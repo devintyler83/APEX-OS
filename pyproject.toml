@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "draftos"
+version = "0.1.0"
+description = "NFL Draft Analytics OS"
+requires-python = ">=3.12"
+
+dependencies = [
+  "streamlit",
+  "polars",
+  "rapidfuzz",
+  "python-dotenv",
+]
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["draftos*"]
+exclude = ["app*", "data*", "tests*", "scripts*"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
