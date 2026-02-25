@@ -1,21 +1,23 @@
-﻿# Python / venv
+﻿# Python virtual environments
 .venv/
 venv/
+
+# Python cache
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
 
-# Local env
+# Environment files
 .env
 .env.*
 
-# DraftOS local data (do not commit)
+# DraftOS local data (NEVER commit)
 data/edge/draftos.sqlite
 data/exports/backups/
 data/imports/
 
-# OS / editor
+# OS / editor noise
 .DS_Store
 Thumbs.db
 .vscode/
