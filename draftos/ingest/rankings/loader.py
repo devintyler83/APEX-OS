@@ -52,6 +52,21 @@ class LoadedRow:
     ingested_at: str
 
 
+def _read_csv_robust(path: Path) -> pl.DataFrame:
+    """
+    Robust CSV reader for messy web exports:
+    - utf8-lossy: replaces invalid byte sequences
+    - truncate_ragged_lines: ignores extra trailing fields from bad quoting/commas
+    """
+    return pl.read_csv(
+        path,
+        ignore_errors=True,
+        encoding="utf8-lossy",
+        truncate_ragged_lines=True,
+        infer_schema_length=10000,
+    )
+
+
 def load_rankings_csv(
     csv_path: Path,
     *,
@@ -65,30 +80,26 @@ def load_rankings_csv(
     col_tier: str | None = None,
     col_ranking_date: str | None = None,
 ) -> list[LoadedRow]:
-    df = pl.read_csv(csv_path, ignore_errors=True)
 
+    df = _read_csv_robust(csv_path)
     cols = df.columns
 
-    # Heuristic column inference (override with CLI flags if needed)
-    name_col = col_name or _pick_col(cols, ["player", "name", "full_name", "player_name"])
-    school_col = col_school or _pick_col(cols, ["school", "college", "team"])
-    pos_col = col_position or _pick_col(cols, ["pos", "position"])
-    class_col = col_class_year or _pick_col(cols, ["class_year", "year", "draft_year", "class"])
+    name_col = col_name or _pick_col(cols, ["player", "name", "full_name", "player_name", "raw_full_name"])
+    school_col = col_school or _pick_col(cols, ["school", "college", "team", "raw_school"])
+    pos_col = col_position or _pick_col(cols, ["pos", "position", "raw_position"])
+    class_col = col_class_year or _pick_col(cols, ["class_year", "year", "draft_year", "class", "raw_class_year"])
     ovr_col = col_overall_rank or _pick_col(cols, ["overall_rank", "rank", "ovr_rank", "overall"])
-    posr_col = col_position_rank or _pick_col(cols, ["position_rank", "pos_rank", "rank_pos"])
-    grade_col = col_grade or _pick_col(cols, ["grade", "score"])
+    posr_col = col_position_rank or _pick_col(cols, ["position_rank", "pos_rank", "rank_pos", "avg_pos_rank"])
+    grade_col = col_grade or _pick_col(cols, ["grade", "score", "rating"])
     tier_col = col_tier or _pick_col(cols, ["tier"])
     date_col = col_ranking_date or _pick_col(cols, ["ranking_date", "date", "as_of"])
 
     if not name_col:
-        raise ValueError(
-            f"Could not infer name column from: {cols}. "
-            f"Provide --col-name explicitly."
-        )
+        raise ValueError(f"Could not infer name column from: {cols}. Provide --col-name explicitly.")
 
     ingested_at = _now_iso()
-
     rows: list[LoadedRow] = []
+
     for rec in df.to_dicts():
         raw_full_name = normalize_whitespace(str(rec.get(name_col, "") or "")).strip()
         if not raw_full_name:
@@ -100,7 +111,7 @@ def load_rankings_csv(
         raw_class_year: int | None = None
         if class_col and rec.get(class_col) not in (None, ""):
             try:
-                raw_class_year = int(rec.get(class_col))
+                raw_class_year = int(float(rec.get(class_col)))
             except Exception:
                 raw_class_year = None
 
@@ -132,7 +143,6 @@ def load_rankings_csv(
         if date_col and rec.get(date_col) not in (None, ""):
             ranking_date = normalize_whitespace(str(rec.get(date_col)))
 
-        # Store extra columns as JSON (exclude the mapped fields)
         used = {name_col, school_col, pos_col, class_col, ovr_col, posr_col, grade_col, tier_col, date_col}
         extra = {k: v for k, v in rec.items() if k not in used and v not in (None, "")}
         raw_json = json.dumps(extra, ensure_ascii=False)
@@ -161,7 +171,6 @@ def main() -> None:
     ap.add_argument("--csv", required=True, help="Path to rankings CSV")
     ap.add_argument("--print-sample", type=int, default=10, help="Print first N parsed rows")
 
-    # Optional explicit mappings
     ap.add_argument("--col-name", default=None)
     ap.add_argument("--col-school", default=None)
     ap.add_argument("--col-position", default=None)

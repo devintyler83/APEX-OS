@@ -72,6 +72,13 @@ def main() -> None:
             c = conn.execute(f"SELECT COUNT(*) AS n FROM {t};").fetchone()["n"]
             print(f"{t}: {c}")
 
+
+        # Active sources (post-migration 0005)
+        cols = {r["name"] for r in conn.execute("PRAGMA table_info(sources);").fetchall()}
+        if "is_active" in cols:
+            active = conn.execute("SELECT COUNT(*) AS n FROM sources WHERE is_active = 1;").fetchone()["n"]
+            print(f"sources_active: {active}")
+
     print("OK: doctor checks passed")
 
 

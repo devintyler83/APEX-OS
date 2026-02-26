@@ -13,6 +13,8 @@ CREATE TABLE IF NOT EXISTS sources (
   source_type TEXT NOT NULL,          -- ranking, stats, combine, notes
   url TEXT,
   notes TEXT
+  is_active INTEGER NOT NULL DEFAULT 1,
+  superseded_by_source_id INTEGER,
 );
 
 CREATE TABLE IF NOT EXISTS seasons (
