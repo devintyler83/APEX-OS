@@ -1,0 +1,145 @@
+score,tier,sources_covered,display_name,full_name,school_canonical,position_group,prospect_key,prospect_id,reason_chips
+98.9716,Elite,12,Fernando Mendoza,Fernando Mendoza,Indiana,QB,p2026_dba0c5812d55a88e,1,100% coverage; Tight consensus; 12 sources top-10
+97.9973,Elite,12,Caleb Downs,Caleb Downs,Ohio State,S,p2026_3f8ef9fa0196a552,5,100% coverage; Tight consensus; 12 sources top-10
+96.6322,Elite,12,Jeremiyah Love,Jeremiyah Love,Notre Dame,RB,p2026_a76ab34555d651a9,6,100% coverage; Tight consensus; 11 sources top-10
+95.8258,Elite,12,David Bailey,David Bailey,Texas Tech,EDGE,p2026_751a0fb5de67a568,4,100% coverage; Tight consensus; 9 sources top-10
+94.9119,Elite,12,Carnell Tate,Carnell Tate,Ohio State,WR,p2026_bf9006fd3e722ea7,7,100% coverage; Tight consensus; 10 sources top-10
+94.7799,Elite,12,Spencer Fano,Spencer Fano,Utah,OL,p2026_e09a3d84fdb832a8,18,100% coverage; Tight consensus; 6 sources top-10
+90.6648,Elite,11,Mansoor Delane,Mansoor Delane,LSU,CB,p2026_85ce845b78d4fb46,10,92% coverage; Tight consensus; 7 sources top-10
+90.2269,Elite,10,Arvell Reese,Arvell Reese,Ohio State,LB,p2026_045ea980e83f305f,3,83% coverage; Tight consensus; 10 sources top-10
+88.5806,Strong,11,Jermod Mccoy,Jermod Mccoy,Tennessee,CB,p2026_2163cc132b03dd54,12,92% coverage; Tight consensus; Median rank ≤ 25
+87.628,Strong,11,Jordyn Tyson,Jordyn Tyson,Arizona State,WR,p2026_085326fbe8fb5f79,14,92% coverage; Tight consensus; 4 sources top-10
+87.3677,Strong,10,Sonny Styles,Sonny Styles,Ohio State,LB,p2026_78f52412e2a49fa7,8,83% coverage; Moderate variance; 7 sources top-10
+87.1579,Strong,11,Makai Lemon,Makai Lemon,USC,WR,p2026_047d2d00c402b224,9,92% coverage; Moderate variance; 5 sources top-10
+85.7256,Strong,11,Kenyon Sadiq,Kenyon Sadiq,Oregon,TE,p2026_2e11e91474c8ab6a,24,92% coverage; Tight consensus; Median rank ≤ 25
+85.6107,Strong,12,KC Concepcion,KC Concepcion,Texas A&M,WR,p2026_2e994cb9415d6f2b,28,100% coverage; Moderate variance; Median rank ≤ 50
+83.7979,Strong,12,Caleb Lomu,Caleb Lomu,Utah,OL,p2026_13dd2e5ef01c6595,29,100% coverage; Moderate variance; Median rank ≤ 50
+83.0711,Strong,11,CJ Allen,CJ Allen,Georgia,LB,p2026_9ca568a57b8e0b3f,27,92% coverage; Moderate variance; Median rank ≤ 50
+82.9307,Strong,11,Keldric Faulk,Keldric Faulk,Auburn,EDGE,p2026_610c9589021238bf,16,92% coverage; Moderate variance; Median rank ≤ 25
+82.6102,Strong,11,Denzel Boston,Denzel Boston,Washington,WR,p2026_5e1f822b566cea5d,20,92% coverage; Moderate variance; Median rank ≤ 25
+82.17,Strong,11,Kadyn Proctor,Kadyn Proctor,Alabama,OL,p2026_4f1c71b2abbdb108,25,92% coverage; Moderate variance; Median rank ≤ 25
+82.0819,Strong,10,Avieon Terrell,Avieon Terrell,Clemson,CB,p2026_76f58f29cb85647f,19,83% coverage; Moderate variance; Median rank ≤ 25
+80.2292,Strong,11,Cashius Howell,Cashius Howell,Texas A&M,EDGE,p2026_a0924c5b0378d257,15,92% coverage; Moderate variance; Median rank ≤ 25
+79.6223,Playable,10,Colton Hood,Colton Hood,Tennessee,CB,p2026_098e231465b72ff1,48,83% coverage; Moderate variance; Median rank ≤ 50
+79.5919,Playable,11,Monroe Freeling,Monroe Freeling,Georgia,OL,p2026_a8ae7bf2d78f101f,31,92% coverage; Moderate variance; Median rank ≤ 50
+78.7256,Playable,12,Dillon Thieneman,Dillon Thieneman,Oregon,S,p2026_24dd53a776fefc1e,39,100% coverage; Moderate variance; Median rank ≤ 50
+78.2081,Playable,10,Brandon Cisse,Brandon Cisse,South Carolina,CB,p2026_510fab33d83a3530,32,83% coverage; Moderate variance; Median rank ≤ 50
+76.83,Playable,11,Ty Simpson,Ty Simpson,Alabama,QB,p2026_1dca8f26a6560f4b,34,92% coverage; Moderate variance; Median rank ≤ 50
+75.168,Playable,12,Zion Young,Zion Young,Missouri,EDGE,p2026_b9258f0a3f927cf6,46,100% coverage; Moderate variance; Median rank ≤ 50
+74.7822,Playable,10,Anthony Hill,Anthony Hill,Texas,LB,p2026_42e956e9f4d7b971,40,83% coverage; Moderate variance; Median rank ≤ 50
+74.4821,Playable,12,Emmanuel Pregnon,Emmanuel Pregnon,Oregon,OL,p2026_7f63fab99751b1c8,44,100% coverage; Moderate variance; Median rank ≤ 50
+73.9753,Playable,10,Omar Cooper,Omar Cooper,Indiana,WR,p2026_adb49d81c96a46b6,41,83% coverage; Moderate variance; Median rank ≤ 50
+73.1937,Playable,8,Olaivavega Ioane,Olaivavega Ioane,Penn State,OL,p2026_f9d5bb48550c20c3,22,67% coverage; Moderate variance; Median rank ≤ 25
+73.1445,Playable,10,R Mason Thomas,R Mason Thomas,Oklahoma,EDGE,p2026_665b8834f4fcbbec,38,83% coverage; Moderate variance; Median rank ≤ 50
+72.7112,Playable,10,Chris Johnson,Chris Johnson,San Diego State,CB,p2026_f4310484a2a6ed7b,59,83% coverage; Moderate variance; Median rank ≤ 50
+71.6899,Playable,9,Caleb Banks,Caleb Banks,Florida,DT,p2026_3215e63a2f8a66ea,456,75% coverage; Moderate variance; Median rank ≤ 50
+69.9151,Playable,8,Kayden Mcdonald,Kayden Mcdonald,Ohio State,DT,p2026_c1fcc67b51c30cf0,452,67% coverage; Moderate variance; Median rank ≤ 25
+69.5805,Playable,12,Chris Brazzell,Chris Brazzell,Tennessee,WR,p2026_95c1ef45fcc86b89,89,100% coverage; Moderate variance; Median rank ≤ 50
+69.4355,Playable,10,Emmanuel Mcneil-warren,Emmanuel Mcneil-warren,Toledo,S,p2026_f4450c62eb6168d2,35,83% coverage; Moderate variance; Median rank ≤ 50
+68.8807,Playable,10,Blake Miller,Blake Miller,Clemson,OL,p2026_6f262dbb8bdd4847,52,83% coverage; Moderate variance; Median rank ≤ 50
+68.8615,Playable,12,Chris Bell,Chris Bell,Louisville,WR,p2026_6710589d2f84f83c,37,100% coverage; Moderate variance; Median rank ≤ 50
+68.5118,Playable,9,D'Angelo Ponds,D'Angelo Ponds,Indiana,CB,p2026_5cca5ecc8b25f346,55,75% coverage; Moderate variance; Median rank ≤ 50
+68.3611,Playable,10,Max Iheanachor,Max Iheanachor,Arizona State,OL,p2026_d6ebcb9468fd4711,47,83% coverage; Moderate variance; Median rank ≤ 50
+68.1939,Playable,10,Zachariah Branch,Zachariah Branch,Georgia,WR,p2026_a2ce935bf6bbe4cc,76,83% coverage; Moderate variance
+67.8874,Playable,9,Jake Golday,Jake Golday,Cincinnati,LB,p2026_4adbe1b7a195cb6f,51,75% coverage; Moderate variance
+66.7577,Playable,9,Germie Bernard,Germie Bernard,Alabama,WR,p2026_3914125530ef1886,57,75% coverage; Moderate variance
+66.6749,Playable,10,Chase Bisontis,Chase Bisontis,Texas A&M,OL,p2026_d13b46df15e348ae,54,83% coverage; Moderate variance
+66.4655,Playable,10,T.j.parker,T.j.parker,Clemson,EDGE,p2026_23877b588839cefe,23,83% coverage; Wide variance; Median rank ≤ 50
+66.2826,Playable,9,Keith Abney,Keith Abney,Arizona State,CB,p2026_ec28adb4245eb76a,36,75% coverage; Wide variance; Median rank ≤ 50
+65.7613,Playable,9,Joshua Josephs,Joshua Josephs,Tennessee,EDGE,p2026_0cdf8a652588ac23,63,75% coverage; Wide variance
+65.6954,Playable,11,Elijah Sarratt,Elijah Sarratt,Indiana,WR,p2026_0a64982d0190ce92,67,92% coverage; Moderate variance
+65.327,Playable,9,Christen Miller,Christen Miller,Georgia,DT,p2026_eea3ea10fa0c2710,454,75% coverage; Moderate variance; Median rank ≤ 50
+64.5029,Watch,8,Lee Hunter,Lee Hunter,Texas Tech,DT,p2026_3292570d64168096,458,67% coverage; Moderate variance; Median rank ≤ 50
+64.1741,Watch,10,Gabe Jacas,Gabe Jacas,Illinois,EDGE,p2026_91923bc956082771,42,83% coverage; Moderate variance
+64.0936,Watch,10,Malachi Fields,Malachi Fields,Notre Dame,WR,p2026_91f72fa2400d7878,85,83% coverage; Wide variance
+63.3124,Watch,10,Josiah Trotter,Josiah Trotter,Missouri,LB,p2026_cfeade57c5c62df6,62,83% coverage; Moderate variance
+63.2007,Watch,11,Jadarian Price,Jadarian Price,Notre Dame,RB,p2026_c76eb7f87d677108,61,92% coverage; Moderate variance
+62.4938,Watch,11,Romello Height,Romello Height,Texas Tech,EDGE,p2026_935e1eb93102a303,53,92% coverage; Wide variance
+62.2544,Watch,8,Connor Lew,Connor Lew,Auburn,OL,p2026_a20c86a88aadd6a4,65,67% coverage; Moderate variance
+61.4232,Watch,11,Davison Igbinosun,Davison Igbinosun,Ohio State,CB,p2026_2a0b10baaef5ecd5,123,92% coverage; Wide variance
+61.1187,Watch,10,Devin Moore,Devin Moore,Florida,CB,p2026_f63c123e6a16fe5f,82,83% coverage; Moderate variance
+60.6352,Watch,10,Antonio Williams,Antonio Williams,Clemson,WR,p2026_95e98d0e5e4902fe,97,83% coverage; Moderate variance
+60.3922,Watch,10,Kyle Louis,Kyle Louis,Pittsburgh,LB,p2026_59d828ac38014d31,91,83% coverage; Wide variance
+60.0272,Watch,9,Caleb Tiernan,Caleb Tiernan,Northwestern,OL,p2026_a2391ec70f6350d7,56,75% coverage; Moderate variance
+59.9164,Watch,10,Derrick Moore,Derrick Moore,Michigan,EDGE,p2026_264a5823f412e59f,60,83% coverage; Moderate variance
+59.8779,Watch,10,Gennings Dunker,Gennings Dunker,Iowa,OL,p2026_02fe408c5f370390,83,83% coverage; Wide variance
+59.5456,Watch,8,Kamari Ramsey,Kamari Ramsey,USC,S,p2026_432248204a3c4f65,64,67% coverage; Wide variance
+59.0144,Watch,9,Deontae Lawson,Deontae Lawson,Alabama,LB,p2026_42e9a4c80e90c099,84,75% coverage; Wide variance
+58.8909,Watch,10,Jacob Rodriguez,Jacob Rodriguez,Texas Tech,LB,p2026_979803acea967ab8,93,83% coverage; Moderate variance
+58.2742,Watch,11,Max Klare,Max Klare,Ohio State,TE,p2026_8726cbb6c6bac3a8,71,92% coverage; Moderate variance
+57.5773,Watch,10,Eli Stowers,Eli Stowers,Vanderbilt,TE,p2026_3654faa235705ff5,45,83% coverage; Wide variance
+57.411,Watch,8,Genesis Smith,Genesis Smith,Arizona,S,p2026_65a77a8a85de82d2,99,67% coverage; Moderate variance
+56.7567,Watch,9,LT Overton,LT Overton,Alabama,EDGE,p2026_aaaf49404008d552,49,75% coverage; Wide variance
+56.5661,Watch,9,Zakee Wheatley,Zakee Wheatley,Penn State,S,p2026_42ea9f092d3c9b63,96,75% coverage; Moderate variance
+56.0982,Watch,8,Keylan Rutledge,Keylan Rutledge,Georgia Tech,OL,p2026_67c2812199125f43,94,67% coverage; Moderate variance
+55.9671,Watch,8,A.j.haulcy,A.j.haulcy,LSU,S,p2026_e52aaa5deee20e9e,43,67% coverage; Moderate variance
+54.9736,Watch,9,Jake Slaughter,Jake Slaughter,Florida,OL,p2026_02b8b1fad64a1a1f,77,75% coverage; Wide variance
+54.8955,Watch,8,Julian Neal,Julian Neal,Arkansas,CB,p2026_f708acf39bd58c78,142,67% coverage; Wide variance
+54.7996,Watch,8,Jonah Coleman,Jonah Coleman,Washington,RB,p2026_82b03133b0996ac3,78,67% coverage; Moderate variance
+53.5044,Watch,8,Ja'Kobi Lane,Ja'Kobi Lane,USC,WR,p2026_d97579cfa8aab836,154,67% coverage; Wide variance
+53.4847,Watch,10,Emmett Johnson,Emmett Johnson,Nebraska,RB,p2026_0a089d99ac593977,81,83% coverage; Wide variance
+52.4518,Watch,9,Isaiah World,Isaiah World,Oregon,OL,p2026_f3d18227a54724e9,129,75% coverage; Wide variance
+52.4003,Watch,10,Chandler Rivers,Chandler Rivers,Duke,CB,p2026_b6a0de8b9e6d4537,69,83% coverage; Wide variance
+52.2465,Watch,9,Michael Trigg,Michael Trigg,Baylor,TE,p2026_d3f80d21418e9e23,75,75% coverage; Moderate variance
+52.1343,Watch,8,Kevin Coleman,Kevin Coleman,Missouri,WR,p2026_66f10613449b0aef,145,67% coverage; Wide variance
+51.8544,Watch,8,Treydan Stukes,Treydan Stukes,Arizona,CB,p2026_0160f65e808284d7,103,67% coverage; Wide variance
+51.4856,Watch,9,Will Lee,Will Lee,Texas A&M,CB,p2026_68e855d40409c775,108,75% coverage; Moderate variance
+51.1899,Watch,10,Garrett Nussmeier,Garrett Nussmeier,LSU,QB,p2026_8a4e4044b10e5a3b,80,83% coverage; Wide variance
+51.0767,Watch,10,Malik Muhammad,Malik Muhammad,Texas,CB,p2026_df549a2d3cd81dd7,111,83% coverage; Moderate variance
+50.747,Watch,8,Jack Endries,Jack Endries,Texas,TE,p2026_d80e7fb25f097840,72,67% coverage; Wide variance
+49.5593,Watch,9,Deion Burks,Deion Burks,Oklahoma,WR,p2026_f19c434971f82462,90,75% coverage; Wide variance
+49.1776,Watch,8,Daylen Everette,Daylen Everette,Georgia,CB,p2026_9b4eab4aeb9014ad,73,67% coverage; Wide variance
+48.7675,Watch,8,Brian Parker,Brian Parker,Duke,OL,p2026_69b77cf96faafbaf,116,67% coverage; Moderate variance
+48.4899,Watch,8,Dani Dennis-sutton,Dani Dennis-sutton,Penn State,EDGE,p2026_20742c5a075d14ba,92,67% coverage; Wide variance
+48.3833,Watch,9,Ar'Maj Reed-adams,Ar'Maj Reed-adams,Texas A&M,OL,p2026_eb0856f786dfa427,163,75% coverage; Wide variance
+47.998,Watch,10,Bud Clark,Bud Clark,TCU,S,p2026_89f951392ba7f0fc,115,83% coverage; Wide variance
+47.9199,Watch,8,Billy Schrauth,Billy Schrauth,Notre Dame,OL,p2026_c070431ca1229d65,107,67% coverage; Moderate variance
+47.8915,Watch,10,Austin Barber,Austin Barber,Florida,OL,p2026_65de27679736984d,122,83% coverage; Moderate variance
+47.86,Watch,8,Kaytron Allen,Kaytron Allen,Penn State,RB,p2026_8504c94214abd30c,134,67% coverage; Moderate variance
+47.1265,Watch,8,Drew Shelton,Drew Shelton,Penn State,OL,p2026_912b98a113de3185,161,67% coverage; Wide variance
+46.8488,Watch,8,Taurean York,Taurean York,Texas A&M,LB,p2026_e503f38dc1158e9c,118,67% coverage; Wide variance
+46.2091,Watch,9,Ted Hurst,Ted Hurst,Georgia State,WR,p2026_3ecb888533b8d937,168,75% coverage; Wide variance
+46.1117,Watch,8,Brenen Thompson,Brenen Thompson,Mississippi State,WR,p2026_816d8ab68ac9bb2e,124,67% coverage; Wide variance
+45.6446,Watch,8,Keyron Crawford,Keyron Crawford,Auburn,EDGE,p2026_b66093666775b9e7,86,67% coverage; Wide variance
+45.2221,Watch,8,Beau Stephens,Beau Stephens,Iowa,OL,p2026_3f862e02be444039,148,67% coverage; Wide variance
+45.0684,Watch,10,Malachi Lawrence,Malachi Lawrence,UCF,EDGE,p2026_b402d858e4640e93,175,83% coverage; Wide variance
+44.7929,Watch,8,Mike Washington,Mike Washington,Arkansas,RB,p2026_25f40c05968413b8,159,67% coverage; Wide variance
+44.7837,Watch,8,Darrell Jackson,Darrell Jackson,Florida State,DT,p2026_5355bdcbd596a9e1,464,67% coverage; Moderate variance
+43.7691,Watch,8,Harold Perkins,Harold Perkins,LSU,LB,p2026_76f8f9f3fdfc2cf9,166,67% coverage; Wide variance
+43.4939,Watch,9,Dametrious Crownover,Dametrious Crownover,Texas A&M,OL,p2026_d776793ba7654b4b,174,75% coverage; Wide variance
+43.445,Watch,9,Drew Allar,Drew Allar,Penn State,QB,p2026_b2e4007b50782b65,139,75% coverage; Wide variance
+43.3515,Watch,8,Eric Mcalister,Eric Mcalister,TCU,WR,p2026_2b7cadca0eada4fe,146,67% coverage; Wide variance
+42.6723,Watch,8,Dallen Bentley,Dallen Bentley,Utah,TE,p2026_e8083c8bcdbb8d00,181,67% coverage; Wide variance
+42.1522,Watch,9,Aiden Fisher,Aiden Fisher,Indiana,LB,p2026_61db6c7bf6368497,150,75% coverage; Wide variance
+42.0565,Watch,8,Eric Rivers,Eric Rivers,Georgia Tech,WR,p2026_3f6b128681693774,151,67% coverage; Wide variance
+41.9906,Watch,9,Josh Cameron,Josh Cameron,Baylor,WR,p2026_8d71300d1c346fdd,232,75% coverage; Wide variance
+41.8914,Watch,9,Trey Zuhn,Trey Zuhn,Texas A&M,OL,p2026_2c0dfb3bb8e78cff,186,75% coverage; Wide variance
+41.5657,Watch,8,Nate Boerkircher,Nate Boerkircher,Texas A&M,TE,p2026_e2f5d18621b8faf0,133,67% coverage; Wide variance
+41.4316,Watch,8,Marlin Klein,Marlin Klein,Michigan,TE,p2026_c954417f09183851,114,67% coverage; Wide variance
+40.9985,Watch,8,Eli Raridon,Eli Raridon,Notre Dame,TE,p2026_78b74213f4656296,140,67% coverage; Wide variance
+40.5649,Watch,8,Kage Casey,Kage Casey,Boise State,OL,p2026_d756a77aa8af066e,205,67% coverage; Wide variance
+40.1764,Watch,8,Max Llewellyn,Max Llewellyn,Iowa,EDGE,p2026_5cbf783fae094356,164,67% coverage; Wide variance
+40.0859,Watch,8,DJ Campbell,DJ Campbell,Texas,OL,p2026_8b0722a02c54306c,143,67% coverage; Wide variance
+39.7075,Watch,9,Domani Jackson,Domani Jackson,Alabama,CB,p2026_5af6372d28f06eff,210,75% coverage; Wide variance
+39.6756,Watch,9,Reggie Virgil,Reggie Virgil,Texas Tech,WR,p2026_be58a77e32e2284c,155,75% coverage; Wide variance
+39.0033,Watch,8,Sam Roush,Sam Roush,Stanford,TE,p2026_55372bb27a6f265d,105,67% coverage; Wide variance
+38.9419,Watch,8,Nicholas Singleton,Nicholas Singleton,Penn State,RB,p2026_a96db85ec7bf3078,119,67% coverage; Wide variance
+38.0085,Watch,8,Vincent Anthony,Vincent Anthony,Duke,EDGE,p2026_7df7ba8bd088b00e,224,67% coverage; Wide variance
+37.9276,Watch,8,Oscar Delp,Oscar Delp,Georgia,TE,p2026_95bf6e162b20b17e,192,67% coverage; Wide variance
+37.6559,Watch,8,Tanner Koziol,Tanner Koziol,Houston,TE,p2026_593880aece4ae6bf,178,67% coverage; Wide variance
+37.4785,Watch,8,Le'Veon Moss,Le'Veon Moss,Texas A&M,RB,p2026_b099420d9d0d6775,128,67% coverage; Wide variance
+37.2168,Watch,8,Tim Keenan,Tim Keenan,Alabama,DT,p2026_9527878c8115ae71,473,67% coverage; Wide variance
+37.1304,Watch,8,Caden Curry,Caden Curry,Ohio State,EDGE,p2026_177028d03eae5488,169,67% coverage; Wide variance
+35.3528,Watch,8,Louis Moore,Louis Moore,Indiana,S,p2026_a82446eecaf62b75,283,67% coverage; Wide variance
+35.045,Watch,9,Rayshaun Benny,Rayshaun Benny,Michigan,DT,p2026_ed916a9a54827499,485,75% coverage; Wide variance
+34.5573,Watch,8,Bryce Boettcher,Bryce Boettcher,Oregon,LB,p2026_0b267705d96cdc7d,226,67% coverage; Wide variance
+34.3981,Watch,8,John Michael Gyllenborg,John Michael Gyllenborg,Wyoming,TE,p2026_51e99460b804fe9b,185,67% coverage; Wide variance
+33.0809,Watch,9,J'Mari Taylor,J'Mari Taylor,Virginia,RB,p2026_4a22605470c9d90c,162,75% coverage; Wide variance
+32.7918,Watch,8,Zane Durant,Zane Durant,Penn State,DT,p2026_1ad91dc7f27e86c8,479,67% coverage; Wide variance
+32.0051,Watch,8,TJ Hall,TJ Hall,Iowa,CB,p2026_ba70a90864d7f4b4,247,67% coverage; Wide variance
+31.7145,Watch,9,Sawyer Robertson,Sawyer Robertson,Baylor,QB,p2026_791d6f8da7acc663,241,75% coverage; Wide variance
+31.1944,Watch,8,Kaelon Black,Kaelon Black,Indiana,RB,p2026_bf9443ffad2fc914,203,67% coverage; Wide variance
+29.1629,Watch,8,Caleb Douglas,Caleb Douglas,Texas Tech,WR,p2026_386fb327ba1076ec,213,67% coverage; Wide variance
+23.7585,Watch,9,Fernando Carmona,Fernando Carmona,Arkansas,OL,p2026_4b7ed16e9db894c7,314,75% coverage; Wide variance
+20.5784,Watch,8,Adam Randall,Adam Randall,Clemson,RB,p2026_c825eb1f7eae356c,317,67% coverage; Wide variance
+19.6488,Watch,8,Jack Pyburn,Jack Pyburn,LSU,EDGE,p2026_0d1a3f89169dbed8,326,67% coverage; Wide variance

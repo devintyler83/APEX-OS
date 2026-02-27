@@ -1,0 +1,37 @@
+C:\DraftOS
+├── app\
+├── draftos\
+│   ├── config.py
+│   ├── db\
+│   │   ├── connect.py
+│   │   ├── migrate.py
+│   │   ├── schema.sql
+│   │   └── migrations\
+│   │       ├── 0002_seed_2026.sql
+│   │       ├── 0003_seed_v1_default_model.sql
+│   │       ├── 0004_fix_seed_2026_and_model.sql
+│   │       ├── 0005_sources_active_cols.sql
+│   │       └── 0006_deprecate_nfldraftbuzz_old.sql
+│   ├── ingest\
+│   │   └── rankings\
+│   │       ├── __init__.py
+│   │       ├── loader.py
+│   │       └── writer.py
+│   └── normalize\
+│       ├── names.py
+│       ├── positions.py
+│       └── schools.py
+├── data\
+│   ├── edge\draftos.sqlite
+│   ├── imports\rankings\
+│   │   ├── pff_2026.csv
+│   │   ├── nfldraftbuzz_2026.csv
+│   │   └── nfldraftbuzz_2026_v2.csv
+│   └── exports\backups\
+├── scripts\
+│   ├── doctor.py
+│   ├── patch_0005_0006_soft_deprecate_nfldraftbuzz.py
+│   └── scrape_nfldraftbuzz_2026_playwright.py
+├── tests\
+├── README.md
+└── pyproject.toml

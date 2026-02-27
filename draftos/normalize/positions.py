@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 import re
-from typing import Optional, Tuple
+from dataclasses import dataclass
+from typing import Optional
 
-_WS_RE = re.compile(r"\s+")
-
-# Canonical NFL/ESPN position codes
-CANON_POS = {
+# Canonical positions (NFL.com + ESPN requirement)
+CANONICAL_POSITIONS = {
     "QB", "RB", "WR", "TE", "FB",
     "OT", "OG", "C",
     "DT", "LB", "EDGE",
@@ -14,185 +13,217 @@ CANON_POS = {
     "LS", "PK", "P",
 }
 
-# Deterministic alias map, BEFORE compound handling
-# Keep this conservative and stable.
-_ALIAS = {
-    # Offense
-    "HB": "RB",
-    "TB": "RB",
-    "TAILBACK": "RB",
-    "RUNNING BACK": "RB",
-    "FULLBACK": "FB",
-
-    "WIDE RECEIVER": "WR",
-    "RECEIVER": "WR",
-
-    "TIGHT END": "TE",
-
-    "CENTER": "C",
-    "GUARD": "OG",
-    "TACKLE": "OT",
-    "OL": "OT",  # NOTE: if a source only gives OL, default to OT for canonical position.
-               # We can later revise via a richer resolver using measurables or depth charts,
-               # but do not drift rules midstream without a migration/backfill.
-
-    # Defense
-    "SAF": "S",
-    "FS": "S",
-    "SS": "S",
-    "SAFETY": "S",
-
-    "CORNER": "CB",
-    "CBK": "CB",
-
-    "NT": "DT",
-    "NOSE": "DT",
-
-    # Edge handling
-    "DE": "EDGE",
-    "ED": "EDGE",
-    "EDGE RUSHER": "EDGE",
-    "EDGE RUSHERS": "EDGE",
-    "OLB": "LB",  # unless explicitly EDGE, keep LB for canonical
-
-    # Special teams
-    "K": "PK",
-    "PK": "PK",
-    "KICKER": "PK",
-    "PUNTER": "P",
-    "LONG SNAPPER": "LS",
+# Deterministic position groups for UI, filtering, and identity
+# Keep these stable once prospect_key is in use.
+POSITION_GROUPS = {
+    "QB", "RB", "WR", "TE", "FB",
+    "OL", "DT", "EDGE", "LB", "CB", "S",
+    "ST",
 }
 
-# Common compound patterns that imply EDGE in draft media
-_EDGE_COMPOUNDS = {
-    "DE/ED", "ED/DE",
-    "LB/ED", "ED/LB",
-    "DE/LB", "LB/DE",
-    "EDGE/LB", "LB/EDGE",
-    "DE/EDGE", "EDGE/DE",
-    "OLB/EDGE", "EDGE/OLB",
-}
-
-# Some sources use slash combos for DB
-# We must pick a canonical NFL/ESPN position deterministically.
-# Rule: if any token indicates CB-family, choose CB, else choose S.
-_CB_TOKENS = {"CB", "NB", "NICKEL", "CORNER"}
-_S_TOKENS = {"S", "FS", "SS", "SAF", "SAFETY"}
+_WS_RE = re.compile(r"\s+")
+_PUNCT_RE = re.compile(r"[^A-Z0-9/]+")
+_SLASH_SPLIT_RE = re.compile(r"\s*/\s*")
 
 
-def normalize_position_raw(pos: str | None) -> str | None:
-    """
-    Raw cleaner only. Keeps the original semantics but normalizes formatting.
-    This should remain stable and not do aggressive mapping.
-    """
-    if pos is None:
-        return None
-    s = _WS_RE.sub(" ", str(pos).strip().upper())
-    s = s.replace(".", "")
-    return s or None
+@dataclass(frozen=True)
+class NormalizedPosition:
+    raw: str
+    canonical: str
+    group: str
 
 
-def normalize_position_canonical(pos: str | None) -> str | None:
-    """
-    Map arbitrary source position labels to canonical NFL/ESPN codes.
-    Returns None if we can't confidently map.
-    """
-    raw = normalize_position_raw(pos)
-    if not raw:
-        return None
-
-    # Exact already-canonical
-    if raw in CANON_POS:
-        return raw
-
-    # Normalize separators
-    s = raw.replace("-", "/").replace("\\", "/")
+def _clean(raw: str) -> str:
+    s = (raw or "").strip().upper()
+    s = s.replace("-", "/")
+    s = _WS_RE.sub(" ", s)
+    s = _PUNCT_RE.sub("", s)
     s = _WS_RE.sub(" ", s).strip()
-
-    # Handle obvious EDGE compounds
-    if s in _EDGE_COMPOUNDS:
-        return "EDGE"
-
-    # Tokenize slash compounds
-    if "/" in s:
-        tokens = [t.strip() for t in s.split("/") if t.strip()]
-        tokset = set(tokens)
-
-        # EDGE if any token indicates edge or DE/ED
-        if any(t in {"DE", "ED", "EDGE"} for t in tokset):
-            # If it's explicitly "EDGE" or has DE/ED, prefer EDGE.
-            return "EDGE"
-
-        # DB resolution
-        if any(t in _CB_TOKENS for t in tokset):
-            return "CB"
-        if any(t in _S_TOKENS for t in tokset):
-            return "S"
-
-        # OL resolution (rare)
-        if any(t in {"OT", "OG", "C", "OL"} for t in tokset):
-            # Deterministic choice: OT
-            return "OT"
-
-        # Otherwise take first token if mappable via alias
-        first = tokens[0]
-        if first in CANON_POS:
-            return first
-        if first in _ALIAS:
-            mapped = _ALIAS[first]
-            return mapped if mapped in CANON_POS else None
-        return None
-
-    # Direct alias
-    if s in _ALIAS:
-        mapped = _ALIAS[s]
-        return mapped if mapped in CANON_POS else None
-
-    # Long-form / spaced labels
-    if s in _ALIAS:
-        mapped = _ALIAS[s]
-        return mapped if mapped in CANON_POS else None
-
-    return None
+    return s
 
 
-def position_group_from_canonical(pos_can: str | None) -> str | None:
+def position_group_from_canonical(canonical: str) -> str:
     """
-    Deterministic bucketing used across DraftOS.
+    Deterministic grouping derived from canonical position.
     """
-    if pos_can is None:
-        return None
+    c = (canonical or "").strip().upper()
 
-    if pos_can in {"QB"}:
-        return "QB"
-    if pos_can in {"RB", "FB"}:
-        return "RB"
-    if pos_can in {"WR"}:
-        return "WR"
-    if pos_can in {"TE"}:
-        return "TE"
-    if pos_can in {"OT", "OG", "C"}:
+    if c in {"OT", "OG", "C"}:
         return "OL"
-
-    if pos_can in {"DT"}:
-        return "DL"
-    if pos_can in {"EDGE"}:
-        return "EDGE"
-    if pos_can in {"LB"}:
-        return "LB"
-    if pos_can in {"CB", "S"}:
-        return "DB"
-
-    if pos_can in {"LS", "PK", "P"}:
+    if c in {"PK", "P", "LS"}:
         return "ST"
+    if c in {"QB", "RB", "WR", "TE", "FB", "DT", "EDGE", "LB", "CB", "S"}:
+        return c
 
-    return None
+    # Fallback is deterministic, but should be rare.
+    return "ST"
 
 
-def normalize_position(pos: str | None) -> Tuple[Optional[str], Optional[str]]:
+def normalize_position(raw_position: str) -> NormalizedPosition:
     """
-    Convenience: returns (position_canonical, position_group).
+    Normalize raw source positions to canonical positions (NFL.com + ESPN).
+
+    Canonical positions:
+    QB, RB, WR, TE, FB, OT, OG, C, DT, LB, EDGE, CB, S, LS, PK, P
+
+    Notes:
+    - Hybrid labels like "DE/ED", "LB/EDGE", "OL", "IOL", "OT/OG" are normalized deterministically.
+    - If a raw value is unknown, we return "LB" as a conservative defensive fallback only when
+      the token contains "LB". Otherwise, we fallback to "S" if it contains "S/SAF".
+      If no useful signal exists, we fallback to "LB". These fallbacks remain deterministic.
     """
-    pos_can = normalize_position_canonical(pos)
-    pos_group = position_group_from_canonical(pos_can) if pos_can else None
-    return pos_can, pos_group
+    raw = raw_position or ""
+    s = _clean(raw)
+
+    # Fast exact canonical hit
+    if s in CANONICAL_POSITIONS:
+        c = s
+        return NormalizedPosition(raw=raw, canonical=c, group=position_group_from_canonical(c))
+
+    # Common synonyms and abbreviations (single-token)
+    direct = {
+        # offense
+        "HB": "RB",
+        "TB": "RB",
+        "TAILBACK": "RB",
+        "RUNNINGBACK": "RB",
+        "WIDEOUT": "WR",
+        "REC": "WR",
+        "FL": "WR",
+        "SE": "WR",
+        "SLOT": "WR",
+
+        # OL
+        "OL": "OT",     # if only "OL" is given, prefer OT as the neutral OT/OL anchor
+        "T": "OT",
+        "LT": "OT",
+        "RT": "OT",
+        "G": "OG",
+        "LG": "OG",
+        "RG": "OG",
+        "IOL": "OG",    # interior OL bucket mapped to OG deterministically
+
+        # defense
+        "DL": "DT",     # neutral DL anchor
+        "IDL": "DT",
+        "NT": "DT",
+        "NOSE": "DT",
+        "DT/NT": "DT",
+
+        "DE": "EDGE",   # ESPN/NFL.com commonly treat DE prospects as EDGE in draft context
+        "EDGE": "EDGE",
+        "ED": "EDGE",
+        "OLB": "LB",    # base OLB label maps to LB unless explicitly EDGE is present
+        "ILB": "LB",
+        "MLB": "LB",
+
+        "DB": "CB",     # neutral DB anchor
+        "CB": "CB",
+        "NCB": "CB",
+        "SLOT CB": "CB",
+
+        "S": "S",
+        "SS": "S",
+        "FS": "S",
+        "SAF": "S",
+        "SAFETY": "S",
+
+        # special teams
+        "K": "PK",
+        "PK": "PK",
+        "KICKER": "PK",
+        "PUNTER": "P",
+        "LS": "LS",
+        "LONGSNAPPER": "LS",
+        "LONG SNAPPER": "LS",
+    }
+
+    if s in direct:
+        c = direct[s]
+        return NormalizedPosition(raw=raw, canonical=c, group=position_group_from_canonical(c))
+
+    # Handle multi-token labels like "SLOT CB"
+    if s.replace(" ", "") in direct:
+        c = direct[s.replace(" ", "")]
+        return NormalizedPosition(raw=raw, canonical=c, group=position_group_from_canonical(c))
+
+    # Slash hybrids, pick deterministically by priority rules
+    # Priority: QB,RB,WR,TE,FB,OT,OG,C,EDGE,LB,DT,CB,S,LS,PK,P
+    priority = ["QB", "RB", "WR", "TE", "FB", "OT", "OG", "C", "EDGE", "LB", "DT", "CB", "S", "LS", "PK", "P"]
+
+    parts = _SLASH_SPLIT_RE.split(s) if "/" in s else []
+    if parts:
+        expanded: list[str] = []
+        for p in parts:
+            p = p.strip()
+            if not p:
+                continue
+            if p in CANONICAL_POSITIONS:
+                expanded.append(p)
+                continue
+            if p in direct:
+                expanded.append(direct[p])
+                continue
+            # common hybrids
+            if p in {"DE", "ED", "DEED", "DE/ED"}:
+                expanded.append("EDGE")
+                continue
+            if p in {"LB", "OLB", "ILB", "MLB"}:
+                expanded.append("LB")
+                continue
+            if p in {"SAF", "SS", "FS"}:
+                expanded.append("S")
+                continue
+            if p in {"T", "LT", "RT"}:
+                expanded.append("OT")
+                continue
+            if p in {"G", "LG", "RG", "IOL"}:
+                expanded.append("OG")
+                continue
+            if p in {"DL", "IDL", "NT"}:
+                expanded.append("DT")
+                continue
+
+        # Choose the earliest by priority, deterministic
+        for c in priority:
+            if c in expanded:
+                return NormalizedPosition(raw=raw, canonical=c, group=position_group_from_canonical(c))
+
+    # Phrase heuristics, deterministic
+    if "QUARTER" in s or s == "Q" or "QB" in s:
+        c = "QB"
+    elif "RUN" in s or "BACK" in s or s.endswith("HB") or "RB" in s:
+        c = "RB"
+    elif "WIDE" in s or "WR" in s:
+        c = "WR"
+    elif "TIGHT" in s or "TE" in s:
+        c = "TE"
+    elif "FULL" in s or "FB" in s:
+        c = "FB"
+    elif "CENTER" in s or s == "C":
+        c = "C"
+    elif "GUARD" in s or "OG" in s or "IOL" in s:
+        c = "OG"
+    elif "TACKLE" in s or "OT" in s:
+        c = "OT"
+    elif "NOSE" in s or "DT" in s or "TACKLE" in s and "DEF" in s:
+        c = "DT"
+    elif "EDGE" in s or "DE" in s or "ED" in s:
+        c = "EDGE"
+    elif "LINEBACK" in s or "LB" in s:
+        c = "LB"
+    elif "CORNER" in s or "CB" in s:
+        c = "CB"
+    elif "SAF" in s or s.endswith("S") or "FS" in s or "SS" in s:
+        c = "S"
+    elif "KICK" in s or "PK" in s or s == "K":
+        c = "PK"
+    elif "PUNT" in s or s == "P":
+        c = "P"
+    elif "SNAP" in s or "LS" in s:
+        c = "LS"
+    else:
+        # Final deterministic fallback
+        c = "LB"
+
+    return NormalizedPosition(raw=raw, canonical=c, group=position_group_from_canonical(c))
