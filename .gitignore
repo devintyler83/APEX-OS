@@ -22,3 +22,12 @@ data/imports/
 Thumbs.db
 .vscode/
 .idea/
+# Generated exports
+exports/*.csv
+exports/reports/
+
+# SQLite backups
+data/edge/backups/
+
+# Local DB
+data/edge/*.sqlite
