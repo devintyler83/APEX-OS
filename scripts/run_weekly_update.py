@@ -1,4 +1,4 @@
-# scripts/run_weekly_update.py
+﻿# scripts/run_weekly_update.py
 from __future__ import annotations
 
 import subprocess
