@@ -1,8 +1,8 @@
-\# DraftOS Project State (Checkpoint)
+DraftOS Project State (Checkpoint)
 
 
 
-Date: 2026-02-25 to 2026-02-26
+Date: 2026-03-02
 
 Repo Root: C:\\DraftOS
 
@@ -10,145 +10,485 @@ Canonical DB: C:\\DraftOS\\data\\edge\\draftos.sqlite
 
 
 
-\## Current Phase
+Current Phase
 
-Phase 1, engine only. No Streamlit Big Board work yet.
 
 
+Phase 1 complete: Core deterministic engine functional.
 
-\## What Works
+Snapshot layer operational.
 
-\- Deterministic DB path resolution via draftos/config.py.
+Consensus + coverage + confidence pipeline producing exports.
 
-\- Migration runner works and is additive, logs APPLY/SKIP, backs up DB before applying new migrations.
 
-\- Doctor gate passes (python -m scripts.doctor).
 
-\- Rank ingest scaffold works:
+Still no Streamlit Big Board UI work.
 
-&#x20; - draftos.ingest.rankings.loader parses CSV
 
-&#x20; - draftos.ingest.rankings.writer writes to sources, source\_players, source\_rankings
 
-&#x20; - backs up DB before bulk ingest
+What Works (End-to-End Engine)
 
-&#x20; - idempotent via UNIQUE constraints
+Deterministic Core
 
-\- Multi-source ingest proven:
 
-&#x20; - PFF ingested (448 rows).
 
-&#x20; - NFLDraftBuzz scraped via Playwright due to 403 blocking non-browser.
+Deterministic DB path resolution via draftos/config.py.
 
-&#x20; - NFLDraftBuzz v2 CSV fixed fields (school, position, etc).
 
-\- Soft deprecation implemented:
 
-&#x20; - sources table now has is\_active and superseded\_by\_source\_id.
+Migration runner is additive, logs APPLY/SKIP, and backs up DB automatically.
 
-&#x20; - Old NFLDraftBuzz marked inactive and superseded by NFLDraftBuzz\_v2.
 
-&#x20; - Doctor now prints sources\_active.
 
+Doctor gate passes (python -m scripts.doctor).
 
 
-\## Current Data State (Expected)
 
-\- sources: 3 total
+All writes create pre-operation DB backups.
 
-&#x20; - PFF (active)
 
-&#x20; - NFLDraftBuzz (inactive, superseded\_by NFLDraftBuzz\_v2)
 
-&#x20; - NFLDraftBuzz\_v2 (active)
+Multi-Source Ingest (Proven at Scale)
 
-\- sources\_active: 2
 
-\- seasons: 1 (2026)
 
-\- models: 1 (v1\_default seeded for 2026)
+Large 2026 ingest completed.
 
-\- prospects: 0 (not built yet)
 
-\- source\_players/source\_rankings include historical inactive rows, total count around 1416.
 
+Rankings ingested:
 
 
-\## Core Decision
 
-We keep old source ingests for audit, but only active sources are used for matching, aggregation, and UI.
+players\_new ≈ 7023
 
 
 
-\## Next Steps (Engine Only)
+rankings\_new ≈ 14580
 
-1\) Canonical position taxonomy aligned to NFL.com and ESPN:
 
-&#x20;  Canonical codes: QB, RB, WR, TE, FB, OT, OG, C, DT, LB, EDGE, CB, S, LS, PK, P.
 
-&#x20;  Build deterministic mapping from source raw positions (HB, SAF, DE/ED, LB/ED, etc) to canonical.
+Idempotent via UNIQUE constraints.
 
-&#x20;  Derive position\_group deterministically from canonical.
 
 
+Soft deprecation active:
 
-2\) Add active-only query seam in domain layer:
 
-&#x20;  All matching and aggregation must filter sources.is\_active = 1 by default.
 
+sources.is\_active
 
 
-3\) Implement deterministic prospect\_key generator and identity bootstrap:
 
-&#x20;  - Normalize name, suffix stripping, punctuation removal.
+sources.superseded\_by\_source\_id
 
-&#x20;  - Normalize school via aliases table (school\_aliases) with safe fallback.
 
-&#x20;  - Use canonical position and position\_group.
 
-&#x20;  - Create prospects and source\_player\_map deterministically for active sources only.
+Canonical source map operational.
 
-&#x20;  - No UI. No Big Board.
 
 
+Identity + Mapping Layer (Major Milestone)
 
-4\) After matching is stable:
+Name Normalization
 
-&#x20;  - Build master aggregated ranking (active sources only).
 
-&#x20;  - Later add APEX custom ranking layer.
 
+Conservative auto-inserts into source\_player\_map.
 
 
-\## Blockers
 
-None. Need to implement identity + matching and canonical position mapping.
+Large-scale patch runs successful.
 
 
 
-\## Files Modified/Added Recently (High Value)
+Diagnostics exported:
 
-\- draftos/db/migrate.py hardened (name validation + logging).
 
-\- scripts/doctor.py runnable and now prints sources\_active.
 
-\- draftos/ingest/rankings/loader.py robust CSV parsing (utf8-lossy, truncate ragged lines).
+exports\\mapping\_autofix\_2026.csv
 
-\- draftos/ingest/rankings/writer.py ingest pipeline.
 
-\- scripts/scrape\_nfldraftbuzz\_2026\_playwright.py Playwright scraper for NFLDraftBuzz, bypasses 403.
 
-\- scripts/patch\_0005\_0006\_soft\_deprecate\_nfldraftbuzz.py one-time patch creator for migrations 0005/0006 and doctor/schema updates.
+exports\\mapping\_ambiguities\_2026.csv
 
-\- draftos/db/migrations:
 
-&#x20; - 0002\_seed\_2026.sql
 
-&#x20; - 0003\_seed\_v1\_default\_model.sql
+School Canonicalization
 
-&#x20; - 0004\_fix\_seed\_2026\_and\_model.sql
 
-&#x20; - 0005\_sources\_active\_cols.sql
 
-&#x20; - 0006\_deprecate\_nfldraftbuzz\_old.sql
+Learned aliases from mapped data.
+
+
+
+\~147 new aliases inserted.
+
+
+
+School canonical backfill applied.
+
+
+
+Bootstrap Prospect Creation
+
+
+
+Deterministic grouping by:
+
+
+
+name\_key
+
+
+
+school\_canonical
+
+
+
+position\_group
+
+
+
+minimum distinct source count
+
+
+
+bootstrap\_prospects\_from\_sources\_2026 inserted:
+
+
+
+1074 new prospects
+
+
+
+Prospect UNIQUE constraint respected.
+
+
+
+Autoresolve Improvements
+
+
+
+Taxonomy-aligned position logic.
+
+
+
+Multiple deterministic resolution rules:
+
+
+
+school + pos unique
+
+
+
+pos unique
+
+
+
+dominant school + pos
+
+
+
+Hundreds of additional mappings resolved and applied.
+
+
+
+Snapshot Layer (Operational)
+
+
+
+For 2026 / model v1\_default:
+
+
+
+Snapshot coverage computed.
+
+
+
+Snapshot confidence computed (v2 foundations).
+
+
+
+Snapshot export working:
+
+
+
+exports\\board\_2026\_v1\_default.csv
+
+
+
+Snapshot invariants enforced:
+
+
+
+Confidence is computed from snapshot\_rows universe.
+
+
+
+Coverage rows pruned if not present in snapshot\_rows.
+
+
+
+Idempotent delete-and-recompute per snapshot\_id.
+
+
+
+Current Data State (As of 2026-03-02)
+
+
+
+seasons: 1 (2026)
+
+
+
+models: 1 (v1\_default)
+
+
+
+sources: multiple (active-only used for aggregation)
+
+
+
+prospects: >1000 (bootstrapped + seeded)
+
+
+
+source\_players: \~10k+
+
+
+
+source\_rankings: \~14k+
+
+
+
+Snapshot:
+
+
+
+snapshot\_rows ≈ 802
+
+
+
+coverage\_rows aligned to snapshot\_rows
+
+
+
+confidence\_rows aligned to snapshot\_rows
+
+
+
+Unmapped source\_players remain, but reduced substantially from initial post-ingest volume.
+
+
+
+Core Architectural Decisions (Locked)
+
+
+
+Raw ingest data is never deleted.
+
+
+
+Soft deprecation only (active-only query seam).
+
+
+
+Canonical position taxonomy aligned to NFL.com + ESPN.
+
+
+
+Prospect identity derived deterministically.
+
+
+
+Snapshot rows define the universe.
+
+
+
+Coverage and confidence annotate snapshot rows only.
+
+
+
+All scripts idempotent.
+
+
+
+Every write operation backs up the DB.
+
+
+
+Explicitly Deferred (Intentional Holds)
+
+
+
+These are paused by design. Do NOT work on unless they directly unblock engine outputs.
+
+
+
+Manual resolution of remaining open mapping review queue rows.
+
+Defer until richer source coverage improves automatic resolution.
+
+
+
+Broad school canonical expansion beyond learned aliases.
+
+Only revisit if it unlocks automated mapping.
+
+
+
+UI / Streamlit Big Board implementation.
+
+
+
+Cosmetic report enhancements.
+
+
+
+Engine integrity > polish.
+
+
+
+Current Priorities (Next Session Focus)
+
+
+
+Verify snapshot integrity:
+
+
+
+snapshot\_rows == coverage\_rows == confidence\_rows
+
+
+
+No orphan coverage rows.
+
+
+
+No orphan confidence rows.
+
+
+
+Confirm unmapped count trend:
+
+
+
+Track reduction but avoid manual cleanup.
+
+
+
+Prepare consensus math refinement (if needed):
+
+
+
+Dispersion modeling tuning
+
+
+
+Weighted canonical source influence
+
+
+
+Only after snapshot stability:
+
+
+
+Begin consensus model iteration or additional source ingest.
+
+
+
+High-Value Scripts (Core Engine)
+
+
+
+scripts/patch\_name\_normalization\_2026.py
+
+
+
+scripts/build\_mapping\_review\_queue\_2026.py
+
+
+
+scripts/autoresolve\_mapping\_review\_queue\_2026.py
+
+
+
+scripts/apply\_review\_queue\_mappings\_2026.py
+
+
+
+scripts/learn\_school\_aliases\_from\_mapped\_2026.py
+
+
+
+scripts/bootstrap\_prospects\_from\_sources\_2026.py
+
+
+
+scripts/compute\_snapshot\_coverage.py
+
+
+
+scripts/compute\_snapshot\_confidence.py
+
+
+
+scripts/export\_board\_csv.py
+
+
+
+Blockers
+
+
+
+None.
+
+
+
+Remaining open mapping ambiguity is intentional and not blocking the engine.
+
+
+
+System Status Summary
+
+
+
+DraftOS now:
+
+
+
+Ingests multi-source rankings at scale.
+
+
+
+Canonicalizes positions deterministically.
+
+
+
+Learns school aliases automatically.
+
+
+
+Bootstraps prospects from cross-source evidence.
+
+
+
+Maps source players deterministically.
+
+
+
+Computes coverage + confidence.
+
+
+
+Exports deterministic board snapshot.
+
+
+
+Phase 1 engine is operational.
+
+
+
+Next work is refinement, not foundational construction.
 

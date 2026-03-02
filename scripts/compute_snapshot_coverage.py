@@ -154,7 +154,6 @@ def main() -> None:
             "prospect_board_snapshots",
             "prospect_board_snapshot_rows",
             "sources",
-            "source_board_snapshot_metrics",
             "source_rankings",
             "source_player_map",
         ]
@@ -185,29 +184,30 @@ def main() -> None:
 
         cmap = load_canonical_map(conn)
 
-        # Active sources for this snapshot with ranking_date_used
+        # Deterministically derive ranking_date_used per active source from source_rankings:
+        # latest ranking_date (YYYY-MM-DD) on or before snapshot_date_utc.
         src_rows = conn.execute(
             """
             SELECT
               s.source_id,
-              m.ranking_date_used
+              MAX(substr(sr.ranking_date, 1, 10)) AS ranking_date_used
             FROM sources s
-            JOIN source_board_snapshot_metrics m
-              ON m.source_id = s.source_id
+            JOIN source_rankings sr
+              ON sr.source_id = s.source_id
             WHERE s.is_active = 1
-              AND m.snapshot_id = ?
-              AND m.ranking_date_used IS NOT NULL
-              AND length(trim(m.ranking_date_used)) >= 10
+              AND sr.season_id = ?
+              AND substr(sr.ranking_date, 1, 10) <= substr(?, 1, 10)
+            GROUP BY s.source_id
+            HAVING ranking_date_used IS NOT NULL
+              AND length(trim(ranking_date_used)) >= 10
             ORDER BY s.source_id;
             """,
-            (snapshot_id,),
+            (season_id, snapshot_date_utc),
         ).fetchall()
 
         if not src_rows:
-            raise SystemExit("FAIL: no active sources with ranking_date_used found for this snapshot")
+            raise SystemExit("FAIL: no active sources with a ranking_date on/before snapshot_date_utc for this season")
 
-        # Build coverage by aggregating canonical_source_id hits from actual ranked players
-        # We count distinct canonical sources per prospect for each source’s ranking_date_used.
         cov: Dict[int, set[int]] = {}
 
         for r in src_rows:
@@ -258,15 +258,15 @@ def main() -> None:
         model_id = resolve_model_id(conn, season_id, args.model)
 
         if args.snapshot_id is None:
-            snapshot_id, _snapshot_date_utc = get_latest_snapshot(conn, season_id, model_id)
+            snapshot_id, snapshot_date_utc = get_latest_snapshot(conn, season_id, model_id)
         else:
             row = conn.execute(
-                "SELECT id FROM prospect_board_snapshots WHERE id = ? AND season_id = ? AND model_id = ?;",
+                "SELECT id, snapshot_date_utc FROM prospect_board_snapshots WHERE id = ? AND season_id = ? AND model_id = ?;",
                 (args.snapshot_id, season_id, model_id),
             ).fetchone()
             if not row:
                 raise SystemExit("FAIL: snapshot_id not found for this season/model")
-            snapshot_id = int(row["id"])
+            snapshot_id, snapshot_date_utc = int(row["id"]), str(row["snapshot_date_utc"])
 
         cmap = load_canonical_map(conn)
 
@@ -274,17 +274,19 @@ def main() -> None:
             """
             SELECT
               s.source_id,
-              m.ranking_date_used
+              MAX(substr(sr.ranking_date, 1, 10)) AS ranking_date_used
             FROM sources s
-            JOIN source_board_snapshot_metrics m
-              ON m.source_id = s.source_id
+            JOIN source_rankings sr
+              ON sr.source_id = s.source_id
             WHERE s.is_active = 1
-              AND m.snapshot_id = ?
-              AND m.ranking_date_used IS NOT NULL
-              AND length(trim(m.ranking_date_used)) >= 10
+              AND sr.season_id = ?
+              AND substr(sr.ranking_date, 1, 10) <= substr(?, 1, 10)
+            GROUP BY s.source_id
+            HAVING ranking_date_used IS NOT NULL
+              AND length(trim(ranking_date_used)) >= 10
             ORDER BY s.source_id;
             """,
-            (snapshot_id,),
+            (season_id, snapshot_date_utc),
         ).fetchall()
 
         cov: Dict[int, set[int]] = {}

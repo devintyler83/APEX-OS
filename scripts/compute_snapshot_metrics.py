@@ -138,6 +138,10 @@ def load_snapshot_series(
     """
     Returns dict prospect_id -> list aligned to snapshot_ids:
       [(rank_overall, score, coverage_count), ...]
+
+    Deterministic behavior:
+    - Only includes prospects that exist in ALL snapshots for rank_overall.
+    - Does not pre-populate empty series.
     """
     if not snapshot_ids:
         return {}
@@ -163,27 +167,28 @@ def load_snapshot_series(
         # rank should be present; if not, skip (deterministic)
         if rank is None:
             continue
-        by_snap[sid][pid] = (int(rank), float(score) if score is not None else None, int(cov) if cov is not None else None)
+        by_snap[sid][pid] = (
+            int(rank),
+            float(score) if score is not None else None,
+            int(cov) if cov is not None else None,
+        )
 
-    # align series per prospect_id
-    series: Dict[int, List[Tuple[int, Optional[float], Optional[int]]]] = {}
+    # union of prospects across snapshots
+    all_pids: set[int] = set()
     for sid in snapshot_ids:
-        for pid, tup in by_snap[sid].items():
-            series.setdefault(pid, [])[0:0]  # no-op to ensure key exists
+        all_pids |= set(by_snap[sid].keys())
 
     # Build aligned lists (only include prospects that exist in ALL snapshots for rank)
-    all_pids = set()
-    for sid in snapshot_ids:
-        all_pids = all_pids.union(by_snap[sid].keys())
-
+    series: Dict[int, List[Tuple[int, Optional[float], Optional[int]]]] = {}
     for pid in all_pids:
         aligned: List[Tuple[int, Optional[float], Optional[int]]] = []
         ok = True
         for sid in snapshot_ids:
-            if pid not in by_snap[sid]:
+            tup = by_snap[sid].get(pid)
+            if tup is None:
                 ok = False
                 break
-            aligned.append(by_snap[sid][pid])
+            aligned.append(tup)
         if ok:
             series[pid] = aligned
 
@@ -315,15 +320,21 @@ def main() -> None:
         metrics: List[Tuple[int, int, float, float, float, str, str]] = []
 
         for pid, aligned in series.items():
-            ranks = [t[0] for t in aligned]
-            scores = [t[1] for t in aligned]
+            if not aligned:
+                continue
+
+            ranks = [t[0] for t in aligned if t and t[0] is not None]
+            scores = [t[1] for t in aligned if t]
+
+            if len(ranks) < 2:
+                continue
 
             oldest_rank = ranks[0]
             current_rank = ranks[-1]
             m_rank = int(oldest_rank - current_rank)
 
-            oldest_score = scores[0]
-            current_score = scores[-1]
+            oldest_score = scores[0] if scores else None
+            current_score = scores[-1] if scores else None
             if oldest_score is None or current_score is None:
                 m_score = 0.0
             else:
@@ -341,8 +352,11 @@ def main() -> None:
             print("DRY RUN: no DB writes, no backup")
             print(f"PLAN: would compute metrics for snapshot_id={current_snapshot_id} window_n={args.window} prospects={len(metrics)}")
             print(f"PLAN: thresholds momentum={args.momentum_thresh} volatility_mad={args.volatility_thresh}")
-            top = metrics[0]
-            print(f"EXAMPLE: prospect_id={top[0]} momentum_rank={top[1]} momentum_score={top[2]} volatility_mad={top[3]} chip={top[5]}/{top[6]}")
+            if metrics:
+                top = metrics[0]
+                print(
+                    f"EXAMPLE: prospect_id={top[0]} momentum_rank={top[1]} momentum_score={top[2]} volatility_mad={top[3]} chip={top[5]}/{top[6]}"
+                )
             return
 
     backup_path = ensure_backup(PATHS.db)
@@ -360,14 +374,20 @@ def main() -> None:
         series = load_snapshot_series(conn, snapshot_ids)
 
         computed_at = utc_now_iso()
-        metrics = []
+        metrics: List[Tuple[int, int, float, float, float, str, str]] = []
         for pid, aligned in series.items():
-            ranks = [t[0] for t in aligned]
-            scores = [t[1] for t in aligned]
+            if not aligned:
+                continue
+
+            ranks = [t[0] for t in aligned if t and t[0] is not None]
+            scores = [t[1] for t in aligned if t]
+
+            if len(ranks) < 2:
+                continue
 
             m_rank = int(ranks[0] - ranks[-1])
 
-            if scores[0] is None or scores[-1] is None:
+            if not scores or scores[0] is None or scores[-1] is None:
                 m_score = 0.0
             else:
                 m_score = float(scores[-1] - scores[0])
