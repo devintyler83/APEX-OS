@@ -158,7 +158,6 @@ def build_manifest(packet_dir: Path) -> Dict:
             continue
         rel = p.relative_to(packet_dir).as_posix()
         if rel in ("packet_manifest.json",):
-            # exclude; we write it last
             continue
         files.append(
             {
@@ -183,8 +182,15 @@ def main() -> None:
     ap = argparse.ArgumentParser(description="Build immutable snapshot packet (exports + reports + meta + manifest).")
     ap.add_argument("--season", type=int, default=2026)
     ap.add_argument("--model", type=str, default="v1_default")
+    ap.add_argument("--window", type=int, default=3)
+    ap.add_argument("--top", type=int, default=50)
+    ap.add_argument("--stale-days", type=int, default=7)
+    ap.add_argument("--coverage-min", type=float, default=0.50)
+    ap.add_argument("--mad-noisy", type=float, default=50.0)
     args = ap.parse_args()
 
+    if args.window < 2:
+        raise SystemExit("FAIL: --window must be >= 2")
     if not PATHS.db.exists():
         raise SystemExit(f"FAIL: DB not found: {PATHS.db}")
 
@@ -210,22 +216,18 @@ def main() -> None:
         shutil.rmtree(packet_dir)
     packet_dir.mkdir(parents=True, exist_ok=True)
 
-    # Required exports
-    required_files: List[Tuple[str, Optional[Path]]] = []
-
+    # Required exports (window-aware where applicable)
     board = exports_dir / f"board_{args.season}_{args.model}.csv"
     movers_daily = exports_dir / f"movers_daily_{args.season}_{args.model}.csv"
-    movers_window = exports_dir / f"movers_window3_{args.season}_{args.model}.csv"
-    volatility = exports_dir / f"volatility_window3_{args.season}_{args.model}.csv"
+    movers_window = exports_dir / f"movers_window{args.window}_{args.season}_{args.model}.csv"
+    volatility = exports_dir / f"volatility_window{args.window}_{args.season}_{args.model}.csv"
 
-    required_files.extend(
-        [
-            ("board.csv", board if board.exists() else None),
-            ("movers_daily.csv", movers_daily if movers_daily.exists() else None),
-            ("movers_window3.csv", movers_window if movers_window.exists() else None),
-            ("volatility_window3.csv", volatility if volatility.exists() else None),
-        ]
-    )
+    required_files: List[Tuple[str, Optional[Path]]] = [
+        ("board.csv", board if board.exists() else None),
+        ("movers_daily.csv", movers_daily if movers_daily.exists() else None),
+        (f"movers_window{args.window}.csv", movers_window if movers_window.exists() else None),
+        (f"volatility_window{args.window}.csv", volatility if volatility.exists() else None),
+    ]
 
     missing_required = [name for name, p in required_files if p is None]
     if missing_required:
@@ -261,6 +263,11 @@ def main() -> None:
         "model_id": int(model_id),
         "snapshot_id": int(snapshot_id),
         "snapshot_date_utc": str(snapshot_date_utc),
+        "window": int(args.window),
+        "top": int(args.top),
+        "stale_days": int(args.stale_days),
+        "coverage_min": float(args.coverage_min),
+        "mad_noisy": float(args.mad_noisy),
     }
     write_json(packet_dir / "packet_meta.json", meta)
 
