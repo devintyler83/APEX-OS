@@ -131,6 +131,9 @@ def main() -> None:
     # 17) DOCTOR (read-only)
     run(pyfile(scripts / "doctor.py"))
 
+    # 18) SNAPSHOT PACKET (read-only, immutable artifact bundle)
+    run(pymod("scripts.build_snapshot_packet", "--season", str(season), "--model", model))
+
     print("OK: weekly pipeline completed successfully.")
 
 
