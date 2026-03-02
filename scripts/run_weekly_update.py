@@ -105,8 +105,13 @@ def main() -> None:
     )
 
     # 11.5) SNAPSHOT INTEGRITY ASSERTION (read-only)
-    # Ensures snapshot_rows, coverage_rows, confidence_rows match for latest snapshot_id.
-    run(pymod("scripts.verify_snapshot_integrity", "--season", str(season), "--model", model))
+    # If mismatch exists, attempt deterministic SNAPSHOTS-layer repair once, then re-verify.
+    try:
+        run(pymod("scripts.verify_snapshot_integrity", "--season", str(season), "--model", model))
+    except subprocess.CalledProcessError:
+        print("WARN: snapshot integrity check failed, attempting deterministic repair...")
+        run(pymod("scripts.repair_snapshot_orphans", "--season", str(season), "--model", model, "--apply", "1"))
+        run(pymod("scripts.verify_snapshot_integrity", "--season", str(season), "--model", model))
 
     # 12) BOARD EXPORT (read-only)
     run(pymod("scripts.export_board_csv", "--season", str(season), "--model", model, "--window", str(window)))
