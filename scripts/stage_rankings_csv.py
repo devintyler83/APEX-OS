@@ -1,3 +1,4 @@
+# scripts/stage_rankings_csv.py
 from __future__ import annotations
 
 # --- sys.path bootstrap ---
@@ -26,16 +27,42 @@ def norm(s: str) -> str:
     return re.sub(r"[^a-z0-9]+", "", (s or "").strip().lower())
 
 
-RANK_KEYS = {"rank", "rk", "overallrank", "overall", "bigboard", "boardrank"}
-NAME_KEYS = {"name", "player", "playername", "full_name", "fullname"}
-SCHOOL_KEYS = {"school", "college", "team"}
-POS_KEYS = {"pos", "position"}
+RANK_KEYS = {
+    "rank",
+    "rk",
+    "overallrank",
+    "overall",
+    "bigboard",
+    "boardrank",
+    "overallrk",
+    "overall_rk",
+}
+NAME_KEYS = {
+    "name",
+    "player",
+    "playername",
+    "player_name",
+    "full_name",
+    "fullname",
+    "prospect",
+    "prospectname",
+}
+SCHOOL_KEYS = {
+    "school",
+    "college",
+    "college_name",
+    "collegename",
+    "team",
+    "team_name",
+    "university",
+}
+POS_KEYS = {"pos", "position", "positiongroup", "position_group"}
 
 
 def detect_columns(fieldnames: List[str]) -> Dict[str, str]:
     """
     Returns mapping {logical: actual_header}
-    logical keys: rank, name, school (optional), position (optional)
+    logical keys: rank, player_name, school (optional), position (optional)
     """
     header_map = {norm(h): h for h in (fieldnames or [])}
 
@@ -54,7 +81,7 @@ def detect_columns(fieldnames: List[str]) -> Dict[str, str]:
     if rank_h:
         out["rank"] = rank_h
     if name_h:
-        out["name"] = name_h
+        out["player_name"] = name_h
     if school_h:
         out["school"] = school_h
     if pos_h:
@@ -73,7 +100,6 @@ def try_open_reader(p: Path):
         try:
             f = p.open("r", encoding=enc, newline="")
             reader = csv.DictReader(f)
-            # force header read
             _ = reader.fieldnames
             return reader, enc, f
         except Exception as e:
@@ -97,10 +123,9 @@ def stage_file(src: Path, season: int) -> Tuple[str, Optional[Path], int, str]:
 
     with fh:
         cols = detect_columns(reader.fieldnames or [])
-        if "rank" not in cols or "name" not in cols:
-            return ("SKIP", None, 0, "missing rank or name column")
+        if "rank" not in cols or "player_name" not in cols:
+            return ("SKIP", None, 0, "missing rank or player_name column")
 
-        # Write staged output
         out_dir = PATHS.imports / "rankings" / "staged" / str(season)
         out_dir.mkdir(parents=True, exist_ok=True)
 
@@ -108,8 +133,8 @@ def stage_file(src: Path, season: int) -> Tuple[str, Optional[Path], int, str]:
         out_name = f"{src.stem}_staged_{ts}.csv"
         out_path = out_dir / out_name
 
-        # Normalize output headers to standard set
-        fieldnames_out = ["rank", "name", "school", "position"]
+        # Canonical staged schema for ingest
+        fieldnames_out = ["rank", "player_name", "school", "position"]
 
         rows_written = 0
         with out_path.open("w", encoding="utf-8-sig", newline="") as out_f:
@@ -118,9 +143,15 @@ def stage_file(src: Path, season: int) -> Tuple[str, Optional[Path], int, str]:
 
             for row in reader:
                 raw_rank = (row.get(cols["rank"]) or "").strip()
-                raw_name = (row.get(cols["name"]) or "").strip()
-                raw_school = (row.get(cols.get("school", ""), "") or "").strip() if cols.get("school") else ""
-                raw_pos = (row.get(cols.get("position", ""), "") or "").strip() if cols.get("position") else ""
+                raw_name = (row.get(cols["player_name"]) or "").strip()
+
+                raw_school = ""
+                if cols.get("school"):
+                    raw_school = (row.get(cols["school"]) or "").strip()
+
+                raw_pos = ""
+                if cols.get("position"):
+                    raw_pos = (row.get(cols["position"]) or "").strip()
 
                 if not raw_rank or not raw_name:
                     continue
@@ -128,7 +159,7 @@ def stage_file(src: Path, season: int) -> Tuple[str, Optional[Path], int, str]:
                 w.writerow(
                     {
                         "rank": raw_rank,
-                        "name": raw_name,
+                        "player_name": raw_name,
                         "school": raw_school,
                         "position": raw_pos,
                     }
@@ -144,7 +175,8 @@ def stage_file(src: Path, season: int) -> Tuple[str, Optional[Path], int, str]:
 
         return ("OK", out_path, rows_written, f"encoding={enc}")
 
-def main():
+
+def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--dir", required=True, help="Folder containing raw rankings CSVs")
     ap.add_argument("--season", type=int, default=2026)

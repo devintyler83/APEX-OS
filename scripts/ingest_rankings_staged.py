@@ -1,3 +1,4 @@
+# scripts/ingest_rankings_staged.py
 from __future__ import annotations
 
 # --- sys.path bootstrap so "python scripts\..." always works ---
@@ -15,7 +16,7 @@ import hashlib
 import json
 import re
 from datetime import datetime, timezone
-from typing import Dict, Iterable, Optional, Tuple
+from typing import Dict, Optional, Tuple
 
 from draftos.config import PATHS
 from draftos.db.connect import connect
@@ -25,7 +26,7 @@ TS_RE = re.compile(r"_staged_(\d{8})T\d{6}Z\.csv$", re.IGNORECASE)
 
 
 def utcnow_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
 
 def today_utc_date() -> str:
@@ -75,7 +76,6 @@ def upsert_source(conn, source_name: str, *, source_type: str = "ranking") -> in
     if row:
         return int(row["source_id"])
 
-    # Handle schema with/without is_active + superseded_by_source_id (migrations add these)
     has_is_active = sources_has_col(conn, "is_active")
     has_sup = sources_has_col(conn, "superseded_by_source_id")
     has_url = sources_has_col(conn, "url")
@@ -109,9 +109,6 @@ def upsert_source(conn, source_name: str, *, source_type: str = "ranking") -> in
 
 
 def stable_source_player_key(player_name: str, school: str, position: str) -> str:
-    """
-    Stable within a source+season: depends on identity-ish fields, NOT rank.
-    """
     def k(s: str) -> str:
         s = (s or "").strip().lower()
         s = re.sub(r"\s+", " ", s)
@@ -194,10 +191,6 @@ def parse_float(val) -> Optional[float]:
 
 
 def infer_ranking_date_from_filename(path: Path) -> str:
-    """
-    From: source_2026_staged_YYYYMMDDTHHMMSSZ.csv -> YYYY-MM-DD
-    Else: today UTC.
-    """
     m = TS_RE.search(path.name)
     if not m:
         return today_utc_date()
@@ -205,15 +198,19 @@ def infer_ranking_date_from_filename(path: Path) -> str:
     return f"{ymd[0:4]}-{ymd[4:6]}-{ymd[6:8]}"
 
 
-def ingest_staged_file(conn, *, source_name: str, season_id: int, path: Path, ranking_date: Optional[str]) -> Tuple[int, int]:
-    """
-    Returns (players_upserted_count, rankings_inserted_count) for this file.
-    """
+def ingest_staged_file(
+    conn,
+    *,
+    source_name: str,
+    season_id: int,
+    path: Path,
+    ranking_date: Optional[str],
+) -> Tuple[int, int]:
     source_id = upsert_source(conn, source_name, source_type="ranking")
     ingested_at = utcnow_iso()
     rdate = ranking_date or infer_ranking_date_from_filename(path)
 
-    f, enc = open_csv_with_fallbacks(path)
+    f, _enc = open_csv_with_fallbacks(path)
     players_new = 0
     rankings_new = 0
 
@@ -222,23 +219,34 @@ def ingest_staged_file(conn, *, source_name: str, season_id: int, path: Path, ra
         if not reader.fieldnames:
             return (0, 0)
 
-        required = {"rank", "player_name", "school", "position"}
-        missing = [c for c in required if c not in set(reader.fieldnames)]
-        if missing:
-            raise SystemExit(f"FAIL: staged file missing columns {missing}: {path}")
+        fields = set(reader.fieldnames)
+
+        # Backward-compatible: accept player_name or name
+        if "player_name" in fields:
+            name_col = "player_name"
+        elif "name" in fields:
+            name_col = "name"
+        else:
+            raise SystemExit(f"FAIL: staged file missing player_name/name: {path}")
+
+        if "rank" not in fields:
+            raise SystemExit(f"FAIL: staged file missing rank: {path}")
+
+        # These can be blank, but must exist as columns if present in staged schema
+        school_col = "school" if "school" in fields else None
+        pos_col = "position" if "position" in fields else None
 
         for row in reader:
             overall_rank = parse_int(row.get("rank"))
-            player_name = (row.get("player_name") or "").strip()
-            school = (row.get("school") or "").strip()
-            position = (row.get("position") or "").strip()
+            player_name = (row.get(name_col) or "").strip()
+            school = (row.get(school_col) or "").strip() if school_col else ""
+            position = (row.get(pos_col) or "").strip() if pos_col else ""
 
             if overall_rank is None or not player_name:
                 continue
 
             player_key = stable_source_player_key(player_name, school, position)
 
-            # Upsert source_player
             before = conn.execute(
                 "SELECT 1 FROM source_players WHERE source_id=? AND season_id=? AND source_player_key=?",
                 (source_id, season_id, player_key),
@@ -259,7 +267,6 @@ def ingest_staged_file(conn, *, source_name: str, season_id: int, path: Path, ra
             if before is None:
                 players_new += 1
 
-            # Insert ranking row if not exists for this date
             exists = conn.execute(
                 """
                 SELECT 1 FROM source_rankings
@@ -299,20 +306,26 @@ def ingest_staged_file(conn, *, source_name: str, season_id: int, path: Path, ra
     return (players_new, rankings_new)
 
 
-def main():
+def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--season", type=int, default=2026)
-    ap.add_argument("--ranking-date", type=str, default="", help="Override ranking_date YYYY-MM-DD for ALL files. Default: infer from filename.")
-    ap.add_argument("--apply", type=int, default=0, help="0 dry run, 1 apply writes (backs up DB)")
+    ap.add_argument(
+        "--ranking-date",
+        type=str,
+        default="",
+        help="Override ranking_date YYYY-MM-DD for ALL files. Default: infer from filename.",
+    )
+    ap.add_argument("--apply", type=int, default=0, choices=[0, 1], help="0 dry run, 1 apply writes (backs up DB)")
     args = ap.parse_args()
 
-    imports_root = ROOT / "data" / "imports" / "rankings"
-    staged_files = sorted(imports_root.glob("*/*/staged/*.csv"))
-    if not staged_files:
-        staged_files = sorted(imports_root.glob("*/staged/*.csv"))  # tolerate missing nesting
+    # Season-scoped staged dir only (deterministic)
+    staged_dir = PATHS.imports / "rankings" / "staged" / str(args.season)
+    if not staged_dir.exists():
+        raise SystemExit(f"FAIL: staged dir not found: {staged_dir}")
 
+    staged_files = sorted(staged_dir.glob("*.csv"))
     if not staged_files:
-        raise SystemExit(f"FAIL: no staged files found under {imports_root}")
+        raise SystemExit(f"FAIL: no staged files found under {staged_dir}")
 
     ranking_date = args.ranking_date.strip() or None
 
@@ -329,11 +342,11 @@ def main():
         season_id = get_season_id(conn, args.season)
 
         for p in staged_files:
-            # expected: ...\rankings\<source>\staged\<file>
-            source_name = p.parent.parent.name.lower() if p.parent.name == "staged" else p.parent.name.lower()
+            # Use filename stem as source_name (best available without nested folders)
+            # Example: "pff_staged_..." -> "pff"
+            source_name = p.name.split("_staged_")[0].strip().lower() or "unknown"
 
             if args.apply != 1:
-                # dry run counts without writing
                 print(f"PLAN: would ingest {source_name} <- {p.name} (ranking_date={ranking_date or infer_ranking_date_from_filename(p)})")
                 continue
 

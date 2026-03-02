@@ -1,148 +1,128 @@
+# scripts/run_weekly_update.py
 from __future__ import annotations
 
-# --- sys.path bootstrap ---
+import subprocess
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
-# --- end bootstrap ---
-
-import argparse
-import subprocess
-from typing import List
+from draftos.config import PATHS
 
 
-def run(cmd: List[str], *, cwd: Path, check: bool = True) -> int:
-    print("\n" + "=" * 90)
+def run(cmd: list[str]) -> None:
     print("RUN:", " ".join(cmd))
-    print("=" * 90)
-    p = subprocess.run(cmd, cwd=str(cwd))
-    if check and p.returncode != 0:
-        raise SystemExit(f"FAIL: command failed ({p.returncode}): {' '.join(cmd)}")
-    return p.returncode
+    subprocess.check_call(cmd)
 
 
-def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--season", type=int, default=2026)
-    ap.add_argument("--model", type=str, default="v1_default")
+def pymod(module: str, *args: str) -> list[str]:
+    return [sys.executable, "-m", module, *args]
 
-    ap.add_argument("--stage-dir", type=str, default="", help="Folder containing raw rankings CSVs")
-    ap.add_argument("--ranking-date", type=str, default="", help="Override ranking_date YYYY-MM-DD for ALL ingested files")
 
-    ap.add_argument("--export-min-sources", type=int, default=8)
-    ap.add_argument("--export-elite-min-sources", type=int, default=6)
-    ap.add_argument("--export-qb-min-sources", type=int, default=6)
+def pyfile(path: Path, *args: str) -> list[str]:
+    return [sys.executable, str(path), *args]
 
-    ap.add_argument("--apply", type=int, default=0)
-    args = ap.parse_args()
 
-    cwd = ROOT
+def main() -> None:
+    root = PATHS.root
+    scripts = root / "scripts"
+    season = 2026
+    model = "v1_default"
+    window = 3
 
-    print("DraftOS Weekly Update Orchestrator")
-    print(f"ROOT:   {ROOT}")
-    print(f"SEASON: {args.season}")
-    print(f"MODEL:  {args.model}")
-    print(f"APPLY:  {args.apply}")
-    if args.stage_dir:
-        print(f"STAGE:  {args.stage_dir}")
-    if args.ranking_date:
-        print(f"AS-OF:  {args.ranking_date}")
+    rankings_dir = root / "data" / "imports" / "rankings" / "raw" / str(season)
+    if not rankings_dir.exists() or not rankings_dir.is_dir():
+        raise SystemExit(f"FAIL: rankings dir not found: {rankings_dir}")
+    print(f"OK: rankings dir: {rankings_dir}")
 
-    # Always safe checks first
-    run(["python", "-m", "draftos.db.migrate"], cwd=cwd, check=True)
-    run(["python", "-m", "scripts.doctor"], cwd=cwd, check=True)
+    # 1) STAGING (no DB writes)
+    run(pyfile(scripts / "stage_rankings_csv.py", "--dir", str(rankings_dir), "--season", str(season)))
 
-    if args.apply != 1:
-        print("\nDRY RUN orchestrator: stopping after migrate+doctor. Re-run with --apply 1 to execute write steps.")
-        return
+    # 2) INGEST (WRITE)
+    run(pyfile(scripts / "ingest_rankings_staged.py", "--season", str(season), "--apply", "1"))
 
-    # 1) Stage (optional). Stage script now skips junk files instead of failing.
-    if args.stage_dir:
-        run(["python", "scripts/stage_rankings_csv.py", "--dir", args.stage_dir, "--season", str(args.season)], cwd=cwd)
+    # 3) BOOTSTRAP (WRITE)
+    run(pyfile(scripts / "patch_0007_bootstrap_prospects_2026.py", "--apply", "1"))
 
-    # 2) Ingest staged (writes + backup inside)
-    ingest_cmd = ["python", "scripts/ingest_rankings_staged.py", "--season", str(args.season), "--apply", "1"]
-    if args.ranking_date:
-        ingest_cmd += ["--ranking-date", args.ranking_date]
-    run(ingest_cmd, cwd=cwd)
+    # 4) SOURCE CANONICALIZATION (WRITE)
+    run(pymod("scripts.patch_source_canonicalization_2026", "--apply", "1"))
 
-    # 3) Bootstrap prospects/maps (writes + backup inside)
-    run(["python", "scripts/patch_0007_bootstrap_prospects_2026.py", "--apply", "1"], cwd=cwd)
+    # 5) CONSENSUS (WRITE)
+    run(pyfile(scripts / "build_consensus_2026.py", "--apply", "1"))
 
-    # 4) Consensus (writes + backup inside)
-    run(["python", "scripts/build_consensus_2026.py", "--draft-year", str(args.season), "--apply", "1"], cwd=cwd)
+    # 6) MODEL OUTPUTS (WRITE)
+    run(pyfile(scripts / "build_model_outputs_v1_default_2026.py", "--apply", "1"))
 
-    # 5) Model outputs (writes + backup inside)
+    # 7) SNAPSHOT (WRITE)
+    run(pymod("scripts.snapshot_board", "--season", str(season), "--model", model, "--apply", "1"))
+
+    # 8) SNAPSHOT COVERAGE (WRITE)
+    run(pymod("scripts.compute_snapshot_coverage", "--season", str(season), "--model", model, "--apply", "1"))
+
+    # 9) SNAPSHOT METRICS (WRITE)
     run(
-        [
-            "python",
-            "scripts/build_model_outputs_v1_default_2026.py",
-            "--draft-year",
-            str(args.season),
+        pymod(
+            "scripts.compute_snapshot_metrics",
+            "--season",
+            str(season),
             "--model",
-            args.model,
+            model,
+            "--window",
+            str(window),
             "--apply",
             "1",
-        ],
-        cwd=cwd,
+        )
     )
 
-    # 6) Doctor gate
-    run(["python", "-m", "scripts.doctor"], cwd=cwd, check=True)
-
-    # 7) Exports (no DB writes)
+    # 10) SOURCE SNAPSHOT METRICS (WRITE)
     run(
-        ["python", "scripts/export_board_csv.py", "--draft-year", str(args.season), "--model", args.model, "--min-sources", "1"],
-        cwd=cwd,
-    )
-    run(
-        [
-            "python",
-            "scripts/export_board_csv.py",
-            "--draft-year",
-            str(args.season),
+        pymod(
+            "scripts.compute_source_snapshot_metrics",
+            "--season",
+            str(season),
             "--model",
-            args.model,
-            "--min-sources",
-            str(args.export_min_sources),
-        ],
-        cwd=cwd,
-    )
-    run(
-        [
-            "python",
-            "scripts/export_board_csv.py",
-            "--draft-year",
-            str(args.season),
-            "--model",
-            args.model,
-            "--tier",
-            "Elite",
-            "--min-sources",
-            str(args.export_elite_min_sources),
-        ],
-        cwd=cwd,
-    )
-    run(
-        [
-            "python",
-            "scripts/export_board_csv.py",
-            "--draft-year",
-            str(args.season),
-            "--model",
-            args.model,
-            "--position-group",
-            "QB",
-            "--min-sources",
-            str(args.export_qb_min_sources),
-        ],
-        cwd=cwd,
+            model,
+            "--stale-days",
+            "7",
+            "--coverage-min",
+            "0.50",
+            "--mad-noisy",
+            "50.0",
+            "--apply",
+            "1",
+        )
     )
 
-    print("\nOK: weekly pipeline completed successfully.")
+    # 11) SNAPSHOT CONFIDENCE (WRITE)
+    run(
+        pymod(
+            "scripts.compute_snapshot_confidence",
+            "--season",
+            str(season),
+            "--model",
+            model,
+            "--apply",
+            "1",
+        )
+    )
+
+    # 12) BOARD EXPORT (read-only)
+    run(pymod("scripts.export_board_csv", "--season", str(season), "--model", model, "--window", str(window)))
+
+    # 13) MOVERS/VOLATILITY EXPORTS (read-only)
+    run(pymod("scripts.export_movers_csv", "--season", str(season), "--model", model, "--window", str(window), "--top", "50"))
+
+    # 14) SOURCE HEALTH EXPORT (read-only)
+    run(pymod("scripts.export_source_health_csv", "--season", str(season), "--model", model))
+
+    # 15) CONFIDENCE SUMMARY EXPORT (read-only)
+    run(pymod("scripts.export_confidence_summary_csv", "--season", str(season), "--model", model, "--elite-top", "100", "--elite-show", "25"))
+
+    # 16) HTML REPORT PACK (read-only)
+    run(pymod("scripts.export_reports_html", "--season", str(season), "--model", model, "--window", str(window)))
+
+    # 17) DOCTOR (read-only)
+    run(pyfile(scripts / "doctor.py"))
+
+    print("OK: weekly pipeline completed successfully.")
 
 
 if __name__ == "__main__":

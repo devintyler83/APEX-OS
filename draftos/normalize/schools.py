@@ -28,7 +28,6 @@ def school_key(school: str | None) -> Optional[str]:
     raw = normalize_school_raw(school)
     if not raw:
         return None
-
     s = raw.lower().strip()
     s = _PARENS_RE.sub("", s)          # remove "(FL)" etc
     s = re.sub(r"[^\w\s-]", "", s)     # drop punctuation

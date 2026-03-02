@@ -1,0 +1,143 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DraftOS Report Pack</title>
+  <style>
+    :root { --bg:#0b0f14; --panel:#111823; --text:#e7eef7; --muted:#9bb0c5; --line:#243246; }
+    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background:var(--bg); color:var(--text); }
+    a { color:#7fb7ff; text-decoration:none; }
+    a:hover { text-decoration:underline; }
+    .wrap { max-width: 1320px; margin: 0 auto; padding: 20px; }
+    .top { display:flex; justify-content:space-between; align-items:flex-end; gap:16px; }
+    h1 { font-size: 22px; margin:0; }
+    .sub { color: var(--muted); font-size: 13px; margin-top:6px; }
+    .nav { margin: 16px 0 18px; padding: 12px; background:var(--panel); border:1px solid var(--line); border-radius: 12px; }
+    .nav a { margin-right: 14px; font-size: 13px; }
+    .card { background:var(--panel); border:1px solid var(--line); border-radius: 12px; padding: 14px; }
+    .tablewrap { overflow:auto; border-radius: 10px; border:1px solid var(--line); }
+    table { border-collapse: collapse; width: 100%; background: #0d131d; }
+    th, td { border-bottom: 1px solid #1a273a; padding: 8px 10px; font-size: 12px; white-space: nowrap; }
+    th { position: sticky; top:0; background:#0f1724; cursor:pointer; }
+    tr:hover td { background:#0f1a2b; }
+    .meta { color: var(--muted); font-size: 12px; }
+    .chip { display:inline-block; padding: 2px 8px; border-radius: 999px; border:1px solid var(--line); font-size: 12px; }
+    .chip-good { border-color:#1f6f3a; color:#a7f3c5; background:#0d2016; }
+    .chip-mid { border-color:#6b5b1f; color:#ffe7a1; background:#221a0d; }
+    .chip-bad { border-color:#7a2430; color:#ffc1c7; background:#230d12; }
+    .missing { color:#ffb3ba; }
+    </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <div>
+        <h1>DraftOS Report Pack</h1>
+        <div class="sub">Season 2026, model v1_default, snapshot 3 (2026-03-01)</div>
+      </div>
+      <div class="meta">Generated: 2026-03-02T00:17:45+00:00</div>
+    </div>
+    <div class="nav"><a href="board.html">Board</a> <a href="movers_daily.html">Movers Daily</a> <a href="movers_window.html">Movers Window 3</a> <a href="volatility.html">Volatility Window 3</a> <a href="source_health.html">Source Health</a> <a href="confidence.html">Confidence Summary</a> <a href="index.html">Index</a></div>
+    <div class="card">
+      
+      <div class="meta">
+        Season 2026, model v1_default, snapshot 3 (2026-03-01)<br>
+        Reports directory: C:\DraftOS\exports\reports
+      </div>
+      <div class="tablewrap" style="margin-top:12px;">
+        <table>
+          <thead>
+            <tr><th>Report</th><th>Status</th><th>Source CSV</th></tr>
+          </thead>
+          <tbody>
+            
+            <tr>
+              <td><a href="board.html">Board</a></td>
+              <td><span class="chip chip-good">OK</span></td>
+              <td>board_2026_v1_default.csv</td>
+            </tr>
+            
+            <tr>
+              <td><a href="movers_daily.html">Movers Daily</a></td>
+              <td><span class="chip chip-good">OK</span></td>
+              <td>movers_daily_2026_v1_default.csv</td>
+            </tr>
+            
+            <tr>
+              <td><a href="movers_window.html">Movers Window 3</a></td>
+              <td><span class="chip chip-good">OK</span></td>
+              <td>movers_window3_2026_v1_default.csv</td>
+            </tr>
+            
+            <tr>
+              <td><a href="volatility.html">Volatility Window 3</a></td>
+              <td><span class="chip chip-good">OK</span></td>
+              <td>volatility_window3_2026_v1_default.csv</td>
+            </tr>
+            
+            <tr>
+              <td><a href="source_health.html">Source Health</a></td>
+              <td><span class="chip chip-good">OK</span></td>
+              <td>source_health_20260301_2026_v1_default.csv</td>
+            </tr>
+            
+            <tr>
+              <td><a href="confidence.html">Confidence Summary</a></td>
+              <td><span class="chip chip-good">OK</span></td>
+              <td>confidence_summary_20260301_2026_v1_default.csv</td>
+            </tr>
+            
+          </tbody>
+        </table>
+      </div>
+      <div class="meta" style="margin-top:12px;">
+        Tip: click any column header in a report table to sort.
+      </div>
+    
+    </div>
+  </div>
+  <script>
+    // Simple client-side sortable tables. Deterministic HTML output, interactive sorting in browser.
+    (function(){
+      function asNumber(x){
+        var t = (x || "").replace(/,/g,"").trim();
+        if(t === "") return null;
+        var n = Number(t);
+        return isNaN(n) ? null : n;
+      }
+      function getCellText(td){
+        if(!td) return "";
+        var span = td.querySelector("span");
+        return span ? span.textContent : td.textContent;
+      }
+      function sortTable(table, col, dir){
+        var tbody = table.tBodies[0];
+        var rows = Array.prototype.slice.call(tbody.rows, 0);
+        rows.sort(function(a,b){
+          var av = getCellText(a.cells[col]);
+          var bv = getCellText(b.cells[col]);
+          var an = asNumber(av);
+          var bn = asNumber(bv);
+          if(an !== null && bn !== null){
+            return dir * (an - bn);
+          }
+          return dir * av.localeCompare(bv);
+        });
+        rows.forEach(function(r){ tbody.appendChild(r); });
+      }
+      document.querySelectorAll("table.sortable").forEach(function(table){
+        var ths = table.tHead ? table.tHead.rows[0].cells : [];
+        for(let i=0;i<ths.length;i++){
+          let th = ths[i];
+          th.addEventListener("click", function(){
+            var dir = th.getAttribute("data-dir") === "asc" ? -1 : 1;
+            th.setAttribute("data-dir", dir === 1 ? "asc" : "desc");
+            sortTable(table, i, dir);
+          });
+        }
+      });
+    })();
+    </script>
+</body>
+</html>
