@@ -134,8 +134,11 @@ def main() -> None:
     # 18) SNAPSHOT PACKET (read-only, immutable artifact bundle)
     run(pymod("scripts.build_snapshot_packet", "--season", str(season), "--model", model))
 
+    # 19) PUBLISH LATEST PACKET (read-only pointer to newest immutable packet)
+    run(pymod("scripts.publish_latest_packet"))
     print("OK: weekly pipeline completed successfully.")
 
 
 if __name__ == "__main__":
     main()
+
