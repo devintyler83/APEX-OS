@@ -118,7 +118,10 @@ def latest_snapshot_id_and_date(conn, season_id: int, model_id: int) -> Tuple[in
 def count_for_snapshot(conn, table: str, snapshot_id: int) -> int:
     if not table_exists(conn, table):
         raise SystemExit(f"FAIL: missing required table: {table}")
-    row = conn.execute(f"SELECT COUNT(*) AS n FROM {table} WHERE snapshot_id = ?;", (snapshot_id,)).fetchone()
+    row = conn.execute(
+        f"SELECT COUNT(*) AS n FROM {table} WHERE snapshot_id = ?;",
+        (snapshot_id,),
+    ).fetchone()
     return int(row["n"])
 
 

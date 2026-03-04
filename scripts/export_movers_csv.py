@@ -6,6 +6,7 @@ import csv
 from pathlib import Path
 from typing import Dict, List, Optional, Set
 
+
 from draftos.db.connect import connect
 
 
@@ -74,7 +75,6 @@ def load_prospect_names(prospect_ids: List[int]) -> Dict[int, str]:
         if not name_col:
             return {}
 
-        # Chunking is unnecessary at current scale, but keep query safe.
         placeholders = ",".join(["?"] * len(prospect_ids))
         rows = conn.execute(
             f"SELECT prospect_id, {name_col} AS full_name FROM prospects WHERE prospect_id IN ({placeholders});",
@@ -85,6 +85,14 @@ def load_prospect_names(prospect_ids: List[int]) -> Dict[int, str]:
         for r in rows:
             out[int(r["prospect_id"])] = (r["full_name"] or "").strip()
         return out
+
+
+def _nonzero_int_field(r: Dict[str, str], key: str) -> bool:
+    return _to_int(r.get(key, "")) != 0
+
+
+def _nonzero_float_field(r: Dict[str, str], key: str) -> bool:
+    return abs(_to_float(r.get(key, ""))) > 0.0
 
 
 def main() -> None:
@@ -102,7 +110,6 @@ def main() -> None:
     # Ensure season/model present and normalize IDs
     prospect_ids: List[int] = []
     for r in rows:
-        # Always populate these in movers exports
         r["season"] = str(args.season)
         r["model"] = str(args.model)
 
@@ -114,17 +121,12 @@ def main() -> None:
     name_map = load_prospect_names(sorted(set(prospect_ids)))
 
     for r in rows:
-        # Compute sort helper fields (kept internal, not exported)
-        r["_delta_rank_i"] = str(_to_int(r.get("delta_rank", "")))
-        r["_mom_rank_i"] = str(_to_int(r.get(f"momentum_rank_{args.window}", "")))
-        r["_vol_mad_f"] = str(_to_float(r.get(f"volatility_rank_mad_{args.window}", "")))
-
-        # Guarantee player_name
         pn = (r.get("player_name") or "").strip()
         if pn == "":
             pid = _to_int(r.get("prospect_id", ""))
             r["player_name"] = name_map.get(pid, "")
 
+    # Common export header (keeps existing columns, adds confidence fields already present on board)
     header_common = [
         "season",
         "model",
@@ -143,16 +145,27 @@ def main() -> None:
         f"volatility_rank_std_{args.window}",
         "momentum_chip",
         "volatility_chip",
+        "confidence_score",
+        "confidence_band",
+        "confidence_coverage_pct",
+        "confidence_rank_std",
+        "confidence_rank_mad",
+        "confidence_sources_present",
+        "confidence_active_sources",
     ]
 
-    # Daily movers (delta_rank): positive = improved (moved up)
+    # -----------------------------
+    # 1) Daily movers (delta_rank)
+    # -----------------------------
+    daily_pool = [r for r in rows if _nonzero_int_field(r, "delta_rank")]
+
     risers_daily = sorted(
-        rows,
+        daily_pool,
         key=lambda r: (_to_int(r.get("delta_rank", "")), -_to_int(r.get("rank_overall", "0"))),
         reverse=True,
     )
     fallers_daily = sorted(
-        rows,
+        daily_pool,
         key=lambda r: (_to_int(r.get("delta_rank", "")), _to_int(r.get("rank_overall", "0"))),
     )
 
@@ -160,15 +173,19 @@ def main() -> None:
     out_daily = exports_dir / f"movers_daily_{args.season}_{args.model}.csv"
     write_csv(out_daily, header_common, movers_daily)
 
-    # Window movers (momentum_rank_N)
+    # -----------------------------------------
+    # 2) Window movers (momentum_rank_{window})
+    # -----------------------------------------
     mom_col = f"momentum_rank_{args.window}"
+    win_pool = [r for r in rows if _nonzero_int_field(r, mom_col)]
+
     risers_win = sorted(
-        rows,
+        win_pool,
         key=lambda r: (_to_int(r.get(mom_col, "")), -_to_int(r.get("rank_overall", "0"))),
         reverse=True,
     )
     fallers_win = sorted(
-        rows,
+        win_pool,
         key=lambda r: (_to_int(r.get(mom_col, "")), _to_int(r.get("rank_overall", "0"))),
     )
 
@@ -176,15 +193,57 @@ def main() -> None:
     out_win = exports_dir / f"movers_window{args.window}_{args.season}_{args.model}.csv"
     write_csv(out_win, header_common, movers_win)
 
-    # Volatility (rank MAD)
+    # -----------------------------
+    # 3) Volatility (rank MAD)
+    # -----------------------------
     vol_col = f"volatility_rank_mad_{args.window}"
+    vol_pool = [r for r in rows if _to_float(r.get(vol_col, "")) > 0.0]
+
     vol_rows = sorted(
-        rows,
+        vol_pool,
         key=lambda r: (_to_float(r.get(vol_col, "")), -_to_int(r.get("rank_overall", "0"))),
         reverse=True,
     )
     out_vol = exports_dir / f"volatility_window{args.window}_{args.season}_{args.model}.csv"
     write_csv(out_vol, header_common, vol_rows[: (args.top * 2)])
+
+    # --------------------------------
+    # 4) NEW: Score movers (delta_score)
+    # --------------------------------
+    score_pool = [r for r in rows if _nonzero_float_field(r, "delta_score")]
+
+    risers_score = sorted(
+        score_pool,
+        key=lambda r: (_to_float(r.get("delta_score", "")), -_to_int(r.get("rank_overall", "0"))),
+        reverse=True,
+    )
+    fallers_score = sorted(
+        score_pool,
+        key=lambda r: (_to_float(r.get("delta_score", "")), _to_int(r.get("rank_overall", "0"))),
+    )
+
+    movers_score = risers_score[: args.top] + fallers_score[: args.top]
+    out_score = exports_dir / f"movers_score_daily_{args.season}_{args.model}.csv"
+    write_csv(out_score, header_common, movers_score)
+
+    # --------------------------------------
+    # 5) NEW: Coverage movers (delta_coverage)
+    # --------------------------------------
+    cov_pool = [r for r in rows if _nonzero_int_field(r, "delta_coverage")]
+
+    risers_cov = sorted(
+        cov_pool,
+        key=lambda r: (_to_int(r.get("delta_coverage", "")), -_to_int(r.get("rank_overall", "0"))),
+        reverse=True,
+    )
+    fallers_cov = sorted(
+        cov_pool,
+        key=lambda r: (_to_int(r.get("delta_coverage", "")), _to_int(r.get("rank_overall", "0"))),
+    )
+
+    movers_cov = risers_cov[: args.top] + fallers_cov[: args.top]
+    out_cov = exports_dir / f"movers_coverage_daily_{args.season}_{args.model}.csv"
+    write_csv(out_cov, header_common, movers_cov)
 
 
 if __name__ == "__main__":

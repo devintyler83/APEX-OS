@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import argparse
 import csv
@@ -109,7 +109,6 @@ def get_latest_snapshot_date(conn, season_id: int, model_id: int) -> Tuple[int, 
 
 
 def yyyymmdd_from_iso(dt: str) -> str:
-    # dt like "2026-03-01" or "2026-03-01T23:40:31+00:00"
     d = dt[:10].replace("-", "")
     if len(d) != 8:
         return datetime.now(timezone.utc).strftime("%Y%m%d")
@@ -123,7 +122,6 @@ def find_best_file(exports_dir: Path, patterns: List[str]) -> Optional[Path]:
     matches = [p for p in matches if p.is_file()]
     if not matches:
         return None
-    # Prefer newest by modified time for "best available"
     matches.sort(key=lambda p: p.stat().st_mtime, reverse=True)
     return matches[0]
 
@@ -212,7 +210,6 @@ def html_page(title: str, subtitle: str, body_html: str, nav_html: str) -> str:
     .missing { color:#ffb3ba; }
     """
     js = """
-    // Simple client-side sortable tables. Deterministic HTML output, interactive sorting in browser.
     (function(){
       function asNumber(x){
         var t = (x || "").replace(/,/g,"").trim();
@@ -316,7 +313,6 @@ def main() -> None:
 
     stamp = yyyymmdd_from_iso(snapshot_date_utc)
 
-    # Best-effort file discovery (stable names preferred, fallback to newest matching)
     board_file = find_best_file(
         exports_dir,
         [
@@ -330,8 +326,14 @@ def main() -> None:
     movers_window = find_best_file(exports_dir, [f"movers_window{args.window}_{args.season}_{args.model}.csv"])
     volatility_window = find_best_file(exports_dir, [f"volatility_window{args.window}_{args.season}_{args.model}.csv"])
 
-    source_health = find_best_file(exports_dir, [f"source_health_{stamp}_{args.season}_{args.model}.csv", f"source_health_*_{args.season}_{args.model}.csv"])
-    conf_summary = find_best_file(exports_dir, [f"confidence_summary_{stamp}_{args.season}_{args.model}.csv", f"confidence_summary_*_{args.season}_{args.model}.csv"])
+    source_health = find_best_file(
+        exports_dir,
+        [f"source_health_{stamp}_{args.season}_{args.model}.csv", f"source_health_*_{args.season}_{args.model}.csv"],
+    )
+    conf_summary = find_best_file(
+        exports_dir,
+        [f"confidence_summary_{stamp}_{args.season}_{args.model}.csv", f"confidence_summary_*_{args.season}_{args.model}.csv"],
+    )
 
     pages: List[Tuple[str, str, Optional[Path]]] = [
         ("Board", "board.html", board_file),
@@ -342,10 +344,12 @@ def main() -> None:
         ("Confidence Summary", "confidence.html", conf_summary),
     ]
 
-    nav_links = " ".join([f'<a href="{html.escape(fname)}">{html.escape(label)}</a>' for (label, fname, _p) in pages] + ['<a href="index.html">Index</a>'])
+    nav_links = " ".join(
+        [f'<a href="{html.escape(fname)}">{html.escape(label)}</a>' for (label, fname, _p) in pages]
+        + ['<a href="index.html">Index</a>']
+    )
     subtitle = f"Season {args.season}, model {args.model}, snapshot {snapshot_id} ({snapshot_date_utc})"
 
-    # Build each page
     for label, fname, path in pages:
         if path is None:
             body = f'<div class="missing">Missing export file for {html.escape(label)}. Run the weekly pipeline to generate exports.</div>'
@@ -383,7 +387,6 @@ def main() -> None:
         page = html_page(f"DraftOS Report: {label}", subtitle, body, nav_links)
         write_text(reports_dir / fname, page)
 
-    # Index page
     items = []
     for label, fname, path in pages:
         status = "OK" if path and path.exists() else "Missing"

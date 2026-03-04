@@ -31,3 +31,17 @@ data/edge/backups/
 
 # Local DB
 data/edge/*.sqlite
+
+# DraftOS generated artifacts
+draftos.sqlite
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+
+exports/
+exports/packets/
+**/*.bak
+
+# Python
+__pycache__/
+*.pyc

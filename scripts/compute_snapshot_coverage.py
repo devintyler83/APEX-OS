@@ -1,3 +1,4 @@
+# scripts/compute_snapshot_coverage.py
 from __future__ import annotations
 
 import argparse
@@ -146,6 +147,7 @@ def main() -> None:
     if not PATHS.db.exists():
         raise SystemExit(f"FAIL: DB not found: {PATHS.db}")
 
+    # Phase 1: compute coverage map (dry run or prep for apply)
     with connect() as conn:
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA foreign_keys = OFF;")
@@ -237,16 +239,25 @@ def main() -> None:
         min_cov = min(cov_counts) if cov_counts else 0
         max_cov = max(cov_counts) if cov_counts else 0
 
+        # Snapshot universe size (this is what integrity expects)
+        snap_total = conn.execute(
+            "SELECT COUNT(*) AS n FROM prospect_board_snapshot_rows WHERE snapshot_id = ?;",
+            (snapshot_id,),
+        ).fetchone()
+        snap_n = int(snap_total["n"]) if snap_total else 0
+
         print(f"SNAPSHOT_ID: {snapshot_id}  SNAPSHOT_DATE_UTC: {snapshot_date_utc}")
         print(f"ACTIVE_SOURCES_WITH_DATES: {len(src_rows)}")
         print(f"CANONICAL_MAP: {'YES' if len(cmap) > 0 else 'NO'}")
         print(f"PROSPECTS_WITH_COVERAGE: {total}")
         print(f"COVERAGE_MIN_MAX: {min_cov}..{max_cov}")
+        print(f"SNAPSHOT_ROWS_TOTAL: {snap_n}")
 
         if args.apply == 0:
             print("DRY RUN: no DB writes, no backup")
             return
 
+    # Phase 2: apply writes, always writing 1 row per snapshot prospect_id (including zero-coverage)
     backup_path = ensure_backup(PATHS.db)
     print(f"OK: backup created: {backup_path}")
 
@@ -312,13 +323,36 @@ def main() -> None:
                 pid = int(rr["prospect_id"])
                 cov.setdefault(pid, set()).add(canon)
 
+        # Full snapshot universe: write a row for every prospect in the snapshot.
+        snapshot_pids = [
+            int(r["prospect_id"])
+            for r in conn.execute(
+                "SELECT prospect_id FROM prospect_board_snapshot_rows WHERE snapshot_id = ? ORDER BY prospect_id;",
+                (snapshot_id,),
+            ).fetchall()
+        ]
+
         ts = utc_now_iso()
 
         n = 0
         conn.execute("BEGIN;")
         try:
-            for pid, canon_set in cov.items():
+            # Safety cleanup: remove any coverage rows for this snapshot that are not in the snapshot universe.
+            conn.execute(
+                """
+                DELETE FROM prospect_board_snapshot_coverage
+                WHERE snapshot_id = ?
+                  AND prospect_id NOT IN (
+                    SELECT prospect_id FROM prospect_board_snapshot_rows WHERE snapshot_id = ?
+                  );
+                """,
+                (snapshot_id, snapshot_id),
+            )
+
+            for pid in snapshot_pids:
+                canon_set = cov.get(pid, set())
                 canon_list = sorted(int(x) for x in canon_set)
+
                 conn.execute(
                     """
                     INSERT INTO prospect_board_snapshot_coverage(
@@ -332,7 +366,7 @@ def main() -> None:
                     """,
                     (
                         snapshot_id,
-                        int(pid),
+                        pid,
                         int(len(canon_list)),
                         json.dumps(canon_list, ensure_ascii=False),
                         ts,
@@ -340,6 +374,7 @@ def main() -> None:
                     ),
                 )
                 n += 1
+
             conn.commit()
         except Exception:
             conn.rollback()
