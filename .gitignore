@@ -44,4 +44,12 @@ exports/packets/
 
 # Python
 __pycache__/
-*.pyc
+*.pyc# --- DraftOS local artifacts / handoff packets (do not commit) ---
+CLAUDE.md
+DRAFTOS_MIGRATION_EXPORT_*.txt
+draftos.sqlite
+_handoff_*/
+_session_close_*/
+exports/packets/
+scripts/*.bak
+scripts/handoff_export.ps1
