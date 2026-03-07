@@ -1,0 +1,225 @@
+DRAFTOS CONTINUATION
+
+Non-negotiables:
+- Deterministic only
+- Additive migrations only
+- Season scoped
+- Active sources only
+- Idempotent scripts
+- Full file replacements only
+- Provide run order + verification commands
+
+Goal for this chat:
+Consensus math refinement: dispersion modeling, weighted source influence, confidence formula tuning post-dedup.
+
+Authoritative State:
+
+1) STATE_SNAPSHOT.md
+# DraftOS State Snapshot
+
+Last Updated (UTC): 2026-03-07T04:51:27.859179+00:00
+
+---
+
+## Active Season
+
+- 2026 (season_id=1)
+
+## Last Completed Milestone
+
+- Source deduplication complete. source_canonical_map expanded from 2 → 17 entries. Active sources reduced from 36 → 10 canonical sources. Score compression eliminated (#1 score 81.27 → 98.87). Elite tier 0 → 9 prospects. Confidence bands now meaningful (19 High, 100 Medium). Orphan snapshots 1 and 2 deleted. DB clean with 4 valid snapshots (ids 3–6).
+
+## Next Milestone (Single Target)
+
+- Consensus math refinement: dispersion modeling, weighted source influence, confidence formula tuning post-dedup.
+
+---
+
+## Layer Status
+
+RAW CSVs: 10 raw CSVs present in data/imports/rankings/raw/2026/
+
+STAGING: Staged CSVs present per source under data/imports/rankings/staged/2026/
+
+INGEST: Operational. 37 sources (10 active canonical), 10958 source_players, 21034 source_rankings ingested.
+
+BOOTSTRAP: Operational. 4629 prospects bootstrapped.
+
+CONSENSUS: Operational. prospect_consensus_rankings populated. Active sources = 10.
+
+MODEL OUTPUTS: Operational. prospect_model_outputs populated (4629 rows).
+
+SNAPSHOTS: Operational. 4 valid snapshots (ids 3–6). Latest: snapshot_id=6 (2026-03-07). Integrity clean: rows=4629, coverage=4629, confidence=4629.
+
+EXPORTS: board_2026_v1_default.csv produced.
+
+---
+
+## Known Decisions
+
+- Deterministic only
+- Additive migrations only
+- Season scoped only
+- Active sources only (sources.is_active = 1 enforced in math)
+- Idempotent scripts only
+- Each layer has exactly one responsibility
+- No layer may recompute logic belonging to another
+- Raw ingest data is never deleted (soft deprecation only)
+- Snapshot rows define the universe for coverage and confidence
+- source_canonical_map has 17 entries — always use it for dedup, never count raw is_active
+- 10 canonical sources: pff_2026, nfldraftbuzz_2026_v2, bnbfootball_2026, cbssports_2026, espn_2026, nytimes_2026, pfsn_2026, tankathon_2026, thedraftnetwork_2026, theringer_2026
+
+---
+
+## Ordered TODOs
+
+1. Consensus math refinement — dispersion modeling, weighted source influence
+2. Additional source ingest (after dedup stabilizes source universe)
+3. Full clean weekly pipeline run end-to-end
+
+
+2) System Snapshot Output
+=== DRAFTOS SYSTEM SNAPSHOT ===
+generated_utc: 2026-03-07T04:51:27.221987+00:00
+
+## Git
+branch: main
+commit: 34b0288bc782423c061901f8385f1ef030effcac
+status: clean
+
+## Tables
+- measurables
+- meta_migrations
+- model_outputs
+- models
+- name_aliases
+- notes
+- production
+- prospect_board_snapshot_confidence
+- prospect_board_snapshot_coverage
+- prospect_board_snapshot_metrics
+- prospect_board_snapshot_rows
+- prospect_board_snapshots
+- prospect_canonical_map
+- prospect_consensus_rankings
+- prospect_model_outputs
+- prospect_tags
+- prospects
+- ras
+- school_aliases
+- seasons
+- source_board_snapshot_metrics
+- source_canonical_map
+- source_player_map
+- source_player_review_queue
+- source_players
+- source_rankings
+- sources
+- sqlite_sequence
+- tags
+- testing
+
+## Row Counts (key tables)
+- sources: 37
+- seasons: 1
+- prospects: 4629
+- source_players: 10958
+- source_player_map: 10957
+- source_rankings: 21034
+- models: 1
+- model_outputs: 0
+
+## Migrations
+- 0001_schema_v1 @ 2026-02-24T02:00:38.110710+00:00
+- 0003_seed_v1_default_model @ 2026-02-24T02:00:38.119418+00:00
+- migrations0002_seed_2026 @ 2026-02-24T02:00:38.121886+00:00
+- 0002_seed_2026 @ 2026-02-24T03:27:55.106631+00:00
+- 0004_fix_seed_2026_and_model @ 2026-02-24T03:27:55.121563+00:00
+- 0005_sources_active_cols @ 2026-02-26T02:38:57.455975+00:00
+- 0006_deprecate_nfldraftbuzz_old @ 2026-02-26T02:38:57.462821+00:00
+- 0008_consensus_board_table @ 2026-02-27T05:13:18.410022+00:00
+- 0009_consensus_tier_reason_chips @ 2026-02-27T05:24:35.069722+00:00
+- 0010_model_outputs_table @ 2026-02-27T05:28:27.658999+00:00
+- 0002_board_snapshots @ 2026-03-01T00:35:26.529412+00:00
+- 0003_snapshot_metrics @ 2026-03-01T00:35:26.539575+00:00
+- 0004_source_snapshot_metrics @ 2026-03-01T01:13:27.702655+00:00
+- 0005_prospect_snapshot_confidence @ 2026-03-01T01:25:29.015689+00:00
+- 0008_source_canonical_map @ 2026-03-01T23:36:50.072185+00:00
+- 0008_source_canonicalization @ 2026-03-01T23:36:50.084093+00:00
+- 0009_prospect_board_snapshot_coverage @ 2026-03-01T23:36:50.091508+00:00
+- 0009_snapshot_coverage @ 2026-03-01T23:36:50.095992+00:00
+- 0011_name_normalization @ 2026-03-02T00:28:32.096099+00:00
+- 0012_source_players_pos_hint @ 2026-03-02T00:44:38.115485+00:00
+- 0013_source_player_review_queue @ 2026-03-02T01:24:21.648391+00:00
+- 0014_prospect_canonical_map @ 2026-03-02T01:30:01.749708+00:00
+- 0015_source_player_review_queue @ 2026-03-02T01:44:14.682155+00:00
+
+## Active Season
+no is_active column
+
+## Script Inventory
+- app\app.py
+- draftos\config.py
+- draftos\db\connect.py
+- draftos\db\migrate.py
+- draftos\ingest\rankings\loader.py
+- draftos\ingest\rankings\writer.py
+- draftos\normalize\names.py
+- draftos\normalize\positions.py
+- draftos\normalize\schools.py
+- draftos\queries\__init__.py
+- draftos\queries\active.py
+- draftos\queries\consensus.py
+- draftos\queries\model_outputs.py
+- scripts\apply_review_queue_mappings_2026.py
+- scripts\autoresolve_mapping_review_queue_2026.py
+- scripts\bootstrap_prospects_from_sources_2026.py
+- scripts\build_consensus_2026.py
+- scripts\build_mapping_review_queue_2026.py
+- scripts\build_model_outputs_v1_default_2026.py
+- scripts\build_snapshot_packet.py
+- scripts\compute_snapshot_confidence.py
+- scripts\compute_snapshot_coverage.py
+- scripts\compute_snapshot_metrics.py
+- scripts\compute_source_snapshot_metrics.py
+- scripts\delete_orphan_snapshots.py
+- scripts\doctor.py
+- scripts\doctor_snapshot.py
+- scripts\end_session.py
+- scripts\export_board_csv.py
+- scripts\export_confidence_summary_csv.py
+- scripts\export_mapping_review_queue_csv.py
+- scripts\export_movers_csv.py
+- scripts\export_reports_html.py
+- scripts\export_source_health_csv.py
+- scripts\ingest_rankings_staged.py
+- scripts\learn_school_aliases_from_mapped_2026.py
+- scripts\patch_0005_0006_soft_deprecate_nfldraftbuzz.py
+- scripts\patch_0007_bootstrap_prospects_2026.py
+- scripts\patch_name_normalization_2026.py
+- scripts\patch_prospect_canonicalization_2026.py
+- scripts\patch_school_canonicalization_2026.py
+- scripts\patch_source_canonicalization_2026.py
+- scripts\publish_latest_packet.py
+- scripts\repair_snapshot_orphans.py
+- scripts\run_weekly_update.py
+- scripts\scrape_nfldraftbuzz_2026.py
+- scripts\scrape_nfldraftbuzz_2026_playwright.py
+- scripts\snapshot_board.py
+- scripts\stage_rankings_csv.py
+- scripts\verify_packet_manifest.py
+- scripts\verify_snapshot_integrity.py
+
+## Stub / Deferred Detection
+- scripts\doctor_snapshot.py (DEFERRED)
+
+=== END SNAPSHOT ===
+
+
+Instructions:
+Reconstruct system truth from artifacts only.
+Do not infer from prior chats.
+Implement the next milestone cleanly.
+Respect architectural layers.
+Ensure idempotency.
+Include verification commands.
