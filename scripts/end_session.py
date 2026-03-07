@@ -94,10 +94,10 @@ def main() -> None:
     ensure_clean_git()
 
     print("Running migrate.py...")
-    run(["python", "migrate.py"])
+    run(["python", "-m", "draftos.db.migrate"])
 
     print("Running doctor.py...")
-    run(["python", "doctor.py"])
+    run(["python", "scripts/doctor.py"])
 
     print("Running scripts/doctor_snapshot.py...")
     snapshot_output = run(["python", "scripts/doctor_snapshot.py"])
