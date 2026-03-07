@@ -17,7 +17,7 @@ Authoritative State:
 1) STATE_SNAPSHOT.md
 # DraftOS State Snapshot
 
-Last Updated (UTC): 2026-03-07T05:37:57.582137+00:00
+Last Updated (UTC): 2026-03-07T06:16:39.348385+00:00
 
 ---
 
@@ -78,15 +78,18 @@ EXPORTS: board_2026_v1_default.csv produced.
 1. Additional source ingest (source universe stable — dedup complete, weights defined)
 2. Full clean weekly pipeline run end-to-end
 3. Review queue cleanup — filter spamml/fantasy sources, focus on legit draft sources
+4. Audit and expand school_aliases — add LSU, USC, App State and other common variants; recovers ~50+ RAS unmatched rows and improves pipeline-wide matching
+5. Fix corrupted school_aliases entries (Oklahoma → Colorado pattern) — data integrity issue affecting prospect matching
+6. RAS re-ingest after pro days complete — re-run ingest_ras_2026.py with updated file, fully idempotent
 
 
 2) System Snapshot Output
 === DRAFTOS SYSTEM SNAPSHOT ===
-generated_utc: 2026-03-07T05:37:56.939795+00:00
+generated_utc: 2026-03-07T06:16:38.703709+00:00
 
 ## Git
 branch: main
-commit: 2639a12c82381bfa3b068fcc7602c83b8a2138d2
+commit: f4f301f138021b92cbdc98e3df6a16de258a43e6
 status: clean
 
 ## Tables
@@ -108,6 +111,7 @@ status: clean
 - prospect_tags
 - prospects
 - ras
+- ras_staging
 - school_aliases
 - seasons
 - source_board_snapshot_metrics
@@ -158,6 +162,8 @@ status: clean
 - 0024_consensus_dispersion_cols @ 2026-03-07T04:59:06.027435+00:00
 - 0025_consensus_weighted_base @ 2026-03-07T05:28:44.620076+00:00
 - 0026_confidence_dispersion_cap @ 2026-03-07T05:28:44.627370+00:00
+- 0027_ras_season_cols @ 2026-03-07T06:07:03.612026+00:00
+- 0028_ras_staging @ 2026-03-07T06:07:03.619921+00:00
 
 ## Active Season
 no is_active column
@@ -198,6 +204,7 @@ no is_active column
 - scripts\export_reports_html.py
 - scripts\export_source_health_csv.py
 - scripts\ingest_rankings_staged.py
+- scripts\ingest_ras_2026.py
 - scripts\learn_school_aliases_from_mapped_2026.py
 - scripts\patch_0005_0006_soft_deprecate_nfldraftbuzz.py
 - scripts\patch_0007_bootstrap_prospects_2026.py
