@@ -17,7 +17,7 @@ Authoritative State:
 1) STATE_SNAPSHOT.md
 # DraftOS State Snapshot
 
-Last Updated (UTC): 2026-03-07T05:09:14.057670+00:00
+Last Updated (UTC): 2026-03-07T05:37:06.751120+00:00
 
 ---
 
@@ -80,11 +80,11 @@ EXPORTS: board_2026_v1_default.csv produced.
 
 2) System Snapshot Output
 === DRAFTOS SYSTEM SNAPSHOT ===
-generated_utc: 2026-03-07T05:09:13.406163+00:00
+generated_utc: 2026-03-07T05:37:06.089904+00:00
 
 ## Git
 branch: main
-commit: e3c80b5b1871dc40ab076107c9c01528ce5bc937
+commit: b81e918ad9676764476d2e94e80c944fc1de03e3
 status: clean
 
 ## Tables
@@ -154,6 +154,8 @@ status: clean
 - 0014_prospect_canonical_map @ 2026-03-02T01:30:01.749708+00:00
 - 0015_source_player_review_queue @ 2026-03-02T01:44:14.682155+00:00
 - 0024_consensus_dispersion_cols @ 2026-03-07T04:59:06.027435+00:00
+- 0025_consensus_weighted_base @ 2026-03-07T05:28:44.620076+00:00
+- 0026_confidence_dispersion_cap @ 2026-03-07T05:28:44.627370+00:00
 
 ## Active Season
 no is_active column
