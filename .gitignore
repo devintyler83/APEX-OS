@@ -53,3 +53,9 @@ _session_close_*/
 exports/packets/
 scripts/*.bak
 scripts/handoff_export.ps1
+
+# Local / non-pipeline files
+.claude/
+Position_Libraries/
+Universal_Rules/
+ProjectMemory.docx
