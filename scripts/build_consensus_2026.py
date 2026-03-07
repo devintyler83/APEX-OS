@@ -27,6 +27,28 @@ DISPERSION_WEIGHT: float = 0.5
 MAX_PENALTY: float = 0.25          # Score reduction never exceeds 25%
 MIN_SOURCES_FOR_DISPERSION: int = 2  # Dispersion undefined for k < 2; penalty = 0
 
+# ── Source quality weights ─────────────────────────────────────────────────────
+# Tier 1 — Premium analytics/editorial (weight 1.3)
+# Tier 2 — Solid mainstream (weight 1.0)
+# Tier 3 — Aggregator/community (weight 0.7)
+# Any source not listed falls back to DEFAULT_WEIGHT.
+SOURCE_WEIGHTS: Dict[str, float] = {
+    # Tier 1
+    "pff_2026":             1.3,
+    "thedraftnetwork_2026": 1.3,
+    "theringer_2026":       1.3,
+    # Tier 2
+    "nfldraftbuzz_2026_v2": 1.0,
+    "cbssports_2026":       1.0,
+    "espn_2026":            1.0,
+    "nytimes_2026":         1.0,
+    "pfsn_2026":            1.0,
+    # Tier 3
+    "bnbfootball_2026":     0.7,
+    "tankathon_2026":       0.7,
+}
+DEFAULT_WEIGHT: float = 1.0  # fallback for any source not in the dict
+
 
 def utcnow_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
@@ -119,8 +141,9 @@ def per_source_max_rank(conn, season_id: int, source_id: int) -> int:
 
 def normalized_ranks(ranks: List[Tuple[int, int]], source_max: Dict[int, int]) -> List[float]:
     """
-    Returns a list of normalized rank values: norm_rank = 1 - (rank / max_rank_for_source).
+    Returns a list of unweighted normalized rank values: norm_rank = 1 - (rank / max_rank_for_source).
     Range: 0.0 (worst) to ~1.0 (best). Sources with max_rank <= 1 are excluded.
+    Used for dispersion calculation (dispersion measures disagreement, not quality).
     """
     vals = []
     for sid, rk in ranks:
@@ -133,11 +156,38 @@ def normalized_ranks(ranks: List[Tuple[int, int]], source_max: Dict[int, int]) -
 
 def base_score_0_100(norm_vals: List[float]) -> float:
     """
-    base = avg(norm_rank) * 100
+    Unweighted base = avg(norm_rank) * 100.
+    Retained for auditability display alongside weighted_base.
     """
     if not norm_vals:
         return 0.0
     return 100.0 * (sum(norm_vals) / len(norm_vals))
+
+
+def weighted_base_score_0_100(
+    ranks: List[Tuple[int, int]],
+    source_max: Dict[int, int],
+    source_id_to_name: Dict[int, str],
+) -> float:
+    """
+    Weighted base = sum(norm_rank * weight) / sum(weights) * 100.
+    Weights come from SOURCE_WEIGHTS keyed by source_name; falls back to DEFAULT_WEIGHT.
+    Sources with max_rank <= 1 are excluded (consistent with normalized_ranks).
+    """
+    total_weighted = 0.0
+    total_weight = 0.0
+    for sid, rk in ranks:
+        mx = max(1, int(source_max.get(sid, 0) or 0))
+        if mx <= 1:
+            continue
+        norm_val = 1.0 - (rk / mx)
+        sname = source_id_to_name.get(sid, "")
+        w = SOURCE_WEIGHTS.get(sname, DEFAULT_WEIGHT)
+        total_weighted += norm_val * w
+        total_weight += w
+    if total_weight == 0.0:
+        return 0.0
+    return 100.0 * (total_weighted / total_weight)
 
 
 def coverage_factor(k: int, n_active: int) -> float:
@@ -156,7 +206,8 @@ def calc_dispersion(norm_vals: List[float]) -> Tuple[float, float]:
     """
     Returns (rank_std_dev, dispersion_penalty).
 
-    rank_std_dev: population std dev of normalized rank values.
+    rank_std_dev: population std dev of UNWEIGHTED normalized rank values.
+    Dispersion measures disagreement between sources, not source quality.
     dispersion_penalty: min(std_dev * DISPERSION_WEIGHT, MAX_PENALTY).
     Penalty is 0.0 when fewer than MIN_SOURCES_FOR_DISPERSION sources cover the prospect.
     """
@@ -235,6 +286,7 @@ def upsert_consensus_rows(conn, season_id: int, rows: List[Dict]) -> None:
                 UPDATE prospect_consensus_rankings
                 SET consensus_rank=?,
                     score=?,
+                    weighted_base_score=?,
                     sources_covered=?,
                     avg_rank=?,
                     median_rank=?,
@@ -251,6 +303,7 @@ def upsert_consensus_rows(conn, season_id: int, rows: List[Dict]) -> None:
                 (
                     row["consensus_rank"],
                     row["score"],
+                    row["weighted_base_score"],
                     row["sources_covered"],
                     row["avg_rank"],
                     row["median_rank"],
@@ -271,19 +324,20 @@ def upsert_consensus_rows(conn, season_id: int, rows: List[Dict]) -> None:
                 """
                 INSERT INTO prospect_consensus_rankings(
                   season_id, prospect_id,
-                  consensus_rank, score,
+                  consensus_rank, score, weighted_base_score,
                   sources_covered, avg_rank, median_rank, min_rank, max_rank,
                   tier, reason_chips_json,
                   explain_json,
                   rank_std_dev, dispersion_penalty,
                   created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     season_id,
                     row["prospect_id"],
                     row["consensus_rank"],
                     row["score"],
+                    row["weighted_base_score"],
                     row["sources_covered"],
                     row["avg_rank"],
                     row["median_rank"],
@@ -323,6 +377,16 @@ def main():
         src_ids = [s["source_id"] for s in srcs]
         n_active = len(src_ids)
 
+        # Build source_id -> source_name for weight lookups
+        source_id_to_name: Dict[int, str] = {s["source_id"]: s["source_name"] for s in srcs}
+
+        # Log weight assignments for active sources
+        print("\nSOURCE WEIGHTS (active sources):")
+        for s in srcs:
+            w = SOURCE_WEIGHTS.get(s["source_name"], DEFAULT_WEIGHT)
+            tier = "T1" if w > 1.0 else ("T3" if w < 1.0 else "T2")
+            print(f"  {s['source_name']:<30} weight={w}  ({tier})")
+
         source_max = {sid: per_source_max_rank(conn, season_id, sid) for sid in src_ids}
         prospect_ranks = fetch_prospect_ranks(conn, season_id)
 
@@ -343,13 +407,18 @@ def main():
             rvals = [rk for _, rk in ranks_sorted]
             k = len(rvals)
 
+            # Unweighted norm_vals used for dispersion (measures disagreement, not quality)
             norm_vals = normalized_ranks(ranks_sorted, source_max)
-            base = base_score_0_100(norm_vals)
+            unweighted_base = base_score_0_100(norm_vals)
+
+            # Weighted base uses source quality weights
+            w_base = weighted_base_score_0_100(ranks_sorted, source_max, source_id_to_name)
+
             cov = coverage_factor(k, n_active)
             std_dev, disp_penalty = calc_dispersion(norm_vals)
 
-            # score = base × coverage × (1 − dispersion_penalty)
-            score = round(base * cov * (1.0 - disp_penalty), 4)
+            # score = weighted_base × coverage × (1 − dispersion_penalty)
+            score = round(w_base * cov * (1.0 - disp_penalty), 4)
 
             avg_rk = round(sum(rvals) / k, 4) if k else None
             med_rk = float(median(rvals)) if k else None
@@ -362,11 +431,14 @@ def main():
                 "active_sources": n_active,
                 "source_max_rank": {str(k_): int(v) for k_, v in source_max.items()},
                 "scoring": {
-                    "base": "avg(1 - rank/max_rank_by_source) * 100",
+                    "unweighted_base": "avg(1 - rank/max_rank_by_source) * 100",
+                    "weighted_base": "sum((1-rank/max)*weight) / sum(weights) * 100",
                     "coverage": "sqrt(sources_covered / active_sources)",
-                    "dispersion_penalty": f"min(pstdev(norm_ranks) * {DISPERSION_WEIGHT}, {MAX_PENALTY})",
-                    "final": "base * coverage * (1 - dispersion_penalty)",
+                    "dispersion_penalty": f"min(pstdev(unweighted_norm_ranks) * {DISPERSION_WEIGHT}, {MAX_PENALTY})",
+                    "final": "weighted_base * coverage * (1 - dispersion_penalty)",
                 },
+                "unweighted_base": round(unweighted_base, 4),
+                "weighted_base": round(w_base, 4),
                 "rank_std_dev": std_dev,
                 "dispersion_penalty": disp_penalty,
                 "tier": tier,
@@ -377,6 +449,7 @@ def main():
                 {
                     "prospect_id": int(prospect_id),
                     "score": float(score),
+                    "weighted_base_score": round(float(w_base), 4),
                     "sources_covered": int(k),
                     "avg_rank": avg_rk,
                     "median_rank": med_rk,
@@ -387,6 +460,8 @@ def main():
                     "explain_json": json.dumps(explain, ensure_ascii=False),
                     "rank_std_dev": float(std_dev),
                     "dispersion_penalty": float(disp_penalty),
+                    # Display-only fields (not stored in DB separately)
+                    "_unweighted_base": round(unweighted_base, 4),
                 }
             )
 
@@ -398,20 +473,15 @@ def main():
             row["consensus_rank"] = i
 
         print(f"\nPLAN: would write consensus rows: {len(computed)} (active sources: {n_active})")
-        print(f"\n{'Rank':<5} {'Name':<28} {'Pos':<6} {'Base':>7} {'StdDev':>8} {'Penalty':>9} {'Score':>8}")
-        print("-" * 75)
+        print(f"\n{'Rank':<5} {'Name':<28} {'Pos':<6} {'Unwt Base':>10} {'Wt Base':>8} {'StdDev':>8} {'Penalty':>9} {'Score':>8}")
+        print("-" * 90)
         for row in computed[:20]:
             pid = row["prospect_id"]
             meta = prospect_meta.get(pid, {"name": f"id:{pid}", "position": "?"})
-            # Recompute base for display (score / (cov * (1-pen)) is cleaner to recompute)
-            k_ = row["sources_covered"]
-            cov_ = coverage_factor(k_, n_active)
-            pen_ = row["dispersion_penalty"]
-            denom = cov_ * (1.0 - pen_)
-            base_display = round(row["score"] / denom, 2) if denom > 0 else 0.0
             print(
                 f"{row['consensus_rank']:<5} {meta['name']:<28} {meta['position']:<6} "
-                f"{base_display:>7.2f} {row['rank_std_dev']:>8.4f} {row['dispersion_penalty']:>9.4f} "
+                f"{row['_unweighted_base']:>10.2f} {row['weighted_base_score']:>8.2f} "
+                f"{row['rank_std_dev']:>8.4f} {row['dispersion_penalty']:>9.4f} "
                 f"{row['score']:>8.4f}"
             )
 

@@ -12,6 +12,25 @@ from typing import Any, Dict, List, Optional, Tuple
 from draftos.config import PATHS
 from draftos.db.connect import connect
 
+# ── Confidence band thresholds ─────────────────────────────────────────────────
+HIGH_COVERAGE_MIN: float = 0.70    # coverage ratio threshold for High band
+MEDIUM_COVERAGE_MIN: float = 0.40  # coverage ratio threshold for Medium band
+
+# ── Dispersion caps (applied on normalized rank std_dev, range 0.0–1.0) ────────
+# rank_std_dev from prospect_consensus_rankings uses pstdev(1 - rank/max_rank values).
+# High dispersion = sources wildly disagree; cap confidence band regardless of coverage.
+DISPERSION_CAP_HIGH: float = 0.10  # std_dev > this cannot achieve High band
+DISPERSION_CAP_MED: float = 0.20   # std_dev > this cannot achieve Medium band (capped at Low)
+
+# Band ordering for cap comparisons
+_BAND_ORDER: Dict[str, int] = {"High": 2, "Medium": 1, "Low": 0}
+_BAND_FROM_INT: Dict[int, str] = {2: "High", 1: "Medium", 0: "Low"}
+
+
+def _cap_band(band: str, max_band: str) -> str:
+    """Return the lower of band and max_band."""
+    return _BAND_FROM_INT[min(_BAND_ORDER.get(band, 0), _BAND_ORDER.get(max_band, 0))]
+
 
 def utc_now_iso() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
@@ -178,6 +197,7 @@ def compute_confidence_v2(
     """
     v2: coverage is computed on canonical sources.
     Additionally uses health-weighted coverage so Healthy sources contribute more.
+    Returns (score, base_band, reasons). Dispersion cap is applied in the caller.
     """
     cov = float(present_canon_sources) / float(active_canon_sources) if active_canon_sources > 0 else 0.0
     cov = clamp01(cov)
@@ -244,6 +264,36 @@ def compute_confidence_v2(
     return score, band, reasons
 
 
+def apply_dispersion_cap(
+    base_band: str,
+    norm_std_dev: Optional[float],
+    present_count: int,
+) -> Tuple[str, int]:
+    """
+    Apply hard dispersion cap to confidence band.
+    Uses normalized rank std_dev from prospect_consensus_rankings (range 0.0–1.0).
+    Returns (final_band, dispersion_cap_applied).
+
+    Rules:
+    - No data (NULL std_dev or fewer than 2 sources): no cap, return base_band unchanged.
+    - std_dev > DISPERSION_CAP_MED (0.20): cap at Low — high disagreement.
+    - std_dev > DISPERSION_CAP_HIGH (0.10): cap at Medium — moderate disagreement.
+    - else: tight consensus, no cap.
+    """
+    if norm_std_dev is None or present_count < 2:
+        return base_band, 0
+
+    if norm_std_dev > DISPERSION_CAP_MED:
+        final_band = "Low"
+    elif norm_std_dev > DISPERSION_CAP_HIGH:
+        final_band = _cap_band(base_band, "Medium")
+    else:
+        final_band = base_band
+
+    cap_applied = 1 if final_band != base_band else 0
+    return final_band, cap_applied
+
+
 def load_canonical_map(conn) -> Dict[int, int]:
     if not table_exists(conn, "source_canonical_map"):
         return {}
@@ -256,6 +306,23 @@ def load_canonical_map(conn) -> Dict[int, int]:
 
 def canon_of(source_id: int, cmap: Dict[int, int]) -> int:
     return int(cmap.get(int(source_id), int(source_id)))
+
+
+def load_norm_std_dev_map(conn, season_id: int) -> Dict[int, Optional[float]]:
+    """
+    Load rank_std_dev (normalized, 0.0–1.0) from prospect_consensus_rankings.
+    Used for dispersion cap — measures source agreement on relative placement.
+    """
+    rows = conn.execute(
+        "SELECT prospect_id, rank_std_dev FROM prospect_consensus_rankings WHERE season_id = ?;",
+        (season_id,),
+    ).fetchall()
+    result: Dict[int, Optional[float]] = {}
+    for r in rows:
+        pid = int(r["prospect_id"])
+        val = r["rank_std_dev"]
+        result[pid] = float(val) if val is not None else None
+    return result
 
 
 def main() -> None:
@@ -313,6 +380,9 @@ def main() -> None:
 
         cmap = load_canonical_map(conn)
         has_coverage = table_exists(conn, "prospect_board_snapshot_coverage")
+
+        # Load normalized std_dev for dispersion cap
+        norm_std_dev_map = load_norm_std_dev_map(conn, season_id)
 
         src_rows = conn.execute(
             """
@@ -468,7 +538,7 @@ def main() -> None:
             sd = stddev(ranks)
             mad = mean([abs(x - (mean(ranks) or 0.0)) for x in ranks]) if ranks else None
 
-            score, band, reasons = compute_confidence_v2(
+            score, base_band, reasons = compute_confidence_v2(
                 active_canon_sources=active_canon_sources,
                 present_canon_sources=present,
                 sum_present_weights=sum_present_weights,
@@ -480,6 +550,10 @@ def main() -> None:
                 rank_std=sd,
                 rank_mad=mad,
             )
+
+            # Apply dispersion cap using normalized std_dev from consensus rankings
+            norm_sd = norm_std_dev_map.get(pid)
+            final_band, cap_applied = apply_dispersion_cap(base_band, norm_sd, present)
 
             out_rows.append(
                 {
@@ -497,37 +571,64 @@ def main() -> None:
                     "rank_std": sd,
                     "rank_mad": mad,
                     "confidence_score": score,
-                    "confidence_band": band,
+                    "confidence_band": final_band,
                     "confidence_reasons_json": json.dumps(reasons, ensure_ascii=False),
                     "computed_at_utc": computed_at,
+                    "dispersion_cap_applied": cap_applied,
+                    # Display-only fields
+                    "_base_band": base_band,
+                    "_norm_std_dev": norm_sd,
                 }
             )
 
         if args.apply == 0:
             print("DRY RUN: no DB writes, no backup")
             print(
-                "PLAN:",
-                f"would compute snapshot confidence v2 snapshot_id={snapshot_id}",
-                f"snapshot_rows={len(board_pids)}",
-                f"confidence_rows={len(out_rows)}",
-                f"active_canon_sources={active_canon_sources}",
-                f"coverage_table={'YES' if has_coverage else 'NO'}",
-                f"coverage_extras_not_in_snapshot_rows={len(extra_coverage_pids)}",
-                f"canonical_map={'YES' if table_exists(conn, 'source_canonical_map') else 'NO'}",
+                f"PLAN: compute snapshot confidence v2 snapshot_id={snapshot_id}"
+                f"  snapshot_rows={len(board_pids)}"
+                f"  confidence_rows={len(out_rows)}"
+                f"  active_canon_sources={active_canon_sources}"
+                f"  coverage_table={'YES' if has_coverage else 'NO'}"
+                f"  coverage_extras_not_in_snapshot_rows={len(extra_coverage_pids)}"
             )
-            if extra_coverage_pids:
-                print(f"EXAMPLE_COVERAGE_EXTRA_PROSPECT_ID: {extra_coverage_pids[0]}")
-            if out_rows:
-                ex = out_rows[0]
-                print(
-                    "EXAMPLE:",
-                    f"prospect_id={ex['prospect_id']}",
-                    f"sources_present={ex['sources_present']}/{ex['active_sources']}",
-                    f"coverage_pct={round(ex['coverage_pct']*100.0,1)}",
-                    f"score={ex['confidence_score']}",
-                    f"band={ex['confidence_band']}",
-                    f"reasons={ex['confidence_reasons_json']}",
-                )
+            print(f"DISPERSION_CAP_HIGH={DISPERSION_CAP_HIGH}  DISPERSION_CAP_MED={DISPERSION_CAP_MED}")
+
+            # Distribution
+            dist: Dict[str, int] = {"High": 0, "Medium": 0, "Low": 0}
+            base_dist: Dict[str, int] = {"High": 0, "Medium": 0, "Low": 0}
+            capped_rows = []
+            for r in out_rows:
+                dist[r["confidence_band"]] = dist.get(r["confidence_band"], 0) + 1
+                base_dist[r["_base_band"]] = base_dist.get(r["_base_band"], 0) + 1
+                if r["dispersion_cap_applied"]:
+                    capped_rows.append(r)
+
+            print(f"\nCONFIDENCE DISTRIBUTION (projected):")
+            print(f"  Base (pre-cap):  High={base_dist['High']}  Medium={base_dist['Medium']}  Low={base_dist['Low']}")
+            print(f"  Final (post-cap): High={dist['High']}  Medium={dist['Medium']}  Low={dist['Low']}")
+            print(f"\nDISPERSION CAPPED: {len(capped_rows)} prospects had their band downgraded")
+
+            if capped_rows:
+                # Load prospect names for display
+                name_map: Dict[int, str] = {}
+                meta_rows = conn.execute(
+                    "SELECT prospect_id, display_name FROM prospects WHERE season_id = ?",
+                    (season_id,),
+                ).fetchall()
+                for m in meta_rows:
+                    name_map[int(m["prospect_id"])] = m["display_name"] or f"id:{m['prospect_id']}"
+
+                print(f"\nEXAMPLE DISPERSION-CAPPED prospects (up to 5):")
+                print(f"  {'Name':<28} {'Cvg':>5} {'std_dev':>8} {'BaseBand':>9} {'FinalBand':>10}")
+                print(f"  {'-'*28} {'-'*5} {'-'*8} {'-'*9} {'-'*10}")
+                for r in capped_rows[:5]:
+                    name = name_map.get(r["prospect_id"], f"id:{r['prospect_id']}")
+                    cov_pct_disp = round(r["coverage_pct"] * 100, 1)
+                    sd_disp = f"{r['_norm_std_dev']:.4f}" if r["_norm_std_dev"] is not None else "NULL"
+                    print(
+                        f"  {name:<28} {cov_pct_disp:>4.1f}% {sd_disp:>8} {r['_base_band']:>9} {r['confidence_band']:>10}"
+                    )
+
             return
 
     # APPLY: backup before write
@@ -553,6 +654,9 @@ def main() -> None:
 
         cmap = load_canonical_map(conn)
         has_coverage = table_exists(conn, "prospect_board_snapshot_coverage")
+
+        # Load normalized std_dev for dispersion cap
+        norm_std_dev_map = load_norm_std_dev_map(conn, season_id)
 
         src_rows = conn.execute(
             """
@@ -674,6 +778,7 @@ def main() -> None:
         conn.execute("DELETE FROM prospect_board_snapshot_confidence WHERE snapshot_id = ?;", (snapshot_id,))
 
         n = 0
+        capped_count = 0
         for pid in board_pids:
             present_canon_ids: List[int] = []
             if pid in coverage_map:
@@ -715,7 +820,7 @@ def main() -> None:
             sd = stddev(ranks)
             mad = mean([abs(x - (mean(ranks) or 0.0)) for x in ranks]) if ranks else None
 
-            score, band, reasons = compute_confidence_v2(
+            score, base_band, reasons = compute_confidence_v2(
                 active_canon_sources=active_canon_sources,
                 present_canon_sources=present,
                 sum_present_weights=sum_present_weights,
@@ -728,6 +833,12 @@ def main() -> None:
                 rank_mad=mad,
             )
 
+            # Apply dispersion cap using normalized std_dev from consensus rankings
+            norm_sd = norm_std_dev_map.get(pid)
+            final_band, cap_applied = apply_dispersion_cap(base_band, norm_sd, present)
+            if cap_applied:
+                capped_count += 1
+
             conn.execute(
                 """
                 INSERT INTO prospect_board_snapshot_confidence(
@@ -736,9 +847,9 @@ def main() -> None:
                   sources_healthy_present, sources_noisy_present, sources_thin_present, sources_stale_present,
                   rank_std, rank_mad,
                   confidence_score, confidence_band, confidence_reasons_json,
-                  computed_at_utc
+                  computed_at_utc, dispersion_cap_applied
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(snapshot_id, prospect_id)
                 DO UPDATE SET
                   active_sources = excluded.active_sources,
@@ -753,7 +864,8 @@ def main() -> None:
                   confidence_score = excluded.confidence_score,
                   confidence_band = excluded.confidence_band,
                   confidence_reasons_json = excluded.confidence_reasons_json,
-                  computed_at_utc = excluded.computed_at_utc;
+                  computed_at_utc = excluded.computed_at_utc,
+                  dispersion_cap_applied = excluded.dispersion_cap_applied;
                 """,
                 (
                     snapshot_id,
@@ -770,16 +882,17 @@ def main() -> None:
                     sd,
                     mad,
                     score,
-                    band,
+                    final_band,
                     json.dumps(reasons, ensure_ascii=False),
                     computed_at,
+                    cap_applied,
                 ),
             )
             n += 1
 
         conn.commit()
 
-    print(f"OK: snapshot confidence saved (v2): snapshot_id={snapshot_id} rows={n}")
+    print(f"OK: snapshot confidence saved (v2): snapshot_id={snapshot_id} rows={n} dispersion_capped={capped_count}")
 
 
 if __name__ == "__main__":
