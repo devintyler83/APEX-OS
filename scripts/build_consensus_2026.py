@@ -19,6 +19,14 @@ from typing import Dict, List, Tuple
 from draftos.config import PATHS
 from draftos.db.connect import connect
 
+# ── Dispersion tuning constants ────────────────────────────────────────────────
+# Penalty formula: min(std_dev * DISPERSION_WEIGHT, MAX_PENALTY)
+# std_dev is population std dev of normalized rank values (each in [0.0, 1.0]).
+# A std_dev of 0.5 (half the full normalized range) × 0.5 weight = 0.25 penalty cap.
+DISPERSION_WEIGHT: float = 0.5
+MAX_PENALTY: float = 0.25          # Score reduction never exceeds 25%
+MIN_SOURCES_FOR_DISPERSION: int = 2  # Dispersion undefined for k < 2; penalty = 0
+
 
 def utcnow_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
@@ -109,9 +117,10 @@ def per_source_max_rank(conn, season_id: int, source_id: int) -> int:
     return int(row["mx"] or 0)
 
 
-def base_score_0_100(ranks: List[Tuple[int, int]], source_max: Dict[int, int]) -> float:
+def normalized_ranks(ranks: List[Tuple[int, int]], source_max: Dict[int, int]) -> List[float]:
     """
-    base = avg(1 - rank/max_rank_by_source) * 100
+    Returns a list of normalized rank values: norm_rank = 1 - (rank / max_rank_for_source).
+    Range: 0.0 (worst) to ~1.0 (best). Sources with max_rank <= 1 are excluded.
     """
     vals = []
     for sid, rk in ranks:
@@ -119,9 +128,16 @@ def base_score_0_100(ranks: List[Tuple[int, int]], source_max: Dict[int, int]) -
         if mx <= 1:
             continue
         vals.append(1.0 - (rk / mx))
-    if not vals:
+    return vals
+
+
+def base_score_0_100(norm_vals: List[float]) -> float:
+    """
+    base = avg(norm_rank) * 100
+    """
+    if not norm_vals:
         return 0.0
-    return 100.0 * (sum(vals) / len(vals))
+    return 100.0 * (sum(norm_vals) / len(norm_vals))
 
 
 def coverage_factor(k: int, n_active: int) -> float:
@@ -134,6 +150,21 @@ def coverage_factor(k: int, n_active: int) -> float:
     if k == 0:
         return 0.0
     return math.sqrt(k / n_active)
+
+
+def calc_dispersion(norm_vals: List[float]) -> Tuple[float, float]:
+    """
+    Returns (rank_std_dev, dispersion_penalty).
+
+    rank_std_dev: population std dev of normalized rank values.
+    dispersion_penalty: min(std_dev * DISPERSION_WEIGHT, MAX_PENALTY).
+    Penalty is 0.0 when fewer than MIN_SOURCES_FOR_DISPERSION sources cover the prospect.
+    """
+    if len(norm_vals) < MIN_SOURCES_FOR_DISPERSION:
+        return 0.0, 0.0
+    std_dev = pstdev(norm_vals)
+    penalty = min(std_dev * DISPERSION_WEIGHT, MAX_PENALTY)
+    return round(std_dev, 6), round(penalty, 6)
 
 
 def tier_from_score(score: float) -> str:
@@ -174,12 +205,12 @@ def compute_reason_chips(
         else:
             chips.append("Moderate variance")
 
-    # “Top-10 density” across sources: how many sources rank him in top 10?
+    # "Top-10 density" across sources: how many sources rank him in top 10?
     top10 = sum(1 for _, rk in ranks if rk <= 10)
     if top10 >= max(2, math.ceil(0.33 * k)):
         chips.append(f"{top10} sources top-10")
     else:
-        # fallback: highlight “high placement” if median is strong
+        # fallback: highlight "high placement" if median is strong
         med = float(median(rvals)) if rvals else 999.0
         if med <= 25:
             chips.append("Median rank ≤ 25")
@@ -212,6 +243,8 @@ def upsert_consensus_rows(conn, season_id: int, rows: List[Dict]) -> None:
                     tier=?,
                     reason_chips_json=?,
                     explain_json=?,
+                    rank_std_dev=?,
+                    dispersion_penalty=?,
                     updated_at=?
                 WHERE season_id=? AND prospect_id=?
                 """,
@@ -226,6 +259,8 @@ def upsert_consensus_rows(conn, season_id: int, rows: List[Dict]) -> None:
                     row["tier"],
                     row["reason_chips_json"],
                     row["explain_json"],
+                    row["rank_std_dev"],
+                    row["dispersion_penalty"],
                     now,
                     season_id,
                     row["prospect_id"],
@@ -239,8 +274,10 @@ def upsert_consensus_rows(conn, season_id: int, rows: List[Dict]) -> None:
                   consensus_rank, score,
                   sources_covered, avg_rank, median_rank, min_rank, max_rank,
                   tier, reason_chips_json,
-                  explain_json, created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                  explain_json,
+                  rank_std_dev, dispersion_penalty,
+                  created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     season_id,
@@ -255,6 +292,8 @@ def upsert_consensus_rows(conn, season_id: int, rows: List[Dict]) -> None:
                     row["tier"],
                     row["reason_chips_json"],
                     row["explain_json"],
+                    row["rank_std_dev"],
+                    row["dispersion_penalty"],
                     now,
                     now,
                 ),
@@ -264,17 +303,22 @@ def upsert_consensus_rows(conn, season_id: int, rows: List[Dict]) -> None:
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--draft-year", type=int, default=2026)
+    ap.add_argument("--season", type=int, default=None, help="Draft year alias (same as --draft-year)")
     ap.add_argument("--apply", type=int, default=0)
     args = ap.parse_args()
 
+    draft_year = args.season if args.season is not None else args.draft_year
+
     if args.apply == 1:
-        b = backup_db(f"build_consensus_{args.draft_year}")
+        b = backup_db(f"build_consensus_{draft_year}")
         print(f"DB BACKUP: {b}")
     else:
         print("DRY RUN: no DB writes, no backup")
 
+    print(f"CONFIG: DISPERSION_WEIGHT={DISPERSION_WEIGHT}  MAX_PENALTY={MAX_PENALTY}  MIN_SOURCES={MIN_SOURCES_FOR_DISPERSION}")
+
     with connect() as conn:
-        season_id = get_season_id(conn, args.draft_year)
+        season_id = get_season_id(conn, draft_year)
         srcs = active_sources(conn)
         src_ids = [s["source_id"] for s in srcs]
         n_active = len(src_ids)
@@ -282,15 +326,30 @@ def main():
         source_max = {sid: per_source_max_rank(conn, season_id, sid) for sid in src_ids}
         prospect_ranks = fetch_prospect_ranks(conn, season_id)
 
+        # Fetch prospect names/positions for dry-run display
+        prospect_meta: Dict[int, Dict] = {}
+        meta_rows = conn.execute(
+            "SELECT prospect_id, display_name, position_raw FROM prospects WHERE season_id = ?", (season_id,)
+        ).fetchall()
+        for m in meta_rows:
+            prospect_meta[int(m["prospect_id"])] = {
+                "name": m["display_name"] or m["prospect_id"],
+                "position": m["position_raw"] or "",
+            }
+
         computed = []
         for prospect_id, ranks in prospect_ranks.items():
             ranks_sorted = sorted(ranks, key=lambda x: x[0])
             rvals = [rk for _, rk in ranks_sorted]
             k = len(rvals)
 
-            base = base_score_0_100(ranks_sorted, source_max)
+            norm_vals = normalized_ranks(ranks_sorted, source_max)
+            base = base_score_0_100(norm_vals)
             cov = coverage_factor(k, n_active)
-            score = round(base * cov, 4)
+            std_dev, disp_penalty = calc_dispersion(norm_vals)
+
+            # score = base × coverage × (1 − dispersion_penalty)
+            score = round(base * cov * (1.0 - disp_penalty), 4)
 
             avg_rk = round(sum(rvals) / k, 4) if k else None
             med_rk = float(median(rvals)) if k else None
@@ -301,12 +360,15 @@ def main():
             explain = {
                 "sources": [{"source_id": sid, "rank": rk} for sid, rk in ranks_sorted],
                 "active_sources": n_active,
-                "source_max_rank": {str(k): int(v) for k, v in source_max.items()},
+                "source_max_rank": {str(k_): int(v) for k_, v in source_max.items()},
                 "scoring": {
                     "base": "avg(1 - rank/max_rank_by_source) * 100",
                     "coverage": "sqrt(sources_covered / active_sources)",
-                    "final": "base * coverage",
+                    "dispersion_penalty": f"min(pstdev(norm_ranks) * {DISPERSION_WEIGHT}, {MAX_PENALTY})",
+                    "final": "base * coverage * (1 - dispersion_penalty)",
                 },
+                "rank_std_dev": std_dev,
+                "dispersion_penalty": disp_penalty,
                 "tier": tier,
                 "reason_chips": chips,
             }
@@ -323,6 +385,8 @@ def main():
                     "tier": tier,
                     "reason_chips_json": json.dumps(chips, ensure_ascii=False),
                     "explain_json": json.dumps(explain, ensure_ascii=False),
+                    "rank_std_dev": float(std_dev),
+                    "dispersion_penalty": float(disp_penalty),
                 }
             )
 
@@ -333,19 +397,43 @@ def main():
         for i, row in enumerate(computed, start=1):
             row["consensus_rank"] = i
 
-        print(f"PLAN: would write consensus rows: {len(computed)} (active sources: {n_active})")
-        for row in computed[:10]:
+        print(f"\nPLAN: would write consensus rows: {len(computed)} (active sources: {n_active})")
+        print(f"\n{'Rank':<5} {'Name':<28} {'Pos':<6} {'Base':>7} {'StdDev':>8} {'Penalty':>9} {'Score':>8}")
+        print("-" * 75)
+        for row in computed[:20]:
+            pid = row["prospect_id"]
+            meta = prospect_meta.get(pid, {"name": f"id:{pid}", "position": "?"})
+            # Recompute base for display (score / (cov * (1-pen)) is cleaner to recompute)
+            k_ = row["sources_covered"]
+            cov_ = coverage_factor(k_, n_active)
+            pen_ = row["dispersion_penalty"]
+            denom = cov_ * (1.0 - pen_)
+            base_display = round(row["score"] / denom, 2) if denom > 0 else 0.0
             print(
-                f"TOP: prospect_id={row['prospect_id']} rank={row['consensus_rank']} "
-                f"score={row['score']} tier={row['tier']} sources={row['sources_covered']}"
+                f"{row['consensus_rank']:<5} {meta['name']:<28} {meta['position']:<6} "
+                f"{base_display:>7.2f} {row['rank_std_dev']:>8.4f} {row['dispersion_penalty']:>9.4f} "
+                f"{row['score']:>8.4f}"
             )
 
+        # High-dispersion flags (penalty > 0.15) in top 100
+        flagged = [r for r in computed[:100] if r["dispersion_penalty"] > 0.15]
+        if flagged:
+            print(f"\nHIGH-DISAGREEMENT flags (penalty > 0.15) in top 100: {len(flagged)}")
+            for r in flagged:
+                pid = r["prospect_id"]
+                meta = prospect_meta.get(pid, {"name": f"id:{pid}", "position": "?"})
+                print(
+                    f"  #{r['consensus_rank']} {meta['name']} ({meta['position']})  "
+                    f"std_dev={r['rank_std_dev']:.4f}  penalty={r['dispersion_penalty']:.4f}  score={r['score']:.4f}"
+                )
+
         if args.apply != 1:
+            print("\nDRY RUN complete. Rerun with --apply 1 to write.")
             return
 
         upsert_consensus_rows(conn, season_id, computed)
         conn.commit()
-        print(f"OK: wrote consensus rows: {len(computed)}")
+        print(f"\nOK: wrote consensus rows: {len(computed)}")
 
 
 if __name__ == "__main__":
