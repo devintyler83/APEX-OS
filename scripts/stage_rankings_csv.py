@@ -12,6 +12,7 @@ if str(ROOT) not in sys.path:
 
 import argparse
 import csv
+import html
 import re
 from datetime import datetime, timezone
 from typing import Dict, List, Optional, Tuple
@@ -160,7 +161,7 @@ def stage_file(src: Path, season: int, *, dry_run: bool = False) -> Tuple[str, O
 
                 raw_school = ""
                 if cols.get("school"):
-                    raw_school = (row.get(cols["school"]) or "").strip()
+                    raw_school = html.unescape((row.get(cols["school"]) or "").strip())
 
                 raw_pos = ""
                 if cols.get("position"):
