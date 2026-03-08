@@ -66,9 +66,9 @@ EXPORTS: board_2026_v1_default.csv produced.
 
 ## Ordered TODOs
 
-1. Additional source ingest (source universe stable — dedup complete, weights defined)
-2. Full clean weekly pipeline run end-to-end
-3. Review queue cleanup — filter spamml/fantasy sources, focus on legit draft sources
-4. Audit and expand school_aliases — add LSU, USC, App State and other common variants; recovers ~50+ RAS unmatched rows and improves pipeline-wide matching
-5. Fix corrupted school_aliases entries (Oklahoma → Colorado pattern) — data integrity issue affecting prospect matching
+1. Expand school_aliases — add "Southern California", "Louisiana State", "Texas Christian", "Central Florida" and other long-form variants; recovers ~50+ RAS unmatched rows and improves pipeline-wide matching
+2. Additional source ingest (source universe stable — dedup complete, weights defined)
+3. Full clean weekly pipeline run end-to-end
+4. Review queue cleanup — filter spamml/fantasy sources, focus on legit draft sources
+5. ~~Fix corrupted school_aliases entries (Oklahoma → Colorado pattern)~~ COMPLETE 2026-03-08
 6. RAS re-ingest after pro days complete — re-run ingest_ras_2026.py with updated file, fully idempotent
