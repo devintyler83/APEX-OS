@@ -80,10 +80,20 @@ def load_school_alias_map(conn) -> Dict[str, str]:
     rows = conn.execute("SELECT school_alias, school_canonical FROM school_aliases;").fetchall()
     out: Dict[str, str] = {}
     for r in rows:
-        k = school_key(r["school_alias"])
+        alias_raw = r["school_alias"] or ""
+        k = school_key(alias_raw)
         canon = (r["school_canonical"] or "").strip()
-        if k and canon:
-            out[k] = canon
+        if not k or not canon:
+            continue
+        if k in out:
+            # On key collision, prefer the plain (non-parenthetical) alias.
+            # e.g. 'Miami' beats 'Miami (OH)' for key 'miami' because the plain
+            # form is more general and avoids false canonicalization of raw
+            # school values like 'Miami' to 'Miami OH'.
+            incoming_has_paren = "(" in alias_raw
+            if incoming_has_paren:
+                continue  # do not overwrite a plain alias with a parenthetical one
+        out[k] = canon
     return out
 
 

@@ -28,7 +28,7 @@ from draftos.db.connect import connect
 
 
 # ---------------------------------------------------------------------------
-# 10 canonical source IDs (these are authoritative — never map or deactivate)
+# 11 canonical source IDs (these are authoritative — never map or deactivate)
 # ---------------------------------------------------------------------------
 CANONICAL_SOURCE_IDS = {
     14,  # bnbfootball_2026
@@ -41,6 +41,7 @@ CANONICAL_SOURCE_IDS = {
     35,  # tankathon_2026
     36,  # thedraftnetwork_2026
     37,  # theringer_2026
+    38,  # jfosterfilm_2026
 }
 
 # ---------------------------------------------------------------------------
@@ -158,7 +159,7 @@ def print_plan(conn: sqlite3.Connection) -> None:
     active = {r[0]: r[1] for r in conn.execute("SELECT source_id, is_active FROM sources").fetchall()}
 
     print()
-    print("=== CANONICAL SOURCES (10 — will remain is_active=1) ===")
+    print("=== CANONICAL SOURCES (11 — will remain is_active=1) ===")
     for sid in sorted(CANONICAL_SOURCE_IDS):
         print(f"  id={sid:>3}  {rows.get(sid, '?')}")
 

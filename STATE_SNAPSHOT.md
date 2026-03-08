@@ -1,6 +1,6 @@
 # DraftOS State Snapshot
 
-Last Updated (UTC): 2026-03-07T06:16:39.348385+00:00
+Last Updated (UTC): 2026-03-08T05:00:00.000000+00:00
 
 ---
 
@@ -10,7 +10,7 @@ Last Updated (UTC): 2026-03-07T06:16:39.348385+00:00
 
 ## Last Completed Milestone
 
-- Consensus math refinement complete. Source quality weighting added (T1=1.3, T2=1.0, T3=0.7); weighted_base_score stored in DB (migration 0025). Dispersion-aware confidence bands implemented: hard caps at std_dev>0.20 (Low) and std_dev>0.10 (Medium cap); dispersion_cap_applied flag stored per row (migration 0026). 55 prospects capped. Final confidence distribution: High=12, Medium=58, Low=4559. Doctor clean. snapshot_id=6 rebuilt end-to-end.
+- jfosterfilm_2026 ingested and re-ingested (updated file). 293 ranked prospects. source_id=38, is_active=1, T2 weight=1.0. Migration 0029. 216/293 source_players auto-mapped. Rueben Bain Jr. correctly mapped to prospect_id=449 (Miami, EDGE) after fixing school_alias key collision (plain alias beats parenthetical on same key in load_school_alias_map). reingest_source_2026.py created as standard re-ingest script. snapshot_id=7 rebuilt end-to-end. Doctor clean. Confidence: High=11, Medium=54, Low=4564.
 
 ## Next Milestone (Single Target)
 
@@ -20,19 +20,19 @@ Last Updated (UTC): 2026-03-07T06:16:39.348385+00:00
 
 ## Layer Status
 
-RAW CSVs: 10 raw CSVs present in data/imports/rankings/raw/2026/
+RAW CSVs: 11 raw CSVs present in data/imports/rankings/raw/2026/
 
 STAGING: Staged CSVs present per source under data/imports/rankings/staged/2026/
 
-INGEST: Operational. 37 sources (10 active canonical), 10958 source_players, 21034 source_rankings ingested.
+INGEST: Operational. 38 sources (11 active canonical), 11251 source_players, 21327 source_rankings ingested.
 
 BOOTSTRAP: Operational. 4629 prospects bootstrapped.
 
-CONSENSUS: Operational. prospect_consensus_rankings populated. Active sources = 10.
+CONSENSUS: Operational. prospect_consensus_rankings populated. Active sources = 11.
 
 MODEL OUTPUTS: Operational. prospect_model_outputs populated (4629 rows).
 
-SNAPSHOTS: Operational. 4 valid snapshots (ids 3–6). Latest: snapshot_id=6 (2026-03-07). Integrity clean: rows=4629, coverage=4629, confidence=4629.
+SNAPSHOTS: Operational. Latest: snapshot_id=7 (2026-03-08). Integrity clean: rows=4629, coverage=4629, confidence=4629.
 
 EXPORTS: board_2026_v1_default.csv produced.
 
@@ -50,9 +50,17 @@ EXPORTS: board_2026_v1_default.csv produced.
 - Raw ingest data is never deleted (soft deprecation only)
 - Snapshot rows define the universe for coverage and confidence
 - source_canonical_map has 17 entries — always use it for dedup, never count raw is_active
-- 10 canonical sources: pff_2026, nfldraftbuzz_2026_v2, bnbfootball_2026, cbssports_2026, espn_2026, nytimes_2026, pfsn_2026, tankathon_2026, thedraftnetwork_2026, theringer_2026
-- SOURCE_WEIGHTS: T1 (pff_2026, thedraftnetwork_2026, theringer_2026) = 1.3; T2 (nfldraftbuzz_2026_v2, cbssports_2026, espn_2026, nytimes_2026, pfsn_2026) = 1.0; T3 (bnbfootball_2026, tankathon_2026) = 0.7
+- 11 canonical sources: pff_2026, nfldraftbuzz_2026_v2, bnbfootball_2026, cbssports_2026, espn_2026, nytimes_2026, pfsn_2026, tankathon_2026, thedraftnetwork_2026, theringer_2026, jfosterfilm_2026
+- SOURCE_WEIGHTS: T1 (pff_2026, thedraftnetwork_2026, theringer_2026) = 1.3; T2 (nfldraftbuzz_2026_v2, cbssports_2026, espn_2026, nytimes_2026, pfsn_2026, jfosterfilm_2026) = 1.0; T3 (bnbfootball_2026, tankathon_2026) = 0.7
 - Confidence dispersion caps: std_dev > 0.20 → Low; std_dev > 0.10 → cap at Medium (normalized rank std_dev, range 0–1)
+- reingest_source_2026.py is the standard script for all future source updates (clean replace of source_players, source_rankings, source_player_map, staged files; then re-runs staging → ingest → name normalization → bootstrap → prospect canonicalization). Usage: python -m scripts.reingest_source_2026 --source <name> --season <year> --apply 0|1
+- school_alias key collision fix applied in patch_name_normalization_2026.py: plain alias (e.g. 'Miami') beats parenthetical alias (e.g. 'Miami (OH)') when both normalize to the same school_key
+
+---
+
+## Divergence Flags (Manual Evaluation Needed)
+
+- SONNY STYLES (LB, Ohio State): jfosterfilm_2026 ranks #1 overall; consensus rank is outside top 10 (#14, score=80.29). Significant source disagreement — worth manual evaluation to determine if jfosterfilm reflects a strong contrarian view or a data artifact.
 
 ---
 

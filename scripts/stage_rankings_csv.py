@@ -36,6 +36,7 @@ RANK_KEYS = {
     "boardrank",
     "overallrk",
     "overall_rk",
+    "ovr",        # jfosterfilm_2026 and similar boards use OVR
 }
 NAME_KEYS = {
     "name",
@@ -111,10 +112,11 @@ def try_open_reader(p: Path):
     raise last_err  # type: ignore
 
 
-def stage_file(src: Path, season: int) -> Tuple[str, Optional[Path], int, str]:
+def stage_file(src: Path, season: int, *, dry_run: bool = False) -> Tuple[str, Optional[Path], int, str]:
     """
     Returns (status, staged_path, rows_count, message)
     status: OK | SKIP | FAIL
+    When dry_run=True, no file is written and staged_path is the would-be path.
     """
     try:
         reader, enc, fh = try_open_reader(src)
@@ -124,7 +126,7 @@ def stage_file(src: Path, season: int) -> Tuple[str, Optional[Path], int, str]:
     with fh:
         cols = detect_columns(reader.fieldnames or [])
         if "rank" not in cols or "player_name" not in cols:
-            return ("SKIP", None, 0, "missing rank or player_name column")
+            return ("SKIP", None, 0, f"missing rank or player_name column (detected: {list(cols.keys())}, headers: {reader.fieldnames})")
 
         out_dir = PATHS.imports / "rankings" / "staged" / str(season)
         out_dir.mkdir(parents=True, exist_ok=True)
@@ -137,6 +139,17 @@ def stage_file(src: Path, season: int) -> Tuple[str, Optional[Path], int, str]:
         fieldnames_out = ["rank", "player_name", "school", "position"]
 
         rows_written = 0
+
+        if dry_run:
+            # Count rows without writing
+            for row in reader:
+                raw_rank = (row.get(cols["rank"]) or "").strip()
+                raw_name = (row.get(cols["player_name"]) or "").strip()
+                if not raw_rank or not raw_name:
+                    continue
+                rows_written += 1
+            return ("OK", out_path, rows_written, f"DRY_RUN encoding={enc} col_map={cols}")
+
         with out_path.open("w", encoding="utf-8-sig", newline="") as out_f:
             w = csv.DictWriter(out_f, fieldnames=fieldnames_out)
             w.writeheader()
@@ -177,28 +190,51 @@ def stage_file(src: Path, season: int) -> Tuple[str, Optional[Path], int, str]:
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--dir", required=True, help="Folder containing raw rankings CSVs")
+    ap = argparse.ArgumentParser(description="Stage raw rankings CSVs for ingest.")
+    grp = ap.add_mutually_exclusive_group(required=True)
+    grp.add_argument("--dir", help="Folder containing raw rankings CSVs (batch mode)")
+    grp.add_argument("--source", help="Stage a single source by name (looks in raw/{season}/{source}.csv)")
     ap.add_argument("--season", type=int, default=2026)
+    ap.add_argument(
+        "--apply",
+        type=int,
+        default=1,
+        choices=[0, 1],
+        help="0 = dry run (no files written), 1 = write staged files (default=1)",
+    )
     args = ap.parse_args()
 
-    src_dir = Path(args.dir)
-    if not src_dir.exists():
-        raise SystemExit(f"FAIL: dir not found: {src_dir}")
+    dry_run = args.apply == 0
+    if dry_run:
+        print("DRY RUN: no staged files will be written")
+    else:
+        print("APPLY: staged files will be written")
 
-    files = sorted([p for p in src_dir.iterdir() if p.is_file() and p.suffix.lower() == ".csv"])
-    if not files:
-        raise SystemExit(f"FAIL: no CSV files found in {src_dir}")
+    if args.source:
+        # Single-source mode: look for raw/{season}/{source}.csv
+        raw_dir = PATHS.imports / "rankings" / "raw" / str(args.season)
+        src_path = raw_dir / f"{args.source}.csv"
+        if not src_path.exists():
+            raise SystemExit(f"FAIL: source file not found: {src_path}")
+        files = [src_path]
+    else:
+        src_dir = Path(args.dir)
+        if not src_dir.exists():
+            raise SystemExit(f"FAIL: dir not found: {src_dir}")
+        files = sorted([p for p in src_dir.iterdir() if p.is_file() and p.suffix.lower() == ".csv"])
+        if not files:
+            raise SystemExit(f"FAIL: no CSV files found in {src_dir}")
 
     ok = 0
     skip = 0
     fail = 0
 
     for f in files:
-        status, staged, n, msg = stage_file(f, args.season)
+        status, staged, n, msg = stage_file(f, args.season, dry_run=dry_run)
         if status == "OK":
             ok += 1
-            print(f"OK: {f.name} -> {staged.name} rows={n} {msg}")
+            staged_label = staged.name if staged else "(would write)"
+            print(f"OK: {f.name} -> {staged_label} rows={n} {msg}")
         elif status == "SKIP":
             skip += 1
             print(f"SKIP: {f.name} ({msg})")
