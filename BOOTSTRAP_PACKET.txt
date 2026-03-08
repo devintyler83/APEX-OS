@@ -17,7 +17,7 @@ Authoritative State:
 1) STATE_SNAPSHOT.md
 # DraftOS State Snapshot
 
-Last Updated (UTC): 2026-03-08T06:11:55.865736+00:00
+Last Updated (UTC): 2026-03-08T06:53:01.803177+00:00
 
 ---
 
@@ -93,11 +93,11 @@ EXPORTS: board_2026_v1_default.csv produced.
 
 2) System Snapshot Output
 === DRAFTOS SYSTEM SNAPSHOT ===
-generated_utc: 2026-03-08T06:11:55.220755+00:00
+generated_utc: 2026-03-08T06:53:01.142493+00:00
 
 ## Git
 branch: main
-commit: 3c39670fa566112b330cfe19594e74f7454d59f1
+commit: b0e9ab62b5451bc98ad11316c1b1c6b4b8913c71
 status: clean
 
 ## Tables
@@ -173,6 +173,7 @@ status: clean
 - 0027_ras_season_cols @ 2026-03-07T06:07:03.612026+00:00
 - 0028_ras_staging @ 2026-03-07T06:07:03.619921+00:00
 - 0029_seed_jfosterfilm_2026 @ 2026-03-08T04:30:43.552188+00:00
+- 0030_prospect_tags_value @ 2026-03-08T06:41:33.114733+00:00
 
 ## Active Season
 no is_active column
@@ -189,6 +190,7 @@ no is_active column
 - draftos\normalize\schools.py
 - draftos\queries\__init__.py
 - draftos\queries\active.py
+- draftos\queries\apex.py
 - draftos\queries\consensus.py
 - draftos\queries\model_outputs.py
 - scripts\_diag_school_aliases.py
