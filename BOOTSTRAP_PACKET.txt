@@ -17,7 +17,7 @@ Authoritative State:
 1) STATE_SNAPSHOT.md
 # DraftOS State Snapshot
 
-Last Updated (UTC): 2026-03-08T05:25:47.727939+00:00
+Last Updated (UTC): 2026-03-08T05:43:03.193303+00:00
 
 ---
 
@@ -83,21 +83,21 @@ EXPORTS: board_2026_v1_default.csv produced.
 
 ## Ordered TODOs
 
-1. Expand school_aliases — add "Southern California", "Louisiana State", "Texas Christian", "Central Florida" and other long-form variants; recovers ~50+ RAS unmatched rows and improves pipeline-wide matching
-2. Additional source ingest (source universe stable — dedup complete, weights defined)
-3. Full clean weekly pipeline run end-to-end
-4. Review queue cleanup — filter spamml/fantasy sources, focus on legit draft sources
-5. ~~Fix corrupted school_aliases entries (Oklahoma → Colorado pattern)~~ COMPLETE 2026-03-08
-6. RAS re-ingest after pro days complete — re-run ingest_ras_2026.py with updated file, fully idempotent
+1. Additional source ingest (source universe stable — dedup complete, weights defined)
+2. Full clean weekly pipeline run end-to-end
+3. Review queue cleanup — filter spamml/fantasy sources, focus on legit draft sources
+4. RAS re-ingest after pro days complete — re-run ingest_ras_2026.py with updated file, fully idempotent
+5. ~~Expand school_aliases — add long-form variants (Southern California, Louisiana State, etc.)~~ COMPLETE 2026-03-08 (23 aliases added, 147→170, RAS matched 447→461)
+6. ~~Fix corrupted school_aliases entries (Oklahoma → Colorado pattern)~~ COMPLETE 2026-03-08
 
 
 2) System Snapshot Output
 === DRAFTOS SYSTEM SNAPSHOT ===
-generated_utc: 2026-03-08T05:25:47.087656+00:00
+generated_utc: 2026-03-08T05:43:02.534895+00:00
 
 ## Git
 branch: main
-commit: a40ea27b4567c863e426f51177e1997109600e1f
+commit: d614c75197bf0eef7729fd1a675d279bd1148e5f
 status: clean
 
 ## Tables
@@ -191,6 +191,7 @@ no is_active column
 - draftos\queries\active.py
 - draftos\queries\consensus.py
 - draftos\queries\model_outputs.py
+- scripts\_diag_school_aliases.py
 - scripts\apply_review_queue_mappings_2026.py
 - scripts\autoresolve_mapping_review_queue_2026.py
 - scripts\bootstrap_prospects_from_sources_2026.py
@@ -206,6 +207,7 @@ no is_active column
 - scripts\doctor.py
 - scripts\doctor_snapshot.py
 - scripts\end_session.py
+- scripts\expand_school_aliases_2026.py
 - scripts\export_board_csv.py
 - scripts\export_confidence_summary_csv.py
 - scripts\export_mapping_review_queue_csv.py
