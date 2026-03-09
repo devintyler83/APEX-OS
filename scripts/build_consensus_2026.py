@@ -103,6 +103,7 @@ def fetch_prospect_ranks(conn, season_id: int) -> Dict[int, List[Tuple[int, int]
         JOIN source_player_map m ON m.source_player_id = sr.source_player_id
         WHERE sr.season_id = ?
           AND s.is_active = 1
+          AND sr.overall_rank IS NOT NULL
           AND sr.ranking_date = (
             SELECT MAX(ranking_date)
             FROM source_rankings sr2
@@ -119,6 +120,7 @@ def fetch_prospect_ranks(conn, season_id: int) -> Dict[int, List[Tuple[int, int]
         FROM source_rankings sr
         JOIN source_player_map m ON m.source_player_id = sr.source_player_id
         WHERE sr.season_id = ?
+          AND sr.overall_rank IS NOT NULL
           AND sr.ranking_date = (
             SELECT MAX(ranking_date)
             FROM source_rankings sr2

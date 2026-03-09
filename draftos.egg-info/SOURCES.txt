@@ -8,3 +8,13 @@ draftos.egg-info/requires.txt
 draftos.egg-info/top_level.txt
 draftos/db/connect.py
 draftos/db/migrate.py
+draftos/ingest/rankings/loader.py
+draftos/ingest/rankings/writer.py
+draftos/normalize/names.py
+draftos/normalize/positions.py
+draftos/normalize/schools.py
+draftos/queries/__init__.py
+draftos/queries/active.py
+draftos/queries/apex.py
+draftos/queries/consensus.py
+draftos/queries/model_outputs.py
