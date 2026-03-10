@@ -1,6 +1,6 @@
 # DraftOS State Snapshot
 
-Last Updated (UTC): 2026-03-10T01:32:58.750080+00:00
+Last Updated (UTC): 2026-03-10T02:11:31.795088+00:00
 
 ---
 
@@ -60,6 +60,7 @@ EXPORTS: board_2026_v1_default.csv produced.
 - Confidence dispersion caps: std_dev > 0.20 → Low; std_dev > 0.10 → cap at Medium (normalized rank std_dev, range 0–1)
 - reingest_source_2026.py is the standard script for all future source updates (clean replace of source_players, source_rankings, source_player_map, staged files; then re-runs staging → ingest → name normalization → bootstrap → prospect canonicalization). Usage: python -m scripts.reingest_source_2026 --source <name> --season <year> --apply 0|1
 - school_alias key collision fix applied in patch_name_normalization_2026.py: plain alias (e.g. 'Miami') beats parenthetical alias (e.g. 'Miami (OH)') when both normalize to the same school_key
+- RAS join in get_big_board() uses AND r.ras_total IS NOT NULL instead of season_id filter. Temporary workaround for two-generation ras data (172 rows season_id=NULL with real data, 336 rows season_id=1 mostly empty). Revert to season_id join after RAS re-ingest post pro days.
 
 ---
 

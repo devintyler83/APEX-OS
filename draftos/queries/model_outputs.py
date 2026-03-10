@@ -272,7 +272,7 @@ def get_big_board(
 
         LEFT JOIN ras r
           ON r.prospect_id = sr.prospect_id
-         AND r.season_id   = sr.season_id
+         AND r.ras_total IS NOT NULL
 
         LEFT JOIN apex_scores aps
           ON aps.prospect_id   = sr.prospect_id
