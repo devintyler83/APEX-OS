@@ -10,14 +10,14 @@ Non-negotiables:
 - Provide run order + verification commands
 
 Goal for this chat:
-Session 9: Re-score top-50 against updated consensus ranks (universe migration changed all consensus_ranks).
+Divergence formula recalibration. Consensus scale shift (40–82 → 65–99) makes nearly all prospects show APEX LOW. Two options:
 
 Authoritative State:
 
 1) STATE_SNAPSHOT.md
 # DraftOS State Snapshot
 
-Last Updated (UTC): 2026-03-10T05:46:05.260250+00:00
+Last Updated (UTC): 2026-03-10T06:10:52.409800+00:00
 
 ---
 
@@ -40,12 +40,22 @@ Last Updated (UTC): 2026-03-10T05:46:05.260250+00:00
   - Confidence: High=11, Medium=63, Low=926
   - Query layer updated: consensus.py, model_outputs.py, snapshot_board.py all filter AND p.is_active=1
 
+## Last Completed Milestone (Session 9 addendum)
+
+- Session 9: Top-50 APEX re-score against updated post-universe consensus ranks. 50/50 scored, 0 failed.
+  - Tier: ELITE=4, APEX=28, SOLID=18  (ELITE threshold = composite ≥ 85.0)
+  - ELITE: Rueben Bain EDGE 91.2 (#4), Fernando Mendoza QB 89.3 (#1), David Bailey EDGE 88.4 (#7), Rueben Bain dup 85.9 (#12)
+  - Only ALIGNED: Rueben Bain #4 (delta=-8.0). All other 49 show APEX LOW.
+  - APEX LOW MAJOR top gaps: Jeremiyah Love RB -41.1, Kenyon Sadiq TE -34.7, Lee Hunter LB -33.6, Olaivavega Ioane OG -32.6
+  - Structural note: systematic APEX LOW is a scale artifact. Consensus now runs 65–99 (post-universe); APEX composites run 55–91. Divergence was calibrated to old compressed scale (40–82). Divergence thresholds need recalibration.
+  - APEX tier thresholds confirmed: ELITE≥85, APEX≥70, SOLID≥55, DEVELOPMENTAL≥40
+
 ## Next Milestone (Single Target)
 
-- Session 9: Re-score top-50 against updated consensus ranks (universe migration changed all consensus_ranks).
-  APEX divergence_delta values are now stale — they were computed against the inflated pre-universe ranks.
-  Run: python -m scripts.run_apex_scoring_2026 --force (top-50 only, not calibration artifacts)
-  Then verify: apex_scores divergence_delta distribution makes sense with new ranks.
+- Divergence formula recalibration. Consensus scale shift (40–82 → 65–99) makes nearly all prospects show APEX LOW. Two options:
+  1. Recalibrate divergence_score to rank-relative comparison (apex_rank vs consensus_rank) instead of raw score delta
+  2. Accept APEX LOW prevalence as meaningful — APEX intentionally discounts non-premium positions via PVC; most APEX LOW MAJOR are OG/C/RB/TE which is correct PVC behavior
+  Decision determines whether to update divergence engine or annotate the current output as-is.
 
 ---
 
@@ -126,7 +136,7 @@ EXPORTS: board_2026_v1_default.csv produced (may be stale — re-export not yet 
 3. ~~Session 6: RAS join fix, ghost prospect audit~~ COMPLETE 2026-03-10
 4. ~~Session 7: top-50 force re-score (positional archetypes), calibration artifact tagging (migration 0032)~~ COMPLETE 2026-03-10 (50 top-50 scored, GEN-=0, 11 cal tagged)
 5. ~~Session 8: Prospect universe migration (migration 0033, is_active, consensus rebuild)~~ COMPLETE 2026-03-10
-6. Session 9: Re-score top-50 APEX with --force against updated consensus ranks (Session 8 changed all ranks)
+6. ~~Session 9: Re-score top-50 APEX with --force against updated consensus ranks~~ COMPLETE 2026-03-10 (50/50, ELITE=4, APEX=28, SOLID=18)
 7. Additional source ingest (source universe stable — dedup complete, weights defined)
 8. Full clean weekly pipeline run end-to-end
 9. Review queue cleanup — filter spamml/fantasy sources, focus on legit draft sources
@@ -137,11 +147,11 @@ EXPORTS: board_2026_v1_default.csv produced (may be stale — re-export not yet 
 
 2) System Snapshot Output
 === DRAFTOS SYSTEM SNAPSHOT ===
-generated_utc: 2026-03-10T05:46:04.587637+00:00
+generated_utc: 2026-03-10T06:10:51.728068+00:00
 
 ## Git
 branch: main
-commit: 03bff37d56f770244930e99e7d8ae777fea0dd11
+commit: 295410e694993ec7cbec08d8fae9a6a354a84180
 status: clean
 
 ## Tables
