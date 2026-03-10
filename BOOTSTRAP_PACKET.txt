@@ -10,14 +10,14 @@ Non-negotiables:
 - Provide run order + verification commands
 
 Goal for this chat:
-Session 5: Add positional archetype libraries to prompts.py (QB, EDGE, CB, OT, S, IDL, TE). Re-score Gunnar Helm (pid=842) with --force after TE library added.
+Session 9: Re-score top-50 against updated consensus ranks (universe migration changed all consensus_ranks).
 
 Authoritative State:
 
 1) STATE_SNAPSHOT.md
 # DraftOS State Snapshot
 
-Last Updated (UTC): 2026-03-10T05:42:24.900622+00:00
+Last Updated (UTC): 2026-03-10T05:46:05.260250+00:00
 
 ---
 
@@ -27,36 +27,47 @@ Last Updated (UTC): 2026-03-10T05:42:24.900622+00:00
 
 ## Last Completed Milestone
 
-- APEX v2.2 engine built and calibrated (Session 3). New package draftos/apex/ (engine.py, prompts.py, writer.py). Scripts: run_apex_scoring_2026.py (Claude API orchestrator, requires ANTHROPIC_API_KEY) and import_apex_batch_json.py (API-key-free batch import path). 12 calibration prospects scored, all 6 validation targets PASS: Hunter=ELITE(91.2)+Two-Way, Schwesinger=APEX(73.1)+CRUSH+Walk-On, Sanders=SOLID(67.0)+TierC, Membou=APEX(76.0), Emmanwori=APEX(74.7)+SOSGate, Etienne=DEVELOPMENTAL(45.8)+NO_FIT. apex_scores=12, divergence_flags=12. get_big_board updated with APEX LEFT JOIN (apex_v2.2). app.py updated with APEX Score/Tier/Archetype columns (ELITE=gold, APEX=green, SOLID=blue, DEVELOPMENTAL=grey).
-
-## Last Completed Milestone (Session 4 addendum)
-
-- Top-50 batch scored (62 total apex_scores: 12 calibration + 50 top50). Tier distribution: ELITE=6, APEX=32, SOLID=22, DEVELOPMENTAL=2. Skip logic confirmed idempotent.
-- Calibration divergence_flags corrected: 12 false APEX HIGH flags → 0. Root cause: DB consensus ranks inflated (190–680) due to source coverage gaps. Fix: scripts/fix_calibration_divergence_2026.py uses hardcoded known ranks (CALIBRATION_KNOWN_RANKS also added to run_apex_scoring_2026.py for future runs). Hunter=ALIGNED(-8.4), Schwesinger=APEX LOW rank=33 delta=-20.3.
+- Session 8: Prospect universe migration — most consequential data quality fix in the project.
+  - Migration 0033: prospects.is_active + prospect_consensus_rankings.is_active (additive, default 1)
+  - data/universe/prospect_universe_2026.csv: 861 canonical players from RAS (630) ∪ jfosterfilm (735)
+  - 3760 garbage rows soft-deprecated (is_active=0) — spamml, fantasy, cross-season contamination
+  - 1376 active rows (861 unique players × ~1.6 position-dup factor from normalization artifacts)
+  - 0 universe names unmatched — suffix-aware (Jr./II/III) + period-aware (T.J.→TJ) matching
+  - All 50 APEX top-50 scored prospects confirmed in active universe (0 false negatives)
+  - Consensus rebuilt: 798 rows (full replace), build_consensus now does DELETE+INSERT not upsert
+  - Score range: max 98.5 (was 81.3). Elite tier: 12 (was 0). Strong: 11 (was 2)
+  - snapshot_id=9 (2026-03-10): rows=1000, coverage=1000, confidence=1000 — OK
+  - Confidence: High=11, Medium=63, Low=926
+  - Query layer updated: consensus.py, model_outputs.py, snapshot_board.py all filter AND p.is_active=1
 
 ## Next Milestone (Single Target)
 
-- Session 5: Add positional archetype libraries to prompts.py (QB, EDGE, CB, OT, S, IDL, TE). Re-score Gunnar Helm (pid=842) with --force after TE library added.
+- Session 9: Re-score top-50 against updated consensus ranks (universe migration changed all consensus_ranks).
+  APEX divergence_delta values are now stale — they were computed against the inflated pre-universe ranks.
+  Run: python -m scripts.run_apex_scoring_2026 --force (top-50 only, not calibration artifacts)
+  Then verify: apex_scores divergence_delta distribution makes sense with new ranks.
 
 ---
 
 ## Layer Status
 
-RAW CSVs: 11 raw CSVs present in data/imports/rankings/raw/2026/
+RAW CSVs: 12 raw CSVs present in data/imports/rankings/raw/2026/ (including ras_2026.csv)
 
 STAGING: Staged CSVs present per source under data/imports/rankings/staged/2026/
 
-INGEST: Operational. 38 sources (11 active canonical), 11251 source_players, 21327 source_rankings ingested.
+INGEST: Operational. 39 sources (11 active canonical), 15135 source_players, 30542 source_rankings ingested.
 
-BOOTSTRAP: Operational. 4629 prospects bootstrapped.
+BOOTSTRAP: Operational. 5136 prospects total (1376 active / 3760 inactive after Session 8 universe apply).
 
-CONSENSUS: Operational. prospect_consensus_rankings populated. Active sources = 11.
+UNIVERSE: Operational. data/universe/prospect_universe_2026.csv (861 players). Migration 0033 applied.
 
-MODEL OUTPUTS: Operational. prospect_model_outputs populated (4629 rows).
+CONSENSUS: Operational. 798 rows (active-universe-only rebuild). Top score: 98.5328 (Fernando Mendoza QB).
 
-SNAPSHOTS: Operational. Latest: snapshot_id=7 (2026-03-08). Integrity clean: rows=4629, coverage=4629, confidence=4629.
+MODEL OUTPUTS: Operational. prospect_model_outputs: 4756 rows (1000 for active prospects).
 
-EXPORTS: board_2026_v1_default.csv produced.
+SNAPSHOTS: Operational. Latest: snapshot_id=9 (2026-03-10). Integrity clean: rows=1000, coverage=1000, confidence=1000.
+
+EXPORTS: board_2026_v1_default.csv produced (may be stale — re-export not yet run post-Session 8).
 
 ---
 
@@ -66,6 +77,7 @@ EXPORTS: board_2026_v1_default.csv produced.
 - Additive migrations only
 - Season scoped only
 - Active sources only (sources.is_active = 1 enforced in math)
+- Active prospects only (prospects.is_active = 1 enforced in all downstream queries post-Session 8)
 - Idempotent scripts only
 - Each layer has exactly one responsibility
 - No layer may recompute logic belonging to another
@@ -78,12 +90,17 @@ EXPORTS: board_2026_v1_default.csv produced.
 - reingest_source_2026.py is the standard script for all future source updates (clean replace of source_players, source_rankings, source_player_map, staged files; then re-runs staging → ingest → name normalization → bootstrap → prospect canonicalization). Usage: python -m scripts.reingest_source_2026 --source <name> --season <year> --apply 0|1
 - school_alias key collision fix applied in patch_name_normalization_2026.py: plain alias (e.g. 'Miami') beats parenthetical alias (e.g. 'Miami (OH)') when both normalize to the same school_key
 - RAS join in get_big_board() uses AND r.ras_total IS NOT NULL instead of season_id filter. Temporary workaround for two-generation ras data (172 rows season_id=NULL with real data, 336 rows season_id=1 mostly empty). Revert to season_id join after RAS re-ingest post pro days.
+- build_consensus_2026.py does full DELETE + INSERT (not upsert) to guarantee clean row count after universe apply. Safe because consensus is derived data, always rebuilt from sources.
+- snapshot_board.py filters prospect_model_outputs via JOIN to prospects WHERE is_active=1. jfosterfilm_2026.csv encoding is latin-1.
+- Universe name matching: normalize_name() → suffix-strip (Jr./Sr./II/III/IV) → period-strip (T.J.→TJ). All 861 universe names matched to DB with 0 gaps.
+- Active prospect count is 1376 DB rows for 861 unique players — the ~1.6x factor is position normalization duplicate artifact (pre-existing, not introduced in Session 8).
 
 ---
 
 ## Divergence Flags (Manual Evaluation Needed)
 
-- SONNY STYLES (LB, Ohio State): jfosterfilm_2026 ranks #1 overall; consensus rank is outside top 10 (#14, score=80.29). Significant source disagreement — worth manual evaluation to determine if jfosterfilm reflects a strong contrarian view or a data artifact.
+- SONNY STYLES (LB, Ohio State): jfosterfilm_2026 ranks #1 overall; new consensus rank is #6 (score=94.30). Source disagreement reduced post-universe but still significant — worth evaluating whether jfoster reflects genuine contrarian view.
+- ALL TOP-50 APEX divergence_deltas are stale post-Session 8 — computed against pre-universe consensus ranks. Re-score with --force in Session 9 to update.
 
 ---
 
@@ -96,9 +113,11 @@ EXPORTS: board_2026_v1_default.csv produced.
 - run_apex_scoring_2026.py requires ANTHROPIC_API_KEY env var to make live API calls
 - Fallback: import_apex_batch_json.py accepts pre-evaluated JSON (no API key needed)
 - data/apex_calibration_batch.json contains the calibration evaluations (APEX v2.2 direct eval)
-- CALIBRATION_KNOWN_RANKS in run_apex_scoring_2026.py maps name -> (consensus_rank, tier) for correct divergence computation. DB ranks for calibration prospects are inflated (190–680) — these override at scoring time.
-- Gunnar Helm (pid=842): 2025 draftee — ghost row in 2026 DB introduced via spamml sources (TEN NFL player rows) and stale PFF list. apex_scores row force-deleted in Session 6. Do NOT re-score — cross-season contamination. Remove from calibration re-score sequence. Calibration batch contains 12 total 2025 draftees; their apex_scores are engine validation artifacts only, not 2026 board signal.
-- APEX LOW on non-premium positions (ILB, OG, C, TE, RB) is structural PVC behavior, not actionable divergence. PVC suppression for these positions means apex_composite will routinely fall below consensus-implied. Monitor APEX LOW MAJOR only on premium positions (QB, CB, EDGE, OT, S) where PVC=0.90–1.0 and the gap reflects genuine framework judgment rather than position discount.
+- CALIBRATION_KNOWN_RANKS in run_apex_scoring_2026.py maps name -> (consensus_rank, tier) for correct divergence computation. These hardcoded ranks will need updating after Session 9 re-score.
+- Gunnar Helm (pid=842): 2025 draftee — ghost row in 2026 DB introduced via spamml sources. apex_scores row force-deleted in Session 6. Do NOT re-score — cross-season contamination. Correctly remains in active universe (pid=842 is in jfosterfilm) — this is a known ghost but the universe CSV catch was correct to include him as jfoster ranked him. Monitor.
+- APEX LOW on non-premium positions (ILB, OG, C, TE, RB) is structural PVC behavior, not actionable divergence. Monitor APEX LOW MAJOR only on premium positions (QB, CB, EDGE, OT, S).
+
+---
 
 ## Ordered TODOs
 
@@ -106,21 +125,23 @@ EXPORTS: board_2026_v1_default.csv produced.
 2. ~~Session 5: Add positional archetype libraries to prompts.py (QB, EDGE, CB, OT, S, IDL, TE)~~ COMPLETE 2026-03-10
 3. ~~Session 6: RAS join fix, ghost prospect audit~~ COMPLETE 2026-03-10
 4. ~~Session 7: top-50 force re-score (positional archetypes), calibration artifact tagging (migration 0032)~~ COMPLETE 2026-03-10 (50 top-50 scored, GEN-=0, 11 cal tagged)
-5. Additional source ingest (source universe stable — dedup complete, weights defined)
-6. Full clean weekly pipeline run end-to-end
-7. Review queue cleanup — filter spamml/fantasy sources, focus on legit draft sources
-8. RAS re-ingest after pro days complete — re-run ingest_ras_2026.py with updated file, fully idempotent
-9. ~~Expand school_aliases — add long-form variants (Southern California, Louisiana State, etc.)~~ COMPLETE 2026-03-08 (23 aliases added, 147→170, RAS matched 447→461)
-10. ~~Fix corrupted school_aliases entries (Oklahoma → Colorado pattern)~~ COMPLETE 2026-03-08
+5. ~~Session 8: Prospect universe migration (migration 0033, is_active, consensus rebuild)~~ COMPLETE 2026-03-10
+6. Session 9: Re-score top-50 APEX with --force against updated consensus ranks (Session 8 changed all ranks)
+7. Additional source ingest (source universe stable — dedup complete, weights defined)
+8. Full clean weekly pipeline run end-to-end
+9. Review queue cleanup — filter spamml/fantasy sources, focus on legit draft sources
+10. RAS re-ingest after pro days complete — re-run ingest_ras_2026.py with updated file, fully idempotent
+11. ~~Expand school_aliases — add long-form variants (Southern California, Louisiana State, etc.)~~ COMPLETE 2026-03-08 (23 aliases added, 147→170, RAS matched 447→461)
+12. ~~Fix corrupted school_aliases entries (Oklahoma → Colorado pattern)~~ COMPLETE 2026-03-08
 
 
 2) System Snapshot Output
 === DRAFTOS SYSTEM SNAPSHOT ===
-generated_utc: 2026-03-10T05:42:24.224519+00:00
+generated_utc: 2026-03-10T05:46:04.587637+00:00
 
 ## Git
 branch: main
-commit: 79bdb1b601334736d5122d60789a6a005511e39d
+commit: 03bff37d56f770244930e99e7d8ae777fea0dd11
 status: clean
 
 ## Tables
