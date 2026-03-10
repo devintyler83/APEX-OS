@@ -17,7 +17,7 @@ Authoritative State:
 1) STATE_SNAPSHOT.md
 # DraftOS State Snapshot
 
-Last Updated (UTC): 2026-03-09T23:03:33.457812+00:00
+Last Updated (UTC): 2026-03-10T00:13:11.837367+00:00
 
 ---
 
@@ -93,11 +93,11 @@ EXPORTS: board_2026_v1_default.csv produced.
 
 2) System Snapshot Output
 === DRAFTOS SYSTEM SNAPSHOT ===
-generated_utc: 2026-03-09T23:03:32.767623+00:00
+generated_utc: 2026-03-10T00:13:11.164971+00:00
 
 ## Git
 branch: main
-commit: 8e0382454fa238cf8ef196c229fa4f894f88f7d8
+commit: 597ff77a4f92c3aa22c18e225adf07e76541129c
 status: clean
 
 ## Tables
@@ -186,8 +186,11 @@ no is_active column
 
 ## Script Inventory
 - app\app.py
+- draftos\apex\__init__.py
+- draftos\apex\engine.py
+- draftos\apex\prompts.py
+- draftos\apex\writer.py
 - draftos\config.py
-- draftos\db\Ingest.py
 - draftos\db\connect.py
 - draftos\db\migrate.py
 - draftos\ingest\rankings\loader.py
@@ -200,9 +203,7 @@ no is_active column
 - draftos\queries\apex.py
 - draftos\queries\consensus.py
 - draftos\queries\model_outputs.py
-- ingest.py
 - scripts\_diag_school_aliases.py
-- scripts\apex_v22_engine.py
 - scripts\apply_review_queue_mappings_2026.py
 - scripts\autoresolve_mapping_review_queue_2026.py
 - scripts\bootstrap_prospects_from_sources_2026.py
@@ -225,6 +226,7 @@ no is_active column
 - scripts\export_movers_csv.py
 - scripts\export_reports_html.py
 - scripts\export_source_health_csv.py
+- scripts\import_apex_batch_json.py
 - scripts\ingest_rankings_staged.py
 - scripts\ingest_ras_2026.py
 - scripts\learn_school_aliases_from_mapped_2026.py
@@ -238,6 +240,7 @@ no is_active column
 - scripts\reingest_source_2026.py
 - scripts\repair_school_aliases_2026.py
 - scripts\repair_snapshot_orphans.py
+- scripts\run_apex_scoring_2026.py
 - scripts\run_weekly_update.py
 - scripts\scrape_nfldraftbuzz_2026.py
 - scripts\scrape_nfldraftbuzz_2026_playwright.py
@@ -247,6 +250,7 @@ no is_active column
 - scripts\verify_snapshot_integrity.py
 
 ## Stub / Deferred Detection
+- draftos\apex\__init__.py
 - scripts\doctor_snapshot.py (DEFERRED)
 
 === END SNAPSHOT ===
