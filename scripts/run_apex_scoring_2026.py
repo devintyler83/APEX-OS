@@ -326,6 +326,25 @@ ARCHETYPE_OVERRIDES: dict[int, dict] = {
             "his hybrid deployment profile and three-level playmaking."
         ),
     },
+    55: {
+        "forced_archetype":  "CB-3 Athletic Freak",
+        "archetype_direction": (
+            "Assigned archetype: CB-3 Athletic Freak — CB-1 Development Pathway Confirmed\n\n"
+            "Rationale: Ponds wins through physical superiority at the line — length, "
+            "burst, and press dominance. His primary winning mechanism is athleticism, "
+            "not spatial intelligence or zone reading. "
+            "CB-1 development pathway is confirmed: technique is trending upward year-over-year, "
+            "and processing is developing, but not yet Tier A confirmed against top-25 competition. "
+            "The CB-1 pathway flag is a ceiling expander, not a reclassification — it signals "
+            "his technique is trending toward CB-1 mechanism. "
+            "Do NOT score as CB-2 Zone Technician — he is not a spatial processor reading "
+            "the quarterback. CB-2 overweights scheme dependency he does not yet possess. "
+            "Score against CB-3 archetype weights (Athleticism bumped to 28%). "
+            "Eval Confidence: Tier B. Capital range: R1 Picks 16-32 / Early R2. "
+            "Tier A (Picks 1-15) accessible if PAA Q4 processing confirmation clears. "
+            "The CB-1 development pathway flag MUST appear in the archetype field or tags."
+        ),
+    },
 }
 
 # ---------------------------------------------------------------------------
