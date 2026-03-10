@@ -1,6 +1,6 @@
 # DraftOS State Snapshot
 
-Last Updated (UTC): 2026-03-09T23:03:33.457812+00:00
+Last Updated (UTC): 2026-03-10T00:20:00.000000+00:00
 
 ---
 
@@ -10,11 +10,11 @@ Last Updated (UTC): 2026-03-09T23:03:33.457812+00:00
 
 ## Last Completed Milestone
 
-- jfosterfilm_2026 ingested and re-ingested (updated file). 293 ranked prospects. source_id=38, is_active=1, T2 weight=1.0. Migration 0029. 216/293 source_players auto-mapped. Rueben Bain Jr. correctly mapped to prospect_id=449 (Miami, EDGE) after fixing school_alias key collision (plain alias beats parenthetical on same key in load_school_alias_map). reingest_source_2026.py created as standard re-ingest script. snapshot_id=7 rebuilt end-to-end. Doctor clean. Confidence: High=11, Medium=54, Low=4564.
+- APEX v2.2 engine built and calibrated (Session 3). New package draftos/apex/ (engine.py, prompts.py, writer.py). Scripts: run_apex_scoring_2026.py (Claude API orchestrator, requires ANTHROPIC_API_KEY) and import_apex_batch_json.py (API-key-free batch import path). 12 calibration prospects scored, all 6 validation targets PASS: Hunter=ELITE(91.2)+Two-Way, Schwesinger=APEX(73.1)+CRUSH+Walk-On, Sanders=SOLID(67.0)+TierC, Membou=APEX(76.0), Emmanwori=APEX(74.7)+SOSGate, Etienne=DEVELOPMENTAL(45.8)+NO_FIT. apex_scores=12, divergence_flags=12. get_big_board updated with APEX LEFT JOIN (apex_v2.2). app.py updated with APEX Score/Tier/Archetype columns (ELITE=gold, APEX=green, SOLID=blue, DEVELOPMENTAL=grey).
 
 ## Next Milestone (Single Target)
 
-- Additional source ingest: identify and ingest 2–3 high-quality new sources to expand coverage (target: move more prospects from Low to Medium/High confidence).
+- Session 4: APEX top-50 batch scoring. User must set ANTHROPIC_API_KEY, then run: python -m scripts.run_apex_scoring_2026 --batch top50 --apply 1. Implement --batch top50 mode (query top 50 by consensus rank), validate tier distribution.
 
 ---
 
@@ -64,11 +64,22 @@ EXPORTS: board_2026_v1_default.csv produced.
 
 ---
 
+## APEX v2.2 Engine Notes
+
+- CALIBRATION_OVERRIDES in run_apex_scoring_2026.py maps name -> {prospect_id, position, school}
+  Required because DB has multiple duplicate entries per prospect (position normalization artifacts)
+  Best prospect_id = highest consensus score entry for that name
+- Position overrides: Schwesinger=ILB, Membou=OT, Ratledge=OG, Emmanwori=S, Williams=IDL, Paul/Wilson=C
+- run_apex_scoring_2026.py requires ANTHROPIC_API_KEY env var to make live API calls
+- Fallback: import_apex_batch_json.py accepts pre-evaluated JSON (no API key needed)
+- data/apex_calibration_batch.json contains the calibration evaluations (APEX v2.2 direct eval)
+
 ## Ordered TODOs
 
-1. Additional source ingest (source universe stable — dedup complete, weights defined)
-2. Full clean weekly pipeline run end-to-end
-3. Review queue cleanup — filter spamml/fantasy sources, focus on legit draft sources
-4. RAS re-ingest after pro days complete — re-run ingest_ras_2026.py with updated file, fully idempotent
-5. ~~Expand school_aliases — add long-form variants (Southern California, Louisiana State, etc.)~~ COMPLETE 2026-03-08 (23 aliases added, 147→170, RAS matched 447→461)
-6. ~~Fix corrupted school_aliases entries (Oklahoma → Colorado pattern)~~ COMPLETE 2026-03-08
+1. Session 4: APEX top-50 batch scoring (requires ANTHROPIC_API_KEY)
+2. Additional source ingest (source universe stable — dedup complete, weights defined)
+3. Full clean weekly pipeline run end-to-end
+4. Review queue cleanup — filter spamml/fantasy sources, focus on legit draft sources
+5. RAS re-ingest after pro days complete — re-run ingest_ras_2026.py with updated file, fully idempotent
+6. ~~Expand school_aliases — add long-form variants (Southern California, Louisiana State, etc.)~~ COMPLETE 2026-03-08 (23 aliases added, 147→170, RAS matched 447→461)
+7. ~~Fix corrupted school_aliases entries (Oklahoma → Colorado pattern)~~ COMPLETE 2026-03-08
