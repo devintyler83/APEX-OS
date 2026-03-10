@@ -17,7 +17,7 @@ Authoritative State:
 1) STATE_SNAPSHOT.md
 # DraftOS State Snapshot
 
-Last Updated (UTC): 2026-03-10T04:50:03.003449+00:00
+Last Updated (UTC): 2026-03-10T04:56:17.627877+00:00
 
 ---
 
@@ -105,7 +105,7 @@ EXPORTS: board_2026_v1_default.csv produced.
 1. ~~Session 4: APEX top-50 batch scoring~~ COMPLETE 2026-03-10 (62 rows, ELITE=6, APEX=32, SOLID=22, DEV=2)
 2. ~~Session 5: Add positional archetype libraries to prompts.py (QB, EDGE, CB, OT, S, IDL, TE)~~ COMPLETE 2026-03-10
 3. ~~Session 6: RAS join fix, ghost prospect audit~~ COMPLETE 2026-03-10
-4. Session 7 first action: restore API credits, run calibration --force, top50 --force. GEN- target = 0.
+4. ~~Session 7: top-50 force re-score (positional archetypes), calibration artifact tagging (migration 0032)~~ COMPLETE 2026-03-10 (50 top-50 scored, GEN-=0, 11 cal tagged)
 5. Additional source ingest (source universe stable — dedup complete, weights defined)
 6. Full clean weekly pipeline run end-to-end
 7. Review queue cleanup — filter spamml/fantasy sources, focus on legit draft sources
@@ -116,11 +116,11 @@ EXPORTS: board_2026_v1_default.csv produced.
 
 2) System Snapshot Output
 === DRAFTOS SYSTEM SNAPSHOT ===
-generated_utc: 2026-03-10T04:50:02.280829+00:00
+generated_utc: 2026-03-10T04:56:16.852086+00:00
 
 ## Git
 branch: main
-commit: cb0cb456d8d6640d086858ed6b11cc2757ca449f
+commit: 3bb068072f51860de0e7a279de0836f750ab91d9
 status: clean
 
 ## Tables
