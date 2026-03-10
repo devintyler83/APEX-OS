@@ -17,7 +17,7 @@ Authoritative State:
 1) STATE_SNAPSHOT.md
 # DraftOS State Snapshot
 
-Last Updated (UTC): 2026-03-10T20:42:54.812253+00:00
+Last Updated (UTC): 2026-03-10T22:41:22.846431+00:00
 
 ---
 
@@ -160,11 +160,11 @@ EXPORTS: board_2026_v1_default.csv produced (may be stale — re-export not yet 
 
 2) System Snapshot Output
 === DRAFTOS SYSTEM SNAPSHOT ===
-generated_utc: 2026-03-10T20:42:53.749845+00:00
+generated_utc: 2026-03-10T22:41:22.172632+00:00
 
 ## Git
 branch: main
-commit: e1dae784c6bb20654c4fc3b7c5a61735d5d84c14
+commit: a9bebd32954f9b16c13086c37427007ab9114a42
 status: clean
 
 ## Tables
@@ -172,6 +172,7 @@ status: clean
 - board_snapshots
 - consensus_rankings
 - divergence_flags
+- draft_results
 - measurables
 - meta_migrations
 - model_outputs
@@ -188,6 +189,8 @@ status: clean
 - prospect_canonical_map
 - prospect_consensus_rankings
 - prospect_model_outputs
+- prospect_tag_history
+- prospect_tag_recommendations
 - prospect_tags
 - prospects
 - ras
@@ -202,55 +205,56 @@ status: clean
 - source_rankings
 - sources
 - sqlite_sequence
-- tags
+- tag_definitions
+- tag_trigger_rules
 - testing
+- users
 
 ## Row Counts (key tables)
-- sources: 39
+- sources: 26
 - seasons: 1
-- prospects: 5136
-- source_players: 15135
-- source_player_map: 15134
-- source_rankings: 30542
+- prospects: 3495
+- source_players: 7316
+- source_player_map: 7239
+- source_rankings: 25535
 - models: 1
 - model_outputs: 0
 
 ## Migrations
-- 0001_schema_v1 @ 2026-02-24T02:00:38.110710+00:00
-- 0003_seed_v1_default_model @ 2026-02-24T02:00:38.119418+00:00
-- migrations0002_seed_2026 @ 2026-02-24T02:00:38.121886+00:00
-- 0002_seed_2026 @ 2026-02-24T03:27:55.106631+00:00
-- 0004_fix_seed_2026_and_model @ 2026-02-24T03:27:55.121563+00:00
-- 0005_sources_active_cols @ 2026-02-26T02:38:57.455975+00:00
-- 0006_deprecate_nfldraftbuzz_old @ 2026-02-26T02:38:57.462821+00:00
-- 0008_consensus_board_table @ 2026-02-27T05:13:18.410022+00:00
-- 0009_consensus_tier_reason_chips @ 2026-02-27T05:24:35.069722+00:00
-- 0010_model_outputs_table @ 2026-02-27T05:28:27.658999+00:00
-- 0002_board_snapshots @ 2026-03-01T00:35:26.529412+00:00
-- 0003_snapshot_metrics @ 2026-03-01T00:35:26.539575+00:00
-- 0004_source_snapshot_metrics @ 2026-03-01T01:13:27.702655+00:00
-- 0005_prospect_snapshot_confidence @ 2026-03-01T01:25:29.015689+00:00
-- 0008_source_canonical_map @ 2026-03-01T23:36:50.072185+00:00
-- 0008_source_canonicalization @ 2026-03-01T23:36:50.084093+00:00
-- 0009_prospect_board_snapshot_coverage @ 2026-03-01T23:36:50.091508+00:00
-- 0009_snapshot_coverage @ 2026-03-01T23:36:50.095992+00:00
-- 0011_name_normalization @ 2026-03-02T00:28:32.096099+00:00
-- 0012_source_players_pos_hint @ 2026-03-02T00:44:38.115485+00:00
-- 0013_source_player_review_queue @ 2026-03-02T01:24:21.648391+00:00
-- 0014_prospect_canonical_map @ 2026-03-02T01:30:01.749708+00:00
-- 0015_source_player_review_queue @ 2026-03-02T01:44:14.682155+00:00
-- 0024_consensus_dispersion_cols @ 2026-03-07T04:59:06.027435+00:00
-- 0025_consensus_weighted_base @ 2026-03-07T05:28:44.620076+00:00
-- 0026_confidence_dispersion_cap @ 2026-03-07T05:28:44.627370+00:00
-- 0027_ras_season_cols @ 2026-03-07T06:07:03.612026+00:00
-- 0028_ras_staging @ 2026-03-07T06:07:03.619921+00:00
-- 0029_seed_jfosterfilm_2026 @ 2026-03-08T04:30:43.552188+00:00
-- 0030_prospect_tags_value @ 2026-03-08T06:41:33.114733+00:00
-- 0031_apex_divergence @ 2026-03-09T22:40:01.472344+00:00
-- 0032_apex_calibration_artifact @ 2026-03-10T04:32:19.228882+00:00
-- 0033_prospect_is_active @ 2026-03-10T05:23:40.608518+00:00
-- 0034_apex_tier_rename @ 2026-03-10T06:26:39.613047+00:00
-- 0035_divergence_rank_delta @ 2026-03-10T14:04:46.816623+00:00
+- 0001_schema_v1 @ 2026-03-10T22:13:56.612939+00:00
+- 0002_seed_2026 @ 2026-03-10T22:13:56.627775+00:00
+- 0002_board_snapshots @ 2026-03-10T22:17:38.518780+00:00
+- 0003_seed_v1_default_model @ 2026-03-10T22:17:38.524214+00:00
+- 0003_snapshot_metrics @ 2026-03-10T22:17:38.525800+00:00
+- 0004_fix_seed_2026_and_model @ 2026-03-10T22:17:38.525800+00:00
+- 0004_source_snapshot_metrics @ 2026-03-10T22:17:38.525800+00:00
+- 0005_prospect_snapshot_confidence @ 2026-03-10T22:17:38.525800+00:00
+- 0005_sources_active_cols @ 2026-03-10T22:19:24.968356+00:00
+- 0006_deprecate_nfldraftbuzz_old @ 2026-03-10T22:19:24.984046+00:00
+- 0008_consensus_board_table @ 2026-03-10T22:19:24.984046+00:00
+- 0008_source_canonical_map @ 2026-03-10T22:19:24.984046+00:00
+- 0008_source_canonicalization @ 2026-03-10T22:19:24.984046+00:00
+- 0009_consensus_tier_reason_chips @ 2026-03-10T22:19:24.984046+00:00
+- 0009_prospect_board_snapshot_coverage @ 2026-03-10T22:19:24.984046+00:00
+- 0009_snapshot_coverage @ 2026-03-10T22:19:24.984046+00:00
+- 0010_model_outputs_table @ 2026-03-10T22:19:24.984046+00:00
+- 0011_name_normalization @ 2026-03-10T22:19:24.984046+00:00
+- 0012_source_players_pos_hint @ 2026-03-10T22:19:24.984046+00:00
+- 0013_source_player_review_queue @ 2026-03-10T22:19:24.999862+00:00
+- 0014_prospect_canonical_map @ 2026-03-10T22:19:24.999862+00:00
+- 0015_source_player_review_queue @ 2026-03-10T22:19:24.999862+00:00
+- 0024_consensus_dispersion_cols @ 2026-03-10T22:19:24.999862+00:00
+- 0025_consensus_weighted_base @ 2026-03-10T22:19:24.999862+00:00
+- 0026_confidence_dispersion_cap @ 2026-03-10T22:19:24.999862+00:00
+- 0027_ras_season_cols @ 2026-03-10T22:19:24.999862+00:00
+- 0028_ras_staging @ 2026-03-10T22:19:24.999862+00:00
+- 0029_seed_jfosterfilm_2026 @ 2026-03-10T22:19:24.999862+00:00
+- 0030_prospect_tags_value @ 2026-03-10T22:19:24.999862+00:00
+- 0031_apex_divergence @ 2026-03-10T22:19:25.015525+00:00
+- 0032_apex_calibration_artifact @ 2026-03-10T22:19:25.015525+00:00
+- 0033_prospect_is_active @ 2026-03-10T22:19:25.015525+00:00
+- 0034_apex_tier_rename @ 2026-03-10T22:19:25.015525+00:00
+- 0035_divergence_rank_delta @ 2026-03-10T22:19:25.015525+00:00
 
 ## Active Season
 no is_active column
