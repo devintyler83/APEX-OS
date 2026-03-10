@@ -86,9 +86,9 @@ with st.sidebar:
         default=present_tiers,
     )
 
-    # APEX tier filter (only show if there are scored prospects)
+    # APEX v2.2 tier filter — draft-capital vocabulary, all 6 tiers
     if apex_scored > 0 and "apex_tier" in df.columns:
-        apex_tier_options = ["(all)", "ELITE", "APEX", "SOLID", "DEVELOPMENTAL", "ARCHETYPE MISS"]
+        apex_tier_options = ["(all)", "ELITE", "DAY1", "DAY2", "DAY3", "UDFA-P", "UDFA"]
         selected_apex_tier = st.selectbox("APEX v2.2 tier", options=apex_tier_options, index=0)
     else:
         selected_apex_tier = "(all)"
@@ -232,12 +232,14 @@ CONFIDENCE_COLORS = {
     "Low":    "background-color: #7a1a1a; color: white",
 }
 
+# Draft-capital tier colors
 APEX_TIER_COLORS = {
-    "ELITE":          "background-color: #b8860b; color: white",   # dark gold
-    "APEX":           "background-color: #1a7a1a; color: white",   # green
-    "SOLID":          "background-color: #005090; color: white",   # blue
-    "DEVELOPMENTAL":  "background-color: #555555; color: white",   # grey
-    "ARCHETYPE MISS": "background-color: #7a1a1a; color: white",   # red
+    "ELITE":  "background-color: #b8860b; color: white",   # dark gold
+    "DAY1":   "background-color: #1a7a1a; color: white",   # green
+    "DAY2":   "background-color: #005090; color: white",   # blue
+    "DAY3":   "background-color: #cc5500; color: white",   # orange
+    "UDFA-P": "background-color: #6a1a8a; color: white",   # purple
+    "UDFA":   "background-color: #455a64; color: white",   # grey-blue
 }
 
 DIVERGENCE_COLOR = "background-color: #8a5700; color: white"   # amber
@@ -282,6 +284,14 @@ styled = (
 # ---------------------------------------------------------------------------
 st.dataframe(styled, use_container_width=True, hide_index=True)
 st.caption(f"Showing {len(display)} of {total_prospects} prospects")
+
+# ---------------------------------------------------------------------------
+# APEX v2.2 tier legend
+# ---------------------------------------------------------------------------
+st.caption(
+    "**APEX v2.2 Tiers:** "
+    "ELITE (≥85) | DAY1 (≥70) | DAY2 (≥55) | DAY3 (≥40) | UDFA-P (≥28) | UDFA (<28)"
+)
 
 # ---------------------------------------------------------------------------
 # APEX v2.2 scores panel (if any prospects scored)

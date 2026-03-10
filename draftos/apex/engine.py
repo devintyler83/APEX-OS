@@ -34,12 +34,16 @@ PVC_TABLE: dict[str, float] = {
 
 # ---------------------------------------------------------------------------
 # Tier thresholds (applied to apex_composite = raw_score * PVC, 0-100 scale)
+# Ordered highest to lowest. First match wins.
+# Draft-capital vocabulary: ELITE | DAY1 | DAY2 | DAY3 | UDFA-P | UDFA
 # ---------------------------------------------------------------------------
-_TIER_THRESHOLDS: list[tuple[float, str]] = [
-    (85.0, "ELITE"),
-    (70.0, "APEX"),
-    (55.0, "SOLID"),
-    (40.0, "DEVELOPMENTAL"),
+TIER_THRESHOLDS: list[tuple[str, float]] = [
+    ("ELITE",  85.0),
+    ("DAY1",   70.0),
+    ("DAY2",   55.0),
+    ("DAY3",   40.0),
+    ("UDFA-P", 28.0),
+    ("UDFA",    0.0),
 ]
 
 
@@ -60,11 +64,11 @@ def compute_apex_composite(raw_score: float, position_group: str) -> float:
 
 
 def compute_apex_tier(apex_composite: float) -> str:
-    """Map composite score to APEX tier label."""
-    for threshold, tier in _TIER_THRESHOLDS:
-        if apex_composite >= threshold:
+    """Map composite score to draft-capital tier label."""
+    for tier, floor in TIER_THRESHOLDS:
+        if apex_composite >= floor:
             return tier
-    return "ARCHETYPE MISS"
+    return "UDFA"
 
 
 def _apex_round_from_composite(apex_composite: float) -> float:
