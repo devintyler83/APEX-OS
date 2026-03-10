@@ -17,7 +17,7 @@ Authoritative State:
 1) STATE_SNAPSHOT.md
 # DraftOS State Snapshot
 
-Last Updated (UTC): 2026-03-10T04:56:17.627877+00:00
+Last Updated (UTC): 2026-03-10T05:42:24.900622+00:00
 
 ---
 
@@ -116,11 +116,11 @@ EXPORTS: board_2026_v1_default.csv produced.
 
 2) System Snapshot Output
 === DRAFTOS SYSTEM SNAPSHOT ===
-generated_utc: 2026-03-10T04:56:16.852086+00:00
+generated_utc: 2026-03-10T05:42:24.224519+00:00
 
 ## Git
 branch: main
-commit: 3bb068072f51860de0e7a279de0836f750ab91d9
+commit: 79bdb1b601334736d5122d60789a6a005511e39d
 status: clean
 
 ## Tables
@@ -204,6 +204,7 @@ status: clean
 - 0030_prospect_tags_value @ 2026-03-08T06:41:33.114733+00:00
 - 0031_apex_divergence @ 2026-03-09T22:40:01.472344+00:00
 - 0032_apex_calibration_artifact @ 2026-03-10T04:32:19.228882+00:00
+- 0033_prospect_is_active @ 2026-03-10T05:23:40.608518+00:00
 
 ## Active Season
 no is_active column
@@ -228,12 +229,14 @@ no is_active column
 - draftos\queries\consensus.py
 - draftos\queries\model_outputs.py
 - scripts\_diag_school_aliases.py
+- scripts\apply_prospect_universe_2026.py
 - scripts\apply_review_queue_mappings_2026.py
 - scripts\autoresolve_mapping_review_queue_2026.py
 - scripts\bootstrap_prospects_from_sources_2026.py
 - scripts\build_consensus_2026.py
 - scripts\build_mapping_review_queue_2026.py
 - scripts\build_model_outputs_v1_default_2026.py
+- scripts\build_prospect_universe_2026.py
 - scripts\build_snapshot_packet.py
 - scripts\compute_snapshot_confidence.py
 - scripts\compute_snapshot_coverage.py
