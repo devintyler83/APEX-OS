@@ -8,8 +8,198 @@ Contains:
 prospect_data keys:
   name, position, school, consensus_rank, consensus_tier, consensus_score,
   ras_total (float | None), web_context (str)
+  archetype_direction (str | None) — analyst override or gate enforcement text
+  forced_archetype (bool) — True = hard analyst override, False = gate enforcement only
 """
 from __future__ import annotations
+
+
+# ---------------------------------------------------------------------------
+# Position-specific PAA classification gates
+# ---------------------------------------------------------------------------
+# Injected into every scoring prompt before archetype assignment.
+# These enforce the position library's mandatory classification logic at the
+# prompt layer — the root fix for systematic archetype misclassification caused
+# by the API pattern-matching on production profile instead of running gates.
+#
+# Key: normalized position string (see _normalize_position_for_gate below)
+# Value: gate block injected verbatim into the user prompt
+# ---------------------------------------------------------------------------
+
+POSITION_PAA_GATES: dict[str, str] = {
+    "EDGE": """\
+MANDATORY EDGE ARCHETYPE GATE — complete before assigning any archetype:
+
+Q1: How does this player win pass rush reps?
+  → Hand technique + leverage + counter sequencing = EDGE-3
+  → Converting linear speed into corner pressure via bend/dip = EDGE-2
+  → Physical tool dominance without confirmed counter package = EDGE-4
+  → Full-diet pass rush AND run stop on same drives = EDGE-1
+
+Q2: Is there a confirmed counter package off the initial move?
+  → YES and technique-led → EDGE-3
+  → YES and speed-led → EDGE-2
+  → NO → EDGE-4 or EDGE-5
+
+Q3: Does the player set the edge against the run on the same drives he generates pass rush?
+  → YES → EDGE-1 candidate
+  → NO → do not assign EDGE-1
+
+CRITICAL: EDGE-2 and EDGE-3 are mechanistically opposite.
+EDGE-2 wins via arc speed and bend. EDGE-3 wins via hand fighting and counter sequences.
+Do NOT assign EDGE-2 if the primary win mechanism is technique-over-speed.
+Do NOT assign EDGE-3 if the player converts athleticism rather than running hand sequences.""",
+
+    "CB": """\
+MANDATORY CB ARCHETYPE GATE — complete before assigning any archetype:
+
+Q1: Primary win mechanism?
+  → Anticipatory processing — reads route before the break = CB-1
+  → Spatial QB-read — reads the quarterback's eyes, not the receiver = CB-2
+  → Physical superiority at the catch point / press dominance = CB-3
+  → Slot-specific hand fighting and short-area quickness = CB-4
+
+Q2 (MANDATORY FOR CB-2): Man coverage floor confirmed?
+  A CB-2 with no confirmed man coverage floor is a Day 2 pick regardless of zone excellence.
+  If man coverage is unconfirmed: capital maximum = Early R2.
+  Include explicit notation in capital_adjusted: "Man coverage floor: [confirmed / developing / unconfirmed]"
+
+Q3: Is technique trending upward YoY with elite physical tools?
+  → YES → CB-3 with CB-1 development pathway flag
+  → Processing is anticipatory → CB-1
+
+CRITICAL: Do NOT assign CB-2 based on zone production profile alone.
+CB-2 requires QB-read mechanism confirmed on tape — the corner positions himself
+in throwing lanes based on formation reads, not receiver tracking.
+Zone production in a zone-heavy system without this mechanism = CB-3 or CB-5, not CB-2.""",
+
+    "S": """\
+MANDATORY S ARCHETYPE GATE — complete before assigning any archetype:
+
+Q1: Man coverage production confirmed? Zone/man split audited?
+  → Zone-dominant without man confirmation → Zone Production Flag active, capital capped at Early R2.
+
+Q2: Post-snap assignment adjustment confirmed?
+  (Player changes assignment based on offensive deployment after the snap —
+   separates genuine S-3 Multiplier from scripted versatility.)
+  → Absent or ambiguous → default to S-1 or S-4, not S-3.
+
+Q3: SOS gate — if primary schedule is non-Power conference, processing cannot confirm
+  Tier A without supplementary evidence. Drop to Tier B.""",
+
+    "ILB": """\
+MANDATORY ILB ARCHETYPE GATE — complete before assigning any archetype:
+
+Q1: Primary value?
+  → Pre-snap diagnosis and protection call communication = ILB-1 Green Dot
+  → Athletic pass rush hybrid from interior = ILB-2
+  → Point-of-attack run stopping = ILB-3
+  → Coverage specialist / multiplier = ILB-4
+
+Q2 (ILB-1 vs ILB-3 GATE — mechanistically opposite):
+  ILB-1 weights Processing at 28%. ILB-3 weights Competitive Toughness at 13%.
+  Do NOT assign ILB-1 if the primary tape evidence is physical run stopping
+  rather than anticipatory diagnosis.
+
+Q3: Archetype gap check — gap between rank-1 and rank-2 archetype score must exceed
+  3 points for a clean classification. If gap < 3, flag as TWEENER.""",
+
+    "QB": """\
+MANDATORY QB ARCHETYPE GATE — complete before assigning any archetype:
+
+Q1: Processor type?
+  → Full-field processor with arm talent to sustain off-schedule plays = QB-1
+  → Game manager maximizing scheme = QB-4
+  → Athletic-arm hybrid with processing gaps = QB-2 or QB-3
+  → Physical tools only, processing unconfirmed = QB-5
+
+Q2: Smith Rule check — C2 (motivation) weighted at 8% for QB but FM-5 Motivation Cliff
+  is the most expensive bust mode at quarterback. Flag any concern explicitly.
+
+Q3: Processing confirmed against top-25 competition minimum 4 games?
+  → If not → Tier B maximum eval confidence regardless of production.""",
+
+    "OT": """\
+MANDATORY OT ARCHETYPE GATE — complete before assigning any archetype:
+
+Q1: Speed rush vulnerability confirmed vs. future NFL edge rushers?
+  → Dominant anchor → OT-1 candidate. Functional → OT-2. Developing → OT-4/OT-5.
+
+Q2: Zone vs. gap scheme — if single-scheme only, Scheme Versatility caps at 5/10.
+
+Q3: Zabel Rule check — if arm length is insufficient for tackle but processing and
+  versatility are elite, correct classification may be OG (Chess Piece), not a
+  discounted OT. The position move is an upgrade in translation confidence.""",
+
+    "OG": """\
+MANDATORY OG ARCHETYPE GATE — complete before assigning any archetype:
+
+Q1: Win mechanism?
+  → Complete pass + run blocking = OG-1
+  → Raw power / mauling = OG-2
+  → Athleticism in zone = OG-3
+  → Processing + versatility without elite physical tools = OG-4/OG-5
+
+Q2: Scheme alignment — OG-2 Mauler in a confirmed zone-first landing spot drops to Day 3
+  regardless of college production. Note scheme alignment explicitly.""",
+
+    "DT": """\
+MANDATORY DT ARCHETYPE GATE — complete before assigning any archetype:
+
+Q1: What percentage of college pressures were individual 1-on-1 vs. scheme-assisted?
+  → Below 40% → FM-2 flag, DT-3 reclassification consideration.
+
+Q2: Penetration / pass rush dominant → use TABLE A weights (Disruptor family).
+  Occupation / run defense dominant → use TABLE B weights (Anchor family).
+  Confirm which table applies before scoring.""",
+
+    "RB": """\
+MANDATORY RB NOTE:
+RB runs at 0.70x PVC — the lowest coefficient. APEX_LOW_PVC_STRUCTURAL divergence is
+expected and is NOT an archetype error. Document explicitly on every RB record.
+Capital must reflect positional value reality: pure runners = Tier 4.
+Receiving backs with 3-down capability = Tier 2 value in the right system only.""",
+
+    "WR": """\
+MANDATORY WR ARCHETYPE GATE — complete before assigning any archetype:
+
+Q1: Win mechanism?
+  → Route precision and separation creation = WR-1
+  → Vertical speed creating separation = WR-2
+  → YAC and open-field creation = WR-3
+  → Slot-specific processing = WR-4
+
+Q2 (WR-3 YAC gate): Confirm YAC is player-generated, not scheme-generated.
+  Screens, jet sweeps, and manufactured touches inflate YAC totals.
+  Audit percentage of YAC from designed touches vs. earned YAC after catch in traffic.""",
+
+    "TE": """\
+MANDATORY TE ARCHETYPE GATE — complete before assigning any archetype:
+
+Q1: Role profile?
+  → Complete weapon (route running + blocking + seam threat) = TE-1
+  → Mismatch creator / seam threat without blocking = TE-2
+  → Blocking specialist = TE-3
+  → Developmental = TE-4
+
+Q2: TE-2 vs TE-1 gate — does the player have blocking competency above replacement level?
+  → YES → TE-1 candidate. NO → TE-2 maximum.
+
+TE runs at 0.80x PVC. Large APEX_LOW_PVC_STRUCTURAL deltas on TE are expected and
+reflect market overvaluation of the position, not archetype errors.""",
+}
+
+
+def _normalize_position_for_gate(position: str) -> str:
+    """Map raw position string to a POSITION_PAA_GATES key."""
+    pos = (position or "").upper().strip()
+    if pos in ("ILB", "OLB", "LB", "MLB"):
+        return "ILB"
+    if pos in ("DT", "IDL", "NT"):
+        return "DT"
+    if pos in ("OL",):
+        return "OT"   # generic OL defaults to OT gate; OG/C resolved by _resolve_position
+    return pos
 
 
 def build_system_prompt() -> str:
@@ -128,7 +318,6 @@ ARCHETYPES:
   EDGE-2 Speed-Bend Specialist    — elite get-off and bend, limited as run defender
   EDGE-3 Power-Counter Technician — hand work and counter moves, scheme versatile
   EDGE-4 Athletic Dominator       — freakish measurables, developing technique
-  EDGE-5 Hybrid Tweener Rusher    — borderline OLB/EDGE, positional flexibility
 
 ----------------------------------------------------------------------
 POSITION: CB (PVC=1.00)
@@ -542,7 +731,8 @@ def build_user_prompt(prospect_data: dict) -> str:
     prospect_data keys:
       name, position, school, consensus_rank, consensus_tier, consensus_score,
       ras_total (float | None), web_context (str)
-      archetype_direction (str | None) — analyst override; forces archetype assignment
+      archetype_direction (str | None) — analyst override or gate enforcement text
+      forced_archetype (bool) — True = hard analyst override, False = gate reminder only
     """
     name                = prospect_data.get("name", "Unknown")
     position            = prospect_data.get("position", "Unknown")
@@ -553,6 +743,7 @@ def build_user_prompt(prospect_data: dict) -> str:
     ras_total           = prospect_data.get("ras_total", None)
     web_context         = prospect_data.get("web_context", "")
     archetype_direction = prospect_data.get("archetype_direction", None)
+    is_forced           = prospect_data.get("forced_archetype", False)
 
     ras_str = (
         f"{float(ras_total):.2f} / 10.00 RAS"
@@ -565,21 +756,47 @@ def build_user_prompt(prospect_data: dict) -> str:
         "combine/pro day measurables, injury history, and character profile."
     )
 
-    # Archetype direction block — injected only when analyst override is present.
-    # Placed at the end of the prompt (last instruction wins) and formatted to be
-    # maximally explicit so the API does not revert to free archetype selection.
+    # Inject position-specific PAA gate before archetype assignment
+    gate_key  = _normalize_position_for_gate(position)
+    paa_gate  = POSITION_PAA_GATES.get(gate_key, "")
+    gate_block = ""
+    if paa_gate:
+        gate_block = f"""
+
+=== MANDATORY CLASSIFICATION GATE ===
+Before assigning an archetype, work through the following position-specific gates.
+These are non-negotiable requirements. Your archetype assignment MUST be consistent
+with the gate outputs.
+
+{paa_gate}
+=== END CLASSIFICATION GATE ==="""
+
+    # Analyst override block — injected when archetype_direction is present.
+    # Header differs: MANDATORY OVERRIDE for forced archetypes, GATE ENFORCEMENT for reminders.
     arch_block = ""
     if archetype_direction:
+        if is_forced:
+            header = "=== ARCHETYPE DIRECTION — ANALYST OVERRIDE (MANDATORY) ==="
+            footer = (
+                "CRITICAL: The archetype assignment above is PRE-DETERMINED by analyst review.\n"
+                "You MUST assign the specified archetype. Do NOT select a different archetype.\n"
+                "Score all trait vectors from the perspective of the forced archetype's weight table.\n"
+                "The archetype field in your JSON output MUST match the assigned archetype exactly."
+            )
+        else:
+            header = "=== ARCHETYPE GATE ENFORCEMENT ==="
+            footer = (
+                "The gate requirements above are non-negotiable. Run each gate question explicitly.\n"
+                "Do NOT assign an archetype that fails any gate check.\n"
+                "State which gate outputs drove your archetype decision in one sentence in red_flags."
+            )
         arch_block = f"""
 
-=== ARCHETYPE DIRECTION — ANALYST OVERRIDE (MANDATORY) ===
+{header}
 {archetype_direction}
 
-CRITICAL: The archetype assignment above is PRE-DETERMINED by analyst review.
-You MUST assign the specified archetype. Do NOT select a different archetype.
-Score all trait vectors from the perspective of the forced archetype's weight table.
-The archetype field in your JSON output MUST match the assigned archetype exactly.
-=== END ARCHETYPE DIRECTION ==="""
+{footer}
+=== END ==="""
 
     return f"""\
 Evaluate the following NFL draft prospect using the APEX v2.2 framework.
@@ -598,7 +815,7 @@ Evaluate the following NFL draft prospect using the APEX v2.2 framework.
   RAS Score: {ras_str}
 
 === CONTEXT ===
-{ctx_block}{arch_block}
+{ctx_block}{gate_block}{arch_block}
 
 Apply ALL applicable modifier rules:
 - Schwesinger Rule (c2 >= 8 + c3 >= 7 → DevTraj boost)
@@ -611,5 +828,8 @@ Apply ALL applicable modifier rules:
 
 Use SECTION B position weight table for this player's position group.
 Assign archetype from the position-specific archetype list only. Do NOT use GEN- archetypes.
+Based on the classification gate outputs above, assign the single most mechanistically
+accurate archetype. Do NOT default to the highest-prestige label if the mechanism
+does not confirm it.
 Compute raw_score on a 0-100 scale using the archetype weight formula.
 Return raw JSON only. No markdown fences. No preamble. Start with {{."""

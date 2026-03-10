@@ -326,6 +326,62 @@ ARCHETYPE_OVERRIDES: dict[int, dict] = {
             "his hybrid deployment profile and three-level playmaking."
         ),
     },
+    16: {
+        "forced_archetype":  "EDGE-3 Power-Counter Technician",
+        "archetype_direction": (
+            "Assigned archetype: EDGE-3 Power-Counter Technician\n\n"
+            "Rationale: Faulk wins through hand technique, leverage, and a three-counter "
+            "sequence off his initial punch — not through converting arc speed into corner pressure. "
+            "His counter package is confirmed and sequenced. Processing-led mechanism. "
+            "Do NOT score as EDGE-2 — he does not win through bend or speed-to-corner. "
+            "Score against EDGE-3 weights: DevTraj 12%, Processing 20% leads the table."
+        ),
+    },
+    48: {
+        # Gate enforcement only — no forced archetype. CB-2 requires Q2 man floor confirmed.
+        "archetype_direction": (
+            "CB-2 GATE ENFORCEMENT — run PAA Q2 before assigning any archetype:\n\n"
+            "Q2 (MANDATORY): Has man coverage floor been confirmed on tape? "
+            "A CB-2 with no confirmed man coverage floor is a Day 2 pick regardless of zone excellence. "
+            "If man coverage is confirmed → CB-2 is valid; note 'Man coverage floor: confirmed' in capital_adjusted. "
+            "If man coverage is developing or unconfirmed → capital maximum Early R2; "
+            "note 'Man coverage floor: unconfirmed' in capital_adjusted. "
+            "Do NOT assign CB-2 on zone production profile alone."
+        ),
+    },
+    32: {
+        "archetype_direction": (
+            "CB-2 GATE ENFORCEMENT — run PAA Q2 before assigning any archetype:\n\n"
+            "Q2 (MANDATORY): Has man coverage floor been confirmed on tape? "
+            "A CB-2 with no confirmed man coverage floor is a Day 2 pick regardless of zone excellence. "
+            "If man coverage is confirmed → CB-2 is valid; note 'Man coverage floor: confirmed' in capital_adjusted. "
+            "If man coverage is developing or unconfirmed → capital maximum Early R2; "
+            "note 'Man coverage floor: unconfirmed' in capital_adjusted. "
+            "Do NOT assign CB-2 on zone production profile alone."
+        ),
+    },
+    12: {
+        "archetype_direction": (
+            "CB-2 GATE ENFORCEMENT — run PAA Q2 before assigning any archetype:\n\n"
+            "Q2 (MANDATORY): Has man coverage floor been confirmed on tape? "
+            "A CB-2 with no confirmed man coverage floor is a Day 2 pick regardless of zone excellence. "
+            "If man coverage is confirmed → CB-2 is valid; note 'Man coverage floor: confirmed' in capital_adjusted. "
+            "If man coverage is developing or unconfirmed → capital maximum Early R2; "
+            "note 'Man coverage floor: unconfirmed' in capital_adjusted. "
+            "Do NOT assign CB-2 on zone production profile alone."
+        ),
+    },
+    59: {
+        "archetype_direction": (
+            "CB-2 GATE ENFORCEMENT — run PAA Q2 before assigning any archetype:\n\n"
+            "Q2 (MANDATORY): Has man coverage floor been confirmed on tape? "
+            "A CB-2 with no confirmed man coverage floor is a Day 2 pick regardless of zone excellence. "
+            "If man coverage is confirmed → CB-2 is valid; note 'Man coverage floor: confirmed' in capital_adjusted. "
+            "If man coverage is developing or unconfirmed → capital maximum Early R2; "
+            "note 'Man coverage floor: unconfirmed' in capital_adjusted. "
+            "Do NOT assign CB-2 on zone production profile alone."
+        ),
+    },
     55: {
         "forced_archetype":  "CB-3 Athletic Freak",
         "archetype_direction": (
@@ -585,11 +641,18 @@ def _score_prospect(
         consensus["consensus_rank"], consensus["consensus_score"], ras_score,
     )
 
-    # Inject archetype direction if this prospect has an analyst override
-    arch_override = ARCHETYPE_OVERRIDES.get(prospect_id)
-    arch_direction = arch_override["archetype_direction"] if arch_override else None
+    # Inject archetype direction / gate enforcement if this prospect has an override
+    arch_override  = ARCHETYPE_OVERRIDES.get(prospect_id)
+    arch_direction = None
+    arch_is_forced = False
     if arch_override:
-        print(f"  Archetype override: {arch_override['forced_archetype']} [ANALYST FORCED]")
+        arch_direction = arch_override.get("archetype_direction")
+        forced         = arch_override.get("forced_archetype")
+        arch_is_forced = bool(forced)
+        if forced:
+            print(f"  Archetype override: {forced} [ANALYST FORCED]")
+        elif arch_direction:
+            print(f"  Archetype gate enforced for pid={prospect_id} [Q2 GATE]")
 
     prospect_data = {
         "name":                display_name,
@@ -601,6 +664,7 @@ def _score_prospect(
         "ras_total":           ras_score,
         "web_context":         web_context,
         "archetype_direction": arch_direction,
+        "forced_archetype":    arch_is_forced,
     }
     user_prompt = build_user_prompt(prospect_data)
 
