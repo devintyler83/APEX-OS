@@ -80,16 +80,18 @@ EXPORTS: board_2026_v1_default.csv produced.
 - Fallback: import_apex_batch_json.py accepts pre-evaluated JSON (no API key needed)
 - data/apex_calibration_batch.json contains the calibration evaluations (APEX v2.2 direct eval)
 - CALIBRATION_KNOWN_RANKS in run_apex_scoring_2026.py maps name -> (consensus_rank, tier) for correct divergence computation. DB ranks for calibration prospects are inflated (190–680) — these override at scoring time.
-- Gunnar Helm (pid=842): archetype correction pending — GEN-1 Complete Prospect → TE-1 Seam Anticipator. Re-score with --force after TE positional library added to prompts.py in Session 5.
+- Gunnar Helm (pid=842): 2025 draftee — ghost row in 2026 DB introduced via spamml sources (TEN NFL player rows) and stale PFF list. apex_scores row force-deleted in Session 6. Do NOT re-score — cross-season contamination. Remove from calibration re-score sequence. Calibration batch contains 12 total 2025 draftees; their apex_scores are engine validation artifacts only, not 2026 board signal.
 - APEX LOW on non-premium positions (ILB, OG, C, TE, RB) is structural PVC behavior, not actionable divergence. PVC suppression for these positions means apex_composite will routinely fall below consensus-implied. Monitor APEX LOW MAJOR only on premium positions (QB, CB, EDGE, OT, S) where PVC=0.90–1.0 and the gap reflects genuine framework judgment rather than position discount.
 
 ## Ordered TODOs
 
 1. ~~Session 4: APEX top-50 batch scoring~~ COMPLETE 2026-03-10 (62 rows, ELITE=6, APEX=32, SOLID=22, DEV=2)
-2. Session 5: Add positional archetype libraries to prompts.py (QB, EDGE, CB, OT, S, IDL, TE). Re-score Helm (pid=842) with --force.
-3. Additional source ingest (source universe stable — dedup complete, weights defined)
-3. Full clean weekly pipeline run end-to-end
-4. Review queue cleanup — filter spamml/fantasy sources, focus on legit draft sources
-5. RAS re-ingest after pro days complete — re-run ingest_ras_2026.py with updated file, fully idempotent
-6. ~~Expand school_aliases — add long-form variants (Southern California, Louisiana State, etc.)~~ COMPLETE 2026-03-08 (23 aliases added, 147→170, RAS matched 447→461)
-7. ~~Fix corrupted school_aliases entries (Oklahoma → Colorado pattern)~~ COMPLETE 2026-03-08
+2. ~~Session 5: Add positional archetype libraries to prompts.py (QB, EDGE, CB, OT, S, IDL, TE)~~ COMPLETE 2026-03-10
+3. ~~Session 6: RAS join fix, ghost prospect audit~~ COMPLETE 2026-03-10
+4. Session 7 first action: restore API credits, run calibration --force, top50 --force. GEN- target = 0.
+5. Additional source ingest (source universe stable — dedup complete, weights defined)
+6. Full clean weekly pipeline run end-to-end
+7. Review queue cleanup — filter spamml/fantasy sources, focus on legit draft sources
+8. RAS re-ingest after pro days complete — re-run ingest_ras_2026.py with updated file, fully idempotent
+9. ~~Expand school_aliases — add long-form variants (Southern California, Louisiana State, etc.)~~ COMPLETE 2026-03-08 (23 aliases added, 147→170, RAS matched 447→461)
+10. ~~Fix corrupted school_aliases entries (Oklahoma → Colorado pattern)~~ COMPLETE 2026-03-08

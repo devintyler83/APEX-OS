@@ -30,8 +30,9 @@ TOP50_POSITION_OVERRIDES:
   DB position_group is unreliable (LB/OL are catch-all fallbacks).
   position_raw is used where clean; overrides applied for known LB->ILB cases and DT->IDL.
 
-# SESSION 6 TODO: Re-score full top-50 with --force after positional
-# libraries are validated against Helm + calibration spot checks.
+# SESSION 7 TODO: Re-score calibration + top-50 with --force after API credits restored.
+# Helm (pid=842) removed from calibration — 2025 draftee, cross-season contamination.
+# Run: python -m scripts.run_apex_scoring_2026 --batch calibration --force --apply 1
 # Run: python -m scripts.run_apex_scoring_2026 --batch top50 --force --apply 1
 
 # TODO Session 5: --batch all mode — score all prospects with consensus_score > 0
@@ -220,12 +221,8 @@ CALIBRATION_OVERRIDES: dict[str, dict] = {
         "school":       "Georgia",
         "display_name": "Tate Ratledge",
     },
-    "Gunnar Helm": {
-        "prospect_id":  842,
-        "position":     "TE",
-        "school":       "Texas",
-        "display_name": "Gunnar Helm",
-    },
+    # Gunnar Helm (pid=842) removed — 2025 draftee, cross-season contamination.
+    # Ghost row introduced via spamml (TEN NFL rows) + stale PFF list. Do NOT re-score.
     "Trevor Etienne": {
         "prospect_id":  838,
         "position":     "RB",
@@ -286,7 +283,6 @@ CALIBRATION_KNOWN_RANKS: dict[str, tuple[int, str]] = {
     "Nick Emmanwori":     ( 24,  "Strong"),
     "Carson Schwesinger": ( 33,  "Strong"),
     "Tate Ratledge":      ( 48,  "Strong"),
-    "Gunnar Helm":        ( 62,  "Standard"),
     "Tyleik Williams":    ( 65,  "Standard"),
     "Jared Wilson":       ( 80,  "Standard"),
     "Chris Paul":         ( 88,  "Standard"),  # display_name "Chris Paul Jr."
