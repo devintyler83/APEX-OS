@@ -1,6 +1,6 @@
 # DraftOS State Snapshot
 
-Last Updated (UTC): 2026-03-10T00:23:00.307045+00:00
+Last Updated (UTC): 2026-03-10T02:00:00.000000+00:00
 
 ---
 
@@ -12,9 +12,14 @@ Last Updated (UTC): 2026-03-10T00:23:00.307045+00:00
 
 - APEX v2.2 engine built and calibrated (Session 3). New package draftos/apex/ (engine.py, prompts.py, writer.py). Scripts: run_apex_scoring_2026.py (Claude API orchestrator, requires ANTHROPIC_API_KEY) and import_apex_batch_json.py (API-key-free batch import path). 12 calibration prospects scored, all 6 validation targets PASS: Hunter=ELITE(91.2)+Two-Way, Schwesinger=APEX(73.1)+CRUSH+Walk-On, Sanders=SOLID(67.0)+TierC, Membou=APEX(76.0), Emmanwori=APEX(74.7)+SOSGate, Etienne=DEVELOPMENTAL(45.8)+NO_FIT. apex_scores=12, divergence_flags=12. get_big_board updated with APEX LEFT JOIN (apex_v2.2). app.py updated with APEX Score/Tier/Archetype columns (ELITE=gold, APEX=green, SOLID=blue, DEVELOPMENTAL=grey).
 
+## Last Completed Milestone (Session 4 addendum)
+
+- Top-50 batch scored (62 total apex_scores: 12 calibration + 50 top50). Tier distribution: ELITE=6, APEX=32, SOLID=22, DEVELOPMENTAL=2. Skip logic confirmed idempotent.
+- Calibration divergence_flags corrected: 12 false APEX HIGH flags → 0. Root cause: DB consensus ranks inflated (190–680) due to source coverage gaps. Fix: scripts/fix_calibration_divergence_2026.py uses hardcoded known ranks (CALIBRATION_KNOWN_RANKS also added to run_apex_scoring_2026.py for future runs). Hunter=ALIGNED(-8.4), Schwesinger=APEX LOW rank=33 delta=-20.3.
+
 ## Next Milestone (Single Target)
 
-- Session 4: APEX top-50 batch scoring. User must set ANTHROPIC_API_KEY, then run: python -m scripts.run_apex_scoring_2026 --batch top50 --apply 1. Implement --batch top50 mode (query top 50 by consensus rank), validate tier distribution.
+- Session 5: Add positional archetype libraries to prompts.py (QB, EDGE, CB, OT, S, IDL, TE). Re-score Gunnar Helm (pid=842) with --force after TE library added.
 
 ---
 
@@ -73,11 +78,15 @@ EXPORTS: board_2026_v1_default.csv produced.
 - run_apex_scoring_2026.py requires ANTHROPIC_API_KEY env var to make live API calls
 - Fallback: import_apex_batch_json.py accepts pre-evaluated JSON (no API key needed)
 - data/apex_calibration_batch.json contains the calibration evaluations (APEX v2.2 direct eval)
+- CALIBRATION_KNOWN_RANKS in run_apex_scoring_2026.py maps name -> (consensus_rank, tier) for correct divergence computation. DB ranks for calibration prospects are inflated (190–680) — these override at scoring time.
+- Gunnar Helm (pid=842): archetype correction pending — GEN-1 Complete Prospect → TE-1 Seam Anticipator. Re-score with --force after TE positional library added to prompts.py in Session 5.
+- APEX LOW on non-premium positions (ILB, OG, C, TE, RB) is structural PVC behavior, not actionable divergence. PVC suppression for these positions means apex_composite will routinely fall below consensus-implied. Monitor APEX LOW MAJOR only on premium positions (QB, CB, EDGE, OT, S) where PVC=0.90–1.0 and the gap reflects genuine framework judgment rather than position discount.
 
 ## Ordered TODOs
 
-1. Session 4: APEX top-50 batch scoring (requires ANTHROPIC_API_KEY)
-2. Additional source ingest (source universe stable — dedup complete, weights defined)
+1. ~~Session 4: APEX top-50 batch scoring~~ COMPLETE 2026-03-10 (62 rows, ELITE=6, APEX=32, SOLID=22, DEV=2)
+2. Session 5: Add positional archetype libraries to prompts.py (QB, EDGE, CB, OT, S, IDL, TE). Re-score Helm (pid=842) with --force.
+3. Additional source ingest (source universe stable — dedup complete, weights defined)
 3. Full clean weekly pipeline run end-to-end
 4. Review queue cleanup — filter spamml/fantasy sources, focus on legit draft sources
 5. RAS re-ingest after pro days complete — re-run ingest_ras_2026.py with updated file, fully idempotent
