@@ -30,7 +30,6 @@ from __future__ import annotations
 
 import argparse
 import sqlite3
-from typing import NamedTuple
 
 from draftos.config import PATHS
 
@@ -86,7 +85,7 @@ def _apply_bump(base: list[float], idx: int, new_val: float) -> list[float]:
     result[idx] = new_val
     if old_remaining > 1e-9:
         scale = remaining_budget / old_remaining
-        for i in range(len(result)):
+        for i, _ in enumerate(result):
             if i != idx:
                 result[i] = base[i] * scale
     return result
@@ -172,16 +171,12 @@ def _build_s_library() -> list[tuple[str, list[float]]]:
     ]
 
 
-def _build_idl_library(traits: list[float]) -> list[tuple[str, list[float]]]:
+def _build_idl_library() -> list[tuple[str, list[float]]]:
     """
-    IDL uses two tables (Disruptor A vs. Anchor B).
-    Determine family from trait profile: athleticism > comp_tough -> Disruptor.
+    IDL library — score all 5 DT archetypes and let match_archetype() pick the best.
+    DT-1/DT-2/DT-5 use Disruptor weights (TABLE A); DT-3/DT-4 use Anchor weights (TABLE B).
+    Note: IDL archetype prefix is DT-
     """
-    ath  = traits[_I_ATH]
-    ct   = traits[_I_CT]
-    # Disruptor family: DT-1, DT-2, DT-5
-    # Anchor family: DT-3, DT-4
-    # Note: IDL archetype prefix is DT-
     return [
         ("DT-1 Interior Wrecker",    _IDL_A[:]),
         ("DT-2 Versatile Disruptor", _IDL_A[:]),
@@ -306,7 +301,7 @@ def get_library(position_group: str, traits: list[float]) -> list[tuple[str, lis
     elif pos in ("S", "FS", "SS"):
         return _build_s_library()
     elif pos in ("IDL", "DT", "NT"):
-        return _build_idl_library(traits)
+        return _build_idl_library()
     elif pos == "TE":
         return _build_te_library()
     elif pos in ("ILB", "MLB", "LB"):
