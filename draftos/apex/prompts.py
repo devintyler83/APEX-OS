@@ -542,15 +542,17 @@ def build_user_prompt(prospect_data: dict) -> str:
     prospect_data keys:
       name, position, school, consensus_rank, consensus_tier, consensus_score,
       ras_total (float | None), web_context (str)
+      archetype_direction (str | None) — analyst override; forces archetype assignment
     """
-    name            = prospect_data.get("name", "Unknown")
-    position        = prospect_data.get("position", "Unknown")
-    school          = prospect_data.get("school", "Unknown")
-    consensus_rank  = prospect_data.get("consensus_rank", "Unknown")
-    consensus_tier  = prospect_data.get("consensus_tier", "Unknown")
-    consensus_score = prospect_data.get("consensus_score", 0.0)
-    ras_total       = prospect_data.get("ras_total", None)
-    web_context     = prospect_data.get("web_context", "")
+    name                = prospect_data.get("name", "Unknown")
+    position            = prospect_data.get("position", "Unknown")
+    school              = prospect_data.get("school", "Unknown")
+    consensus_rank      = prospect_data.get("consensus_rank", "Unknown")
+    consensus_tier      = prospect_data.get("consensus_tier", "Unknown")
+    consensus_score     = prospect_data.get("consensus_score", 0.0)
+    ras_total           = prospect_data.get("ras_total", None)
+    web_context         = prospect_data.get("web_context", "")
+    archetype_direction = prospect_data.get("archetype_direction", None)
 
     ras_str = (
         f"{float(ras_total):.2f} / 10.00 RAS"
@@ -562,6 +564,22 @@ def build_user_prompt(prospect_data: dict) -> str:
         "Use your training knowledge about this prospect's college production, "
         "combine/pro day measurables, injury history, and character profile."
     )
+
+    # Archetype direction block — injected only when analyst override is present.
+    # Placed at the end of the prompt (last instruction wins) and formatted to be
+    # maximally explicit so the API does not revert to free archetype selection.
+    arch_block = ""
+    if archetype_direction:
+        arch_block = f"""
+
+=== ARCHETYPE DIRECTION — ANALYST OVERRIDE (MANDATORY) ===
+{archetype_direction}
+
+CRITICAL: The archetype assignment above is PRE-DETERMINED by analyst review.
+You MUST assign the specified archetype. Do NOT select a different archetype.
+Score all trait vectors from the perspective of the forced archetype's weight table.
+The archetype field in your JSON output MUST match the assigned archetype exactly.
+=== END ARCHETYPE DIRECTION ==="""
 
     return f"""\
 Evaluate the following NFL draft prospect using the APEX v2.2 framework.
@@ -580,7 +598,7 @@ Evaluate the following NFL draft prospect using the APEX v2.2 framework.
   RAS Score: {ras_str}
 
 === CONTEXT ===
-{ctx_block}
+{ctx_block}{arch_block}
 
 Apply ALL applicable modifier rules:
 - Schwesinger Rule (c2 >= 8 + c3 >= 7 → DevTraj boost)

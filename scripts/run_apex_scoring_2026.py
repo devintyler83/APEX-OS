@@ -288,6 +288,47 @@ CALIBRATION_OVERRIDES: dict[str, dict] = {
 CALIBRATION_PROSPECTS = list(CALIBRATION_OVERRIDES.keys())
 
 # ---------------------------------------------------------------------------
+# Archetype correction overrides
+# ---------------------------------------------------------------------------
+# Maps prospect_id -> forced archetype assignment for prospects where the batch
+# API run assigned the wrong archetype. Injected into the user prompt as an
+# ANALYST OVERRIDE block so the API scores against the correct weight table.
+#
+# Use when: post-score review identifies archetype mismatch vs. evaluation record.
+# Do NOT use to nudge scores up/down — only for clear archetype family mismatches.
+# ---------------------------------------------------------------------------
+ARCHETYPE_OVERRIDES: dict[int, dict] = {
+    457: {
+        "forced_archetype":  "EDGE-4 Athletic Dominator",
+        "archetype_direction": (
+            "Assigned archetype: EDGE-4 Athletic Dominator\n\n"
+            "Rationale: Mesidor wins through superior physical tools vs. college competition. "
+            "Pass rush wins are athletically generated — first-step speed and length, "
+            "not hand technique or sequenced counters. Pre-snap diagnosis is reactive. "
+            "Counter development is incomplete at this stage of his career. "
+            "FM-1 (first-move primary) is his primary risk — counters are not yet reliable "
+            "at NFL speed. Do NOT score as EDGE-3 (Power-Counter Technician) — "
+            "he does not win through hand technique or leverage sequencing. "
+            "Bust risk: Moderate-High (technique dependence on athleticism)."
+        ),
+    },
+    39: {
+        "forced_archetype":  "S-3 Multiplier Safety",
+        "archetype_direction": (
+            "Assigned archetype: S-3 Multiplier Safety\n\n"
+            "Rationale: Thieneman's primary value is deployment versatility and "
+            "post-snap adjustment — S-3 Multiplier Safety. S-1 Centerfielder is a "
+            "secondary mechanism only. His ceiling is captured by S-3, not S-1. "
+            "Score against S-3 Multiplier Safety archetype weights. "
+            "Eval Confidence: Tier B — Q4 competition flag (top-25 processing confirmed "
+            "in 2-3 games, not 4+ games against elite opposition; not fully cleared). "
+            "Do NOT assign S-1 Centerfielder. The S-3 archetype correctly captures "
+            "his hybrid deployment profile and three-level playmaking."
+        ),
+    },
+}
+
+# ---------------------------------------------------------------------------
 # Known correct consensus ranks for calibration prospects.
 #
 # DB consensus ranks for these players are inflated (190–680) because they are
@@ -525,15 +566,22 @@ def _score_prospect(
         consensus["consensus_rank"], consensus["consensus_score"], ras_score,
     )
 
+    # Inject archetype direction if this prospect has an analyst override
+    arch_override = ARCHETYPE_OVERRIDES.get(prospect_id)
+    arch_direction = arch_override["archetype_direction"] if arch_override else None
+    if arch_override:
+        print(f"  Archetype override: {arch_override['forced_archetype']} [ANALYST FORCED]")
+
     prospect_data = {
-        "name":            display_name,
-        "position":        position,
-        "school":          school,
-        "consensus_rank":  consensus["consensus_rank"],
-        "consensus_tier":  consensus["consensus_tier"],
-        "consensus_score": consensus["consensus_score"],
-        "ras_total":       ras_score,
-        "web_context":     web_context,
+        "name":                display_name,
+        "position":            position,
+        "school":              school,
+        "consensus_rank":      consensus["consensus_rank"],
+        "consensus_tier":      consensus["consensus_tier"],
+        "consensus_score":     consensus["consensus_score"],
+        "ras_total":           ras_score,
+        "web_context":         web_context,
+        "archetype_direction": arch_direction,
     }
     user_prompt = build_user_prompt(prospect_data)
 
@@ -849,6 +897,93 @@ def _run_single(
         sys.exit(1)
 
 
+def _run_prospect_ids(
+    client:        anthropic.Anthropic,
+    conn,
+    system_prompt: str,
+    prospect_ids:  list[int],
+    season_id:     int,
+    apply:         bool,
+) -> None:
+    """
+    Score specific prospects by prospect_id, always with force-delete semantics.
+
+    Used for targeted re-scores (e.g. archetype corrections) without touching
+    the rest of the top-50. Deletes existing apex_scores + divergence_flags rows
+    before writing new ones (equivalent to --force --batch single for each pid).
+
+    Looks up position, school, and display_name from DB. Applies ARCHETYPE_OVERRIDES
+    if present for the given prospect_id.
+    """
+    backed_up     = False
+    success_count = 0
+    fail_count    = 0
+
+    print(f"\nProspect-IDs batch: {prospect_ids}")
+
+    for i, pid in enumerate(prospect_ids):
+        row = conn.execute(
+            """
+            SELECT prospect_id, display_name, position_group, position_raw, school_canonical
+            FROM prospects
+            WHERE prospect_id = ? AND season_id = ?
+            """,
+            (pid, season_id),
+        ).fetchone()
+
+        if not row:
+            print(f"\n[ERROR] prospect_id={pid} not found in DB (season_id={season_id})")
+            fail_count += 1
+            continue
+
+        display_name = row["display_name"]
+        position     = _resolve_position(pid, row["position_group"], row["position_raw"])
+        school       = row["school_canonical"] or "Unknown"
+
+        print(f"\n{'='*60}")
+        print(f"  [FORCE] Deleting existing rows for pid={pid} ({display_name})")
+
+        if apply:
+            conn.execute(
+                "DELETE FROM apex_scores WHERE prospect_id=? AND season_id=? AND model_version=?",
+                (pid, season_id, MODEL_VERSION),
+            )
+            conn.execute(
+                "DELETE FROM divergence_flags WHERE prospect_id=? AND season_id=? AND model_version=?",
+                (pid, season_id, MODEL_VERSION),
+            )
+            conn.commit()
+        else:
+            print(f"  [DRY RUN] Would delete apex_scores + divergence_flags for pid={pid}")
+
+        override = {
+            "prospect_id":  pid,
+            "position":     position,
+            "school":       school,
+            "display_name": display_name,
+        }
+
+        if i > 0 and apply:
+            print(f"  [sleeping {API_SLEEP_SEC}s for rate limit]")
+            time.sleep(API_SLEEP_SEC)
+
+        ok, backed_up = _score_prospect(
+            client, conn, system_prompt,
+            display_name, override, season_id, apply, backed_up,
+        )
+
+        if ok:
+            success_count += 1
+        else:
+            fail_count += 1
+
+    print(f"\n{'='*60}")
+    print(
+        f"Prospect-IDs complete: {success_count} scored, {fail_count} failed "
+        f"(total={len(prospect_ids)})"
+    )
+
+
 def _run_divergence_batch(conn, season_id: int, model_version: str, apply: bool) -> None:
     """
     Recompute divergence flags for all scored prospects using rank-relative method.
@@ -1099,6 +1234,14 @@ def main() -> None:
         help="Which prospect set to score (or 'divergence' to recompute flags only)",
     )
     parser.add_argument(
+        "--prospect-ids",
+        type=str,
+        default=None,
+        dest="prospect_ids",
+        help="Comma-separated prospect_ids for targeted re-score (e.g. '457,39'). "
+             "Always force-deletes existing rows. No --batch needed.",
+    )
+    parser.add_argument(
         "--apply",
         type=int,
         choices=[0, 1],
@@ -1148,6 +1291,40 @@ def main() -> None:
     if args.batch == "single":
         print(f"ProspectID: {args.prospect_id}  Position override: {args.position or '(none)'}")
     print("=" * 60)
+
+    # --prospect-ids: targeted re-score, always force, requires API key
+    if args.prospect_ids is not None:
+        try:
+            pid_list = [int(x.strip()) for x in args.prospect_ids.split(",") if x.strip()]
+        except ValueError:
+            print(f"[ERROR] --prospect-ids must be comma-separated integers: {args.prospect_ids}")
+            sys.exit(1)
+
+        if not pid_list:
+            print("[ERROR] --prospect-ids is empty.")
+            sys.exit(1)
+
+        print(f"Prospect IDs: {pid_list}")
+
+        api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+        if apply and not api_key:
+            print("\n[ERROR] ANTHROPIC_API_KEY not set. Required for --prospect-ids.")
+            sys.exit(1)
+
+        client        = anthropic.Anthropic(api_key=api_key if api_key else "dry-run-no-key")
+        system_prompt = build_system_prompt()
+
+        with connect() as conn:
+            _run_prospect_ids(client, conn, system_prompt, pid_list, season_id, apply)
+
+        if apply:
+            print("\n  Recomputing divergence for all scored prospects...")
+            with connect() as conn:
+                _run_divergence_batch(conn, season_id, MODEL_VERSION, apply=True)
+
+        if not apply:
+            print("\n[DRY RUN COMPLETE] Run with --apply 1 to execute API calls and DB writes.")
+        return
 
     # --batch divergence: no API calls needed
     if args.batch == "divergence":
