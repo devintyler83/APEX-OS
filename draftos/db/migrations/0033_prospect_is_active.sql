@@ -1,0 +1,2 @@
+ALTER TABLE prospects ADD COLUMN is_active INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE prospect_consensus_rankings ADD COLUMN is_active INTEGER NOT NULL DEFAULT 1;

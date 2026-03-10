@@ -78,6 +78,11 @@ def sources_has_is_active(conn) -> bool:
     return "is_active" in cols
 
 
+def prospects_has_is_active(conn) -> bool:
+    cols = [r["name"] for r in conn.execute("PRAGMA table_info(prospects);").fetchall()]
+    return "is_active" in cols
+
+
 def active_sources(conn) -> List[Dict]:
     if sources_has_is_active(conn):
         rows = conn.execute(
@@ -91,8 +96,34 @@ def active_sources(conn) -> List[Dict]:
 def fetch_prospect_ranks(conn, season_id: int) -> Dict[int, List[Tuple[int, int]]]:
     """
     Returns: prospect_id -> list[(source_id, overall_rank)] for each active source's latest ranking_date.
+    Filters to is_active=1 prospects when the column exists.
     """
-    if sources_has_is_active(conn):
+    use_src_active = sources_has_is_active(conn)
+    use_pro_active = prospects_has_is_active(conn)
+
+    if use_src_active and use_pro_active:
+        sql = """
+        SELECT
+          m.prospect_id,
+          sr.source_id,
+          sr.overall_rank
+        FROM source_rankings sr
+        JOIN sources s ON s.source_id = sr.source_id
+        JOIN source_player_map m ON m.source_player_id = sr.source_player_id
+        JOIN prospects p ON p.prospect_id = m.prospect_id
+          AND p.season_id = sr.season_id
+          AND p.is_active = 1
+        WHERE sr.season_id = ?
+          AND s.is_active = 1
+          AND sr.overall_rank IS NOT NULL
+          AND sr.ranking_date = (
+            SELECT MAX(ranking_date)
+            FROM source_rankings sr2
+            WHERE sr2.source_id = sr.source_id
+              AND sr2.season_id = sr.season_id
+          )
+        """
+    elif use_src_active:
         sql = """
         SELECT
           m.prospect_id,
@@ -301,6 +332,7 @@ def upsert_consensus_rows(conn, season_id: int, rows: List[Dict]) -> None:
                     explain_json=?,
                     rank_std_dev=?,
                     dispersion_penalty=?,
+                    is_active=1,
                     updated_at=?
                 WHERE season_id=? AND prospect_id=?
                 """,
@@ -333,8 +365,9 @@ def upsert_consensus_rows(conn, season_id: int, rows: List[Dict]) -> None:
                   tier, reason_chips_json,
                   explain_json,
                   rank_std_dev, dispersion_penalty,
+                  is_active,
                   created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     season_id,
@@ -352,6 +385,7 @@ def upsert_consensus_rows(conn, season_id: int, rows: List[Dict]) -> None:
                     row["explain_json"],
                     row["rank_std_dev"],
                     row["dispersion_penalty"],
+                    1,
                     now,
                     now,
                 ),
@@ -392,13 +426,19 @@ def main():
             print(f"  {s['source_name']:<30} weight={w}  ({tier})")
 
         source_max = {sid: per_source_max_rank(conn, season_id, sid) for sid in src_ids}
+
+        # Fetch ranks for active prospects only (is_active=1 filter applied in fetch_prospect_ranks)
         prospect_ranks = fetch_prospect_ranks(conn, season_id)
 
-        # Fetch prospect names/positions for dry-run display
+        # Fetch prospect metadata — active prospects only for display and universe tracking
+        use_pro_active = prospects_has_is_active(conn)
+        meta_sql = (
+            "SELECT prospect_id, display_name, position_raw FROM prospects WHERE season_id = ? AND is_active = 1"
+            if use_pro_active
+            else "SELECT prospect_id, display_name, position_raw FROM prospects WHERE season_id = ?"
+        )
         prospect_meta: Dict[int, Dict] = {}
-        meta_rows = conn.execute(
-            "SELECT prospect_id, display_name, position_raw FROM prospects WHERE season_id = ?", (season_id,)
-        ).fetchall()
+        meta_rows = conn.execute(meta_sql, (season_id,)).fetchall()
         for m in meta_rows:
             prospect_meta[int(m["prospect_id"])] = {
                 "name": m["display_name"] or m["prospect_id"],
@@ -504,6 +544,17 @@ def main():
         if args.apply != 1:
             print("\nDRY RUN complete. Rerun with --apply 1 to write.")
             return
+
+        # ── Cleanup: full replace of consensus for this season ────────────────
+        # Consensus is a derived table. Delete all existing rows for this season
+        # and reinsert only the current computed set. This guarantees the table
+        # count exactly equals len(computed) and eliminates stale rows for both
+        # inactive prospects and active-but-unranked prospects.
+        deleted_total = conn.execute(
+            "DELETE FROM prospect_consensus_rankings WHERE season_id = ?",
+            (season_id,),
+        ).rowcount
+        print(f"Deleted {deleted_total} old consensus rows (full replace).")
 
         upsert_consensus_rows(conn, season_id, computed)
         conn.commit()

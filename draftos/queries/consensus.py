@@ -48,6 +48,7 @@ def get_consensus_board(
             JOIN prospects p
               ON p.prospect_id = c.prospect_id
              AND p.season_id = c.season_id
+             AND p.is_active = 1
             WHERE c.season_id = ?
               AND c.sources_covered >= ?
             ORDER BY c.consensus_rank
@@ -81,6 +82,7 @@ def get_consensus_row(season_id: int, prospect_id: int) -> Optional[Dict[str, An
             JOIN prospects p
               ON p.prospect_id = c.prospect_id
              AND p.season_id = c.season_id
+             AND p.is_active = 1
             WHERE c.season_id = ?
               AND c.prospect_id = ?
             """,

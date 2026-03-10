@@ -51,6 +51,13 @@ def pick_first_existing(cols: set[str], *cands: str) -> Optional[str]:
     return None
 
 
+def prospects_has_is_active(conn) -> bool:
+    if not table_exists(conn, "prospects"):
+        return False
+    cols = set(column_names(conn, "prospects"))
+    return "is_active" in cols
+
+
 def resolve_season_id(conn, draft_year: int) -> int:
     if not table_exists(conn, "seasons"):
         raise SystemExit("FAIL: seasons table not found")
@@ -246,22 +253,41 @@ def read_outputs_rows(conn, spec: OutputSourceSpec, season_id: int, model_id: in
     def sel(canon: str, default_sql: str = "NULL") -> str:
         actual = c.get(canon)
         if actual:
-            return f"{actual} AS {canon}"
+            return f"o.{actual} AS {canon}"
         return f"{default_sql} AS {canon}"
 
-    # Deterministic ordering used to derive rank_overall:
-    # score DESC, prospect_id ASC (stable tie-break)
-    sql = f"""
-    SELECT
-      {sel("prospect_id")},
-      {sel("score")},
-      {sel("tier")},
-      {sel("reason_chips_json")},
-      {sel("explain_json")}
-    FROM {spec.table}
-    WHERE season_id = ? AND model_id = ?
-    ORDER BY score DESC, prospect_id ASC;
-    """
+    # Filter to is_active=1 prospects when the column exists, to exclude
+    # soft-deprecated universe orphans from the snapshot.
+    use_active = prospects_has_is_active(conn)
+
+    if use_active:
+        sql = f"""
+        SELECT
+          {sel("prospect_id")},
+          {sel("score")},
+          {sel("tier")},
+          {sel("reason_chips_json")},
+          {sel("explain_json")}
+        FROM {spec.table} o
+        JOIN prospects p
+          ON p.prospect_id = o.prospect_id
+         AND p.season_id   = o.season_id
+         AND p.is_active   = 1
+        WHERE o.season_id = ? AND o.model_id = ?
+        ORDER BY o.score DESC, o.prospect_id ASC;
+        """
+    else:
+        sql = f"""
+        SELECT
+          {sel("prospect_id")},
+          {sel("score")},
+          {sel("tier")},
+          {sel("reason_chips_json")},
+          {sel("explain_json")}
+        FROM {spec.table} o
+        WHERE o.season_id = ? AND o.model_id = ?
+        ORDER BY o.score DESC, o.prospect_id ASC;
+        """
 
     rows = conn.execute(sql, (season_id, model_id)).fetchall()
     return [dict(r) for r in rows]

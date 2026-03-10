@@ -69,6 +69,7 @@ def get_model_board(
             JOIN prospects p
               ON p.prospect_id = o.prospect_id
              AND p.season_id = o.season_id
+             AND p.is_active = 1
             WHERE o.season_id = ?
               AND o.model_id = ?
             ORDER BY o.score DESC, p.prospect_id ASC
@@ -109,6 +110,7 @@ def get_model_output(
             JOIN prospects p
               ON p.prospect_id = o.prospect_id
              AND p.season_id = o.season_id
+             AND p.is_active = 1
             WHERE o.season_id = ?
               AND o.model_id = ?
               AND o.prospect_id = ?
@@ -258,6 +260,7 @@ def get_big_board(
         JOIN prospects p
           ON p.prospect_id = sr.prospect_id
          AND p.season_id   = sr.season_id
+         AND p.is_active   = 1
 
         JOIN prospect_model_outputs pmo
           ON pmo.prospect_id = sr.prospect_id
