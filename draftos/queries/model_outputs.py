@@ -6,6 +6,8 @@ from typing import Any, Dict, List, Optional
 from draftos.db.connect import connect
 from draftos.queries.apex import get_apex_ranks
 
+_APEX_MODEL_VERSION = "apex_v2.2"
+
 
 def _try_json(s: Any):
     if isinstance(s, str) and s:
@@ -186,7 +188,8 @@ def get_big_board(
       coverage_count, snapshot_date,
       ras_score,
       divergence_flag, jfosterfilm_rank, divergence_delta,
-      apex_rank, apex_delta
+      apex_rank, apex_delta,
+      apex_composite, apex_tier, apex_archetype
 
     Notes:
       - Snapshot scope: latest snapshot only (MAX id for season_id + model_id).
@@ -198,8 +201,9 @@ def get_big_board(
       - apex_delta: consensus_rank - apex_rank
           positive = analyst ranks prospect higher than consensus
           None if no apex rank set
+      - apex_composite, apex_tier, apex_archetype: from apex_scores (APEX v2.2)
+          None if not yet scored
 
-    TODO Session 2 (completed): divergence_flag wired to jfosterfilm_2026 source delta.
     TODO Session 3: Prospect detail expander — click row, show explain_json breakdown,
       source-by-source rank table, confidence reasons, APEX notes field.
     TODO Session 3: Movers panel — delta_rank from snapshot comparison, top risers/fallers.
@@ -238,7 +242,11 @@ def get_big_board(
           sr.coverage_count,
           ps.snapshot_date_utc   AS snapshot_date,
 
-          r.ras_total            AS ras_score
+          r.ras_total            AS ras_score,
+
+          aps.apex_composite,
+          aps.apex_tier,
+          aps.matched_archetype  AS apex_archetype
 
         FROM prospect_board_snapshot_rows sr
 
@@ -264,13 +272,18 @@ def get_big_board(
           ON r.prospect_id = sr.prospect_id
          AND r.season_id   = sr.season_id
 
+        LEFT JOIN apex_scores aps
+          ON aps.prospect_id   = sr.prospect_id
+         AND aps.season_id     = sr.season_id
+         AND aps.model_version = ?
+
         WHERE sr.snapshot_id = ?
           AND sr.season_id   = ?
           AND sr.model_id    = ?
 
         ORDER BY sr.rank_overall ASC, p.prospect_id ASC
         """,
-        (latest_snapshot_id, season_id, model_id),
+        (_APEX_MODEL_VERSION, latest_snapshot_id, season_id, model_id),
     ).fetchall()
 
     board = [dict(row) for row in rows]
@@ -279,25 +292,25 @@ def get_big_board(
     jf_ranks = get_source_ranks(conn, source_name="jfosterfilm_2026", season_id=season_id)
 
     for row in board:
-        pid = row["prospect_id"]
+        pid       = row["prospect_id"]
         consensus = row["consensus_rank"]
-        jf_rank = jf_ranks.get(pid)
+        jf_rank   = jf_ranks.get(pid)
 
         if jf_rank is not None:
-            delta = jf_rank - consensus
+            delta                  = jf_rank - consensus
             row["jfosterfilm_rank"] = jf_rank
             row["divergence_delta"] = delta
-            row["divergence_flag"] = 1 if abs(delta) >= 10 else 0
+            row["divergence_flag"]  = 1 if abs(delta) >= 10 else 0
         else:
             row["jfosterfilm_rank"] = None
             row["divergence_delta"] = None
-            row["divergence_flag"] = 0
+            row["divergence_flag"]  = 0
 
-    # --- APEX ranks ---
+    # --- APEX analyst ranks (from prospect_tags) ---
     apex_ranks = get_apex_ranks(conn, season_id=season_id)
 
     for row in board:
-        pid = row["prospect_id"]
+        pid       = row["prospect_id"]
         apex_rank = apex_ranks.get(pid)
         row["apex_rank"] = apex_rank
         if apex_rank is not None:

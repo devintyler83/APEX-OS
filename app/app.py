@@ -1,6 +1,6 @@
 """
-DraftOS Big Board — Session 2
-Read-only Streamlit UI with divergence flags and APEX rank input.
+DraftOS Big Board — Session 3
+Read-only Streamlit UI with divergence flags, APEX rank input, and APEX v2.2 scores.
 No DB writes except through save_apex_rank(). No business logic.
 
 TODO Session 3: Prospect detail expander — click row, show explain_json breakdown,
@@ -46,11 +46,16 @@ df = pd.DataFrame(raw)
 # ---------------------------------------------------------------------------
 # Header
 # ---------------------------------------------------------------------------
-snapshot_date = df["snapshot_date"].iloc[0] if "snapshot_date" in df.columns else "unknown"
-total_prospects = len(df)
+snapshot_date    = df["snapshot_date"].iloc[0] if "snapshot_date" in df.columns else "unknown"
+total_prospects  = len(df)
+apex_scored      = df["apex_composite"].notna().sum() if "apex_composite" in df.columns else 0
 
 st.title("DraftOS — 2026 Big Board")
-st.caption(f"Snapshot: {snapshot_date}   |   Total prospects in DB: {total_prospects}")
+st.caption(
+    f"Snapshot: {snapshot_date}   |   "
+    f"Total prospects: {total_prospects}   |   "
+    f"APEX v2.2 scored: {apex_scored}"
+)
 
 # ---------------------------------------------------------------------------
 # Sidebar filters
@@ -62,7 +67,9 @@ with st.sidebar:
 
     show_divergence_only = st.checkbox("Show divergence flags only (⚡)", value=False)
 
-    show_apex_only = st.checkbox("Show APEX ranked only", value=False)
+    show_apex_only = st.checkbox("Show APEX ranked only (analyst)", value=False)
+
+    show_apex_scored_only = st.checkbox("Show APEX v2.2 scored only", value=False)
 
     all_positions = sorted(df["position_group"].dropna().unique().tolist())
     selected_positions = st.multiselect(
@@ -78,6 +85,13 @@ with st.sidebar:
         options=present_tiers,
         default=present_tiers,
     )
+
+    # APEX tier filter (only show if there are scored prospects)
+    if apex_scored > 0 and "apex_tier" in df.columns:
+        apex_tier_options = ["(all)", "ELITE", "APEX", "SOLID", "DEVELOPMENTAL", "ARCHETYPE MISS"]
+        selected_apex_tier = st.selectbox("APEX v2.2 tier", options=apex_tier_options, index=0)
+    else:
+        selected_apex_tier = "(all)"
 
     school_search = st.text_input("School (contains search)", value="")
 
@@ -104,7 +118,7 @@ with st.sidebar:
     )
 
 # ---------------------------------------------------------------------------
-# Apply filters (Python-side — no SQL WHERE, season_id scoping already in query)
+# Apply filters
 # ---------------------------------------------------------------------------
 filtered = df.copy()
 
@@ -117,11 +131,17 @@ if show_divergence_only:
 if show_apex_only:
     filtered = filtered[filtered["apex_rank"].notna()]
 
+if show_apex_scored_only and "apex_composite" in filtered.columns:
+    filtered = filtered[filtered["apex_composite"].notna()]
+
 if selected_positions:
     filtered = filtered[filtered["position_group"].isin(selected_positions)]
 
 if selected_tiers:
     filtered = filtered[filtered["consensus_tier"].isin(selected_tiers)]
+
+if selected_apex_tier != "(all)" and "apex_tier" in filtered.columns:
+    filtered = filtered[filtered["apex_tier"] == selected_apex_tier]
 
 if school_search.strip():
     mask = filtered["school_canonical"].str.contains(
@@ -131,7 +151,7 @@ if school_search.strip():
 
 if ras_range is not None:
     ras_lo, ras_hi = ras_range
-    has_ras = filtered["ras_score"].notna()
+    has_ras  = filtered["ras_score"].notna()
     in_range = filtered["ras_score"].between(ras_lo, ras_hi)
     filtered = filtered[~has_ras | in_range]
 
@@ -146,8 +166,6 @@ def _fmt_div(row) -> str:
     """Format divergence delta for display. Positive = jf ranks prospect higher."""
     if row["divergence_flag"] != 1 or row["divergence_delta"] is None:
         return ""
-    # delta = jf_rank - consensus_rank (negative = jf ranks higher = better)
-    # display: positive sign when jf ranks higher (lower number = better)
     display_val = -int(row["divergence_delta"])
     return f"{display_val:+d}"
 
@@ -157,6 +175,12 @@ def _fmt_apex_delta(val) -> str:
         return ""
     v = int(val)
     return f"{v:+d}"
+
+
+def _fmt_apex_composite(val) -> str:
+    if pd.isna(val) or val is None:
+        return ""
+    return f"{float(val):.1f}"
 
 
 display = pd.DataFrame()
@@ -173,7 +197,18 @@ display["RAS"]        = filtered["ras_score"].round(1)
 display["⚡ Div"]    = filtered.apply(_fmt_div, axis=1)
 display["APEX"]       = filtered["apex_rank"].astype("Int64")
 display["Δ APEX"]    = filtered["apex_delta"].apply(_fmt_apex_delta)
-display["Snapshot"]   = (
+
+# APEX v2.2 engine columns
+if "apex_composite" in filtered.columns:
+    display["APEX Score"]     = filtered["apex_composite"].apply(_fmt_apex_composite)
+    display["APEX Tier"]      = filtered["apex_tier"].fillna("")
+    display["Archetype"]      = filtered["apex_archetype"].fillna("")
+else:
+    display["APEX Score"]     = ""
+    display["APEX Tier"]      = ""
+    display["Archetype"]      = ""
+
+display["Snapshot"] = (
     filtered["snapshot_date"].str[:10]
     if hasattr(filtered["snapshot_date"], "str")
     else filtered["snapshot_date"]
@@ -188,6 +223,14 @@ CONFIDENCE_COLORS = {
     "High":   "background-color: #1a7a1a; color: white",
     "Medium": "background-color: #7a6a00; color: white",
     "Low":    "background-color: #7a1a1a; color: white",
+}
+
+APEX_TIER_COLORS = {
+    "ELITE":          "background-color: #b8860b; color: white",   # dark gold
+    "APEX":           "background-color: #1a7a1a; color: white",   # green
+    "SOLID":          "background-color: #005090; color: white",   # blue
+    "DEVELOPMENTAL":  "background-color: #555555; color: white",   # grey
+    "ARCHETYPE MISS": "background-color: #7a1a1a; color: white",   # red
 }
 
 DIVERGENCE_COLOR = "background-color: #8a5700; color: white"   # amber
@@ -215,11 +258,16 @@ def _style_apex_delta(val: str) -> str:
     return ""
 
 
+def _style_apex_tier(val: str) -> str:
+    return APEX_TIER_COLORS.get(val, "")
+
+
 styled = (
     display.style
     .map(_style_confidence, subset=["Confidence"])
     .map(_style_divergence, subset=["⚡ Div"])
     .map(_style_apex_delta, subset=["Δ APEX"])
+    .map(_style_apex_tier, subset=["APEX Tier"])
 )
 
 # ---------------------------------------------------------------------------
@@ -229,10 +277,36 @@ st.dataframe(styled, use_container_width=True, hide_index=True)
 st.caption(f"Showing {len(display)} of {total_prospects} prospects")
 
 # ---------------------------------------------------------------------------
-# APEX rank input panel
+# APEX v2.2 scores panel (if any prospects scored)
+# ---------------------------------------------------------------------------
+if apex_scored > 0 and "apex_composite" in df.columns:
+    st.divider()
+    st.subheader(f"APEX v2.2 Engine — {apex_scored} Prospects Scored")
+
+    apex_df = df[df["apex_composite"].notna()].copy()
+    apex_df = apex_df.sort_values("apex_composite", ascending=False)
+
+    apex_display = pd.DataFrame()
+    apex_display["Player"]    = apex_df["display_name"]
+    apex_display["Pos"]       = apex_df["position_group"]
+    apex_display["School"]    = apex_df["school_canonical"]
+    apex_display["Archetype"] = apex_df["apex_archetype"].fillna("")
+    apex_display["APEX Score"]= apex_df["apex_composite"].apply(_fmt_apex_composite)
+    apex_display["APEX Tier"] = apex_df["apex_tier"].fillna("")
+    apex_display["Consensus"] = apex_df["consensus_rank"].astype("Int64")
+
+    apex_styled = (
+        apex_display.style
+        .map(_style_apex_tier, subset=["APEX Tier"])
+    )
+
+    st.dataframe(apex_styled, use_container_width=True, hide_index=True)
+
+# ---------------------------------------------------------------------------
+# APEX rank input panel (analyst overrides)
 # ---------------------------------------------------------------------------
 st.divider()
-st.subheader("Set APEX Rank")
+st.subheader("Set APEX Rank (Analyst Override)")
 
 all_names = sorted(df["display_name"].dropna().unique().tolist())
 
