@@ -157,12 +157,17 @@ def upsert_divergence_flag(
     consensus_rank: int,
     consensus_tier: str | None,
     divergence:     dict,
+    position_tier:  str | None = None,
 ) -> None:
     """
     INSERT OR REPLACE into divergence_flags.
     Idempotent via UNIQUE(prospect_id, season_id, model_version).
 
     divergence: dict returned by engine.compute_divergence()
+    position_tier: 'premium' or 'non_premium' (optional; populated by batch recompute)
+      divergence_rank_delta is NULL here — only the batch divergence recompute can
+      populate it because rank-relative ordering requires all scored prospects.
+      divergence_raw_delta is written from divergence['divergence_score'] (old method).
     """
     now = datetime.now(timezone.utc).isoformat()
 
@@ -173,26 +178,30 @@ def upsert_divergence_flag(
             apex_composite, apex_tier, apex_capital,
             consensus_ovr_rank, consensus_tier,
             divergence_score, rounds_diff,
-            divergence_flag, divergence_mag, apex_favors
+            divergence_flag, divergence_mag, apex_favors,
+            divergence_raw_delta, position_tier
         ) VALUES (
             ?, ?, ?, ?,
             ?, ?, ?,
             ?, ?,
             ?, ?,
-            ?, ?, ?
+            ?, ?, ?,
+            ?, ?
         )
         ON CONFLICT(prospect_id, season_id, model_version) DO UPDATE SET
-            computed_at        = excluded.computed_at,
-            apex_composite     = excluded.apex_composite,
-            apex_tier          = excluded.apex_tier,
-            apex_capital       = excluded.apex_capital,
-            consensus_ovr_rank = excluded.consensus_ovr_rank,
-            consensus_tier     = excluded.consensus_tier,
-            divergence_score   = excluded.divergence_score,
-            rounds_diff        = excluded.rounds_diff,
-            divergence_flag    = excluded.divergence_flag,
-            divergence_mag     = excluded.divergence_mag,
-            apex_favors        = excluded.apex_favors
+            computed_at          = excluded.computed_at,
+            apex_composite       = excluded.apex_composite,
+            apex_tier            = excluded.apex_tier,
+            apex_capital         = excluded.apex_capital,
+            consensus_ovr_rank   = excluded.consensus_ovr_rank,
+            consensus_tier       = excluded.consensus_tier,
+            divergence_score     = excluded.divergence_score,
+            rounds_diff          = excluded.rounds_diff,
+            divergence_flag      = excluded.divergence_flag,
+            divergence_mag       = excluded.divergence_mag,
+            apex_favors          = excluded.apex_favors,
+            divergence_raw_delta = excluded.divergence_raw_delta,
+            position_tier        = excluded.position_tier
         """,
         (
             prospect_id, season_id, now, model_version,
@@ -203,6 +212,9 @@ def upsert_divergence_flag(
             divergence["divergence_flag"],
             divergence["divergence_mag"],
             divergence["apex_favors"],
+            # divergence_raw_delta: old raw score delta (diagnostic)
+            divergence.get("divergence_score"),
+            position_tier,
         ),
     )
     conn.commit()

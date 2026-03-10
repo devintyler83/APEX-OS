@@ -8,11 +8,13 @@ Usage:
     python -m scripts.run_apex_scoring_2026 --batch calibration --apply 0|1 [--season 2026]
     python -m scripts.run_apex_scoring_2026 --batch top50      --apply 0|1 [--force]
     python -m scripts.run_apex_scoring_2026 --batch single     --prospect_id N --apply 0|1 [--position POS] [--force]
+    python -m scripts.run_apex_scoring_2026 --batch divergence --apply 0|1
     python -m scripts.run_apex_scoring_2026 --batch all        --apply 0|1
 
 --batch calibration  Score 12 calibration prospects (hardcoded overrides)
 --batch top50        Score top 50 by consensus rank (skips already-scored unless --force)
 --batch single       Score one prospect by prospect_id (requires --prospect_id)
+--batch divergence   Recompute divergence flags for all scored prospects (no API calls)
 --batch all          (Session 5+) Score all prospects with consensus_score > 0
 --apply 0            Dry run — shows what would be scored, no API calls, no DB writes
 --apply 1            Full run — calls Claude API and writes to DB
@@ -53,6 +55,7 @@ import os
 import re
 import sys
 import time
+from datetime import datetime, timezone
 
 # Load .env if present (for ANTHROPIC_API_KEY)
 try:
@@ -112,6 +115,27 @@ def _normalize_position(pos: str | None) -> str:
         return "LB"
     up = pos.upper().strip()
     return _POSITION_NORM.get(up, up)
+
+
+# ---------------------------------------------------------------------------
+# Position tier — premium vs. non-premium for divergence classification
+# ---------------------------------------------------------------------------
+
+PREMIUM_POSITIONS: set[str] = {"QB", "CB", "EDGE", "OT", "S"}
+NON_PREMIUM_POSITIONS: set[str] = {"ILB", "OLB", "OG", "C", "TE", "RB", "IDL", "WR", "FB"}
+
+
+def get_position_tier(position: str) -> str:
+    """
+    Return 'premium' or 'non_premium' based on PVC tier.
+
+    Premium (QB, CB, EDGE, OT, S): divergence is actionable.
+    Non-premium: APEX LOW is structural PVC behavior, not actionable.
+    """
+    pos = (position or "").upper().strip()
+    if pos in PREMIUM_POSITIONS:
+        return "premium"
+    return "non_premium"
 
 
 # ---------------------------------------------------------------------------
@@ -543,6 +567,7 @@ def _score_prospect(
         apex_tier,
         consensus["consensus_tier"],
     )
+    pos_tier = get_position_tier(position)
 
     print(f"  Archetype:   {apex_data.get('archetype')}")
     print(
@@ -560,6 +585,7 @@ def _score_prospect(
         f"({divergence['divergence_mag']})  score={divergence['divergence_score']}"
     )
     print(f"  Capital:     {apex_data.get('capital_adjusted')}")
+    print(f"  Pos tier:    {pos_tier}")
 
     backed_up = backup_once(backed_up)
 
@@ -586,6 +612,7 @@ def _score_prospect(
         consensus_rank=consensus["consensus_rank"],
         consensus_tier=consensus["consensus_tier"],
         divergence=divergence,
+        position_tier=pos_tier,
     )
 
     print(f"  [OK] Written to DB")
@@ -822,6 +849,241 @@ def _run_single(
         sys.exit(1)
 
 
+def _run_divergence_batch(conn, season_id: int, model_version: str, apply: bool) -> None:
+    """
+    Recompute divergence flags for all scored prospects using rank-relative method.
+
+    Primary signal: divergence_rank_delta = consensus_ovr_rank - apex_ovr_rank
+      Positive = APEX ranks prospect higher than consensus (APEX HIGH)
+      Negative = consensus ranks prospect higher (APEX LOW)
+
+    Diagnostic: divergence_raw_delta = apex_composite - consensus_implied_score
+      Retained from old method for historical comparison.
+
+    Flag logic:
+      Non-premium + rank_delta < -5  → APEX_LOW_PVC_STRUCTURAL (not actionable)
+      abs(rank_delta) <= 5           → ALIGNED
+      rank_delta > 0                 → APEX_HIGH
+      rank_delta < 0                 → APEX_LOW (premium only, actionable)
+
+    Magnitude (rank positions):
+      0-15:  MINOR
+      16-30: MODERATE
+      >30:   MAJOR (premium positions only for MAJOR override)
+
+    No API calls. Reads apex_scores + prospect_consensus_rankings, writes divergence_flags.
+    Idempotent — INSERT OR REPLACE on UNIQUE(prospect_id, season_id, model_version).
+    """
+    print(f"\n  Computing divergence flags (rank-relative method)...")
+    print(f"  model_version={model_version}  season_id={season_id}  apply={apply}")
+
+    def _rank_to_implied_score(rank: int | None) -> float | None:
+        """Legacy: convert consensus rank to implied 0-100 score. Diagnostic only."""
+        if rank is None:
+            return None
+        return max(0.0, round(100.0 - (rank - 1) * (100.0 / 250.0), 1))
+
+    # Pull all scored prospects with consensus rank
+    scored = conn.execute(
+        """
+        SELECT
+            a.prospect_id,
+            p.position_group     AS position,
+            a.apex_composite,
+            a.apex_tier,
+            a.capital_adjusted,
+            c.consensus_rank,
+            c.tier               AS consensus_tier
+        FROM apex_scores a
+        JOIN prospects p
+          ON p.prospect_id = a.prospect_id
+         AND p.season_id   = a.season_id
+        JOIN prospect_consensus_rankings c
+          ON c.prospect_id = a.prospect_id
+         AND c.season_id   = a.season_id
+        WHERE a.model_version = ?
+          AND a.season_id     = ?
+        ORDER BY a.apex_composite DESC
+        """,
+        (model_version, season_id),
+    ).fetchall()
+
+    if not scored:
+        print(f"  [WARN] No scored prospects found for model={model_version} season={season_id}")
+        return
+
+    # Assign APEX overall rank by apex_composite ordering (DESC = rank 1 = best)
+    apex_ovr_rank_map: dict[int, int] = {
+        row["prospect_id"]: (i + 1)
+        for i, row in enumerate(scored)
+    }
+
+    print(f"  Loaded {len(scored)} scored prospects")
+
+    now     = datetime.now(timezone.utc).isoformat()
+    updated = 0
+
+    rows_to_write = []
+    for row in scored:
+        pid       = row["prospect_id"]
+        position  = row["position"] or ""
+        apex_comp = row["apex_composite"]
+        cons_rank = row["consensus_rank"]
+        apex_ovr  = apex_ovr_rank_map.get(pid)
+
+        if apex_comp is None or cons_rank is None or apex_ovr is None:
+            print(f"  [SKIP] pid={pid} — missing apex_comp/cons_rank/apex_ovr")
+            continue
+
+        # PRIMARY SIGNAL: rank delta
+        # consensus_rank - apex_ovr_rank
+        # Positive = APEX ranks prospect higher (APEX HIGH)
+        # Negative = consensus ranks prospect higher (APEX LOW)
+        rank_delta = int(round(cons_rank - apex_ovr))
+
+        # DIAGNOSTIC: raw score delta (old method, retained)
+        cons_implied  = _rank_to_implied_score(int(cons_rank))
+        raw_delta     = round(apex_comp - cons_implied, 1) if cons_implied is not None else None
+
+        # Position tier
+        pos_tier  = get_position_tier(position)
+        abs_delta = abs(rank_delta)
+
+        # Divergence magnitude
+        if abs_delta <= 15:
+            mag = "MINOR"
+        elif abs_delta <= 30:
+            mag = "MODERATE"
+        else:
+            mag = "MAJOR"
+
+        # Flag logic
+        if pos_tier == "non_premium" and rank_delta < -5:
+            # Non-premium APEX LOW = structural PVC discount, not actionable
+            flag = "APEX_LOW_PVC_STRUCTURAL"
+        elif abs_delta <= 5:
+            flag = "ALIGNED"
+        elif rank_delta > 0:
+            flag = "APEX_HIGH"
+        else:
+            flag = "APEX_LOW"
+
+        favors = 1 if rank_delta > 0 else (-1 if rank_delta < 0 else 0)
+
+        rows_to_write.append((
+            pid, season_id, now, model_version,
+            apex_comp, row["apex_tier"], row["capital_adjusted"],
+            float(cons_rank), row["consensus_tier"],
+            None,          # consensus_round — not in current schema, keep NULL
+            rank_delta,    # divergence_score — updated to rank delta as primary signal
+            rank_delta,    # divergence_rank_delta — new explicit column
+            raw_delta,     # divergence_raw_delta — diagnostic
+            None,          # rounds_diff — deprecated, keep NULL
+            flag, mag, favors,
+            pos_tier,
+        ))
+
+    # Print dry-run summary before any writes
+    from collections import Counter
+    flag_counts = Counter(r[14] for r in rows_to_write)
+    tier_counts = Counter(r[17] for r in rows_to_write)
+    print(f"\n  Divergence summary ({len(rows_to_write)} prospects):")
+    for label in ["ALIGNED", "APEX_HIGH", "APEX_LOW", "APEX_LOW_PVC_STRUCTURAL"]:
+        print(f"    {label}: {flag_counts.get(label, 0)}")
+    print(f"  Position tiers: {dict(tier_counts)}")
+
+    if not apply:
+        print(f"\n  [DRY RUN] No writes. Run with --apply 1 to commit.")
+
+        # Preview actionable divergence (premium APEX_LOW and APEX_HIGH)
+        print("\n  Premium APEX_LOW (actionable — consensus ranks higher than APEX):")
+        actionable_low = [r for r in rows_to_write if r[14] == "APEX_LOW" and r[17] == "premium"]
+        actionable_low.sort(key=lambda r: r[10])  # sort by rank_delta (most negative first)
+        for r in actionable_low:
+            pid_r   = r[0]
+            rd      = r[10]
+            mag_r   = r[15]
+            # Look up name from scored list
+            name_row = next((s for s in scored if s["prospect_id"] == pid_r), None)
+            pos_r = name_row["position"] if name_row else "?"
+            print(f"    pid={pid_r} ({pos_r})  rank_delta={rd}  [{mag_r}]")
+
+        print("\n  Premium APEX_HIGH (actionable — APEX ranks higher than consensus):")
+        actionable_high = [r for r in rows_to_write if r[14] == "APEX_HIGH" and r[17] == "premium"]
+        actionable_high.sort(key=lambda r: r[10], reverse=True)
+        for r in actionable_high:
+            pid_r    = r[0]
+            rd       = r[10]
+            mag_r    = r[15]
+            name_row = next((s for s in scored if s["prospect_id"] == pid_r), None)
+            pos_r    = name_row["position"] if name_row else "?"
+            print(f"    pid={pid_r} ({pos_r})  rank_delta={rd}  [{mag_r}]")
+        return
+
+    # Apply writes
+    for row_vals in rows_to_write:
+        conn.execute(
+            """
+            INSERT OR REPLACE INTO divergence_flags
+              (prospect_id, season_id, computed_at, model_version,
+               apex_composite, apex_tier, apex_capital,
+               consensus_ovr_rank, consensus_tier, consensus_round,
+               divergence_score, divergence_rank_delta, divergence_raw_delta,
+               rounds_diff, divergence_flag, divergence_mag, apex_favors,
+               position_tier)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            row_vals,
+        )
+        updated += 1
+
+    conn.commit()
+    print(f"\n  [OK] Divergence recomputed for {updated} prospects.")
+
+    # Detailed actionable list (post-write)
+    print("\n  Premium APEX_LOW (actionable — consensus ranks higher than APEX):")
+    actionable = conn.execute(
+        """
+        SELECT df.prospect_id, p.full_name, p.position_group,
+               df.divergence_rank_delta, df.divergence_flag, df.divergence_mag
+        FROM divergence_flags df
+        JOIN prospects p ON p.prospect_id = df.prospect_id
+        WHERE df.divergence_flag = 'APEX_LOW'
+          AND df.position_tier   = 'premium'
+          AND df.season_id       = ?
+          AND df.model_version   = ?
+        ORDER BY df.divergence_rank_delta ASC
+        """,
+        (season_id, model_version),
+    ).fetchall()
+    for r in actionable:
+        print(
+            f"    {r['full_name']} ({r['position_group']})  "
+            f"rank_delta={r['divergence_rank_delta']}  [{r['divergence_mag']}]"
+        )
+
+    print("\n  Premium APEX_HIGH (actionable — APEX ranks higher than consensus):")
+    actionable_high = conn.execute(
+        """
+        SELECT df.prospect_id, p.full_name, p.position_group,
+               df.divergence_rank_delta, df.divergence_flag, df.divergence_mag
+        FROM divergence_flags df
+        JOIN prospects p ON p.prospect_id = df.prospect_id
+        WHERE df.divergence_flag = 'APEX_HIGH'
+          AND df.position_tier   = 'premium'
+          AND df.season_id       = ?
+          AND df.model_version   = ?
+        ORDER BY df.divergence_rank_delta DESC
+        """,
+        (season_id, model_version),
+    ).fetchall()
+    for r in actionable_high:
+        print(
+            f"    {r['full_name']} ({r['position_group']})  "
+            f"rank_delta={r['divergence_rank_delta']}  [{r['divergence_mag']}]"
+        )
+
+
 # ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
@@ -832,9 +1094,9 @@ def main() -> None:
     )
     parser.add_argument(
         "--batch",
-        choices=["calibration", "top50", "all", "single"],
+        choices=["calibration", "top50", "all", "single", "divergence"],
         default="calibration",
-        help="Which prospect set to score",
+        help="Which prospect set to score (or 'divergence' to recompute flags only)",
     )
     parser.add_argument(
         "--apply",
@@ -887,7 +1149,18 @@ def main() -> None:
         print(f"ProspectID: {args.prospect_id}  Position override: {args.position or '(none)'}")
     print("=" * 60)
 
-    # Verify API key before any work (only required for actual runs)
+    # --batch divergence: no API calls needed
+    if args.batch == "divergence":
+        with connect() as conn:
+            _run_divergence_batch(conn, season_id, MODEL_VERSION, apply)
+        if not apply:
+            print(
+                "\n[DRY RUN COMPLETE] "
+                "Run with --apply 1 to execute DB writes."
+            )
+        return
+
+    # All other batches require API key for actual runs
     api_key = os.environ.get("ANTHROPIC_API_KEY", "")
     if apply and not api_key:
         print("\n[ERROR] ANTHROPIC_API_KEY not set in environment.")
