@@ -17,7 +17,7 @@ Authoritative State:
 1) STATE_SNAPSHOT.md
 # DraftOS State Snapshot
 
-Last Updated (UTC): 2026-03-10T23:04:21.832111+00:00
+Last Updated (UTC): 2026-03-10T23:48:46.174840+00:00
 
 ---
 
@@ -201,11 +201,11 @@ EXPORTS: board_2026_v1_default.csv produced (may be stale — re-export not yet 
 
 2) System Snapshot Output
 === DRAFTOS SYSTEM SNAPSHOT ===
-generated_utc: 2026-03-10T23:04:21.184259+00:00
+generated_utc: 2026-03-10T23:48:45.512750+00:00
 
 ## Git
 branch: main
-commit: 13b50fac754ed7e4b7c51fbacf21d4cd418bff93
+commit: e673ab8bdfd27ce6e2a91a62f507a04395ec51c3
 status: clean
 
 ## Tables
@@ -352,9 +352,11 @@ no is_active column
 - scripts\learn_school_aliases_from_mapped_2026.py
 - scripts\patch_0005_0006_soft_deprecate_nfldraftbuzz.py
 - scripts\patch_0007_bootstrap_prospects_2026.py
+- scripts\patch_apex_archetypes_local_2026.py
 - scripts\patch_name_normalization_2026.py
 - scripts\patch_prospect_canonicalization_2026.py
 - scripts\patch_school_canonicalization_2026.py
+- scripts\patch_school_from_universe_2026.py
 - scripts\patch_source_canonicalization_2026.py
 - scripts\publish_latest_packet.py
 - scripts\reingest_source_2026.py
