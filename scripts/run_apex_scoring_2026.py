@@ -338,48 +338,130 @@ ARCHETYPE_OVERRIDES: dict[int, dict] = {
         ),
     },
     48: {
-        # Gate enforcement only — no forced archetype. CB-2 requires Q2 man floor confirmed.
-        "archetype_direction": (
-            "CB-2 GATE ENFORCEMENT — run PAA Q2 before assigning any archetype:\n\n"
-            "Q2 (MANDATORY): Has man coverage floor been confirmed on tape? "
-            "A CB-2 with no confirmed man coverage floor is a Day 2 pick regardless of zone excellence. "
-            "If man coverage is confirmed → CB-2 is valid; note 'Man coverage floor: confirmed' in capital_adjusted. "
-            "If man coverage is developing or unconfirmed → capital maximum Early R2; "
-            "note 'Man coverage floor: unconfirmed' in capital_adjusted. "
-            "Do NOT assign CB-2 on zone production profile alone."
+        "name": "Colton Hood",
+        "position": "CB",
+        "forced_archetype": "CB-3",
+        "archetype_label": "CB-3 Athletic Freak — CB-1 Development Pathway Confirmed",
+        "paa_findings": {
+            "Q1": "CLEAR — 83.3 PFF coverage grade, targeted at starter volume and held up under pressure",
+            "Q2": "CLEAR — man coverage confirmed at starter level, PFF 70+ in both man and zone contexts",
+            "Q3": "CLEAR — held McMillan (Pick 8, 2025) to 5 catches / 38 yards in direct matchup",
+            "Q4": (
+                "PARTIAL CB-3 — anticipatory tendencies present and trending, but primary winning "
+                "mechanism is physical press dominance, not pre-break route anticipation. CB-3 primary "
+                "archetype. CB-1 development pathway confirmed as realistic ceiling trajectory."
+            ),
+        },
+        "eval_confidence": "Tier A",
+        "capital_range": "R1 Picks 16-25",
+        "fm_flags": [],
+        "archetype_rationale": (
+            "Physical press dominance is the primary mechanism. Hood wins at the line of scrimmage "
+            "through length and contact timing, not anticipatory processing. CB-1 pathway is real and "
+            "trending — Q4 anticipatory signals are present — but the confirmed mechanism at this stage "
+            "is CB-3. Scoring against CB-1 criteria before the pathway is confirmed produces inflated "
+            "capital. CB-3 at R1 Picks 16-25 is the correct capital expression with CB-1 upside "
+            "embedded in the trajectory."
         ),
     },
     32: {
-        "archetype_direction": (
-            "CB-2 GATE ENFORCEMENT — run PAA Q2 before assigning any archetype:\n\n"
-            "Q2 (MANDATORY): Has man coverage floor been confirmed on tape? "
-            "A CB-2 with no confirmed man coverage floor is a Day 2 pick regardless of zone excellence. "
-            "If man coverage is confirmed → CB-2 is valid; note 'Man coverage floor: confirmed' in capital_adjusted. "
-            "If man coverage is developing or unconfirmed → capital maximum Early R2; "
-            "note 'Man coverage floor: unconfirmed' in capital_adjusted. "
-            "Do NOT assign CB-2 on zone production profile alone."
+        "name": "Brandon Cisse",
+        "position": "CB",
+        "forced_archetype": "CB-3",
+        "archetype_label": "CB-3 Athletic Freak — CB-1 Development Pathway NOT Confirmed",
+        "paa_findings": {
+            "Q1": "CLEAR — athleticism and coverage presence confirmed at starter level",
+            "Q2": "CLEAR — physical tools and press ability confirmed",
+            "Q3": (
+                "PARTIAL FLAG — production decline vs. elite competition. Wins against NFL-caliber "
+                "WRs not confirmed at the rate required for full Q3 clear."
+            ),
+            "Q4": (
+                "FLAG — reactive processing dominant. Pre-break route anticipation not confirmed. "
+                "CB-1 pathway requires anticipatory processing — this gate does not clear. CB-3 "
+                "ceiling confirmed; CB-1 pathway is speculative, not trending."
+            ),
+        },
+        "eval_confidence": "Tier B",
+        "capital_range": "R1 Picks 25-32 / Top R2",
+        "fm_flags": [],
+        "bust_warning": (
+            "Gareon Conley pattern active. CB-3 prospects who show Q3 production decline vs. elite "
+            "competition AND Q4 reactive processing flag carry elevated FM-1 (Athleticism Mirage) bust "
+            "risk. Physical dominance that doesn't translate against NFL-caliber athletes is the exact "
+            "FM-1 expression. Capital ceiling is hard at Picks 25-32 / Top R2 until competition "
+            "performance resolves."
+        ),
+        "archetype_rationale": (
+            "Cisse is a legitimate CB-3. The physical tools are real. The ceiling question is whether "
+            "reactive processing will hold at the NFL level against route runners who can manufacture "
+            "separation without needing to beat him physically. Q3 partial and Q4 flag say that question "
+            "is open, not trending positive. CB-1 pathway is not confirmed and should not be priced into "
+            "capital. Conley Warning is active."
         ),
     },
     12: {
-        "archetype_direction": (
-            "CB-2 GATE ENFORCEMENT — run PAA Q2 before assigning any archetype:\n\n"
-            "Q2 (MANDATORY): Has man coverage floor been confirmed on tape? "
-            "A CB-2 with no confirmed man coverage floor is a Day 2 pick regardless of zone excellence. "
-            "If man coverage is confirmed → CB-2 is valid; note 'Man coverage floor: confirmed' in capital_adjusted. "
-            "If man coverage is developing or unconfirmed → capital maximum Early R2; "
-            "note 'Man coverage floor: unconfirmed' in capital_adjusted. "
-            "Do NOT assign CB-2 on zone production profile alone."
+        "name": "Jermod McCoy",
+        "position": "CB",
+        "forced_archetype": "CB-1",
+        "archetype_label": "CB-1 Press-Man Shutdown — FM-4 Medical Flag Active",
+        "paa_findings": {
+            "Q1": "CLEAR — production grade and assignment execution confirm CB-1 mechanism",
+            "Q2": "CLEAR — man coverage dominant mechanism confirmed, anticipatory processing validated",
+            "Q3": "CLEAR — competitive toughness and assignment execution vs. NFL-caliber competition confirmed",
+            "Q4": "CLEAR — processing and anticipation confirmed as primary mechanism, not reactionary",
+        },
+        "eval_confidence": "Tier B-Conditional",
+        "eval_confidence_note": (
+            "Tier A mechanism. Tier B capital. Tier A only if combine medicals confirm pre-injury "
+            "movement quality is intact. ACL tear January 2025, missed entire 2025 season. "
+            "Injury vector HARD CAP at 6/10 — framework rule: no prospect who has missed a full "
+            "season to soft tissue injury may exceed 6/10 on injury vector until two full "
+            "post-injury seasons confirmed."
+        ),
+        "capital_range": "R1 Picks 12-22",
+        "fm_flags": ["FM-4"],
+        "fm_4_note": (
+            "ACL tear January 2025. Full 2025 season missed. Injury vector capped at 6/10. Capital "
+            "ceiling suppressed one tier from mechanism-implied range. Tier B capital is not a "
+            "mechanism discount — it is an injury risk discount. If combine medicals are clean and "
+            "movement quality is confirmed pre-injury level, capital range upgrades to Picks 11-20."
+        ),
+        "archetype_rationale": (
+            "CB-1 mechanism is fully confirmed. The archetype is correct. The capital suppression is "
+            "entirely FM-4 driven. Do not conflate the mechanism grade (CB-1, would otherwise be "
+            "Picks 8-15 range) with the capital recommendation (suppressed to Picks 12-22 by injury "
+            "floor). These are separate outputs."
         ),
     },
     59: {
-        "archetype_direction": (
-            "CB-2 GATE ENFORCEMENT — run PAA Q2 before assigning any archetype:\n\n"
-            "Q2 (MANDATORY): Has man coverage floor been confirmed on tape? "
-            "A CB-2 with no confirmed man coverage floor is a Day 2 pick regardless of zone excellence. "
-            "If man coverage is confirmed → CB-2 is valid; note 'Man coverage floor: confirmed' in capital_adjusted. "
-            "If man coverage is developing or unconfirmed → capital maximum Early R2; "
-            "note 'Man coverage floor: unconfirmed' in capital_adjusted. "
-            "Do NOT assign CB-2 on zone production profile alone."
+        "name": "Chris Johnson",
+        "position": "CB",
+        "forced_archetype": "CB-2",
+        "archetype_label": "CB-2 Zone Coverage Technician — Confirmed Correct",
+        "paa_findings": {
+            "Q1": "CLEAR — zone coverage production grade confirmed at starter level",
+            "Q2": (
+                "PARTIAL FLAG — man coverage real and present, but NFL-level man coverage confirmation "
+                "incomplete. PAA Q2 partial means CB-1 cannot be assigned. CB-2 is the correct "
+                "classification at this evidence level."
+            ),
+            "Q3": "CLEAR — production vs. competition confirms CB-2 mechanism",
+            "Q4": "CLEAR — zone processing and pattern recognition confirmed as primary mechanism",
+        },
+        "eval_confidence": "Tier B",
+        "capital_range": "R1 Picks 22-32 / Top R2",
+        "fm_flags": [],
+        "divergence_note": (
+            "APEX_HIGH direction correct. +15 magnitude is slightly aggressive — +5 to +8 is the "
+            "defensible range given PAA Q2 partial. The market undervaluation is real; the magnitude "
+            "of the signal overstates confirmation level. Score against CB-2 criteria only."
+        ),
+        "archetype_rationale": (
+            "CB-2 is confirmed. The API overcorrected to CB-1 when the PAA gate pushed it to confirm "
+            "man coverage — PAA Q2 partial means man coverage is present and real, not that it's "
+            "NFL-confirmed starter-level. CB-2 with clean Q2 would justify Picks 16-22. Q2 partial "
+            "suppresses to Picks 22-32 / Top R2. APEX_HIGH is the right directional call."
         ),
     },
     55: {
@@ -642,17 +724,42 @@ def _score_prospect(
     )
 
     # Inject archetype direction / gate enforcement if this prospect has an override
-    arch_override  = ARCHETYPE_OVERRIDES.get(prospect_id)
-    arch_direction = None
-    arch_is_forced = False
+    arch_override      = ARCHETYPE_OVERRIDES.get(prospect_id)
+    arch_direction     = None
+    arch_is_forced     = False
+    paa_findings       = None
+    override_eval_conf = None
+    override_capital   = None
+    override_fm_flags  = None
     if arch_override:
         arch_direction = arch_override.get("archetype_direction")
         forced         = arch_override.get("forced_archetype")
         arch_is_forced = bool(forced)
+        paa_findings       = arch_override.get("paa_findings")
+        override_eval_conf = arch_override.get("eval_confidence")
+        override_capital   = arch_override.get("capital_range")
+        override_fm_flags  = arch_override.get("fm_flags")
+
+        # Build arch_direction from structured fields when archetype_direction is absent.
+        # New-style entries use archetype_rationale + optional extra note fields.
+        if arch_direction is None and arch_override.get("archetype_rationale"):
+            label     = arch_override.get("archetype_label") or forced or ""
+            rationale = arch_override["archetype_rationale"]
+            parts     = [f"Assigned archetype: {label}\n\nRationale: {rationale}"]
+            for extra_key in ("eval_confidence_note", "fm_4_note", "bust_warning", "divergence_note"):
+                val = arch_override.get(extra_key)
+                if val:
+                    parts.append(val)
+            arch_direction = "\n\n".join(parts)
+
         if forced:
             print(f"  Archetype override: {forced} [ANALYST FORCED]")
         elif arch_direction:
             print(f"  Archetype gate enforced for pid={prospect_id} [Q2 GATE]")
+        if paa_findings:
+            print(f"  PAA findings injected: {len(paa_findings)} confirmed gate results")
+        if override_fm_flags:
+            print(f"  FM flags active: {', '.join(override_fm_flags)}")
 
     prospect_data = {
         "name":                display_name,
@@ -665,6 +772,10 @@ def _score_prospect(
         "web_context":         web_context,
         "archetype_direction": arch_direction,
         "forced_archetype":    arch_is_forced,
+        "paa_findings":        paa_findings,
+        "override_eval_conf":  override_eval_conf,
+        "override_capital":    override_capital,
+        "override_fm_flags":   override_fm_flags,
     }
     user_prompt = build_user_prompt(prospect_data)
 

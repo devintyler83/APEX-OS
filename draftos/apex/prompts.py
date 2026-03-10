@@ -733,6 +733,10 @@ def build_user_prompt(prospect_data: dict) -> str:
       ras_total (float | None), web_context (str)
       archetype_direction (str | None) — analyst override or gate enforcement text
       forced_archetype (bool) — True = hard analyst override, False = gate reminder only
+      paa_findings (dict | None) — confirmed gate results keyed Q1..Q4; injected verbatim
+      override_eval_conf (str | None) — analyst-locked eval confidence tier
+      override_capital (str | None) — analyst-locked capital range
+      override_fm_flags (list | None) — active FM flags for this prospect
     """
     name                = prospect_data.get("name", "Unknown")
     position            = prospect_data.get("position", "Unknown")
@@ -744,6 +748,10 @@ def build_user_prompt(prospect_data: dict) -> str:
     web_context         = prospect_data.get("web_context", "")
     archetype_direction = prospect_data.get("archetype_direction", None)
     is_forced           = prospect_data.get("forced_archetype", False)
+    paa_findings        = prospect_data.get("paa_findings", None)
+    override_eval_conf  = prospect_data.get("override_eval_conf", None)
+    override_capital    = prospect_data.get("override_capital", None)
+    override_fm_flags   = prospect_data.get("override_fm_flags", None)
 
     ras_str = (
         f"{float(ras_total):.2f} / 10.00 RAS"
@@ -770,6 +778,43 @@ with the gate outputs.
 
 {paa_gate}
 === END CLASSIFICATION GATE ==="""
+
+    # Confirmed PAA gate findings block — injected when paa_findings is present.
+    # These are analyst-verified results that supersede API training data inferences.
+    # Injected after the generic gate so the API has framework context before reading findings.
+    paa_block = ""
+    if paa_findings:
+        finding_lines = "\n".join(
+            f"  {q}: {v}" for q, v in paa_findings.items()
+        )
+        paa_block = f"""
+
+=== CONFIRMED PAA GATE FINDINGS (ANALYST-VERIFIED — DO NOT OVERRIDE) ===
+The following gate results have been confirmed through full DraftOS evaluation.
+These supersede training data inferences. Score against these confirmed findings exactly.
+Do NOT re-derive gate answers from training data — accept these results as ground truth.
+
+{finding_lines}
+=== END CONFIRMED PAA FINDINGS ==="""
+
+    # Analyst capital and confidence constraints — injected when override fields are present.
+    # These lock the output range so the API does not produce independent capital inference
+    # that conflicts with confirmed evaluation records.
+    constraints_block = ""
+    constraint_parts: list[str] = []
+    if override_eval_conf:
+        constraint_parts.append(f"Eval Confidence (LOCKED): {override_eval_conf}")
+    if override_capital:
+        constraint_parts.append(f"Capital Range (LOCKED): {override_capital}")
+    if override_fm_flags:
+        constraint_parts.append(f"FM Flags Active: {', '.join(override_fm_flags)}")
+    if constraint_parts:
+        constraints_block = (
+            "\n\n=== ANALYST CAPITAL AND CONFIDENCE CONSTRAINTS ===\n"
+            + "\n".join(constraint_parts)
+            + "\nApply these constraints exactly. Do not override with independent capital inference."
+            "\n=== END CONSTRAINTS ==="
+        )
 
     # Analyst override block — injected when archetype_direction is present.
     # Header differs: MANDATORY OVERRIDE for forced archetypes, GATE ENFORCEMENT for reminders.
@@ -815,7 +860,7 @@ Evaluate the following NFL draft prospect using the APEX v2.2 framework.
   RAS Score: {ras_str}
 
 === CONTEXT ===
-{ctx_block}{gate_block}{arch_block}
+{ctx_block}{gate_block}{paa_block}{arch_block}{constraints_block}
 
 Apply ALL applicable modifier rules:
 - Schwesinger Rule (c2 >= 8 + c3 >= 7 → DevTraj boost)
