@@ -171,16 +171,23 @@ def _fmt_div(row) -> str:
 
 
 def _fmt_apex_delta(val) -> str:
-    if pd.isna(val) or val is None:
+    if val is None or (isinstance(val, float) and pd.isna(val)):
         return ""
-    v = int(val)
+    try:
+        v = int(val)
+    except (TypeError, ValueError):
+        return ""
     return f"{v:+d}"
 
 
 def _fmt_apex_composite(val) -> str:
-    if pd.isna(val) or val is None:
-        return ""
-    return f"{float(val):.1f}"
+    """Return formatted score string, or '-' when NULL."""
+    if val is None or (isinstance(val, float) and pd.isna(val)):
+        return "-"
+    try:
+        return f"{float(val):.1f}"
+    except (TypeError, ValueError):
+        return "-"
 
 
 display = pd.DataFrame()
@@ -198,15 +205,15 @@ display["⚡ Div"]    = filtered.apply(_fmt_div, axis=1)
 display["APEX"]       = filtered["apex_rank"].astype("Int64")
 display["Δ APEX"]    = filtered["apex_delta"].apply(_fmt_apex_delta)
 
-# APEX v2.2 engine columns
+# APEX v2.2 engine columns — NULL-safe: '-' for missing score, '' for missing tier/archetype
 if "apex_composite" in filtered.columns:
-    display["APEX Score"]     = filtered["apex_composite"].apply(_fmt_apex_composite)
-    display["APEX Tier"]      = filtered["apex_tier"].fillna("")
-    display["Archetype"]      = filtered["apex_archetype"].fillna("")
+    display["APEX Score"] = filtered["apex_composite"].apply(_fmt_apex_composite)
+    display["APEX Tier"]  = filtered["apex_tier"].fillna("")
+    display["Archetype"]  = filtered["apex_archetype"].fillna("-")
 else:
-    display["APEX Score"]     = ""
-    display["APEX Tier"]      = ""
-    display["Archetype"]      = ""
+    display["APEX Score"] = "-"
+    display["APEX Tier"]  = ""
+    display["Archetype"]  = "-"
 
 display["Snapshot"] = (
     filtered["snapshot_date"].str[:10]
@@ -287,13 +294,13 @@ if apex_scored > 0 and "apex_composite" in df.columns:
     apex_df = apex_df.sort_values("apex_composite", ascending=False)
 
     apex_display = pd.DataFrame()
-    apex_display["Player"]    = apex_df["display_name"]
-    apex_display["Pos"]       = apex_df["position_group"]
-    apex_display["School"]    = apex_df["school_canonical"]
-    apex_display["Archetype"] = apex_df["apex_archetype"].fillna("")
-    apex_display["APEX Score"]= apex_df["apex_composite"].apply(_fmt_apex_composite)
-    apex_display["APEX Tier"] = apex_df["apex_tier"].fillna("")
-    apex_display["Consensus"] = apex_df["consensus_rank"].astype("Int64")
+    apex_display["Player"]     = apex_df["display_name"]
+    apex_display["Pos"]        = apex_df["position_group"]
+    apex_display["School"]     = apex_df["school_canonical"]
+    apex_display["Archetype"]  = apex_df["apex_archetype"].fillna("-")
+    apex_display["APEX Score"] = apex_df["apex_composite"].apply(_fmt_apex_composite)
+    apex_display["APEX Tier"]  = apex_df["apex_tier"].fillna("")
+    apex_display["Consensus"]  = apex_df["consensus_rank"].astype("Int64")
 
     apex_styled = (
         apex_display.style

@@ -7,14 +7,18 @@ computes APEX composite scores, and writes results to apex_scores + divergence_f
 Usage:
     python -m scripts.run_apex_scoring_2026 --batch calibration --apply 0|1 [--season 2026]
     python -m scripts.run_apex_scoring_2026 --batch top50      --apply 0|1 [--force]
+    python -m scripts.run_apex_scoring_2026 --batch single     --prospect_id N --apply 0|1 [--position POS] [--force]
     python -m scripts.run_apex_scoring_2026 --batch all        --apply 0|1
 
 --batch calibration  Score 12 calibration prospects (hardcoded overrides)
 --batch top50        Score top 50 by consensus rank (skips already-scored unless --force)
+--batch single       Score one prospect by prospect_id (requires --prospect_id)
 --batch all          (Session 5+) Score all prospects with consensus_score > 0
 --apply 0            Dry run — shows what would be scored, no API calls, no DB writes
 --apply 1            Full run — calls Claude API and writes to DB
---force              Re-score already-scored prospects (overrides skip logic)
+--force              Re-score already-scored prospects; for single: deletes existing rows first
+--prospect_id N      Prospect ID for --batch single mode
+--position POS       Position override for --batch single mode (e.g. TE, ILB, QB)
 
 CALIBRATION_OVERRIDES:
   Maps display name -> best prospect_id + correct position for PVC.
@@ -26,9 +30,11 @@ TOP50_POSITION_OVERRIDES:
   DB position_group is unreliable (LB/OL are catch-all fallbacks).
   position_raw is used where clean; overrides applied for known LB->ILB cases and DT->IDL.
 
+# SESSION 6 TODO: Re-score full top-50 with --force after positional
+# libraries are validated against Helm + calibration spot checks.
+# Run: python -m scripts.run_apex_scoring_2026 --batch top50 --force --apply 1
+
 # TODO Session 5: --batch all mode — score all prospects with consensus_score > 0
-# TODO Session 5: Add position-specific archetype libraries (QB, EDGE, CB, OT, S, IDL)
-#   as separate prompt modules — currently using v2.2 base weights for all non-QB/ILB
 # TODO Session 5: Tune system prompt based on top50 tier distribution results
 # TODO Session 5: Add apex_pos_rank computation (rank within position group)
 # TODO Session 5: Integrate live web search via anthropic beta web_search_20250305 tool
@@ -736,6 +742,90 @@ def _run_top50(
     )
 
 
+def _run_single(
+    client:            anthropic.Anthropic,
+    conn,
+    system_prompt:     str,
+    prospect_id:       int,
+    position_override: str | None,
+    season_id:         int,
+    apply:             bool,
+    force:             bool,
+) -> None:
+    """
+    Score a single prospect by prospect_id.
+
+    Looks up the prospect from DB. Uses --position override if provided,
+    otherwise resolves from DB position_group / position_raw.
+
+    If --force and --apply 1: deletes existing apex_scores + divergence_flags
+    rows for this prospect_id + model_version before writing new ones.
+    """
+    row = conn.execute(
+        """
+        SELECT prospect_id, display_name, position_group, position_raw, school_canonical
+        FROM prospects
+        WHERE prospect_id = ? AND season_id = ?
+        """,
+        (prospect_id, season_id),
+    ).fetchone()
+
+    if not row:
+        print(f"[ERROR] prospect_id={prospect_id} not found in DB (season_id={season_id})")
+        sys.exit(1)
+
+    display_name = row["display_name"]
+    position = (
+        _normalize_position(position_override)
+        if position_override
+        else _resolve_position(prospect_id, row["position_group"], row["position_raw"])
+    )
+    school = row["school_canonical"] or "Unknown"
+
+    print(f"\nSingle prospect batch")
+    print(f"  prospect_id={prospect_id}  display_name={display_name}")
+    print(f"  position={position}  school={school}  force={force}")
+
+    if force and apply:
+        conn.execute(
+            "DELETE FROM apex_scores WHERE prospect_id=? AND season_id=? AND model_version=?",
+            (prospect_id, season_id, MODEL_VERSION),
+        )
+        conn.execute(
+            "DELETE FROM divergence_flags WHERE prospect_id=? AND season_id=? AND model_version=?",
+            (prospect_id, season_id, MODEL_VERSION),
+        )
+        conn.commit()
+        print(
+            f"  [FORCE] Deleted existing apex_scores + divergence_flags "
+            f"rows for pid={prospect_id} model={MODEL_VERSION}"
+        )
+    elif force and not apply:
+        print(
+            f"  [DRY RUN + FORCE] Would delete existing rows for "
+            f"pid={prospect_id} model={MODEL_VERSION}"
+        )
+
+    override = {
+        "prospect_id":  prospect_id,
+        "position":     position,
+        "school":       school,
+        "display_name": display_name,
+    }
+
+    ok, _ = _score_prospect(
+        client, conn, system_prompt,
+        display_name, override, season_id, apply, False,
+    )
+
+    print(f"\n{'='*60}")
+    if ok:
+        print(f"[COMPLETE] {display_name} scored successfully.")
+    else:
+        print(f"[FAILED] {display_name} scoring failed.")
+        sys.exit(1)
+
+
 # ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
@@ -746,7 +836,7 @@ def main() -> None:
     )
     parser.add_argument(
         "--batch",
-        choices=["calibration", "top50", "all"],
+        choices=["calibration", "top50", "all", "single"],
         default="calibration",
         help="Which prospect set to score",
     )
@@ -767,9 +857,25 @@ def main() -> None:
         "--force",
         action="store_true",
         default=False,
-        help="Re-score already-scored prospects (top50/all batches only)",
+        help="Re-score already-scored prospects; for --batch single: deletes existing rows first",
+    )
+    parser.add_argument(
+        "--prospect_id",
+        type=int,
+        default=None,
+        help="Prospect ID for --batch single mode",
+    )
+    parser.add_argument(
+        "--position",
+        type=str,
+        default=None,
+        help="Position override for --batch single mode (e.g. TE, ILB, QB)",
     )
     args = parser.parse_args()
+
+    # Validate single-mode requirements
+    if args.batch == "single" and args.prospect_id is None:
+        parser.error("--batch single requires --prospect_id")
 
     season_id = 1 if args.season == 2026 else args.season
     apply     = bool(args.apply)
@@ -781,6 +887,8 @@ def main() -> None:
     print(f"Force:   {args.force}")
     print(f"Model:   {CLAUDE_MODEL}")
     print(f"Version: {MODEL_VERSION}")
+    if args.batch == "single":
+        print(f"ProspectID: {args.prospect_id}  Position override: {args.position or '(none)'}")
     print("=" * 60)
 
     # Verify API key before any work (only required for actual runs)
@@ -805,6 +913,12 @@ def main() -> None:
 
         elif args.batch == "top50":
             _run_top50(client, conn, system_prompt, season_id, apply, args.force)
+
+        elif args.batch == "single":
+            _run_single(
+                client, conn, system_prompt,
+                args.prospect_id, args.position, season_id, apply, args.force,
+            )
 
         elif args.batch == "all":
             # TODO Session 5: implement all batch

@@ -133,6 +133,7 @@ def get_source_ranks(
 
     Joins source_rankings through source_player_map to resolve prospect_id.
     Prospects not mapped in source_player_map are excluded.
+    Rows where overall_rank IS NULL are skipped (some sources omit positional ranks).
     If the source is not found, returns {}.
     """
     src_row = conn.execute(
@@ -168,6 +169,7 @@ def get_source_ranks(
           AND sr.season_id = ?
           AND sr.ranking_date = ?
           AND spm.prospect_id IS NOT NULL
+          AND sr.overall_rank IS NOT NULL
         """,
         (source_id, season_id, latest_date),
     ).fetchall()

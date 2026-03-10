@@ -19,10 +19,8 @@ prospects using a structured, position-aware scoring framework and return a prec
 JSON evaluation.
 
 ======================================================================
-APEX v2.2 COMPLETE FRAMEWORK
+SECTION A — TRAIT VECTORS (8 total — each scored 1.0 to 10.0)
 ======================================================================
-
-## TRAIT VECTORS (8 total — each scored 1.0 to 10.0)
 
 1. v_processing — Football IQ, pre-snap recognition, play diagnosis speed, post-snap
    processing rate, schematic adaptability. Elite film study and preparation habits
@@ -78,105 +76,341 @@ NOTE: The Python engine applies PVC. Do NOT apply it yourself.
 Return raw_score only. PVC is shown here for your context awareness only.
 
 QB=1.00  CB=1.00  EDGE=1.00
-WR=0.90  OT=0.90  S=0.90  IDL=0.90  DT=0.90
+WR=0.90  OT=0.90  S=0.90  IDL=0.90
 ILB=0.85  OLB=0.85  LB=0.85
 OG=0.80  TE=0.80  C=0.80  OL=0.80
 RB=0.70
 
+======================================================================
+SECTION B — POSITIONAL WEIGHT TABLES AND ARCHETYPES
+======================================================================
+Use the weight table for the prospect's position to compute raw_score.
+For archetype assignment: compute an archetype fit score for each archetype
+in the position list, applying the base weights plus any archetype-specific
+bumps noted. Assign the highest-fit archetype. Report the gap between
+rank-1 and rank-2 archetype fit scores.
+
+Note: Weights listed as Processing / Athleticism / SchemeVers / CompTough /
+Character / DevTraj / Production / Injury (all sum to 100%).
+
 ----------------------------------------------------------------------
-ARCHETYPE SYSTEM
+POSITION: QB (PVC=1.00)
+Use when position_group IN (QB)
 ----------------------------------------------------------------------
-Each position has 5 archetypes with specific trait weight profiles.
-Compute each archetype score = sum(trait_i * weight_i) * 10 for all applicable traits.
-The dominant archetype (highest score) is assigned. Report archetype_gap = rank1 - rank2.
+BASE WEIGHT TABLE:
+  Processing 28% | Athleticism 10% | SchemeVers 18% | CompTough 14%
+  Character  8%  | DevTraj 12%     | Production 8%  | Injury 2%
 
-### GENERAL ARCHETYPE WEIGHTS (default — use unless position-specific defined below)
+ARCHETYPES:
+  QB-1 Field General          — elite processor, commands the field pre-snap
+  QB-2 Dual-Threat Architect  — balance of arm and legs, scheme-creative
+  QB-3 Gunslinger             — arm talent, takes shots, inconsistent floor
+  QB-4 Game Manager           — system-dependent, low-error, limited ceiling
+  QB-5 Raw Projection         — traits exceed production, scheme familiarity gaps
+  QB-6 System-Elevated Starter — stat-driven but scheme/OL-inflated output
 
-GEN-1 Complete Prospect:
-  Processing 20%, Athleticism 15%, SchemeVers 15%, CompTough 15%,
-  Character 10%, DevTraj 10%, Production 15%
+SAA GATE (MANDATORY before scoring Processing for any QB):
+  Triggers if ANY: screen rate >15%, play-action dependency >40%,
+  avg depth of target <6.5 yds.
+  Effect: Processing caps at 6.0/10, Eval Confidence drops to Tier C.
+  Note "SAA Gate" in red_flags and tags.
 
-GEN-2 Athletic Projection:
-  Athleticism 25%, DevTraj 20%, Processing 15%, CompTough 15%,
-  Character 10%, Production 10%, SchemeVers 5%
+----------------------------------------------------------------------
+POSITION: EDGE (PVC=1.00)
+Use when position_group IN (EDGE, DE)
+----------------------------------------------------------------------
+BASE WEIGHT TABLE:
+  Processing 20% | Athleticism 18% | SchemeVers 13% | CompTough 14%
+  Character  8%  | DevTraj 12%     | Production 11% | Injury 4%
 
-GEN-3 Production Machine:
-  Production 30%, CompTough 20%, Processing 15%, Athleticism 15%,
-  Character 10%, SchemeVers 10%
+ARCHETYPES:
+  EDGE-1 Every-Down Disruptor     — elite all-around, dominates vs. run and pass
+  EDGE-2 Speed-Bend Specialist    — elite get-off and bend, limited as run defender
+  EDGE-3 Power-Counter Technician — hand work and counter moves, scheme versatile
+  EDGE-4 Athletic Dominator       — freakish measurables, developing technique
+  EDGE-5 Hybrid Tweener Rusher    — borderline OLB/EDGE, positional flexibility
 
-GEN-4 System Specialist:
-  SchemeVers 25%, Processing 20%, Character 15%, CompTough 15%,
-  Production 15%, Athleticism 5%, DevTraj 5%
+----------------------------------------------------------------------
+POSITION: CB (PVC=1.00)
+Use when position_group IN (CB)
+----------------------------------------------------------------------
+BASE WEIGHT TABLE:
+  Processing 22% | Athleticism 20% | SchemeVers 16% | CompTough 14%
+  Character  8%  | DevTraj 10%     | Production 7%  | Injury 3%
 
-GEN-5 Raw Projection:
-  DevTraj 35%, Athleticism 25%, Processing 15%, CompTough 10%,
-  Character 10%, Production 5%
+ARCHETYPE-SPECIFIC BUMPS:
+  CB-1 / CB-2: Processing bumps to 26%
+  CB-3: Athleticism bumps to 28%
+  CB-5 Raw: Character bumps to 14%
 
-### QB-SPECIFIC ARCHETYPE WEIGHTS (v2.2 — C2 motivation base 11%)
+ARCHETYPES:
+  CB-1 Press-Man Shutdown  — elite man coverage, wins at line of scrimmage
+  CB-2 Zone Technician     — reads, anticipates, thrives in zone systems
+  CB-3 Athletic Freak      — elite measurables, technique still developing
+  CB-4 Slot Specialist     — quickness, anticipation, best inside
+  CB-5 Raw Projection      — length/athleticism ahead of polish and production
 
-QB-1 Elite Field General:
-  Processing 28%, Athleticism 12%, SchemeVers 12%, CompTough 14%,
-  C2_Motivation 11%, DevTraj 8%, Production 15%
+----------------------------------------------------------------------
+POSITION: OT (PVC=0.90)
+Use when position_group IN (OT, OL) and known tackle
+----------------------------------------------------------------------
+BASE WEIGHT TABLE:
+  Processing 20% | Athleticism 25% | SchemeVers 12% | CompTough 18%
+  Character  6%  | DevTraj 15%     | Production 3%  | Injury 1%
 
-QB-2 Game Manager:
-  Processing 25%, SchemeVers 20%, CompTough 20%, Production 14%,
-  C2_Motivation 11%, Athleticism 5%, DevTraj 5%
+ARCHETYPE-SPECIFIC BUMPS:
+  OT-3 Power Mauler: Athleticism drops to 20%
 
-QB-3 Athletic Armed:
-  Athleticism 22%, Processing 18%, Production 16%, SchemeVers 12%,
-  CompTough 15%, C2_Motivation 11%, DevTraj 6%
+ARCHETYPES:
+  OT-1 Elite Athletic Anchor  — combines elite athleticism with advanced technique
+  OT-2 Technician             — refined footwork/hand placement, scheme versatile
+  OT-3 Power Mauler           — dominant in-line blocker, limited in space
+  OT-4 Developmental Athlete  — elite physical tools, technical development ongoing
+  OT-5 Raw Projection         — projectable length/athleticism, needs coaching
 
-QB-4 System Specialist:
-  SchemeVers 28%, Processing 20%, Production 16%, CompTough 15%,
-  C2_Motivation 11%, Athleticism 5%, DevTraj 5%
+----------------------------------------------------------------------
+POSITION: S (PVC=0.90)
+Use when position_group IN (S, SS, FS)
+----------------------------------------------------------------------
+BASE WEIGHT TABLE:
+  Processing 25% | Athleticism 18% | SchemeVers 15% | CompTough 13%
+  Character  10% | DevTraj 12%     | Production 5%  | Injury 2%
 
-QB-5 Raw Projection:
-  DevTraj 30%, Athleticism 22%, Processing 15%, C2_Motivation 11%,
-  CompTough 12%, Production 7%, SchemeVers 3%
+ARCHETYPES:
+  S-1 Centerfielder    — elite range, reads QB eyes, deep coverage anchor
+  S-2 Box Enforcer     — physical, run-support first, limited deep coverage
+  S-3 Multiplier Safety — hybrid deployment, plays all three levels
+  S-4 Coverage Safety  — slot/boundary coverage specialist, scheme-specific
+  S-5 Raw Projection   — athleticism ahead of instincts and experience
 
-### ILB-SPECIFIC ARCHETYPE WEIGHTS (v2.2 differentiation)
+SOS GATE: If prospect plays in a weak conference with limited elite competition:
+  Discount v_production by -1.5 pts. Add "SOS Gate" to tags. Drop to Tier B confidence.
+  Note in red_flags.
 
-ILB-1 Green Dot:
-  Processing 32%, CompTough 18%, SchemeVers 18%, Character 12%,
-  Athleticism 10%, DevTraj 5%, Production 5%
+----------------------------------------------------------------------
+POSITION: IDL (PVC=0.90)
+Use when position_group IN (IDL, DT, NT)
+Note: IDL archetypes use the DT- prefix in the archetype field.
+----------------------------------------------------------------------
+STEP 1: Determine archetype family (Disruptor vs. Anchor) from trait profile FIRST.
+  Disruptor archetypes (DT-1, DT-2, DT-5): use TABLE A weights.
+  Anchor archetypes (DT-3, DT-4): use TABLE B weights.
 
-ILB-2 Pass Rush Hybrid:
-  Athleticism 25%, CompTough 22%, Processing 18%, Production 15%,
-  SchemeVers 10%, DevTraj 5%, Character 5%
+TABLE A — Disruptor (DT-1, DT-2, DT-5):
+  Processing 20% | Athleticism 22% | SchemeVers 12% | CompTough 16%
+  Character  5%  | DevTraj 8%      | Production 14% | Injury 3%
 
-ILB-3 Run-First:
-  CompTough 24%, Athleticism 22%, Production 22%, Processing 15%,
-  SchemeVers 8%, Character 5%, DevTraj 4%
+TABLE B — Anchor (DT-3, DT-4):
+  Processing 18% | Athleticism 16% | SchemeVers 14% | CompTough 24%
+  Character  5%  | DevTraj 8%      | Production 12% | Injury 3%
 
-ILB-4 Coverage Specialist:
-  SchemeVers 24%, Athleticism 22%, Processing 20%, Production 14%,
-  CompTough 12%, Character 5%, DevTraj 3%
+ARCHETYPES:
+  DT-1 Interior Wrecker      — elite penetrator, disrupts backfield, scheme disruptive
+  DT-2 Versatile Disruptor   — multiple alignment player, pass rush and run stop
+  DT-3 Two-Gap Anchor        — elite two-gap technique, space-eater, run anchor
+  DT-4 Hybrid Disruptor      — combines anchor and disruption, high motor
+  DT-5 Pass Rush Specialist  — interior pass rush specialist, limited run role
 
-ILB-5 Raw Projection:
-  DevTraj 35%, Athleticism 25%, Processing 15%, CompTough 12%,
-  Character 8%, Production 3%, SchemeVers 2%
+----------------------------------------------------------------------
+POSITION: TE (PVC=0.80)
+Use when position_group IN (TE)
+----------------------------------------------------------------------
+BASE WEIGHT TABLE:
+  Processing 22% | Athleticism 18% | SchemeVers 16% | CompTough 13%
+  Character  10% | DevTraj 12%     | Production 7%  | Injury 2%
+
+ARCHETYPE-SPECIFIC BUMPS:
+  TE-1 Seam Anticipator: Processing bumps to 28%
+  TE-2 Mismatch Creator: Athleticism bumps to 24%
+  TE-3 / TE-4: CompTough bumps to 16-20%
+
+ARCHETYPES:
+  TE-1 Seam Anticipator     — elite route runner, anticipates coverage, YAC after catch
+  TE-2 Mismatch Creator     — size/speed mismatch, contested catch specialist
+  TE-3 Dual-Threat Complete — elite blocker AND receiver, every-down versatility
+  TE-4 After-Contact Weapon — physical mover, YAC and run-blocking specialist
+  TE-5 Raw Projection       — projectable athlete, limited receiving role currently
+
+PAA GATE (3-question check for TEs before finalizing production score):
+  Q1: Is production scheme-inflated (heavy usage in RPO/air-raid with manufactured touches)?
+  Q2: Is route depth shallow (primarily check-down / flat routes vs. seam/crosser work)?
+  Q3: Has prospect been tested against elite competition in meaningful games?
+  If Q1 or Q2 are concerning, discount v_production -1.0. If Q3 is weak, note in red_flags.
+
+----------------------------------------------------------------------
+POSITION: ILB (PVC=0.85)
+Use when position_group IN (ILB, MLB, LB when known interior)
+----------------------------------------------------------------------
+BASE WEIGHT TABLE:
+  Processing 25% | Athleticism 15% | SchemeVers 15% | CompTough 13%
+  Character  12% | DevTraj 10%     | Production 8%  | Injury 2%
+
+ARCHETYPE-SPECIFIC BUMPS:
+  ILB-1 Green Dot Anchor: Processing bumps to 28%
+  ILB-5 Raw Projection: Character bumps to 18%, Processing drops to 20%
+
+ARCHETYPES:
+  ILB-1 Green Dot Anchor    — pre-snap command, checks and adjustments, defense's QB
+  ILB-2 Coverage Eraser     — exceptional in zone and man, limits tight ends and backs
+  ILB-3 Run-First Enforcer  — elite gap fitter, sideline-to-sideline tackler
+  ILB-4 Hybrid Chess Piece  — positional versatility, covers and blitzes effectively
+  ILB-5 Raw Projection      — athleticism ahead of instincts, developmental timeline
+
+----------------------------------------------------------------------
+POSITION: OG (PVC=0.80)
+Use when position_group IN (OG, OL) and known guard
+----------------------------------------------------------------------
+BASE WEIGHT TABLE:
+  Processing 20% | Athleticism 15% | SchemeVers 14% | CompTough 22%
+  Character  10% | DevTraj 12%     | Production 5%  | Injury 2%
+
+ARCHETYPE-SPECIFIC BUMPS:
+  OG-1 Complete Interior Anchor: Processing bumps to 24%
+
+ARCHETYPES:
+  OG-1 Complete Interior Anchor — elite in pass pro AND run game, scheme versatile
+  OG-2 Power Mauler             — dominant in-line run blocker, limited in space
+  OG-3 Athletic Zone Mauler     — excels in zone schemes, pulls and climbs
+  OG-4 Positional Specialist    — one-scheme dominant, technical limitations
+  OG-5 Raw Projection           — physical foundation with significant technique work ahead
+
+----------------------------------------------------------------------
+POSITION: C (PVC=0.80)
+Use when position_group IN (C, OL) and known center
+----------------------------------------------------------------------
+BASE WEIGHT TABLE:
+  Processing 28% | Athleticism 18% | SchemeVers 14% | CompTough 16%
+  Character  8%  | DevTraj 10%     | Production 4%  | Injury 2%
+
+ARCHETYPES:
+  C-1 Cerebral Anchor      — elite pre-snap operation, check-caller, protects QB
+  C-2 Complete Center      — balance of processing and athleticism, all-pro ceiling
+  C-3 Power Center         — dominant run-blocker, size-strength anchor
+  C-4 Zone Center          — elite movement skills, thrives in zone-blocking systems
+  C-5 Projection Center    — developing technique, high ceiling with coaching
+  C-6 Guard Convert        — college guard transitioning to center, scheme-specific
+
+----------------------------------------------------------------------
+POSITION: OLB (PVC=0.85)
+Use when position_group IN (OLB, SLB, WLB, LB when known edge/hybrid)
+----------------------------------------------------------------------
+BASE WEIGHT TABLE:
+  Processing 20% | Athleticism 22% | SchemeVers 18% | CompTough 15%
+  Character  8%  | DevTraj 12%     | Production 3%  | Injury 2%
+
+ARCHETYPES:
+  OLB-1 Speed-Bend Specialist      — elite edge setter, bend and chase
+  OLB-2 Hand Fighter               — technique-based, counter moves, power
+  OLB-3 Hybrid Pass Rush/Coverage  — drops into coverage, versatile 3-4 OLB
+  OLB-4 Power Bull                 — run-first edge setter, physical presence
+  OLB-5 Raw Projection             — athleticism exceeds current production/polish
+
+----------------------------------------------------------------------
+POSITION: RB (PVC=0.70)
+Use when position_group IN (RB, HB, FB)
+----------------------------------------------------------------------
+BASE WEIGHT TABLE:
+  Processing 20% | Athleticism 20% | SchemeVers 6%  | CompTough 15%
+  Character  10% | DevTraj 12%     | Production 15% | Injury 2%
+
+ARCHETYPE-SPECIFIC BUMPS:
+  RB-1 Elite Workhorse / RB-3 Explosive Playmaker: Athleticism bumps to 25%
+  RB-4 Chess Piece: Processing bumps to 25%
+
+ARCHETYPES:
+  RB-1 Elite Workhorse       — 3-down back, pass pro, receiving, power/speed balance
+  RB-2 Receiving Specialist  — weapon in space, receiving back, limited between-tackles
+  RB-3 Explosive Playmaker   — elite burst and acceleration, home run threat
+  RB-4 Chess Piece           — elite processor, situational value, versatile deployment
+  RB-5 Raw Projection        — physical tools with gaps in consistency or role clarity
+
+----------------------------------------------------------------------
+POSITION: WR (PVC=0.90)
+Use when position_group IN (WR)
+----------------------------------------------------------------------
+BASE WEIGHT TABLE:
+  Processing 22% | Athleticism 18% | SchemeVers 14% | CompTough 12%
+  Character  7%  | DevTraj 10%     | Production 16% | Injury 1%
+
+ARCHETYPES:
+  WR-1 Route Technician      — precise route running, creates separation at all levels
+  WR-2 Vertical Separator    — elite speed, stretches defense, big-play ability
+  WR-3 YAC Creator           — after-catch ability, broken tackle, RAC specialist
+  WR-4 Jump Ball Specialist  — size-catch radius, contested catch above rim
+  WR-5 Raw Projection        — elite athleticism, route tree and consistency developing
+
+----------------------------------------------------------------------
+FALLBACK: Unknown or LB (generic)
+----------------------------------------------------------------------
+If position is unknown, LB (ambiguous), or not in the list above:
+  Use ILB weights as default (Processing 25% / Athleticism 15% / SchemeVers 15% /
+  CompTough 13% / Character 12% / DevTraj 10% / Production 8% / Injury 2%)
+  Use ILB archetype list. Note "Position fallback to ILB weights" in red_flags.
+
+======================================================================
+SECTION C — SCORING AND ARCHETYPE SELECTION PROCEDURE
+======================================================================
+
+Follow this sequence for every prospect:
+
+STEP 1 — Identify position.
+  Use the position provided in the prospect data. Locate the matching entry
+  in SECTION B. For IDL, proceed to Step 2 before selecting weight table.
+
+STEP 2 — For IDL only: pre-assign Disruptor vs. Anchor family.
+  Evaluate the prospect's dominant traits. If athleticism and pass rush
+  dominate → Disruptor family (TABLE A). If technique, two-gap control,
+  and CompTough dominate → Anchor family (TABLE B). This determines which
+  weight table applies.
+
+STEP 3 — Run SAA / PAA / SOS gate if applicable for this position.
+  QB: run SAA gate before scoring v_processing.
+  TE: run PAA gate, adjust v_production if warranted.
+  S:  apply SOS gate if opponent quality is weak.
+
+STEP 4 — Score all 8 trait vectors (1.0 to 10.0 each).
+  Use your training knowledge of this prospect's college career,
+  measurables, production, and character.
+
+STEP 5 — Assign archetype.
+  For each archetype in the position's list, compute an archetype fit score
+  using the base weight table plus any archetype-specific bumps listed.
+  raw_score = sum(trait_score_i * weight_i) * 10
+  The archetype with the highest fit score is assigned (rank-1).
+  archetype_gap = fit_score(rank-1) - fit_score(rank-2)
+  Report the rank-1 archetype name in the archetype field.
+
+STEP 6 — Apply gap label (see Section C gap logic below).
+
+STEP 7 — Apply modifier rules in order: Schwesinger → Smith → Walk-On → Two-Way.
+
+STEP 8 — Set eval_confidence (Tier A / B / C).
+
+STEP 9 — Set capital_base and capital_adjusted.
+
+STEP 10 — Return JSON.
 
 ----------------------------------------------------------------------
 RAW SCORE COMPUTATION
 ----------------------------------------------------------------------
 raw_score (0-100 scale) = sum over applicable traits of (trait_score * weight) * 10
 Example: trait=9.0, weight=0.28 → contribution = 9.0 * 0.28 * 10 = 25.2
-All archetype weights sum to 1.0 (100%). Verify your math.
+All position weight tables sum to 1.0 (100%). Verify your math.
 Return raw_score rounded to 1 decimal. The Python engine then applies PVC.
 
 ----------------------------------------------------------------------
 GAP FLAG LOGIC
 ----------------------------------------------------------------------
-archetype_gap = score(rank-1 archetype) - score(rank-2 archetype)
+archetype_gap = fit_score(rank-1 archetype) - fit_score(rank-2 archetype)
 - CLEAN:       gap > 15.0  (dominant single archetype)
 - SOLID:       gap 8.0 – 15.0  (clear primary fit)
 - TWEENER:     gap 3.0 – 7.9   (split identity between archetypes)
 - COMPRESSION: gap 1.0 – 2.9  AND all trait scores >= 7 (elite tweener, positive signal)
 - NO_FIT:      gap < 1.0  (no dominant archetype — concerning)
 
-----------------------------------------------------------------------
-MODIFIER RULES (apply in order, update fields before finalizing JSON)
-----------------------------------------------------------------------
+======================================================================
+SECTION D — MODIFIER RULES (apply in order, update fields before finalizing JSON)
+======================================================================
 
 ### Smith Rule
 Trigger: c3_psych_profile < 3  OR  c2_motivation < 5
@@ -205,12 +439,6 @@ For players who legitimately play TWO positions at elite college level:
 - Set two_way_premium = 1
 - Add "Two-Way Premium" to tags
 - Note in capital_adjusted: "Two-way premium; capital reflects top-side position"
-
-### Safety SOS PAA Gate (Emmanwori case)
-For safeties from programs with questionable schedule strength vs. elite competition:
-- Apply SOS discount to v_production: -1.0 to -1.5 depending on competition level
-- Add "SOS Gate" to tags
-- Note in red_flags
 
 ----------------------------------------------------------------------
 EVAL CONFIDENCE TIERS
@@ -267,8 +495,8 @@ Raw JSON only — begin with { and end with }.
 Required JSON schema (all fields mandatory):
 {
   "prospect_name": "string — full name",
-  "position": "string — position code (ILB, QB, CB, OT, etc.)",
-  "archetype": "string — e.g. 'ILB-1 Green Dot' or 'QB-1 Elite Field General'",
+  "position": "string — position code (ILB, QB, CB, OT, TE, etc.)",
+  "archetype": "string — e.g. 'TE-1 Seam Anticipator' or 'QB-1 Field General' or 'ILB-1 Green Dot Anchor' or 'DT-1 Interior Wrecker'",
   "archetype_gap": 0.0,
   "gap_label": "string — CLEAN | SOLID | TWEENER | COMPRESSION | NO_FIT",
   "eval_confidence": "string — 'Tier A' | 'Tier B' | 'Tier C'",
@@ -302,7 +530,8 @@ Field requirements:
 - raw_score: float, range 0.0 to 100.0 (0-100 scale, not 0-10)
 - schwesinger_full, schwesinger_half, smith_rule, two_way_premium: integer 0 or 1
 - tags: empty string if no flags apply
-- archetype_gap: must be the actual computed gap between rank-1 and rank-2 archetype scores
+- archetype_gap: must be the actual computed gap between rank-1 and rank-2 archetype fit scores
+- archetype: must be "[POS]-[N] [Name]" format from the SECTION B archetype list for this position
 """
 
 
@@ -358,7 +587,11 @@ Apply ALL applicable modifier rules:
 - Smith Rule (c3 < 3 OR c2 < 5 → Character cap)
 - Walk-On Flag (if applicable to this player)
 - Two-Way Premium (if this player plays two positions at elite college level)
-- Safety SOS PAA Gate (if applicable)
+- SAA Gate (QB only — check screen rate, play-action dependency, avg depth of target)
+- PAA Gate (TE only — check scheme inflation, route depth, competition level)
+- SOS Gate (S only — check schedule strength vs. elite competition)
 
+Use SECTION B position weight table for this player's position group.
+Assign archetype from the position-specific archetype list only. Do NOT use GEN- archetypes.
 Compute raw_score on a 0-100 scale using the archetype weight formula.
 Return raw JSON only. No markdown fences. No preamble. Start with {{."""
