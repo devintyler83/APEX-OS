@@ -39,6 +39,14 @@ RAW CSVs → stage → ingest → bootstrap → canonicalize → consensus → m
 - snapshot_board.py filters to is_active=1 via JOIN
 - All query files (consensus.py, model_outputs.py) filter AND p.is_active=1
 
+## Session 13b Changes (School + Archetype Fixes)
+- patch_school_from_universe_2026.py: fixes school_canonical from universe CSV; handles UNIQUE constraint by deactivating name_norm=NULL conflict rows + freeing slot via __dedup_N__ marker
+- patch_apex_archetypes_local_2026.py: reclassifies GEN-* archetypes using local APEX v2.2 weight tables; no API calls; tie-breaks to first-defined archetype (EDGE-1, S-1, etc.)
+- Only updates matched_archetype/archetype_gap/gap_label — preserves raw_score/composite/tier
+- Most local-matched archetypes get gap=0.0 NO_FIT due to uniform GEN trait vectors — expected
+- PATHS.db (not PATHS.DB_PATH) is the correct attribute for DB path
+- Remaining issues: Travis Hunter school=Unknown (not in universe), ST prospects (Koo/Fairbairn) keep GEN
+
 ## Score Improvement Post-Universe
 - Before: max score 81.3, Elite=0, Strong=2
 - After: max score 98.5, Elite=12, Strong=11

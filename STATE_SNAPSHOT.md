@@ -1,6 +1,6 @@
 # DraftOS State Snapshot
 
-Last Updated (UTC): 2026-03-10T23:04:21.832111+00:00
+Last Updated (UTC): 2026-03-10T23:59:00.000000+00:00
 
 ---
 
@@ -85,6 +85,31 @@ Last Updated (UTC): 2026-03-10T23:04:21.832111+00:00
   - Note: prospects_active=2005 (was 1018 post-rebuild) — weekly ingest picks up inactive source
     staged files, bootstrap creates is_active=1 prospects from those; universe apply not in weekly
     pipeline. Board quality unaffected (consensus still uses only 11 active sources).
+
+## Last Completed Milestone (Session 13b — CRITICAL FIX)
+
+- Session 13b: Two data quality fixes — schools and APEX archetypes.
+  - ISSUE 1 (school_canonical): 611 active prospects updated from universe CSV.
+    - Match strategy: exact name_norm lookup + name_norm_and_key(display_name) fallback
+    - Conflict resolution: deactivates name_norm=NULL duplicate rows blocking updates
+    - Remaining unknowns: 2 (Travis Kelce calibration ghost + Travis Hunter not in universe CSV)
+    - Also fixed 96 mismatch rows: USC→Southern California, LSU→Louisiana State, etc.
+  - ISSUE 2 (GEN archetypes): 64 apex_scores rows reclassified to positional archetypes.
+    - Local weight-table matching — no API calls, no network, fully deterministic
+    - Uses APEX v2.2 weight tables from prompts.py with archetype-specific bumps
+    - Only updates matched_archetype, archetype_gap, gap_label — scores preserved
+    - Tie-break: first-defined archetype wins (EDGE-1 > EDGE-4, S-1 > S-5)
+    - Remaining GEN: 2 (Younghoe Koo ST + Kaimi Fairbairn ST — no positional library)
+    - Spot checks: Caleb Downs→S-1 Centerfielder, Rueben Bain→EDGE-1 Every-Down Disruptor,
+      Travis Hunter→CB-3 Athletic Freak, Fernando Mendoza→QB-1 (unchanged), Carson Schwesinger→ILB-1 (unchanged)
+  - Divergence recomputed: ALIGNED=12, APEX_HIGH=16, APEX_LOW=3, APEX_LOW_PVC_STRUCTURAL=20
+  - Board re-exported: board_2026_v1_default.csv (609 rows, top: Fernando Mendoza QB 98.56)
+  - Doctor: PASSED
+  - Note: most local-matched archetypes have gap=0.0, gap_label=NO_FIT — GEN trait vectors
+    are uniform, so within-position differentiation requires API re-scoring. NO_FIT label signals
+    uncertainty correctly. True positional archetype depth requires API re-score when available.
+  - Known remaining: Travis Hunter school=Unknown (not in universe CSV), Tate Ratledge position_group=TE
+    (should be OG per CALIBRATION_OVERRIDES — pre-existing data quality issue in prospects table)
 
 ## Next Milestone (Single Target)
 
