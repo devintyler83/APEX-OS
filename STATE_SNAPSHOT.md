@@ -1,6 +1,6 @@
 # DraftOS State Snapshot
 
-Last Updated (UTC): 2026-03-10T06:10:52.409800+00:00
+Last Updated (UTC): 2026-03-10T14:20:00.000000+00:00
 
 ---
 
@@ -33,12 +33,25 @@ Last Updated (UTC): 2026-03-10T06:10:52.409800+00:00
   - Structural note: systematic APEX LOW is a scale artifact. Consensus now runs 65–99 (post-universe); APEX composites run 55–91. Divergence was calibrated to old compressed scale (40–82). Divergence thresholds need recalibration.
   - APEX tier thresholds confirmed: ELITE≥85, APEX≥70, SOLID≥55, DEVELOPMENTAL≥40
 
+## Last Completed Milestone (Session 10 addendum)
+
+- Session 10: Divergence engine recalibration — rank-relative method.
+  - Migration 0035: adds divergence_rank_delta (INTEGER), divergence_raw_delta (REAL), position_tier (TEXT) to divergence_flags
+  - New --batch divergence mode: recomputes all scored prospects using consensus_rank vs apex_ovr_rank instead of raw score delta
+  - Scale artifact eliminated: ALIGNED 2→20, APEX_LOW 59→0 (active board), APEX_LOW_PVC_STRUCTURAL 12
+  - Flag logic: non-premium APEX LOW → APEX_LOW_PVC_STRUCTURAL (structural PVC discount, not actionable)
+  - Premium APEX_HIGH (actionable — APEX rates higher than consensus): 15 prospects
+    Top: Dillon Thieneman S rank_delta=+28, Akheem Mesidor EDGE +22, D'Angelo Ponds CB +17, Keldric Faulk EDGE +14
+  - 0 premium APEX_LOW on active board — APEX scores are in agreement or above consensus for all premium positions
+  - writer.py updated: position_tier and divergence_raw_delta propagated on per-prospect scoring runs
+  - snapshot_id=9 (2026-03-10): rows=1000, coverage=1000, confidence=1000 — OK (unchanged)
+  - Board exported: board_2026_v1_default.csv
+
 ## Next Milestone (Single Target)
 
-- Divergence formula recalibration. Consensus scale shift (40–82 → 65–99) makes nearly all prospects show APEX LOW. Two options:
-  1. Recalibrate divergence_score to rank-relative comparison (apex_rank vs consensus_rank) instead of raw score delta
-  2. Accept APEX LOW prevalence as meaningful — APEX intentionally discounts non-premium positions via PVC; most APEX LOW MAJOR are OG/C/RB/TE which is correct PVC behavior
-  Decision determines whether to update divergence engine or annotate the current output as-is.
+- Additional source ingest (2-3 high-quality sources) to expand coverage and confidence bands.
+  OR: Full clean weekly pipeline run end-to-end to verify all 18 steps pass cleanly.
+  See Ordered TODOs #7 and #8 below.
 
 ---
 

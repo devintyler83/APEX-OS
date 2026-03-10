@@ -17,7 +17,7 @@ Authoritative State:
 1) STATE_SNAPSHOT.md
 # DraftOS State Snapshot
 
-Last Updated (UTC): 2026-03-10T06:10:52.409800+00:00
+Last Updated (UTC): 2026-03-10T06:33:12.635601+00:00
 
 ---
 
@@ -147,11 +147,11 @@ EXPORTS: board_2026_v1_default.csv produced (may be stale — re-export not yet 
 
 2) System Snapshot Output
 === DRAFTOS SYSTEM SNAPSHOT ===
-generated_utc: 2026-03-10T06:10:51.728068+00:00
+generated_utc: 2026-03-10T06:33:11.972868+00:00
 
 ## Git
 branch: main
-commit: 295410e694993ec7cbec08d8fae9a6a354a84180
+commit: 8e8e416c202a145950e62e4ef7a30143e839d477
 status: clean
 
 ## Tables
@@ -236,6 +236,7 @@ status: clean
 - 0031_apex_divergence @ 2026-03-09T22:40:01.472344+00:00
 - 0032_apex_calibration_artifact @ 2026-03-10T04:32:19.228882+00:00
 - 0033_prospect_is_active @ 2026-03-10T05:23:40.608518+00:00
+- 0034_apex_tier_rename @ 2026-03-10T06:26:39.613047+00:00
 
 ## Active Season
 no is_active column
@@ -273,6 +274,7 @@ no is_active column
 - scripts\compute_snapshot_coverage.py
 - scripts\compute_snapshot_metrics.py
 - scripts\compute_source_snapshot_metrics.py
+- scripts\dedup_prospects_2026.py
 - scripts\delete_orphan_snapshots.py
 - scripts\doctor.py
 - scripts\doctor_snapshot.py
