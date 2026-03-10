@@ -306,8 +306,11 @@ def main() -> None:
         model_id = resolve_model_id(conn, season_id, args.model)
 
         snaps = latest_snapshots(conn, season_id, model_id, args.window)
+        if len(snaps) < 2:
+            print(f"SKIP: insufficient snapshot history (need >=2, found {len(snaps)} for season_id={season_id} model_id={model_id})")
+            raise SystemExit(0)
         if len(snaps) < args.window:
-            raise SystemExit(f"FAIL: need {args.window} snapshots, found {len(snaps)} for season_id={season_id} model_id={model_id}")
+            print(f"WARN: only {len(snaps)} snapshots available (window={args.window}), using available history")
 
         snapshot_ids = [sid for sid, _ in snaps]
         current_snapshot_id = snapshot_ids[-1]

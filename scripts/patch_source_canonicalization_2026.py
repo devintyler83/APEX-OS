@@ -13,6 +13,9 @@ Apply:
     python -m scripts.patch_source_canonicalization_2026 --apply 1
 
 Idempotent: safe to re-run. Uses INSERT OR REPLACE on source_canonical_map.
+
+NOTE: IDs updated 2026-03-10 after Session 12 DB rebuild. New DB has different
+source_id assignments than original DB.
 """
 
 from __future__ import annotations
@@ -29,19 +32,20 @@ from draftos.db.connect import connect
 
 # ---------------------------------------------------------------------------
 # 11 canonical source IDs (these are authoritative — never map or deactivate)
+# IDs as of 2026-03-10 rebuilt DB.
 # ---------------------------------------------------------------------------
 CANONICAL_SOURCE_IDS = {
-    14,  # bnbfootball_2026
-    15,  # cbssports_2026
-    18,  # espn_2026
-    21,  # nfldraftbuzz_2026_v2
-    22,  # nytimes_2026
-    25,  # pff_2026
-    27,  # pfsn_2026
-    35,  # tankathon_2026
-    36,  # thedraftnetwork_2026
-    37,  # theringer_2026
-    38,  # jfosterfilm_2026
+    1,   # jfosterfilm_2026
+    2,   # bnbfootball_2026
+    3,   # cbssports_2026
+    6,   # espn_2026
+    9,   # nfldraftbuzz_2026_v2
+    10,  # nytimes_2026
+    13,  # pff_2026
+    15,  # pfsn_2026
+    23,  # tankathon_2026
+    24,  # thedraftnetwork_2026
+    25,  # theringer_2026
 }
 
 # ---------------------------------------------------------------------------
@@ -51,58 +55,34 @@ CANONICAL_SOURCE_IDS = {
 ALIAS_MAP: dict[int, tuple[int, str, str]] = {
     # source_id: (canonical_source_id, source_name, canonical_name)
 
-    # PFF group -> pff_2026 (25)
-    1:  (25, "PFF",         "pff_2026"),
-    9:  (25, "pff",         "pff_2026"),
-    24: (25, "pff (1)",     "pff_2026"),
+    # espn group -> espn_2026 (6)
+    5:  (6,  "espn (1)",                   "espn_2026"),
 
-    # NFLDraftBuzz group -> nfldraftbuzz_2026_v2 (21)
-    2:  (21, "NFLDraftBuzz",    "nfldraftbuzz_2026_v2"),
-    3:  (21, "NFLDraftBuzz_v2", "nfldraftbuzz_2026_v2"),
-    7:  (21, "nfldraftbuzz",    "nfldraftbuzz_2026_v2"),
+    # pff group -> pff_2026 (13)
+    12: (13, "pff (1)",                    "pff_2026"),
 
-    # bnbfootball group -> bnbfootball_2026 (14)
-    4:  (14, "bnbfootball",  "bnbfootball_2026"),
+    # pfsn group -> pfsn_2026 (15)
+    14: (15, "pfsn-consensus-2026-02-27",  "pfsn_2026"),
 
-    # cbssports group -> cbssports_2026 (15)
-    5:  (15, "cbssports",    "cbssports_2026"),
-
-    # espn group -> espn_2026 (18)
-    6:  (18, "espn",         "espn_2026"),
-    17: (18, "espn (1)",     "espn_2026"),
-
-    # nytimes group -> nytimes_2026 (22)
-    8:  (22, "nytimes",      "nytimes_2026"),
-
-    # pfsn group -> pfsn_2026 (27)
-    10: (27, "pfsn",                       "pfsn_2026"),
-    26: (27, "pfsn-consensus-2026-02-27",  "pfsn_2026"),
-    30: (27, "profootballnetwork (1)",     "pfsn_2026"),
-
-    # tankathon group -> tankathon_2026 (35)
-    11: (35, "tankathon",        "tankathon_2026"),
-
-    # thedraftnetwork group -> thedraftnetwork_2026 (36)
-    12: (36, "thedraftnetwork",  "thedraftnetwork_2026"),
-
-    # theringer group -> theringer_2026 (37)
-    13: (37, "theringer",        "theringer_2026"),
+    # theringer group -> theringer_2026 (25)
+    26: (25, "theringer",                  "theringer_2026"),
 }
 
 # ---------------------------------------------------------------------------
 # Junk / artifact sources: deactivate only, no canonical map entry
 # ---------------------------------------------------------------------------
 JUNK_SOURCE_IDS: dict[int, str] = {
-    16: "deep_cleaned_player_list",
-    19: "fully_cleaned_player_list",
-    20: "harryknowsball_league_available",
-    23: "overall (2026-shane)",
-    28: "players (1)",
-    29: "players",
-    31: "repaired_player_list",
-    32: "spamml - 6-16-25 football fantasy draft cheat sheet",
-    33: "spamml 8-11-25 football fantasy draft cheat sheet",
-    34: "spamml 8-4-25 football fantasy draft cheat sheet",
+    4:  "deep_cleaned_player_list",
+    7:  "fully_cleaned_player_list",
+    8:  "harryknowsball_league_available",
+    11: "overall (2026-shane)",
+    16: "players (1)",
+    17: "players",
+    18: "profootballnetwork (1)",
+    19: "repaired_player_list",
+    20: "spamml - 6-16-25 football fantasy draft cheat sheet",
+    21: "spamml 8-11-25 football fantasy draft cheat sheet",
+    22: "spamml 8-4-25 football fantasy draft cheat sheet",
 }
 
 
