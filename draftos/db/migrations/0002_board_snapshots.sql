@@ -17,8 +17,8 @@ CREATE TABLE IF NOT EXISTS prospect_board_snapshots (
   note              TEXT,
 
   UNIQUE (season_id, model_id, snapshot_date_utc),
-  FOREIGN KEY (season_id) REFERENCES seasons(id),
-  FOREIGN KEY (model_id)  REFERENCES models(id)
+  FOREIGN KEY (season_id) REFERENCES seasons(season_id),
+  FOREIGN KEY (model_id)  REFERENCES models(model_id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_pbs_season_model_date
@@ -44,9 +44,9 @@ CREATE TABLE IF NOT EXISTS prospect_board_snapshot_rows (
   UNIQUE (snapshot_id, prospect_id),
 
   FOREIGN KEY (snapshot_id) REFERENCES prospect_board_snapshots(id),
-  FOREIGN KEY (season_id)   REFERENCES seasons(id),
-  FOREIGN KEY (model_id)    REFERENCES models(id),
-  FOREIGN KEY (prospect_id) REFERENCES prospects(id)
+  FOREIGN KEY (season_id)   REFERENCES seasons(season_id),
+  FOREIGN KEY (model_id)    REFERENCES models(model_id),
+  FOREIGN KEY (prospect_id) REFERENCES prospects(prospect_id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_pbsr_snapshot_rank

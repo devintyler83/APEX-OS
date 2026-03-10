@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 import shutil
+import sqlite3
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -84,7 +85,31 @@ def _discover_migrations(migrations_dir: Path) -> list[Migration]:
 
 def _apply_sql_file(conn, sql_path: Path) -> None:
     sql = sql_path.read_text(encoding="utf-8")
-    conn.executescript(sql)
+    try:
+        conn.executescript(sql)
+    except sqlite3.OperationalError as exc:
+        if "duplicate column name" not in str(exc):
+            raise
+        # Column already absorbed into schema.sql — execute statement-by-statement,
+        # skipping any ALTER TABLE ADD COLUMN that raises duplicate column.
+        _apply_sql_file_tolerant(conn, sql)
+
+
+def _apply_sql_file_tolerant(conn, sql: str) -> None:
+    """Execute SQL statement-by-statement, ignoring duplicate-column errors on ALTER TABLE."""
+    # Strip block comments then split on semicolons (sufficient for our migration files)
+    sql_clean = re.sub(r"/\*.*?\*/", "", sql, flags=re.DOTALL)
+    for raw_stmt in sql_clean.split(";"):
+        stmt = raw_stmt.strip()
+        if not stmt or stmt.startswith("--"):
+            continue
+        try:
+            conn.executescript(stmt + ";")
+        except sqlite3.OperationalError as exc:
+            if "duplicate column name" in str(exc):
+                print(f"  SKIP (column exists): {stmt[:60].replace(chr(10), ' ').strip()}")
+                continue
+            raise
 
 
 def migrate() -> None:
