@@ -1,4 +1,4 @@
-﻿# scripts/run_weekly_update.py
+# scripts/run_weekly_update.py
 from __future__ import annotations
 
 import argparse
@@ -90,6 +90,11 @@ def main() -> None:
 
     # 3) BOOTSTRAP (WRITE)
     run(pyfile(bootstrap, "--apply", "1"))
+
+    # 3b) UNIVERSE APPLY — enforce is_active filter after bootstrap (WRITE)
+    # Prevents weekly ingest from inflating active prospect count via inactive source staged files.
+    # apply_prospect_universe_2026.py is hardcoded to season_id=1; --apply 1 required for writes.
+    run(pymod("scripts.apply_prospect_universe_2026", "--apply", "1"))
 
     # 4) SOURCE CANONICALIZATION (WRITE)
     # Prefer module entrypoint for consistency, but fail fast if the expected file isn't present.
