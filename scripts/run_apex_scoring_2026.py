@@ -494,6 +494,85 @@ ARCHETYPE_OVERRIDES: dict[int, dict] = {
             "The CB-1 development pathway flag MUST appear in the archetype field or tags."
         ),
     },
+
+    # ---------------------------------------------------------------------------
+    # Session 18 overrides
+    # ---------------------------------------------------------------------------
+
+    # Jalon Kilgore — CB entry (pid=449). Re-scored as S-3 Multiplier Safety.
+    # CB-3 ELITE 90.0 was a position-library error: DB position_group=CB but canonical
+    # position is Safety. CB PVC=1.00 inflated the composite; S weight table is correct.
+    # --position S passed at CLI to force S library. Archetype direction injected below.
+    449: {
+        "forced_archetype":   "S-3",
+        "archetype_label":    "S-3 Multiplier Safety",
+        "archetype_rationale": (
+            "RAS 9.66 elite for position. CB/S dual experience creates genuine scheme versatility "
+            "but S-3 post-snap adjustment is developmentally pending. Man coverage DEVELOPING — "
+            "Tier B floor, not unconfirmed. Zone production is primary confirmed mechanism. "
+            "Score reflects S weight table with S-3 archetype direction. "
+            "Capital locked R3 until combine confirms man coverage floor."
+        ),
+        "eval_confidence_note": "Tier B — position ambiguity resolved to S. Post-snap: DEVELOPING.",
+        "fm_flags":            ["FM-6", "FM-2"],
+        "bust_warning":        (
+            "FM-6 Role Mismatch primary: CB/S hybrid value requires scheme that actively deploys "
+            "multiplier. Heavy man-coverage teams destroy value."
+        ),
+        "eval_confidence":     "Tier B",
+        "capital_range":       "R3 base; R2 late if combine confirms man coverage floor",
+        "paa_findings": {
+            "Man coverage":        "DEVELOPING (not unconfirmed — Tier B floor)",
+            "Post-snap adjustment": "PARTIAL — crossfield range confirmed, scripted vs genuine ambiguous",
+            "SOS Gate":            "PASSES (SEC Power 4)",
+            "Zone production":     "PRIMARY confirmed mechanism",
+            "RAS":                 "9.66 ELITE",
+        },
+    },
+
+    # Jalon Kilgore — S entry (pid=309). Canonical Safety entry. No prior APEX score.
+    # Documented here for completeness; lower consensus score reflects coverage gap not quality gap.
+    309: {
+        "forced_archetype":   "S-3",
+        "archetype_label":    "S-3 Multiplier Safety",
+        "archetype_rationale": (
+            "Same evaluation as pid=449 (CB entry). Canonical Safety entry for Jalon Kilgore. "
+            "Lower consensus score reflects coverage gap not quality gap — fewer sources ranked "
+            "the S row vs the CB row due to source normalization. S-3 Multiplier Safety archetype "
+            "and Tier B confidence carry forward from full PAA evaluation."
+        ),
+        "eval_confidence":     "Tier B",
+        "capital_range":       "R3 base; R2 late if combine confirms man coverage floor",
+        "fm_flags":            ["FM-6", "FM-2"],
+    },
+
+    # Kyron Drones — QB (pid=1420). Documentation override only — no API re-score warranted.
+    # Already re-scored Session 15 to QB-5 49.1 DAY3 after contaminated vector corrected.
+    # This entry documents the eval rationale and freeze conditions for future reference.
+    # Do NOT re-score until combine RAS confirms elite athleticism threshold.
+    1420: {
+        "forced_archetype":   "QB-5",
+        "archetype_label":    "QB-5 Raw Projection",
+        "archetype_rationale": (
+            "Athletic-first QB whose mobility exceeds current processing and scheme familiarity. "
+            "SAA Gate: probable trigger — VT offense was run-first, short-area design. "
+            "Processing unconfirmed at NFL complexity. Transfer history (WVU→VT) noted, not flagged. "
+            "Wide consensus variance (25% coverage) reflects genuine scout disagreement on processing. "
+            "No APEX re-score warranted until combine RAS confirms elite athleticism threshold."
+        ),
+        "eval_confidence":     "Tier C",
+        "capital_range":       "R6-R7 / UDFA",
+        "fm_flags":            ["FM-3", "FM-2"],
+        "bust_warning":        (
+            "FM-3 Processing Wall primary: athletic-first QBs who cannot develop NFL pre-snap "
+            "diagnosis stall at practice squad. Combine threshold: sub-4.45 + 130+ Burst Score "
+            "required before any capital investment."
+        ),
+        "eval_confidence_note": (
+            "Tier C — SAA probable, processing unconfirmed, wide variance consensus. "
+            "Do not re-score until combine data available."
+        ),
+    },
 }
 
 # ---------------------------------------------------------------------------
