@@ -17,7 +17,7 @@ Authoritative State:
 1) STATE_SNAPSHOT.md
 # DraftOS State Snapshot
 
-Last Updated (UTC): 2026-03-11T06:12:23.171048+00:00
+Last Updated (UTC): 2026-03-11T18:25:16.998456+00:00
 
 ---
 
@@ -324,11 +324,11 @@ EXPORTS: board_2026_v1_default.csv last produced Session 13. May be stale vs lat
 
 2) System Snapshot Output
 === DRAFTOS SYSTEM SNAPSHOT ===
-generated_utc: 2026-03-11T06:12:22.505078+00:00
+generated_utc: 2026-03-11T18:25:15.716569+00:00
 
 ## Git
 branch: main
-commit: bbd5c66328065ad7003012b84efad21583728b2c
+commit: 3a13662dfd13d07aaf1a010682a2b89b250680ad
 status: clean
 
 ## Tables
