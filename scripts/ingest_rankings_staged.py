@@ -64,6 +64,11 @@ def sources_has_col(conn, col: str) -> bool:
     return col in cols
 
 
+def source_rankings_has_col(conn, col: str) -> bool:
+    cols = [r["name"] for r in conn.execute("PRAGMA table_info(source_rankings);").fetchall()]
+    return col in cols
+
+
 def get_season_id(conn, draft_year: int) -> int:
     row = conn.execute("SELECT season_id FROM seasons WHERE draft_year = ?", (draft_year,)).fetchone()
     if not row:
@@ -205,6 +210,7 @@ def ingest_staged_file(
     season_id: int,
     path: Path,
     ranking_date: Optional[str],
+    has_analyst_grade_col: bool,
 ) -> Tuple[int, int]:
     source_id = upsert_source(conn, source_name, source_type="ranking")
     ingested_at = utcnow_iso()
@@ -235,6 +241,10 @@ def ingest_staged_file(
         # These can be blank, but must exist as columns if present in staged schema
         school_col = "school" if "school" in fields else None
         pos_col = "position" if "position" in fields else None
+
+        # analyst_grade: only read if both the staged file has the column AND
+        # the source_rankings table has the column (migration 0038 applied).
+        grade_col = "analyst_grade" if ("analyst_grade" in fields and has_analyst_grade_col) else None
 
         for row in reader:
             overall_rank = parse_int(row.get("rank"))
@@ -277,27 +287,54 @@ def ingest_staged_file(
             if exists:
                 continue
 
-            conn.execute(
-                """
-                INSERT INTO source_rankings(
-                  source_id, season_id, source_player_id,
-                  overall_rank, position_rank, position_raw,
-                  grade, tier, ranking_date, ingested_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    source_id,
-                    season_id,
-                    spid,
-                    overall_rank,
-                    parse_int(row.get("position_rank")),
-                    (row.get("raw_position") or row.get("position") or "").strip(),
-                    parse_float(row.get("grade")),
-                    None,
-                    rdate,
-                    ingested_at,
-                ),
-            )
+            analyst_grade = parse_float(row.get(grade_col)) if grade_col else None
+
+            if grade_col is not None:
+                conn.execute(
+                    """
+                    INSERT INTO source_rankings(
+                      source_id, season_id, source_player_id,
+                      overall_rank, position_rank, position_raw,
+                      grade, tier, ranking_date, ingested_at,
+                      analyst_grade
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        source_id,
+                        season_id,
+                        spid,
+                        overall_rank,
+                        parse_int(row.get("position_rank")),
+                        (row.get("raw_position") or row.get("position") or "").strip(),
+                        parse_float(row.get("grade")),
+                        None,
+                        rdate,
+                        ingested_at,
+                        analyst_grade,
+                    ),
+                )
+            else:
+                conn.execute(
+                    """
+                    INSERT INTO source_rankings(
+                      source_id, season_id, source_player_id,
+                      overall_rank, position_rank, position_raw,
+                      grade, tier, ranking_date, ingested_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        source_id,
+                        season_id,
+                        spid,
+                        overall_rank,
+                        parse_int(row.get("position_rank")),
+                        (row.get("raw_position") or row.get("position") or "").strip(),
+                        parse_float(row.get("grade")),
+                        None,
+                        rdate,
+                        ingested_at,
+                    ),
+                )
             rankings_new += 1
 
     finally:
@@ -340,6 +377,7 @@ def main() -> None:
 
     with connect() as conn:
         season_id = get_season_id(conn, args.season)
+        has_analyst_grade_col = source_rankings_has_col(conn, "analyst_grade")
 
         for p in staged_files:
             # Use filename stem as source_name (best available without nested folders)
@@ -350,7 +388,14 @@ def main() -> None:
                 print(f"PLAN: would ingest {source_name} <- {p.name} (ranking_date={ranking_date or infer_ranking_date_from_filename(p)})")
                 continue
 
-            pn, rn = ingest_staged_file(conn, source_name=source_name, season_id=season_id, path=p, ranking_date=ranking_date)
+            pn, rn = ingest_staged_file(
+                conn,
+                source_name=source_name,
+                season_id=season_id,
+                path=p,
+                ranking_date=ranking_date,
+                has_analyst_grade_col=has_analyst_grade_col,
+            )
             conn.commit()
 
             total_players_new += pn

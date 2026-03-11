@@ -48,6 +48,7 @@ SOURCE_WEIGHTS: Dict[str, float] = {
     "tankathon_2026":       0.7,
     # Tier 2 (continued)
     "jfosterfilm_2026":     1.0,  # independent expert board 2026 — 293 ranked prospects
+    "bleacherreport_2026":  1.0,  # B/R NFL Scouting Dept. post-combine big board. 250 ranked prospects.
 }
 DEFAULT_WEIGHT: float = 1.0  # fallback for any source not in the dict
 
