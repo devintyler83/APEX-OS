@@ -573,6 +573,92 @@ ARCHETYPE_OVERRIDES: dict[int, dict] = {
             "Do not re-score until combine data available."
         ),
     },
+
+    # ---------------------------------------------------------------------------
+    # Session 20 overrides
+    # ---------------------------------------------------------------------------
+
+    # Jeremiyah Love — RB (pid=61). GEN score 59.8 DAY2 — API re-score pending.
+    # Local weight-table matched RB-1 correctly. API re-score needed to replace GEN
+    # trait vectors with real evaluated scores. RB-3 secondary layer documented here.
+    # FM-6 elevated to co-primary with FM-4. SOS-ELITE confirmed.
+    # Carry Accumulation Clock volume audit must be run before finalizing FM-4 tier.
+    61: {
+        "name":          "Jeremiyah Love",
+        "position":      "RB",
+        "forced_archetype": "RB-1",
+        "archetype_label":  "RB-1 Elite Workhorse — RB-3 Secondary Layer Active",
+        "paa_findings": {
+            "SOS Gate": (
+                "CLEAR — ELITE tier. Michigan, Georgia, playoff field. Production held "
+                "against top-15 defense quality. SOS-ELITE is the highest confirmation "
+                "tier. Do NOT apply SOS discount."
+            ),
+            "Three-Down Mechanism": (
+                "CLEAR — pass protection confirmed vs. Power 4 edge rushers at starter "
+                "volume. Receiving is genuine (route tree, not schemed flare routes). "
+                "Power/speed balance places him in top tier of 2026 RB class. "
+                "RB-1 three-down mechanism is the confirmed primary archetype."
+            ),
+            "RB-3 Secondary Layer": (
+                "ACTIVE — elite burst and acceleration are present as a secondary mechanism. "
+                "Home-run threat ability is real and above-average for RB-1 profiles. "
+                "Do NOT reclassify to RB-3 primary — the workhorse mechanism leads. "
+                "RB-3 traits expand ceiling and inform v_athleticism scoring upward. "
+                "Score v_athleticism toward upper range; both RB-1 and RB-3 share the "
+                "25% Athleticism bump — apply it."
+            ),
+            "Carry Accumulation Clock": (
+                "AUDIT PENDING — Notre Dame 2023 + 2024 carry totals must be verified "
+                "against the Carry Accumulation Clock threshold before FM-4 vector is "
+                "finalized. If total collegiate carries (2022+2023+2024) exceed the "
+                "high-risk threshold, v_injury is capped and FM-4 risk tier escalates. "
+                "Score v_injury conservatively until audit resolves. Do not assign "
+                "v_injury above 8.0 without explicit audit confirmation."
+            ),
+        },
+        "eval_confidence": "Tier A",
+        "capital_range":   "R2 top | Floor: R2 late | Ceiling: R1 late (thin-class market)",
+        "fm_flags":        ["FM-6", "FM-4"],
+        "fm_6_note": (
+            "FM-6 Role Mismatch is CO-PRIMARY with FM-4 — not secondary. "
+            "FM-6 is the higher-probability bad outcome at R2 capital for a PVC=0.70 player: "
+            "landing in a pass-heavy committee system destroys the three-down deployment that "
+            "makes RB-1 value actionable at this capital. "
+            "Best fits: KC, PHI, DET, BAL — organizations with volume deployment and design "
+            "touches that multiply RB-1 value. "
+            "Worst fits: pass-heavy committee systems (NE historical, LAR historical pattern). "
+            "The FM-6 bust scenario produces underperformance at high draft capital — which "
+            "for a PVC=0.70 position is the more likely bad outcome than FM-4 career end."
+        ),
+        "fm_4_note": (
+            "FM-4 Body Breakdown is CO-PRIMARY with FM-6. Position-structural risk for any "
+            "3-down RB drafted at R2 capital. Injury vector score is contingent on the "
+            "Carry Accumulation Clock audit (see paa_findings). If 2022+2023+2024 Notre Dame "
+            "carries exceed high-risk threshold, v_injury is hard-capped and FM-4 risk "
+            "tier elevates to primary. Score v_injury no higher than 8.0 pending audit. "
+            "FM-4 ends careers; FM-6 produces underperformance — both are relevant here."
+        ),
+        "bust_warning": (
+            "Dual primary failure mode: FM-6 (role mismatch — wrong system destroys value "
+            "at draft capital) + FM-4 (body breakdown — position-structural, carry volume "
+            "audit pending). Either alone at R2 capital produces a bust outcome. "
+            "FM-6 is the higher-probability event — market will price the athlete, not the "
+            "deployment fit. FM-4 becomes dominant if carry volume audit flags. "
+            "Resolve carry audit before finalizing capital recommendation."
+        ),
+        "archetype_rationale": (
+            "RB-1 Elite Workhorse is the confirmed primary archetype. Three-down mechanism "
+            "is real: pass protection, genuine receiving (route tree), power/speed balance "
+            "at top-of-class level. SOS-ELITE (Michigan, Georgia, playoff field) confirms "
+            "the mechanism is not a product-of-competition artifact. "
+            "RB-3 Explosive Playmaker traits are present as a secondary layer — elite burst, "
+            "home-run threat — but the primary winning mechanism is the workhorse profile, "
+            "not the explosive play profile. Score against RB-1 weight table with 25% "
+            "Athleticism bump applied (shared by RB-1 and RB-3). PVC=0.70 is structural "
+            "and correct. Do not suppress the composite below what the mechanism earns."
+        ),
+    },
 }
 
 # ---------------------------------------------------------------------------
@@ -836,7 +922,7 @@ def _score_prospect(
             label     = arch_override.get("archetype_label") or forced or ""
             rationale = arch_override["archetype_rationale"]
             parts     = [f"Assigned archetype: {label}\n\nRationale: {rationale}"]
-            for extra_key in ("eval_confidence_note", "fm_4_note", "bust_warning", "divergence_note"):
+            for extra_key in ("eval_confidence_note", "fm_4_note", "fm_6_note", "bust_warning", "divergence_note"):
                 val = arch_override.get(extra_key)
                 if val:
                     parts.append(val)
