@@ -31,8 +31,6 @@ from __future__ import annotations
 import argparse
 import shutil
 from datetime import datetime, timezone
-from pathlib import Path
-
 from draftos.config import PATHS
 from draftos.db.connect import connect
 
@@ -136,30 +134,18 @@ def take_snapshot(conn, apply: bool) -> dict:
     print(f"  Snapshot date:   {snapshot_date}")
     print(f"  Prospects:       {len(universe)}")
 
-    # Determine which rows already exist (for skip counts)
-    existing = set()
-    if apply:
-        rows = conn.execute(
-            """
-            SELECT prospect_id FROM board_snapshots
-            WHERE snapshot_date = ? AND season_id = ?
-            """,
-            (snapshot_date, SEASON_ID),
-        ).fetchall()
-        existing = {r["prospect_id"] for r in rows}
-    else:
-        # Dry run: check what already exists to report accurately
-        rows = conn.execute(
-            """
-            SELECT prospect_id FROM board_snapshots
-            WHERE snapshot_date = ? AND season_id = ?
-            """,
-            (snapshot_date, SEASON_ID),
-        ).fetchall()
-        existing = {r["prospect_id"] for r in rows}
+    # Determine which rows already exist (for skip counts and idempotency)
+    rows = conn.execute(
+        """
+        SELECT prospect_id FROM board_snapshots
+        WHERE snapshot_date = ? AND season_id = ?
+        """,
+        (snapshot_date, SEASON_ID),
+    ).fetchall()
+    existing = {r["prospect_id"] for r in rows}
 
-    new_rows  = [p for p in universe if p["prospect_id"] not in existing]
-    skip_rows = [p for p in universe if p["prospect_id"] in existing]
+    new_count  = sum(1 for p in universe if p["prospect_id"] not in existing)
+    skip_count = len(existing)
 
     # -----------------------------------------------------------------------
     # Dry run output
@@ -185,9 +171,9 @@ def take_snapshot(conn, apply: bool) -> dict:
             )
 
         print(f"\n=== SUMMARY (DRY RUN) ===")
-        print(f"Rows to write:  {len(new_rows)}")
-        print(f"Already exist:  {len(skip_rows)}")
-        if len(new_rows) > 0:
+        print(f"Rows to write:  {new_count}")
+        print(f"Already exist:  {skip_count}")
+        if new_count > 0:
             print("Run with --apply 1 to write.")
         else:
             print("All rows already exist for today. Nothing to write.")
@@ -196,7 +182,7 @@ def take_snapshot(conn, apply: bool) -> dict:
             "snapshot_date":         snapshot_date,
             "prospects_in_universe": len(universe),
             "rows_written":          0,
-            "rows_skipped":          len(skip_rows),
+            "rows_skipped":          skip_count,
         }
 
     # -----------------------------------------------------------------------
@@ -204,9 +190,10 @@ def take_snapshot(conn, apply: bool) -> dict:
     # -----------------------------------------------------------------------
     _backup_db()
 
-    written = 0
-    skipped = 0
-    now     = datetime.now(timezone.utc).isoformat()
+    written      = 0
+    skipped      = 0
+    tier_counts: dict[str, int] = {}
+    now          = datetime.now(timezone.utc).isoformat()
 
     for p in universe:
         result = conn.execute(
@@ -235,6 +222,8 @@ def take_snapshot(conn, apply: bool) -> dict:
         )
         if result.rowcount > 0:
             written += 1
+            t = p["apex_tier"] or "UNKNOWN"
+            tier_counts[t] = tier_counts.get(t, 0) + 1
         else:
             skipped += 1
 
@@ -244,12 +233,6 @@ def take_snapshot(conn, apply: bool) -> dict:
     print(f"  Rows written: {written}")
     print(f"  Rows skipped (already existed): {skipped}")
 
-    # Summary by tier
-    tier_counts: dict[str, int] = {}
-    for p in universe:
-        if p["prospect_id"] not in existing:
-            t = p["apex_tier"] or "UNKNOWN"
-            tier_counts[t] = tier_counts.get(t, 0) + 1
     if tier_counts:
         print("\n  Written by tier:")
         for tier in ("ELITE", "DAY1", "DAY2", "DAY3", "UDFA-P", "UDFA", "UNKNOWN"):

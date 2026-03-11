@@ -57,7 +57,6 @@ from __future__ import annotations
 import argparse
 import json
 import shutil
-import sys
 from collections import Counter, defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
@@ -110,12 +109,12 @@ def _backup_db() -> None:
 # Rule condition evaluator
 # ---------------------------------------------------------------------------
 
-def evaluate_condition(condition: dict, field_values: dict) -> tuple[bool, str | None]:
+def evaluate_condition(condition: dict, field_values: dict) -> bool:
     """
     Evaluate a single condition object (including nested "and") against field_values.
 
-    Returns (fired: bool, triggered_value_str: str | None).
-    If any required field is None -> (False, None). No false positives on missing data.
+    Returns True if the condition fires, False otherwise.
+    If any required field is None -> False. No false positives on missing data.
     Operators: >=, <=, >, <, =, ==, !=
     """
     field    = condition.get("field")
@@ -125,7 +124,7 @@ def evaluate_condition(condition: dict, field_values: dict) -> tuple[bool, str |
     actual = field_values.get(field)
 
     if actual is None:
-        return False, None
+        return False
 
     try:
         if operator in ("=", "=="):
@@ -141,40 +140,19 @@ def evaluate_condition(condition: dict, field_values: dict) -> tuple[bool, str |
         elif operator == "<":
             result = (float(actual) < float(value))
         else:
-            return False, None  # Unknown operator -- never fire
+            return False  # Unknown operator -- never fire
     except (TypeError, ValueError):
-        return False, None
+        return False
 
     if not result:
-        return False, None
+        return False
 
     # Recurse into compound "and" clause
     and_cond = condition.get("and")
     if and_cond:
-        sub_fired, _ = evaluate_condition(and_cond, field_values)
-        if not sub_fired:
-            return False, None
+        return evaluate_condition(and_cond, field_values)
 
-    # Build triggered_value string from the root field
-    tv = _format_triggered_value_for_field(field, actual)
-    return True, tv
-
-
-def _format_triggered_value_for_field(field: str, value: Any) -> str:
-    """Format a triggered_value string from a field name and its value."""
-    if field == "ras_total":
-        return f"RAS: {float(value):.2f}"
-    if field == "apex_archetype_gap":
-        return f"archetype_gap: {float(value):.1f}"
-    if field == "apex_consensus_divergence":
-        delta = int(value)
-        return f"rank_delta: {delta:+d}"
-    if field in ("trait_injury_durability", "trait_character_composite",
-                 "trait_scheme_versatility", "trait_dev_trajectory"):
-        return f"{field}: {float(value):.1f}"
-    if field == "translation_confidence":
-        return f"translation_confidence: {value}"
-    return f"{field}: {value}"
+    return True
 
 
 def _format_triggered_value(rule_name: str, data: dict[str, Any]) -> str:
@@ -408,9 +386,7 @@ def run_engine(conn, apply: bool) -> dict:
                 non_premium_skips += 1
                 continue
 
-            fired, _ = evaluate_condition(rule["expression"], data)
-
-            if not fired:
+            if not evaluate_condition(rule["expression"], data):
                 # Check if it was a null-field skip or just didn't qualify
                 # We count null skips by checking if the root field is None
                 root_field = rule["expression"].get("field")
