@@ -105,7 +105,7 @@ def latest_snapshot_ids(conn, season_id: int, model_id: int) -> Tuple[int, Optio
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser(description="Export board CSV with deltas + snapshot metrics + confidence.")
+    ap = argparse.ArgumentParser(description="Export board CSV with deltas + snapshot metrics + confidence + tag counts.")
     ap.add_argument("--season", type=int, default=2026)
     ap.add_argument("--model", type=str, default="v1_default")
     ap.add_argument("--window", type=int, default=3)
@@ -128,6 +128,9 @@ def main() -> None:
         name_col = pick_col(p_cols, ["full_name", "display_name", "name"])
         if not name_col:
             raise SystemExit("FAIL: prospects missing name column (expected full_name/display_name/name)")
+
+        # Detect whether board_status column exists on prospects
+        has_board_status = "board_status" in p_cols
 
         # Detect snapshot metrics column names (schema-adaptive)
         sm_cols = table_cols(conn, "prospect_board_snapshot_metrics")
@@ -160,6 +163,9 @@ def main() -> None:
                 sel(volatility_chip_col, "volatility_chip"),
             ]
         )
+
+        # board_status column expression (NULL if column missing for forward-compat)
+        board_status_sel = "p.board_status" if has_board_status else "NULL"
 
         prev_id = prev_snap_id if prev_snap_id is not None else -1
 
@@ -217,7 +223,18 @@ def main() -> None:
               cf.rank_mad AS confidence_rank_mad,
               cf.confidence_score,
               cf.confidence_band,
-              cf.confidence_reasons_json
+              cf.confidence_reasons_json,
+
+              {board_status_sel} AS board_status,
+
+              (SELECT COUNT(*) FROM prospect_tag_recommendations r2
+               WHERE r2.prospect_id = cur.prospect_id
+                 AND r2.status = 'pending') AS pending_tags,
+
+              (SELECT COUNT(*) FROM prospect_tags pt
+               WHERE pt.prospect_id = cur.prospect_id
+                 AND pt.is_active = 1) AS accepted_tags
+
             FROM cur
             JOIN prospects p
               ON p.prospect_id = cur.prospect_id
@@ -259,6 +276,9 @@ def main() -> None:
         "confidence_rank_mad",
         "confidence_sources_present",
         "confidence_active_sources",
+        "board_status",
+        "pending_tags",
+        "accepted_tags",
     ]
 
     with out_path.open("w", encoding="utf-8", newline="") as f:
@@ -290,6 +310,9 @@ def main() -> None:
                 "confidence_rank_mad": d.get("confidence_rank_mad", ""),
                 "confidence_sources_present": d.get("sources_present", ""),
                 "confidence_active_sources": d.get("active_sources", ""),
+                "board_status": d.get("board_status", "available"),
+                "pending_tags": d.get("pending_tags", 0),
+                "accepted_tags": d.get("accepted_tags", 0),
             }
             w.writerow(out)
 
