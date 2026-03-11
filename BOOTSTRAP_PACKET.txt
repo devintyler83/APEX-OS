@@ -17,7 +17,7 @@ Authoritative State:
 1) STATE_SNAPSHOT.md
 # DraftOS State Snapshot
 
-Last Updated (UTC): 2026-03-11T05:23:32.753965+00:00
+Last Updated (UTC): 2026-03-11T05:34:55.559520+00:00
 
 ---
 
@@ -324,11 +324,11 @@ EXPORTS: board_2026_v1_default.csv last produced Session 13. May be stale vs lat
 
 2) System Snapshot Output
 === DRAFTOS SYSTEM SNAPSHOT ===
-generated_utc: 2026-03-11T05:23:32.072921+00:00
+generated_utc: 2026-03-11T05:34:54.825374+00:00
 
 ## Git
 branch: main
-commit: 20d8cac698c1a76178827880978a09f6345f300c
+commit: b7bf19e83279b630bcf8a3abda247516be62bb05
 status: clean
 
 ## Tables
@@ -446,6 +446,7 @@ no is_active column
 - draftos\queries\consensus.py
 - draftos\queries\model_outputs.py
 - scripts\_diag_school_aliases.py
+- scripts\accept_tag_recommendations_2026.py
 - scripts\apply_prospect_universe_2026.py
 - scripts\apply_review_queue_mappings_2026.py
 - scripts\autoresolve_mapping_review_queue_2026.py
