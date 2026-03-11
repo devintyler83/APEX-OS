@@ -609,12 +609,9 @@ ARCHETYPE_OVERRIDES: dict[int, dict] = {
                 "25% Athleticism bump — apply it."
             ),
             "Carry Accumulation Clock": (
-                "AUDIT PENDING — Notre Dame 2023 + 2024 carry totals must be verified "
-                "against the Carry Accumulation Clock threshold before FM-4 vector is "
-                "finalized. If total collegiate carries (2022+2023+2024) exceed the "
-                "high-risk threshold, v_injury is capped and FM-4 risk tier escalates. "
-                "Score v_injury conservatively until audit resolves. Do not assign "
-                "v_injury above 8.0 without explicit audit confirmation."
+                "CLEAR — ~479 college carries (2022-2024). "
+                "Below 500-carry FM-4 threshold. v_injury hard cap lifted. "
+                "Score v_injury at 9.0."
             ),
         },
         "eval_confidence": "Tier A",
