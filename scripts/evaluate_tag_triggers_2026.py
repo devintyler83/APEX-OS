@@ -59,6 +59,14 @@ SEASON_ID = 1
 MODEL_VER  = "apex_v2.2"
 
 # ---------------------------------------------------------------------------
+# Premium positions — only actionable divergence signals
+# Non-premium (ILB, OLB, OG, C, TE, RB, LB, OL) are structural PVC discounts.
+# Divergence Alert rules (rule_id=5,6) only fire for these positions.
+# Session 20: added to prevent non-premium noise from polluting the board weekly.
+# ---------------------------------------------------------------------------
+PREMIUM_POSITIONS: frozenset[str] = frozenset({"QB", "CB", "EDGE", "OT", "S"})
+
+# ---------------------------------------------------------------------------
 # translation_confidence: gap_label → numeric tier for rule 10
 # SOLID → 3, TWEENER → 2, NO_FIT → None (ambiguous — skip development_bet rule)
 # ---------------------------------------------------------------------------
@@ -320,6 +328,9 @@ _UNFIREABLE_RULES: frozenset[str] = frozenset({
     "faller_tier_drop",      # apex_tier_change not available (requires historical comparison)
 })
 
+# Divergence Alert rule IDs — only fire for PREMIUM_POSITIONS
+_DIVERGENCE_RULE_IDS: frozenset[int] = frozenset({5, 6})
+
 
 # ---------------------------------------------------------------------------
 # Main evaluation
@@ -337,15 +348,26 @@ def evaluate(conn, season_id: int, model_ver: str, apply: bool,
     print(f"  Loaded {len(prospects)} prospects ({scope_msg}, is_calibration_artifact=0).")
 
     # --- First pass: determine which rules fire for which prospects ---
-    fired:   list[tuple[dict, dict, str]] = []  # (rule, data, triggered_value)
-    skipped: set[str] = set()
+    fired:    list[tuple[dict, dict, str]] = []  # (rule, data, triggered_value)
+    skipped:  set[str] = set()
+    filtered: int = 0  # non-premium divergence skips
 
     for data in prospects:
+        pos = data.get("_position_group") or ""
         for rule in rules:
             rule_name = rule["rule_name"]
+            rule_id   = rule["rule_id"]
+
             if rule_name in _UNFIREABLE_RULES:
                 skipped.add(rule_name)
                 continue
+
+            # Divergence Alert rules only fire for premium positions.
+            # Non-premium APEX divergence is structural PVC discount — not actionable.
+            if rule_id in _DIVERGENCE_RULE_IDS and pos not in PREMIUM_POSITIONS:
+                filtered += 1
+                continue
+
             if eval_condition(data, rule["expression"]):
                 tv = _format_triggered_value(rule_name, data)
                 fired.append((rule, data, tv))
@@ -359,6 +381,8 @@ def evaluate(conn, season_id: int, model_ver: str, apply: bool,
         print(f"\n[DRY RUN] Would fire {len(fired)} recommendations "
               f"across {len(by_prospect)} prospects.")
         print(f"  Skipped unfireable rules: {sorted(skipped)}")
+        print(f"  Skipped non-premium divergence checks: {filtered} "
+              f"(position not in PREMIUM_POSITIONS)")
 
         by_rule = Counter(r["rule_name"] for r, _, _ in fired)
         print("\n  Breakdown by rule:")
@@ -413,6 +437,8 @@ def evaluate(conn, season_id: int, model_ver: str, apply: bool,
     total = new_count + existing_count
     print(f"\n[OK] {total} recommendations evaluated ({new_count} new, {existing_count} already existed).")
     print(f"  Skipped unfireable rules: {sorted(skipped)}")
+    print(f"  Skipped non-premium divergence checks: {filtered} "
+          f"(position not in PREMIUM_POSITIONS)")
 
     by_rule = Counter(r["rule_name"] for r, _, _ in fired)
     print("\n  Breakdown by rule:")
