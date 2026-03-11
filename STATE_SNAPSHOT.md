@@ -182,9 +182,44 @@ Last Updated (UTC): 2026-03-11T18:25:16.998456+00:00
   - snapshot_id=2 (2026-03-11): rows=615 — OK
   - Doctor: PASSED
 
+## Last Completed Milestone (Session 21 — DEV BET TRIAGE + LOVE RE-SCORE + COMPRESSION FLAGS)
+
+- Session 21: Love re-score, Development Bet batch triage, Compression Flag batch accept.
+
+  LOVE RE-SCORE (pid=61):
+  - Carry Accumulation Clock audit complete: ~479 college carries (2022-2024) — CLEAR.
+    Below 500-carry FM-4 threshold. v_injury cap lifted, scored at 9.0.
+  - ARCHETYPE_OVERRIDES[61] updated in run_apex_scoring_2026.py.
+  - Final: RB-1 Elite Workhorse | composite=59.8 | DAY2 | Tier A | v_injury=9.0
+    FM-6/FM-4 co-primary in red_flags. gap=18.7 (CLEAN).
+
+  DEVELOPMENT BET TRIAGE (38 recs → 0 pending):
+  - 10 dismissed (Tier A): Bain, Downs, Terrell, Hood, Tate, Mauigoa, Woods, Hill, Reese, Love.
+    Rationale: eval_confidence Tier A = finished products. High v_dev_traj on Tier A players
+    is upward arc confirmation, not a projection requirement — tag mismatch.
+    Love additionally dismissed as gap_label=CLEAN post-re-score (double ineligible).
+  - 28 accepted (Tier B): all gap_label=SOLID with genuine developmental projection required.
+    Key: David Bailey, Akheem Mesidor, Mansoor Delane, Spencer Fano, Devin Moore, Keith Abney,
+    Germie Bernard, Dillon Thieneman, Max Iheanachor, Kenyon Sadiq, and 18 others.
+  - 0 TWEENER rows — no holds from Dev Bet triage.
+
+  COMPRESSION FLAG TRIAGE (13 recs → 0 pending):
+  - All 13 accepted as system-generated information tags.
+  - Kamari Ramsey (S, gap=0.0) and Connor Lew (OL, gap=0.14) are highest-ambiguity profiles.
+  - Cluster of 10 at gap=4.2: Howell, Cooper, Simpson, Hunter, Thomas, Young, Trotter, Jacas,
+    Klare, Catalon.
+  - D'Angelo Ponds (rec_id=19, gap=0.31) accepted separately — excluded from audit JOIN due to
+    missing consensus rank row.
+
+  POST-SESSION 21 TAG STATE:
+  - Rec status: accepted=54, dismissed=22, pending=1 (Kilgore Divergence Alert — held for combine)
+  - Active tags: Development Bet=28, Compression Flag=13, Divergence Alert=6, Elite RAS=4,
+    Poor RAS=1, Great RAS=1, Injury Flag=1
+  - Board re-exported, snapshot_id=2 refreshed, doctor PASSED, integrity PASSED.
+
 ## Next Milestone (Single Target)
 
-- Additional source ingest (remaining 1-2 high-quality sources) or calibration batch re-score.
+- Calibration batch API re-score (12 prospects, generic trait vectors) or additional source ingest.
   See Ordered TODOs below.
 
 ---
@@ -212,9 +247,14 @@ SNAPSHOTS: Operational. Latest: snapshot_id=2 (2026-03-11). rows=615 — OK.
 
 APEX: Operational. 58 active 2026 scored prospects + 12 calibration artifacts (tagged, excluded from board).
   Tiers: ELITE=3, DAY1=21, DAY2=30, DAY3=4. Latest backup: data/apex_top50_rescored_session15.json.
-  Migrations: 0001–0036 applied. Next migration: 0037.
+  Love (pid=61) re-scored Session 21: RB-1 59.8 DAY2 Tier A v_injury=9.0 (carry clock CLEAR).
+  Migrations: 0001–0038 applied. Next migration: 0039.
 
-EXPORTS: board_2026_v1_default.csv last produced Session 13. May be stale vs latest APEX scores.
+TAGS: Operational. Session 21 triage complete.
+  Rec status: accepted=54, dismissed=22, pending=1 (Kilgore Divergence Alert, held).
+  Active tags: Development Bet=28, Compression Flag=13, Divergence Alert=6, Elite RAS=4, Poor RAS=1, Great RAS=1, Injury Flag=1.
+
+EXPORTS: board_2026_v1_default.csv last produced Session 21. Current.
 
 ---
 
