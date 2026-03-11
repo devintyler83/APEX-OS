@@ -1,6 +1,6 @@
 # DraftOS State Snapshot
 
-Last Updated (UTC): 2026-03-11T02:41:59.360983+00:00
+Last Updated (UTC): 2026-03-11T03:06:55.020881+00:00
 
 ---
 
@@ -162,10 +162,30 @@ Last Updated (UTC): 2026-03-11T02:41:59.360983+00:00
   - Calibration batch API re-score: 12 calibration prospects still on generic trait vectors.
   - Kyron Drones QB (351): low consensus rank — genuine late-round talent or wrong player in DB?
 
+## Last Completed Milestone (Session 16 — BLEACHERREPORT INGEST + ANALYST_GRADE CAPTURE)
+
+- Session 16: bleacherreport_2026 ingested as 12th active canonical source (T2, weight 1.0).
+  - Migration 0037: seeds source_id=27 (bleacherreport_2026, ranking, is_active=1)
+  - Migration 0038: adds analyst_grade REAL (nullable) to source_rankings
+  - stage_rankings_csv.py: B/R format detection + 3-variant parser
+    Format A: "N. POS\xa0, School (grade)" — \xa0 after pos, player in col 2 (166 rows)
+    Format B: "N. POS Player Name, School (grade)" — player embedded, col 2 empty (54 rows)
+    Format C: "N. POS , School (grade)" — regular space, player in col 2 (30 rows)
+    Detection: norm(fieldnames[0]) == "posschoolgrade"
+  - ingest_rankings_staged.py: reads analyst_grade from staged CSV, writes to source_rankings.analyst_grade
+    NULL-safe: column absent from non-B/R staged files → NULL, never errors
+  - build_consensus_2026.py: bleacherreport_2026 added to SOURCE_WEIGHTS at 1.0 (T2)
+  - Result: 250 B/R prospects ingested, 250 graded rows, grade range 5.7-9.3
+  - Consensus: 615 rows (was 609), top 3 stable: Mendoza QB, Downs S, Bain EDGE
+  - Confidence: High=4, Medium=55 (was 53), Low=556
+  - PFF analyst_grade: 0 rows — correct, NULL for all non-B/R sources
+  - snapshot_id=2 (2026-03-11): rows=615 — OK
+  - Doctor: PASSED
+
 ## Next Milestone (Single Target)
 
-- Additional source ingest (2-3 high-quality sources) to expand coverage and confidence bands.
-  See Ordered TODOs #7 below.
+- Additional source ingest (remaining 1-2 high-quality sources) or calibration batch re-score.
+  See Ordered TODOs below.
 
 ---
 
@@ -175,17 +195,20 @@ RAW CSVs: 12 raw CSVs present in data/imports/rankings/raw/2026/ (including ras_
 
 STAGING: Staged CSVs present per source under data/imports/rankings/staged/2026/
 
-INGEST: Operational. 26 sources (11 active canonical), source_players: 7316, source_rankings: 28347.
+INGEST: Operational. 27 sources (12 active canonical), source_players: 7566, source_rankings: 28597.
+  analyst_grade column active on source_rankings (migration 0038). Populated for bleacherreport_2026 only.
 
 BOOTSTRAP: Operational. prospects: 4482 total (active managed by is_active flag).
 
 UNIVERSE: Operational. data/universe/prospect_universe_2026.csv (861 players). Migration 0033 applied.
 
-CONSENSUS: Operational. 609 rows (post-Session-13 weekly run). Top: Fernando Mendoza QB 98.56.
+CONSENSUS: Operational. 615 rows (Session 16). Top: Fernando Mendoza QB 94.36 | Caleb Downs S 92.68 | Rueben Bain EDGE 91.08.
+  Score shift from 98.56 → 94.36 is expected: adding 12th source changes coverage factor sqrt(k/12) vs sqrt(k/11).
 
-MODEL OUTPUTS: Operational (model_outputs: 0 in snapshot — prospect_model_outputs row count not captured).
+MODEL OUTPUTS: Operational. 615 rows (Session 16 rebuild).
 
-SNAPSHOTS: Operational. Latest: snapshot_id=1 (2026-03-10). rows=586, coverage=586, confidence=586 — OK.
+SNAPSHOTS: Operational. Latest: snapshot_id=2 (2026-03-11). rows=615 — OK.
+  Confidence: High=4, Medium=55, Low=556.
 
 APEX: Operational. 58 active 2026 scored prospects + 12 calibration artifacts (tagged, excluded from board).
   Tiers: ELITE=3, DAY1=21, DAY2=30, DAY3=4. Latest backup: data/apex_top50_rescored_session15.json.
@@ -208,8 +231,9 @@ EXPORTS: board_2026_v1_default.csv last produced Session 13. May be stale vs lat
 - Raw ingest data is never deleted (soft deprecation only)
 - Snapshot rows define the universe for coverage and confidence
 - source_canonical_map has 0 entries in rebuilt DB — no duplicates to canonicalize (all 15 non-canonical sources deactivated via UPDATE sources SET is_active=0 during rebuild). patch_source_canonicalization_2026.py uses hardcoded IDs from old DB — DO NOT run it without updating IDs first.
-- 11 canonical sources: pff_2026, nfldraftbuzz_2026_v2, bnbfootball_2026, cbssports_2026, espn_2026, nytimes_2026, pfsn_2026, tankathon_2026, thedraftnetwork_2026, theringer_2026, jfosterfilm_2026
-- SOURCE_WEIGHTS: T1 (pff_2026, thedraftnetwork_2026, theringer_2026) = 1.3; T2 (nfldraftbuzz_2026_v2, cbssports_2026, espn_2026, nytimes_2026, pfsn_2026, jfosterfilm_2026) = 1.0; T3 (bnbfootball_2026, tankathon_2026) = 0.7
+- 12 canonical sources: pff_2026, nfldraftbuzz_2026_v2, bnbfootball_2026, cbssports_2026, espn_2026, nytimes_2026, pfsn_2026, tankathon_2026, thedraftnetwork_2026, theringer_2026, jfosterfilm_2026, bleacherreport_2026
+- analyst_grade column added to source_rankings (migration 0038). Nullable REAL, 0-10 scale. Currently populated for bleacherreport_2026 only (Sobleski grades). Never backfill other sources.
+- SOURCE_WEIGHTS: T1 (pff_2026, thedraftnetwork_2026, theringer_2026) = 1.3; T2 (nfldraftbuzz_2026_v2, cbssports_2026, espn_2026, nytimes_2026, pfsn_2026, jfosterfilm_2026, bleacherreport_2026) = 1.0; T3 (bnbfootball_2026, tankathon_2026) = 0.7
 - Confidence dispersion caps: std_dev > 0.20 → Low; std_dev > 0.10 → cap at Medium (normalized rank std_dev, range 0–1)
 - reingest_source_2026.py is the standard script for all future source updates (clean replace of source_players, source_rankings, source_player_map, staged files; then re-runs staging → ingest → name normalization → bootstrap → prospect canonicalization). Usage: python -m scripts.reingest_source_2026 --source <name> --season <year> --apply 0|1
 - school_alias key collision fix applied in patch_name_normalization_2026.py: plain alias (e.g. 'Miami') beats parenthetical alias (e.g. 'Miami (OH)') when both normalize to the same school_key
@@ -270,7 +294,7 @@ EXPORTS: board_2026_v1_default.csv last produced Session 13. May be stale vs lat
 4. ~~Session 7: top-50 force re-score (positional archetypes), calibration artifact tagging~~ COMPLETE 2026-03-10
 5. ~~Session 8: Prospect universe migration (migration 0033, is_active, consensus rebuild)~~ COMPLETE 2026-03-10
 6. ~~Session 9: Re-score top-50 APEX with --force against updated consensus ranks~~ COMPLETE 2026-03-10
-7. Additional source ingest (source universe stable — dedup complete, weights defined) ← NEXT
+7. Additional source ingest — bleacherreport_2026 ingested Session 16. 1-2 more sources still possible. ← PARTIAL
 8. ~~Full clean weekly pipeline run end-to-end~~ COMPLETE 2026-03-10 (Session 13)
 9. ~~Session 14: Top-50 re-score, APEX tier label standardization (DAY1/DAY2/DAY3), divergence~~ COMPLETE 2026-03-10
 10. ~~Session 15: Full board audit, TOP50_POSITION_OVERRIDES + ARCHETYPE_OVERRIDES stale-ID fix,~~ COMPLETE 2026-03-11
