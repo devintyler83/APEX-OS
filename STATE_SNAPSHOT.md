@@ -111,6 +111,57 @@ Last Updated (UTC): 2026-03-11T01:52:12.561863+00:00
   - Known remaining: Travis Hunter school=Unknown (not in universe CSV), Tate Ratledge position_group=TE
     (should be OG per CALIBRATION_OVERRIDES — pre-existing data quality issue in prospects table)
 
+## Last Completed Milestone (Session 15 — APEX BOARD AUDIT + OVERRIDE CORRECTION)
+
+- Session 15: Full APEX board audit, stale override ID fix, 9 priority re-scores, calibration tagging.
+
+  ROOT CAUSE FOUND: Both TOP50_POSITION_OVERRIDES and ARCHETYPE_OVERRIDES in run_apex_scoring_2026.py
+  contained stale prospect_ids from the pre-Session-12 DB (the corrupt 33MB rebuild). After the
+  Session 12 rebuild, prospect IDs changed but override dicts were never updated — causing wrong
+  positional libraries and analyst overrides to be applied to different players.
+
+  OVERRIDE FIXES (scripts/run_apex_scoring_2026.py):
+  - TOP50_POSITION_OVERRIDES: rebuilt from scratch with verified current IDs (16 entries).
+    Key corrections: pid=26 (Spencer Fano) was mapped to "LB" (Lee Hunter entry) → now OT.
+    pid=18 (Gabe Jacas) was mapped to "OT" (Spencer Fano entry) → now ILB.
+    pid=40 (Cashius Howell) was mapped to "ILB" (Anthony Hill entry) → entry removed (EDGE is correct).
+  - ARCHETYPE_OVERRIDES: all 8 keys corrected.
+    Critical: pid=12 (Omar Cooper) had Jerrod McCoy's CB-1 forced override → now correctly keyed 38.
+    Critical: pid=16 (Arvell Reese) had Keldric Faulk's EDGE-3 forced override → now correctly keyed 42.
+
+  9 RE-SCORES (all applied with --batch single --force --apply 1):
+  - Kyron Drones QB (1420): QB-1 78.0 DAY1 → QB-5 49.1 DAY3. Contaminated vector (wrong player text).
+  - Jalen Catalon S (1464): ILB-1 73.1 DAY1 → S-4 52.6 DAY3. Wrong library (ILB applied to S).
+  - Spencer Fano OL (26): ILB-1 74.2 DAY1 → OT-1 76.8 DAY1. Stale override (pid=26→LB).
+  - Omar Cooper LB (12): CB-1 69.0 DAY2 → ILB-2 66.4 DAY2. Stale override (pid=12→CB-1 McCoy).
+  - Arvell Reese LB (16): EDGE-3 70.0 DAY1 → OLB-1 67.8 DAY2. Stale override (pid=16→EDGE-3 Faulk).
+  - Gabe Jacas LB (18): OT-4 61.1 DAY2 → ILB-3 59.0 DAY2. Stale override (pid=18→OT).
+  - Cashius Howell EDGE (40): ILB-3 59.8 DAY2 → EDGE-4 73.8 DAY1. Stale override (pid=40→ILB).
+  - Max Klare LB (6): ILB-2 63.0 DAY2 → TE-5 49.1 DAY3. Contaminated vector (RB text); position=TE.
+  - Joshua Josephs EDGE (114): EDGE-1 64.0 DAY2 → EDGE-3 67.8 DAY2. NO_FIT gap; clean re-score.
+
+  CALIBRATION FIX (Migration 0036):
+  - tag_calibration_artifacts_2026.py rebuilt — old script used corrupted display_names
+    ("Carson Schwesingerucla", "Donovan Ezeiruakuboston"), missing Gunnar Helm (313) and
+    Carson Schwesinger (1925) and Donovan Ezeiruaku (1729). Now uses explicit prospect_ids
+    from apex_calibration_batch_patch.json (user-confirmed Session 15).
+  - All 12 calibration artifacts tagged is_calibration_artifact=1 (were all 0).
+  - All 12 confirmed is_active=0 in prospects — excluded from all active board joins.
+
+  POST-SESSION 15 BOARD STATE:
+  - Active 2026 scored prospects: 58 (all is_active=1, is_calibration_artifact=0)
+  - Calibration artifacts: 12 (is_active=0, is_calibration_artifact=1) — excluded from board
+  - Tiers: ELITE=3, DAY1=21, DAY2=30, DAY3=4
+  - Divergence (active board): ALIGNED=15, APEX_HIGH=22, APEX_LOW_PVC_STRUCTURAL=19, APEX_LOW=2
+  - Backup exported: data/apex_top50_rescored_session15.json (141KB)
+  - Migrations applied: 0036_tag_calibration_artifacts
+  - Doctor: PASSED
+
+  PENDING (carried forward):
+  - Kilgore CB-3 ELITE (90.0, consensus=210): FM-1 vs genuine find not resolved — needs CB PAA run.
+  - Calibration batch API re-score: 12 calibration prospects still on generic trait vectors.
+  - Kyron Drones QB (351): low consensus rank — genuine late-round talent or wrong player in DB?
+
 ## Next Milestone (Single Target)
 
 - Additional source ingest (2-3 high-quality sources) to expand coverage and confidence bands.
@@ -124,19 +175,23 @@ RAW CSVs: 12 raw CSVs present in data/imports/rankings/raw/2026/ (including ras_
 
 STAGING: Staged CSVs present per source under data/imports/rankings/staged/2026/
 
-INGEST: Operational. 39 sources (11 active canonical), 15135 source_players, 30542 source_rankings ingested.
+INGEST: Operational. 26 sources (11 active canonical), source_players: 7316, source_rankings: 28347.
 
-BOOTSTRAP: Operational. 5136 prospects total (1376 active / 3760 inactive after Session 8 universe apply).
+BOOTSTRAP: Operational. prospects: 4482 total (active managed by is_active flag).
 
 UNIVERSE: Operational. data/universe/prospect_universe_2026.csv (861 players). Migration 0033 applied.
 
-CONSENSUS: Operational. 798 rows (active-universe-only rebuild). Top score: 98.5328 (Fernando Mendoza QB).
+CONSENSUS: Operational. 609 rows (post-Session-13 weekly run). Top: Fernando Mendoza QB 98.56.
 
-MODEL OUTPUTS: Operational. prospect_model_outputs: 4756 rows (1000 for active prospects).
+MODEL OUTPUTS: Operational (model_outputs: 0 in snapshot — prospect_model_outputs row count not captured).
 
-SNAPSHOTS: Operational. Latest: snapshot_id=9 (2026-03-10). Integrity clean: rows=1000, coverage=1000, confidence=1000.
+SNAPSHOTS: Operational. Latest: snapshot_id=1 (2026-03-10). rows=586, coverage=586, confidence=586 — OK.
 
-EXPORTS: board_2026_v1_default.csv produced (may be stale — re-export not yet run post-Session 8).
+APEX: Operational. 58 active 2026 scored prospects + 12 calibration artifacts (tagged, excluded from board).
+  Tiers: ELITE=3, DAY1=21, DAY2=30, DAY3=4. Latest backup: data/apex_top50_rescored_session15.json.
+  Migrations: 0001–0036 applied. Next migration: 0037.
+
+EXPORTS: board_2026_v1_default.csv last produced Session 13. May be stale vs latest APEX scores.
 
 ---
 
@@ -171,37 +226,56 @@ EXPORTS: board_2026_v1_default.csv produced (may be stale — re-export not yet 
 
 ## Divergence Flags (Manual Evaluation Needed)
 
-- SONNY STYLES (LB, Ohio State): jfosterfilm_2026 ranks #1 overall; new consensus rank is #6 (score=94.30). Source disagreement reduced post-universe but still significant — worth evaluating whether jfoster reflects genuine contrarian view.
-- ALL TOP-50 APEX divergence_deltas are stale post-Session 8 — computed against pre-universe consensus ranks. Re-score with --force in Session 9 to update.
+- JALON KILGORE CB (pid=449, consensus=210): CB-3 ELITE 90.0, APEX_HIGH +209. FM-1 Athleticism
+  Mirage vs genuine APEX_HIGH not resolved. Needs full CB PAA run before accepting score.
+  Do NOT cite this as a real APEX_HIGH signal until PAA clears.
+- KYRON DRONES QB (pid=1420, consensus=351): QB-5 DAY3 49.1, APEX_HIGH +294. Consensus rank
+  of 351 is very low for a scored prospect. Verify this is the correct player in DB before
+  taking any action on this divergence.
+- SONNY STYLES (LB, Ohio State): jfosterfilm_2026 ranks #1 overall; consensus rank now #9. Worth
+  evaluating whether jfoster reflects genuine contrarian view.
 
 ---
 
 ## APEX v2.2 Engine Notes
 
+- CRITICAL (Session 15): TOP50_POSITION_OVERRIDES and ARCHETYPE_OVERRIDES in run_apex_scoring_2026.py
+  used stale prospect_ids from pre-Session-12 DB rebuild. Both dicts were fully corrected Session 15.
+  Any future re-score run will now use correct IDs. If DB is ever rebuilt again, BOTH dicts must be
+  re-verified against the new prospect_ids before running any batch scoring.
 - CALIBRATION_OVERRIDES in run_apex_scoring_2026.py maps name -> {prospect_id, position, school}
   Required because DB has multiple duplicate entries per prospect (position normalization artifacts)
   Best prospect_id = highest consensus score entry for that name
-- Position overrides: Schwesinger=ILB, Membou=OT, Ratledge=OG, Emmanwori=S, Williams=IDL, Paul/Wilson=C
+- TOP50_POSITION_OVERRIDES maps prospect_id -> correct APEX position (OT/OG/C/ILB/OLB/TE/IDL).
+  Rebuilt Session 15 with verified current IDs. Covers OL sub-positions, DT→IDL, LB sub-types.
+- ARCHETYPE_OVERRIDES maps prospect_id -> forced archetype + PAA findings. 8 entries, all keys
+  corrected Session 15: Mesidor(80), Thieneman(29), Faulk(42), Hood(72), Cisse(71), McCoy(38),
+  C.Johnson(35), Ponds(3236).
+- Calibration artifacts: 12 prospects (is_active=0, is_calibration_artifact=1). All 2025 draftees.
+  PIDs: 230, 304, 313, 455, 504, 880, 1050, 1278, 1371, 1391, 1729, 1925. Do NOT re-score.
+  tag_calibration_artifacts_2026.py rebuilt Session 15 — now uses explicit PIDs not display_name matching.
 - run_apex_scoring_2026.py requires ANTHROPIC_API_KEY env var to make live API calls
 - Fallback: import_apex_batch_json.py accepts pre-evaluated JSON (no API key needed)
-- data/apex_calibration_batch.json contains the calibration evaluations (APEX v2.2 direct eval)
-- CALIBRATION_KNOWN_RANKS in run_apex_scoring_2026.py maps name -> (consensus_rank, tier) for correct divergence computation. These hardcoded ranks will need updating after Session 9 re-score.
-- Gunnar Helm (pid=842): 2025 draftee — ghost row in 2026 DB introduced via spamml sources. apex_scores row force-deleted in Session 6. Do NOT re-score — cross-season contamination. Correctly remains in active universe (pid=842 is in jfosterfilm) — this is a known ghost but the universe CSV catch was correct to include him as jfoster ranked him. Monitor.
-- APEX LOW on non-premium positions (ILB, OG, C, TE, RB) is structural PVC behavior, not actionable divergence. Monitor APEX LOW MAJOR only on premium positions (QB, CB, EDGE, OT, S).
+- data/apex_top50_rescored_session15.json: latest full apex_scores backup (141KB, post-Session 15)
+- APEX LOW on non-premium positions (ILB, OLB, OG, C, TE, RB) is structural PVC behavior, not
+  actionable divergence. Monitor APEX_HIGH only on premium positions (QB, CB, EDGE, OT, S).
 
 ---
 
 ## Ordered TODOs
 
-1. ~~Session 4: APEX top-50 batch scoring~~ COMPLETE 2026-03-10 (62 rows, ELITE=6, APEX=32, SOLID=22, DEV=2)
-2. ~~Session 5: Add positional archetype libraries to prompts.py (QB, EDGE, CB, OT, S, IDL, TE)~~ COMPLETE 2026-03-10
+1. ~~Session 4: APEX top-50 batch scoring~~ COMPLETE 2026-03-10
+2. ~~Session 5: Add positional archetype libraries to prompts.py~~ COMPLETE 2026-03-10
 3. ~~Session 6: RAS join fix, ghost prospect audit~~ COMPLETE 2026-03-10
-4. ~~Session 7: top-50 force re-score (positional archetypes), calibration artifact tagging (migration 0032)~~ COMPLETE 2026-03-10 (50 top-50 scored, GEN-=0, 11 cal tagged)
+4. ~~Session 7: top-50 force re-score (positional archetypes), calibration artifact tagging~~ COMPLETE 2026-03-10
 5. ~~Session 8: Prospect universe migration (migration 0033, is_active, consensus rebuild)~~ COMPLETE 2026-03-10
-6. ~~Session 9: Re-score top-50 APEX with --force against updated consensus ranks~~ COMPLETE 2026-03-10 (50/50, ELITE=4, APEX=28, SOLID=18)
-7. Additional source ingest (source universe stable — dedup complete, weights defined)
-8. ~~Full clean weekly pipeline run end-to-end~~ COMPLETE 2026-03-10 (Session 13: all 18 steps pass, step 9 graceful SKIP expected on single snapshot)
-9. Review queue cleanup — filter spamml/fantasy sources, focus on legit draft sources
-10. RAS re-ingest after pro days complete — re-run ingest_ras_2026.py with updated file, fully idempotent
-11. ~~Expand school_aliases — add long-form variants (Southern California, Louisiana State, etc.)~~ COMPLETE 2026-03-08 (23 aliases added, 147→170, RAS matched 447→461)
-12. ~~Fix corrupted school_aliases entries (Oklahoma → Colorado pattern)~~ COMPLETE 2026-03-08
+6. ~~Session 9: Re-score top-50 APEX with --force against updated consensus ranks~~ COMPLETE 2026-03-10
+7. Additional source ingest (source universe stable — dedup complete, weights defined) ← NEXT
+8. ~~Full clean weekly pipeline run end-to-end~~ COMPLETE 2026-03-10 (Session 13)
+9. ~~Session 14: Top-50 re-score, APEX tier label standardization (DAY1/DAY2/DAY3), divergence~~ COMPLETE 2026-03-10
+10. ~~Session 15: Full board audit, TOP50_POSITION_OVERRIDES + ARCHETYPE_OVERRIDES stale-ID fix,~~ COMPLETE 2026-03-11
+    ~~9 priority re-scores, calibration artifact tagging (migration 0036, all 12 tagged)~~
+11. Calibration batch API re-score — 12 prospects still on generic Session 4 trait vectors
+12. Kilgore CB evaluation — CB-3 ELITE 90.0 consensus=210, FM-1 vs genuine find unresolved
+13. RAS re-ingest after pro days complete — re-run ingest_ras_2026.py with updated file
+14. Tag system activation — Layer 10+11 schema deployed, trigger evaluation engine needed

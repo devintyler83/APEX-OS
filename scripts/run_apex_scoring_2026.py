@@ -150,29 +150,38 @@ def get_position_tier(position: str) -> str:
 #   listed here explicitly for documentation clarity).
 # ---------------------------------------------------------------------------
 TOP50_POSITION_OVERRIDES: dict[int, str] = {
-    # OL -> specific sub-position (from position_raw)
-    18:   "OT",    # Spencer Fano      (Utah, raw=OT)
-    450:  "OT",    # Francis Mauigoa   (Miami, raw=OT)
-    4659: "OT",    # Francis Mauigoa   (Miami FL, dup, raw=OT)
-    22:   "OG",    # Olaivavega Ioane  (Penn State, raw=OG)
-    25:   "OT",    # Kadyn Proctor     (Alabama, raw=OT)
-    31:   "OT",    # Monroe Freeling   (Georgia, raw=OT)
-    65:   "C",     # Connor Lew        (Auburn, raw=C)
-    54:   "OG",    # Chase Bisontis    (Texas A&M, raw=OG)
-    29:   "OT",    # Caleb Lomu        (Utah, raw=OT)
+    # OL -> specific sub-position
+    # Rebuilt Session 15: all IDs verified against current DB (post-Session 12 rebuild).
+    # Previous overrides used stale pre-rebuild IDs; corrected here.
+    21:   "OT",    # Chase Bisontis    (Texas A&M)
+    22:   "OG",    # Francis Mauigoa   (Miami)
+    23:   "OT",    # Kadyn Proctor     (Alabama)
+    25:   "OT",    # Monroe Freeling   (Georgia)
+    26:   "OT",    # Spencer Fano      (Utah)
+    54:   "OT",    # Caleb Lomu        (Utah)
+    55:   "OT",    # Emmanuel Pregnon  (Oregon)
+    96:   "OT",    # Blake Miller      (Clemson)
+    98:   "OG",    # Olaivavega Ioane  (Penn State)
+    225:  "C",     # Connor Lew        (Auburn)
     # DT -> IDL
-    641:  "IDL",   # Peter Woods       (Clemson)
-    456:  "IDL",   # Caleb Banks       (Florida)
-    452:  "IDL",   # Kayden Mcdonald   (Ohio State)
-    4660: "IDL",   # Kayden McDonald   (Ohio State, dup)
-    # LB -> ILB for known linebacker prospects
-    3:    "ILB",   # Arvell Reese      (Ohio State)
+    75:   "IDL",   # Caleb Banks       (Florida)
+    78:   "IDL",   # Kayden Mcdonald   (Ohio State)
+    79:   "IDL",   # Peter Woods       (Clemson)
+    # LB -> ILB for known interior/hybrid linebacker prospects
+    1:    "ILB",   # Anthony Hill      (Texas)
+    3:    "ILB",   # Kc Concepcion     (Texas A&M)
+    4:    "ILB",   # Lee Hunter        (Texas Tech)
+    5:    "ILB",   # Max Iheanachor    (Arizona State)
+    6:    "TE",    # Max Klare         (Ohio State — projects as TE, not LB)
+    7:    "ILB",   # R Mason Thomas    (Oklahoma)
     8:    "ILB",   # Sonny Styles      (Ohio State)
-    27:   "ILB",   # CJ Allen          (Georgia)
-    40:   "ILB",   # Anthony Hill      (Texas)
-    # LB stays LB where position is genuinely ambiguous
-    26:   "LB",    # Lee Hunter        (Texas Tech)
-    803:  "LB",    # R Mason Thomas    (Colorado)
+    9:    "ILB",   # Ty Simpson        (Alabama)
+    10:   "ILB",   # Zion Young        (Missouri)
+    11:   "ILB",   # Cj Allen          (Georgia)
+    12:   "ILB",   # Omar Cooper       (Indiana)
+    16:   "OLB",   # Arvell Reese      (Ohio State — pass-rush LB, OLB library)
+    18:   "ILB",   # Gabe Jacas        (Illinois)
+    20:   "ILB",   # Josiah Trotter    (Missouri)
 }
 
 
@@ -298,7 +307,9 @@ CALIBRATION_PROSPECTS = list(CALIBRATION_OVERRIDES.keys())
 # Do NOT use to nudge scores up/down — only for clear archetype family mismatches.
 # ---------------------------------------------------------------------------
 ARCHETYPE_OVERRIDES: dict[int, dict] = {
-    457: {
+    # Keys rebuilt Session 15: all IDs verified against current DB (post-Session 12 rebuild).
+    # Previous keys used stale pre-rebuild IDs; all 8 entries corrected here.
+    80: {
         "forced_archetype":  "EDGE-4 Athletic Dominator",
         "archetype_direction": (
             "Assigned archetype: EDGE-4 Athletic Dominator\n\n"
@@ -312,7 +323,7 @@ ARCHETYPE_OVERRIDES: dict[int, dict] = {
             "Bust risk: Moderate-High (technique dependence on athleticism)."
         ),
     },
-    39: {
+    29: {
         "forced_archetype":  "S-3 Multiplier Safety",
         "archetype_direction": (
             "Assigned archetype: S-3 Multiplier Safety\n\n"
@@ -326,7 +337,7 @@ ARCHETYPE_OVERRIDES: dict[int, dict] = {
             "his hybrid deployment profile and three-level playmaking."
         ),
     },
-    16: {
+    42: {
         "forced_archetype":  "EDGE-3 Power-Counter Technician",
         "archetype_direction": (
             "Assigned archetype: EDGE-3 Power-Counter Technician\n\n"
@@ -337,7 +348,7 @@ ARCHETYPE_OVERRIDES: dict[int, dict] = {
             "Score against EDGE-3 weights: DevTraj 12%, Processing 20% leads the table."
         ),
     },
-    48: {
+    72: {
         "name": "Colton Hood",
         "position": "CB",
         "forced_archetype": "CB-3",
@@ -364,7 +375,7 @@ ARCHETYPE_OVERRIDES: dict[int, dict] = {
             "embedded in the trajectory."
         ),
     },
-    32: {
+    71: {
         "name": "Brandon Cisse",
         "position": "CB",
         "forced_archetype": "CB-3",
@@ -400,7 +411,7 @@ ARCHETYPE_OVERRIDES: dict[int, dict] = {
             "capital. Conley Warning is active."
         ),
     },
-    12: {
+    38: {
         "name": "Jermod McCoy",
         "position": "CB",
         "forced_archetype": "CB-1",
@@ -434,7 +445,7 @@ ARCHETYPE_OVERRIDES: dict[int, dict] = {
             "floor). These are separate outputs."
         ),
     },
-    59: {
+    35: {
         "name": "Chris Johnson",
         "position": "CB",
         "forced_archetype": "CB-2",
@@ -464,7 +475,7 @@ ARCHETYPE_OVERRIDES: dict[int, dict] = {
             "suppresses to Picks 22-32 / Top R2. APEX_HIGH is the right directional call."
         ),
     },
-    55: {
+    3236: {
         "forced_archetype":  "CB-3 Athletic Freak",
         "archetype_direction": (
             "Assigned archetype: CB-3 Athletic Freak — CB-1 Development Pathway Confirmed\n\n"

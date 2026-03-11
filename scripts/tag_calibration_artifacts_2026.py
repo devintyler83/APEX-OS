@@ -1,9 +1,13 @@
 """
 Tag calibration artifact rows in apex_scores.
 
-Sets is_calibration_artifact=1 for all apex_scores rows belonging to the 11
-calibration prospects (2025 draftees whose rows are engine validation artifacts,
-not 2026 board signal).
+Sets is_calibration_artifact=1 for the 12 calibration prospects — 2025 draftees
+whose apex_scores rows exist solely as engine validation artifacts, not 2026 board
+signal. These players have is_active=0 in prospects (soft-deprecated) but their
+apex_scores rows were written with is_calibration_artifact=0 by earlier sessions.
+
+Authoritative source: apex_calibration_batch_patch.json
+Prospect IDs confirmed by user review Session 15.
 
 Usage:
     python -m scripts.tag_calibration_artifacts_2026 --apply 0   # dry run
@@ -23,22 +27,23 @@ from draftos.config import PATHS
 
 SEASON_ID = 1
 
-# Canonical display_names of calibration prospects (2025 draftees / engine
-# validation artifacts). These names must match prospects.display_name exactly
-# for the best-ranked DB entry per player (the pid used in CALIBRATION_OVERRIDES).
-CALIBRATION_NAMES: list[str] = [
-    "Carson Schwesingerucla",   # pid=1464 — best-ranked entry
-    "Travis Hunter",            # pid=885
-    "Shedeur Sanders",          # pid=813
-    "Armand Membou",            # pid=1717
-    "Tate Ratledge",            # pid=1254
-    "Trevor Etienne",           # pid=838
-    "Nick Emmanwori",           # pid=1591
-    "Donovan Ezeiruakuboston",  # pid=1420 — best-ranked entry
-    "Tyleik Williams",          # pid=1405
-    "Chris Paul",               # pid=916 — DB stores as 'Chris Paul', not 'Chris Paul Jr.'
-    "Jared Wilson",             # pid=1736
-]
+# Canonical prospect_ids for calibration artifacts.
+# Source of truth: apex_calibration_batch_patch.json (confirmed Session 15).
+# These are 2025 draftees — NOT 2026 prospects. All have is_active=0 in prospects.
+CALIBRATION_PIDS: dict[int, str] = {
+    1925: "Carson Schwesinger",
+    455:  "Travis Hunter",
+    230:  "Shedeur Sanders",
+    1371: "Armand Membou",
+    880:  "Tate Ratledge",
+    313:  "Gunnar Helm",
+    304:  "Trevor Etienne",
+    1278: "Nick Emmanwori",
+    1729: "Donovan Ezeiruaku",
+    1050: "Tyleik Williams",
+    504:  "Chris Paul Jr.",
+    1391: "Jared Wilson",
+}
 
 
 def _backup_db() -> Path:
@@ -65,36 +70,35 @@ def main() -> None:
     args = parser.parse_args()
     apply = bool(args.apply)
 
+    pids = list(CALIBRATION_PIDS.keys())
+    pid_placeholders = ",".join("?" for _ in pids)
+
     with connect() as conn:
-        # Resolve prospect_ids for calibration names
-        placeholders = ",".join("?" for _ in CALIBRATION_NAMES)
-        pid_rows = conn.execute(
+        # Verify all PIDs exist in prospects (informational — is_active=0 is expected)
+        rows = conn.execute(
             f"""
-            SELECT prospect_id, display_name
+            SELECT prospect_id, display_name, is_active
             FROM prospects
-            WHERE display_name IN ({placeholders})
+            WHERE prospect_id IN ({pid_placeholders})
               AND season_id = ?
+            ORDER BY prospect_id
             """,
-            (*CALIBRATION_NAMES, SEASON_ID),
+            (*pids, SEASON_ID),
         ).fetchall()
 
-        pids = [r["prospect_id"] for r in pid_rows]
-        resolved_names = [r["display_name"] for r in pid_rows]
+        print("Calibration prospects — DB verification:")
+        found_pids = set()
+        for r in rows:
+            active_flag = "is_active=0 (correct)" if not r["is_active"] else "WARNING: is_active=1"
+            print(f"  pid={r['prospect_id']:5d}  {r['display_name']:<30s}  {active_flag}")
+            found_pids.add(r["prospect_id"])
 
-        print(f"Resolved {len(pids)} prospect_ids from {len(CALIBRATION_NAMES)} calibration names:")
-        for r in pid_rows:
-            print(f"  pid={r['prospect_id']}  name={r['display_name']}")
+        missing = set(pids) - found_pids
+        if missing:
+            for pid in sorted(missing):
+                print(f"  [WARNING] pid={pid} ({CALIBRATION_PIDS[pid]}) NOT FOUND in DB")
 
-        unresolved = set(CALIBRATION_NAMES) - set(resolved_names)
-        if unresolved:
-            print(f"  [WARNING] Names not found in DB: {sorted(unresolved)}")
-
-        if not pids:
-            print("[ERROR] No prospect_ids resolved. Aborting.")
-            return
-
-        # Count currently tagged
-        pid_placeholders = ",".join("?" for _ in pids)
+        # Count apex_scores rows already tagged vs needing tagging
         already_tagged = conn.execute(
             f"""
             SELECT COUNT(*) FROM apex_scores
@@ -105,7 +109,6 @@ def main() -> None:
             (*pids, SEASON_ID),
         ).fetchone()[0]
 
-        # Count rows that would be tagged (not yet tagged)
         to_tag = conn.execute(
             f"""
             SELECT COUNT(*) FROM apex_scores
@@ -127,7 +130,7 @@ def main() -> None:
 
         print(f"\napex_scores rows for calibration prospects: {total_apex}")
         print(f"  already tagged (is_calibration_artifact=1): {already_tagged}")
-        print(f"  will be tagged (is_calibration_artifact=0): {to_tag}")
+        print(f"  to be tagged   (is_calibration_artifact=0): {to_tag}")
 
         if not apply:
             print(f"\n[DRY RUN] Would set is_calibration_artifact=1 on {to_tag} rows.")
@@ -150,6 +153,13 @@ def main() -> None:
             """,
             (*pids, SEASON_ID),
         )
+
+        # Record migration
+        conn.execute(
+            "INSERT OR IGNORE INTO meta_migrations (name, applied_at) VALUES (?, ?)",
+            ("0036_tag_calibration_artifacts", datetime.now(timezone.utc).isoformat()),
+        )
+
         conn.commit()
 
         # Verify
@@ -163,7 +173,8 @@ def main() -> None:
             (*pids, SEASON_ID),
         ).fetchone()[0]
 
-        print(f"\n[OK] Tagged {after} rows as is_calibration_artifact=1.")
+        print(f"\n[OK] Tagged {after}/{total_apex} apex_scores rows as is_calibration_artifact=1.")
+        print("     Migration 0036 recorded in meta_migrations.")
 
 
 if __name__ == "__main__":
