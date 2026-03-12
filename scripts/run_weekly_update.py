@@ -182,7 +182,7 @@ def main() -> None:
     # 19) TAG TRIGGER EVALUATION (WRITE)
     # Evaluates all active tag_trigger_rules against scored prospects and writes
     # recommendations to prospect_tag_recommendations. Idempotent — INSERT OR IGNORE.
-    run(pymod("scripts.evaluate_tag_triggers_2026", "--apply", "1"))
+    run(pymod("scripts.run_tag_triggers_2026", "--apply", "1"))
 
     # 18) SNAPSHOT PACKET (read-only, immutable artifact bundle)
     if not args.skip_packet:

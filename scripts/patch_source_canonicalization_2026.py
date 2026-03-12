@@ -16,6 +16,10 @@ Idempotent: safe to re-run. Uses INSERT OR REPLACE on source_canonical_map.
 
 NOTE: IDs updated 2026-03-10 after Session 12 DB rebuild. New DB has different
 source_id assignments than original DB.
+
+Updated Session 25: added bleacherreport_2026 (27), combine_ranks_2026 (28),
+nflcom_2026 (30) to CANONICAL_SOURCE_IDS. Added combine_2026 (31) alias ->
+combine_ranks_2026 (28). Expected active count updated from 11 -> 14.
 """
 
 from __future__ import annotations
@@ -31,8 +35,8 @@ from draftos.db.connect import connect
 
 
 # ---------------------------------------------------------------------------
-# 11 canonical source IDs (these are authoritative — never map or deactivate)
-# IDs as of 2026-03-10 rebuilt DB.
+# 14 canonical source IDs (these are authoritative — never map or deactivate)
+# IDs as of 2026-03-10 rebuilt DB (updated Session 25 to reflect new sources).
 # ---------------------------------------------------------------------------
 CANONICAL_SOURCE_IDS = {
     1,   # jfosterfilm_2026
@@ -46,6 +50,9 @@ CANONICAL_SOURCE_IDS = {
     23,  # tankathon_2026
     24,  # thedraftnetwork_2026
     25,  # theringer_2026
+    27,  # bleacherreport_2026  (added Session 16)
+    28,  # combine_ranks_2026   (added Session 23, renamed from nflcom_2026 in Session 23b)
+    30,  # nflcom_2026          (added Session 23b — NFL.com editorial big board)
 }
 
 # ---------------------------------------------------------------------------
@@ -66,6 +73,11 @@ ALIAS_MAP: dict[int, tuple[int, str, str]] = {
 
     # theringer group -> theringer_2026 (25)
     26: (25, "theringer",                  "theringer_2026"),
+
+    # combine_2026 (staged from combine_2026.csv) -> combine_ranks_2026 (28)
+    # combine_2026 is created by ingest_rankings_staged on each pipeline run;
+    # the canonical key for this source is combine_ranks_2026.
+    31: (28, "combine_2026",               "combine_ranks_2026"),
 }
 
 # ---------------------------------------------------------------------------
@@ -139,7 +151,7 @@ def print_plan(conn: sqlite3.Connection) -> None:
     active = {r[0]: r[1] for r in conn.execute("SELECT source_id, is_active FROM sources").fetchall()}
 
     print()
-    print("=== CANONICAL SOURCES (11 — will remain is_active=1) ===")
+    print(f"=== CANONICAL SOURCES ({len(CANONICAL_SOURCE_IDS)} — will remain is_active=1) ===")
     for sid in sorted(CANONICAL_SOURCE_IDS):
         print(f"  id={sid:>3}  {rows.get(sid, '?')}")
 
