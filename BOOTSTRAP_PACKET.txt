@@ -10,14 +10,14 @@ Non-negotiables:
 - Provide run order + verification commands
 
 Goal for this chat:
-Full clean weekly pipeline run (18 steps) end-to-end to verify all layers pass cleanly
+APEX top-50 re-score with positional archetype libraries. Current scores use pre-archetype
 
 Authoritative State:
 
 1) STATE_SNAPSHOT.md
 # DraftOS State Snapshot
 
-Last Updated (UTC): 2026-03-12T21:44:15.461852+00:00
+Last Updated (UTC): 2026-03-12T22:02:39.161239+00:00
 
 ---
 
@@ -27,26 +27,27 @@ Last Updated (UTC): 2026-03-12T21:44:15.461852+00:00
 
 ## Last Completed Milestone
 
-Session 24 — Tag trigger evaluation engine built and activated. CI workflow removed.
+Session 25 — Full clean weekly pipeline run (18 steps) end-to-end. All layers pass.
 
-- Built draftos/tags/evaluator.py: pure function library, no DB access.
-  evaluate_rule(rule_expression, ctx) -> (bool, str). Never raises. Handles compound
-  "and" chains recursively. Returns (False, "") on missing fields — no false positives.
-- Built scripts/run_tag_triggers_2026.py: new engine with --apply/--prospect_id/--season.
-  Imports from draftos.tags.evaluator. Backs up DB before writes.
-  59 prospects evaluated, 14 rules checked, 65 recs already existed (idempotent), 0 new.
-  4 unfireable rules documented: floor_play, possible_bust_system, riser_tier_jump, faller_tier_drop.
-  74 non-premium divergence checks skipped (structural PVC — not actionable).
-- Built scripts/accept_tag_recs_2026.py: new acceptance workflow with --action interface.
-  --action list|accept|dismiss|accept-all-tag|dismiss-all-tag.
-  --position filter added to list. Sorted by display_order ASC, position, name.
-  Kilgore Divergence Alert (rec_id=48) accepted during verification (ptag_id=55, source=system).
-- Removed .github/workflows/python-package-conda.yml — DraftOS is local-first, CI not applicable.
-- Session infra fixes: end_session.py now validates STATE_SNAPSHOT + commits + pushes artifacts.
-  CLAUDE.md tracked in git. STATE_SNAPSHOT.md updated to Session 23b clean state.
-- Doctor: PASSED. Snapshot integrity: PASSED.
-- Active tags post-S24: Development Bet=28, Compression Flag=13, Divergence Alert=7,
-  Elite RAS=4, Poor RAS=1, Great RAS=1, Injury Flag=1. Rec status: accepted=55, dismissed=22, pending=0.
+- Fixed stray ``` markdown artifact in run_weekly_update.py line 186 (SyntaxError if run directly).
+- Fixed patch_source_canonicalization_2026.py: updated CANONICAL_SOURCE_IDS from 11 to 14
+  (added bleacherreport_2026/27, combine_ranks_2026/28, nflcom_2026/30). Added ALIAS_MAP
+  entry for combine_2026 (source_id=31) -> combine_ranks_2026 (28). Ingest creates combine_2026
+  from staged combine_2026.csv on each run; canonicalization now correctly deactivates it.
+- Pipeline: EXIT 0, "OK: weekly pipeline completed successfully."
+- Doctor: PASSED (sources=31, sources_active=14, source_rankings=33744).
+- Snapshot integrity: PASSED (snapshot_id=3, rows=995, coverage=995, confidence=995).
+- model_outputs: 999 rows (was 615 — grew with 14 active sources including nflcom_2026).
+- Consensus: 995 rows (was 849).
+- Tag triggers: 0 new pending recs, 65 idempotent. status: accepted=55, dismissed=22, pending=0.
+- NGS deactivated confirmed: ngs_2026 (source_id=29) is_active=0.
+- Active sources: 14 canonical.
+
+Prior sessions: 24 (tag trigger engine), 23b (source key correction), 23 (combine+NGS ingest),
+  21 (dev bet triage), 20 (divergence triage), 19 (tag acceptance workflow),
+  18 (Kilgore re-score, trigger engine seed), 16 (bleacherreport ingest),
+  15 (APEX board audit + override fix), 13b (school/archetype fix), 13 (weekly pipeline),
+  12 (DB rebuild).
 
 Prior sessions: 23b (source key correction), 23 (combine+NGS ingest), 21 (dev bet triage),
   20 (divergence triage), 19 (tag acceptance workflow), 18 (Kilgore re-score, trigger engine seed),
@@ -76,9 +77,9 @@ Prior sessions on record: 12 (DB rebuild), 13 (weekly pipeline), 13b (school/arc
 
 ## Next Milestone (Single Target)
 
-- Full clean weekly pipeline run (18 steps) end-to-end to verify all layers pass cleanly
-  post-session-23b source changes (combine_ranks_2026 rename, nflcom_2026 added, ngs deactivated).
-  Run: python -m scripts.run_weekly_update --fast
+- APEX top-50 re-score with positional archetype libraries. Current scores use pre-archetype
+  trait vectors from Session 4. Run: python -m scripts.run_apex_scoring_2026 --batch top50 --force --apply 1
+  Verify all prospect_ids in TOP50_POSITION_OVERRIDES and ARCHETYPE_OVERRIDES before running.
 
 ---
 
@@ -104,15 +105,14 @@ BOOTSTRAP: Operational. prospects: 4482 total (active managed by is_active flag)
 UNIVERSE: Operational. data/universe/prospect_universe_2026.csv (861 players).
   Migration 0033 applied.
 
-CONSENSUS: Operational. 849 rows (14 active sources, Session 23b).
+CONSENSUS: Operational. 995 rows (14 active sources, Session 25 rebuild).
   Top: Sonny Styles LB | Fernando Mendoza QB | Caleb Downs S.
   Styles #1 is genuine multi-source convergence — confirmed after NGS deactivation.
 
-MODEL OUTPUTS: Operational. 615 rows (Session 16 rebuild).
-  Not yet rebuilt for Session 23 consensus expansion.
+MODEL OUTPUTS: Operational. 999 rows (Session 25 rebuild — grew from 615 with 14 active sources).
 
-SNAPSHOTS: Operational. Latest: snapshot_id=3 (2026-03-12). rows=615, coverage=615,
-  confidence=615 — PASSED.
+SNAPSHOTS: Operational. Latest: snapshot_id=3 (2026-03-12). rows=995, coverage=995,
+  confidence=995 — PASSED (Session 25 rebuild).
   Full pipeline: build_consensus → snapshot_board → compute_snapshot_metrics →
   compute_source_snapshot_metrics → compute_snapshot_coverage →
   compute_snapshot_confidence → verify_snapshot_integrity
@@ -161,9 +161,9 @@ EXPORTS: board_2026_v1_default.csv last produced Session 21. Current for that sn
 18. ~~Session 23: combine_ranks_2026 ingest (source_id=28), ngs_2026 ingest (source_id=29)~~ COMPLETE
 19. ~~Session 23b: Source key correction, nflcom_2026 ingest (source_id=30), ngs deactivated~~ COMPLETE
 20. ~~Session 24: Tag trigger engine built (evaluator.py, run_tag_triggers_2026, accept_tag_recs_2026)~~ COMPLETE
-21. **Full clean weekly pipeline run end-to-end (18 steps)** ← NEXT
-22. RAS re-ingest after pro days complete — run ingest_ras_2026.py with updated file
-23. APEX top-50 re-score with positional archetype libraries (current use generic Session 4 vectors)
+21. ~~Session 25: Full clean weekly pipeline run end-to-end (18 steps)~~ COMPLETE
+22. **APEX top-50 re-score with positional archetype libraries** ← NEXT
+23. RAS re-ingest after pro days complete — run ingest_ras_2026.py with updated file
 24. Post-draft audit framework activation (after April 2026 draft)
 
 ---
@@ -223,11 +223,11 @@ Inactive (data preserved): ngs_2026 (source_id=29, is_active=0) — model score,
 
 2) System Snapshot Output
 === DRAFTOS SYSTEM SNAPSHOT ===
-generated_utc: 2026-03-12T21:44:14.774369+00:00
+generated_utc: 2026-03-12T22:02:38.470749+00:00
 
 ## Git
 branch: main
-commit: 399ab4f970d2648bc3cfa02d2b39c34e166de837
+commit: 46cf63fc6f8e2d78551eea7035e4020dbd1fa60d
 status: clean
 
 ## Tables
@@ -274,12 +274,12 @@ status: clean
 - users
 
 ## Row Counts (key tables)
-- sources: 30
+- sources: 31
 - seasons: 1
-- prospects: 4482
-- source_players: 8916
-- source_player_map: 7933
-- source_rankings: 29947
+- prospects: 4536
+- source_players: 9651
+- source_player_map: 9353
+- source_rankings: 33744
 - models: 1
 - model_outputs: 0
 
