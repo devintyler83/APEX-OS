@@ -10,7 +10,21 @@ Last Updated (UTC): 2026-03-12T22:53:11.350292+00:00
 
 ## Last Completed Milestone
 
-Session 26 — APEX full re-score: calibration batch (11) + top-50 batch (50) with positional libraries.
+Session 27 — Max Klare position fix (LB→TE) + tag rec triage (9 pending → 0 pending).
+
+- Max Klare (pid=6): position_group updated LB→TE. Two inactive duplicate rows deactivated
+  (pid=3559 TE Ohio State, pid=4369 LB dedup) after UNIQUE constraint blocked direct update.
+  pid=3559 school_canonical set to __dedup_3559__ to free unique slot. Re-scored as TE-5
+  Raw Projection, 51.3 DAY3. Divergence recomputed (no change in distribution).
+- Tag rec triage: 9 pending → 0 pending.
+  Accepted (2): Josephs EDGE Compression Flag (TWEENER +4.2), Ramsey S Divergence Alert (+28).
+  Dismissed (7): Iheanachor LB Compression (SOLID not tweener), Ponds CB Divergence (artifact),
+  all 5 Dev Bet recs (Howell/Faulk/Mcdonald/Cooper/Rutledge — consensus ranks 18–47, market
+  has priced development trajectory, Dev Bet requires rank >75 to be informative).
+- Rec status: accepted=57, dismissed=29, pending=0.
+- Doctor: PASSED. Snapshot integrity: PASSED.
+
+Prior: Session 26 — APEX full re-score: calibration batch (11) + top-50 batch (50) with positional libraries.
 
 - CRITICAL FIX: CALIBRATION_OVERRIDES prospect_ids were all stale pre-rebuild PIDs (e.g.,
   Schwesinger=1464/Jalen Catalon, Hunter=885/Travis Kelce, Ezeiruaku=1420/Kyron Drones).
@@ -32,7 +46,7 @@ Session 26 — APEX full re-score: calibration batch (11) + top-50 batch (50) wi
 - Backup: data/apex_top50_rescored_session26.json (147KB).
 - Doctor: PASSED. Snapshot integrity: PASSED (snapshot_id=3, rows=995).
 
-Prior sessions: 26 (APEX full re-score, CALIBRATION_OVERRIDES fix), 25 (weekly pipeline),
+Prior sessions: 27 (Klare fix + tag triage), 26 (APEX full re-score, CALIBRATION_OVERRIDES fix), 25 (weekly pipeline),
   24 (tag trigger engine), 23b (source key correction), 23 (combine+NGS ingest),
   21 (dev bet triage), 20 (divergence triage), 19 (tag acceptance workflow),
   18 (Kilgore re-score, trigger engine seed), 16 (bleacherreport ingest),
@@ -67,8 +81,8 @@ Prior sessions on record: 12 (DB rebuild), 13 (weekly pipeline), 13b (school/arc
 
 ## Next Milestone (Single Target)
 
-- Triage 9 new pending tag recommendations from Session 26 re-score.
-  Then: RAS re-ingest after pro days complete (run ingest_ras_2026.py with updated file).
+- run_weekly_update --fast to rebuild snapshot with correct coverage data (resolves
+  Sadiq coverage_count NULL in UI). Then: RAS re-ingest after pro days complete.
 
 ---
 
@@ -113,6 +127,7 @@ APEX: Operational. 59 active 2026 scored prospects (50 top-consensus re-scored S
   Latest backup: data/apex_top50_rescored_session26.json (147KB).
   Love (pid=61): RB-1 59.8 DAY2 Tier A v_injury=9.0 (carry clock CLEAR, Session 21).
   CALIBRATION_OVERRIDES: all 11 PIDs corrected Session 26.
+  Max Klare (pid=6): position_group corrected LB→TE (Session 27). Re-scored TE-5 51.3 DAY3.
   Migrations applied: 0001–0039. Next migration: 0040.
   NOTE: All scores now use positional archetype library trait vectors (Session 26 re-score complete).
 
@@ -120,11 +135,12 @@ TAGS: Operational. Session 24 trigger engine built and active.
   Scripts: run_tag_triggers_2026.py (engine), accept_tag_recs_2026.py (workflow),
     draftos/tags/evaluator.py (pure function library).
   Schema: tag_definitions=27, tag_trigger_rules=14.
-  Rec status: accepted=55, dismissed=22, pending=9 (from Session 26 re-score).
-  Pending: Howell/Faulk/Mcdonald/Rutledge/Cooper Dev Bet; Josephs/Iheanachor Compression;
-    Ponds/Ramsey Divergence Alert.
-  Active tags: Development Bet=28, Compression Flag=13, Divergence Alert=7, Elite RAS=4,
+  Rec status: accepted=57, dismissed=29, pending=0.
+  Active tags: Development Bet=28, Compression Flag=14, Divergence Alert=8, Elite RAS=4,
     Poor RAS=1, Great RAS=1, Injury Flag=1.
+  Session 27 accepted: Josephs EDGE Compression Flag, Ramsey S Divergence Alert.
+  Session 27 dismissed: Iheanachor Compression, Ponds Divergence, Howell/Faulk/Mcdonald/
+    Cooper/Rutledge Dev Bet (all consensus rank <75, market priced).
 
 EXPORTS: board_2026_v1_default.csv last produced Session 21. Current for that snapshot.
 
@@ -154,9 +170,10 @@ EXPORTS: board_2026_v1_default.csv last produced Session 21. Current for that sn
 20. ~~Session 24: Tag trigger engine built (evaluator.py, run_tag_triggers_2026, accept_tag_recs_2026)~~ COMPLETE
 21. ~~Session 25: Full clean weekly pipeline run end-to-end (18 steps)~~ COMPLETE
 22. ~~Session 26: APEX full re-score — calibration (11) + top-50 (50), CALIBRATION_OVERRIDES PIDs fixed~~ COMPLETE
-23. **Triage 9 new pending tag recs from Session 26 re-score** ← NEXT
-24. RAS re-ingest after pro days complete — run ingest_ras_2026.py with updated file
-25. Post-draft audit framework activation (after April 2026 draft)
+23. ~~Session 27: Max Klare LB→TE fix + 9 pending tag recs triaged~~ COMPLETE
+24. **run_weekly_update --fast to rebuild snapshot (resolves coverage_count NULL)** ← NEXT
+25. RAS re-ingest after pro days complete — run ingest_ras_2026.py with updated file
+26. Post-draft audit framework activation (after April 2026 draft)
 
 ---
 
