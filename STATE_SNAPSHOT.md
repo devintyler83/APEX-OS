@@ -217,6 +217,34 @@ Last Updated (UTC): 2026-03-12T07:41:23.362601+00:00
     Poor RAS=1, Great RAS=1, Injury Flag=1
   - Board re-exported, snapshot_id=2 refreshed, doctor PASSED, integrity PASSED.
 
+## Last Completed Milestone (Session 23b — SOURCE KEY CORRECTION)
+
+- Session 23b: Source naming corrected, nflcom_2026.csv ingested, ngs_2026 deactivated.
+
+  SOURCE RENAME:
+  - combine_ranks_2026 (source_id=28): renamed from 'nflcom_2026'. 735 rows intact.
+    Notes updated. ras measurables unaffected (stored by prospect_id, no source FK).
+
+  INGEST: ingest_nflcom_2026.py
+  - nflcom_2026 (source_id=30, T2 1.0): NFL.com editorial big board. 303 players.
+    CSV columns: rank, name, school, pos.
+  - patch_name_normalization: 92 new conservative source_player_map entries.
+
+  NGS DEACTIVATION:
+  - ngs_2026 (source_id=29): is_active=0. Data intact in grade column.
+  - Rule established: model-output scores (NGS, algorithmic composites) are stored
+    with is_active=0. Never feed consensus math. A model score is not a scout ranking.
+
+  CONSENSUS REBUILD:
+  - 849 rows. 14 active sources.
+  - Styles LB still #1 after NGS deactivation — genuine multi-source convergence:
+    jFoster#1, pfsn#3, nytimes#5, BR#6, PFF#8, CBS/ESPN/TDN#10, Ringer#12, combine_ranks#12.
+    House effect hypothesis was incorrect. T1 sources (PFF/TDN/Ringer) all have him top-12.
+    Styles #1 is a real signal, not an artifact.
+
+  Doctor: PASSED (sources=30, sources_active=14, source_rankings=29947).
+  Snapshot 3 (2026-03-12): rows=615, coverage=615, confidence=615 — PASSED.
+
 ## Last Completed Milestone (Session 23 — COMBINE + NGS INGEST)
 
 - Session 23: Two new T2 sources ingested + combine measurables layer added.
@@ -272,17 +300,18 @@ RAW CSVs: 14 raw CSVs present in data/imports/rankings/raw/2026/ (including comb
 
 STAGING: Staged CSVs present per source under data/imports/rankings/staged/2026/
 
-INGEST: Operational. 29 sources (14 active canonical), source_players: 8613, source_rankings: 29644.
+INGEST: Operational. 30 sources (14 active canonical), source_players: 8916, source_rankings: 29947.
   analyst_grade column active on source_rankings (migration 0038). Populated for bleacherreport_2026 only.
-  combine_2026.csv: 735 rows ingested as nflcom_2026 (source_id=28). Also writes hand/arm/wing to ras.
-  ngs_2026.csv: 312 rows ingested as ngs_2026 (source_id=29). ngs_score in grade column.
+  combine_2026.csv: 735 rows as combine_ranks_2026 (source_id=28). Also writes hand/arm/wing to ras.
+  nflcom_2026.csv: 303 rows as nflcom_2026 (source_id=30, T2 1.0). NFL.com editorial big board.
+  ngs_2026.csv: 312 rows as ngs_2026 (source_id=29, is_active=0). ngs_score in grade column. Not in consensus.
 
 BOOTSTRAP: Operational. prospects: 4482 total (active managed by is_active flag).
 
 UNIVERSE: Operational. data/universe/prospect_universe_2026.csv (861 players). Migration 0033 applied.
 
-CONSENSUS: Operational. 850 rows (Session 23). Top: Sonny Styles LB 91.75 | Fernando Mendoza QB 87.36 | Caleb Downs S 85.81.
-  Styles shift to #1 driven by NGS 94.0 + NFL.com high rank; 14 sources covered.
+CONSENSUS: Operational. 849 rows (Session 23b). Top: Sonny Styles LB 91.47 | Fernando Mendoza QB 87.36 | Caleb Downs S 85.81.
+  Styles #1 confirmed genuine — jFoster#1, PFF#8, TDN#10, TheRinger#12, 14 sources.
 
 MODEL OUTPUTS: Operational. 615 rows (Session 16 rebuild — not yet rebuilt for Session 23 consensus).
 
@@ -316,9 +345,10 @@ EXPORTS: board_2026_v1_default.csv last produced Session 21. Current.
 - Raw ingest data is never deleted (soft deprecation only)
 - Snapshot rows define the universe for coverage and confidence
 - source_canonical_map has 0 entries in rebuilt DB — no duplicates to canonicalize (all 15 non-canonical sources deactivated via UPDATE sources SET is_active=0 during rebuild). patch_source_canonicalization_2026.py uses hardcoded IDs from old DB — DO NOT run it without updating IDs first.
-- 14 canonical sources: pff_2026, nfldraftbuzz_2026_v2, bnbfootball_2026, cbssports_2026, espn_2026, nytimes_2026, pfsn_2026, tankathon_2026, thedraftnetwork_2026, theringer_2026, jfosterfilm_2026, bleacherreport_2026, nflcom_2026, ngs_2026
+- 14 active canonical sources: pff_2026, nfldraftbuzz_2026_v2, bnbfootball_2026, cbssports_2026, espn_2026, nytimes_2026, pfsn_2026, tankathon_2026, thedraftnetwork_2026, theringer_2026, jfosterfilm_2026, bleacherreport_2026, combine_ranks_2026, nflcom_2026
+- ngs_2026: is_active=0. Stored only. Model score, not scout ranking.
 - analyst_grade column added to source_rankings (migration 0038). Nullable REAL, 0-10 scale. Currently populated for bleacherreport_2026 only (Sobleski grades). Never backfill other sources.
-- SOURCE_WEIGHTS: T1 (pff_2026, thedraftnetwork_2026, theringer_2026) = 1.3; T2 (nfldraftbuzz_2026_v2, cbssports_2026, espn_2026, nytimes_2026, pfsn_2026, jfosterfilm_2026, bleacherreport_2026, nflcom_2026, ngs_2026) = 1.0; T3 (bnbfootball_2026, tankathon_2026) = 0.7
+- SOURCE_WEIGHTS: T1 (pff_2026, thedraftnetwork_2026, theringer_2026) = 1.3; T2 (nfldraftbuzz_2026_v2, cbssports_2026, espn_2026, nytimes_2026, pfsn_2026, jfosterfilm_2026, bleacherreport_2026, combine_ranks_2026, nflcom_2026) = 1.0; T3 (bnbfootball_2026, tankathon_2026) = 0.7
 - Confidence dispersion caps: std_dev > 0.20 → Low; std_dev > 0.10 → cap at Medium (normalized rank std_dev, range 0–1)
 - reingest_source_2026.py is the standard script for all future source updates (clean replace of source_players, source_rankings, source_player_map, staged files; then re-runs staging → ingest → name normalization → bootstrap → prospect canonicalization). Usage: python -m scripts.reingest_source_2026 --source <name> --season <year> --apply 0|1
 - school_alias key collision fix applied in patch_name_normalization_2026.py: plain alias (e.g. 'Miami') beats parenthetical alias (e.g. 'Miami (OH)') when both normalize to the same school_key
