@@ -49,8 +49,9 @@ SOURCE_WEIGHTS: Dict[str, float] = {
     # Tier 2 (continued)
     "jfosterfilm_2026":     1.0,  # independent expert board 2026 — 293 ranked prospects
     "bleacherreport_2026":  1.0,  # B/R NFL Scouting Dept. post-combine big board. 250 ranked prospects.
-    "nflcom_2026":          1.0,  # NFL.com combine big board. 735 ranked prospects. Added Session 23.
-    "ngs_2026":             1.0,  # NFL Next Gen Stats 2026. ngs_score in grade column. Added Session 23.
+    "combine_ranks_2026":   1.0,  # NFL.com Combine Rankings 2026. 735 ranked prospects. Renamed Session 23b.
+    "nflcom_2026":          1.0,  # NFL.com Rankings 2026 (editorial big board). 303 ranked. Added Session 23b.
+    # ngs_2026 is is_active=0 — model score, not a scout ranking. Stored but excluded from consensus.
 }
 DEFAULT_WEIGHT: float = 1.0  # fallback for any source not in the dict
 
