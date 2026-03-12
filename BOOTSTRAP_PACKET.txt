@@ -10,14 +10,14 @@ Non-negotiables:
 - Provide run order + verification commands
 
 Goal for this chat:
-APEX top-50 re-score with positional archetype libraries. Current scores use pre-archetype
+Triage 9 new pending tag recommendations from Session 26 re-score.
 
 Authoritative State:
 
 1) STATE_SNAPSHOT.md
 # DraftOS State Snapshot
 
-Last Updated (UTC): 2026-03-12T22:02:39.161239+00:00
+Last Updated (UTC): 2026-03-12T22:53:11.350292+00:00
 
 ---
 
@@ -27,23 +27,30 @@ Last Updated (UTC): 2026-03-12T22:02:39.161239+00:00
 
 ## Last Completed Milestone
 
-Session 25 — Full clean weekly pipeline run (18 steps) end-to-end. All layers pass.
+Session 26 — APEX full re-score: calibration batch (11) + top-50 batch (50) with positional libraries.
 
-- Fixed stray ``` markdown artifact in run_weekly_update.py line 186 (SyntaxError if run directly).
-- Fixed patch_source_canonicalization_2026.py: updated CANONICAL_SOURCE_IDS from 11 to 14
-  (added bleacherreport_2026/27, combine_ranks_2026/28, nflcom_2026/30). Added ALIAS_MAP
-  entry for combine_2026 (source_id=31) -> combine_ranks_2026 (28). Ingest creates combine_2026
-  from staged combine_2026.csv on each run; canonicalization now correctly deactivates it.
-- Pipeline: EXIT 0, "OK: weekly pipeline completed successfully."
-- Doctor: PASSED (sources=31, sources_active=14, source_rankings=33744).
-- Snapshot integrity: PASSED (snapshot_id=3, rows=995, coverage=995, confidence=995).
-- model_outputs: 999 rows (was 615 — grew with 14 active sources including nflcom_2026).
-- Consensus: 995 rows (was 849).
-- Tag triggers: 0 new pending recs, 65 idempotent. status: accepted=55, dismissed=22, pending=0.
-- NGS deactivated confirmed: ngs_2026 (source_id=29) is_active=0.
-- Active sources: 14 canonical.
+- CRITICAL FIX: CALIBRATION_OVERRIDES prospect_ids were all stale pre-rebuild PIDs (e.g.,
+  Schwesinger=1464/Jalen Catalon, Hunter=885/Travis Kelce, Ezeiruaku=1420/Kyron Drones).
+  All 11 corrected to post-rebuild PIDs: Schwesinger=1925, Hunter=455, Sanders=230,
+  Membou=1371, Ratledge=880, Etienne=304, Emmanwori=1278, Ezeiruaku=1729,
+  Williams=1050, Paul=504, Wilson=1391. Session 26 annotations added.
+- Calibration batch (11 prospects): all re-scored with correct players and correct positions.
+  Key changes: Sanders DAY2 67.0→DAY1 78.9 (was scoring Tyler Allgeier), Etienne DAY3→DAY2 57.7
+  (was scoring Kaimi Fairbairn), Emmanwori ILB-1 DAY1→S-2 DAY2 (correct position now),
+  Hunter ELITE 91.2→DAY1 84.8 CB-3 (correct player), Ratledge now OG-1 (was TE-4).
+- Top-50 batch: 50 prospects re-scored with --force. All positional archetype libraries applied.
+  Notable changes: David Bailey EDGE-1 82.1→88.7 ELITE (largest upgrade), Mesidor APEX_HIGH +16
+  resolved to ALIGNED +4 (consensus was right), Thieneman divergence compressed +23→+8.
+- New signals: Devin Moore CB APEX_HIGH MAJOR +33, Kamari Ramsey S APEX_HIGH MODERATE +28.
+- Divergence recomputed (62 prospects): ALIGNED=16, APEX_HIGH=26, APEX_LOW=0, APEX_LOW_PVC_STRUCTURAL=20.
+- Tag triggers: 9 new pending recs (5 Dev Bet, 2 Compression, 2 Divergence Alert).
+  Pending: Josephs EDGE/Iheanachor LB (Compression), Howell EDGE/Mcdonald DT/Faulk EDGE/
+  Rutledge OL/Cooper LB (Dev Bet), Ponds CB/Ramsey S (Divergence Alert).
+- Backup: data/apex_top50_rescored_session26.json (147KB).
+- Doctor: PASSED. Snapshot integrity: PASSED (snapshot_id=3, rows=995).
 
-Prior sessions: 24 (tag trigger engine), 23b (source key correction), 23 (combine+NGS ingest),
+Prior sessions: 26 (APEX full re-score, CALIBRATION_OVERRIDES fix), 25 (weekly pipeline),
+  24 (tag trigger engine), 23b (source key correction), 23 (combine+NGS ingest),
   21 (dev bet triage), 20 (divergence triage), 19 (tag acceptance workflow),
   18 (Kilgore re-score, trigger engine seed), 16 (bleacherreport ingest),
   15 (APEX board audit + override fix), 13b (school/archetype fix), 13 (weekly pipeline),
@@ -77,9 +84,8 @@ Prior sessions on record: 12 (DB rebuild), 13 (weekly pipeline), 13b (school/arc
 
 ## Next Milestone (Single Target)
 
-- APEX top-50 re-score with positional archetype libraries. Current scores use pre-archetype
-  trait vectors from Session 4. Run: python -m scripts.run_apex_scoring_2026 --batch top50 --force --apply 1
-  Verify all prospect_ids in TOP50_POSITION_OVERRIDES and ARCHETYPE_OVERRIDES before running.
+- Triage 9 new pending tag recommendations from Session 26 re-score.
+  Then: RAS re-ingest after pro days complete (run ingest_ras_2026.py with updated file).
 
 ---
 
@@ -117,21 +123,23 @@ SNAPSHOTS: Operational. Latest: snapshot_id=3 (2026-03-12). rows=995, coverage=9
   compute_source_snapshot_metrics → compute_snapshot_coverage →
   compute_snapshot_confidence → verify_snapshot_integrity
 
-APEX: Operational. 58 active 2026 scored prospects + 12 calibration artifacts
-  (is_active=0, is_calibration_artifact=1, excluded from board).
-  Tiers: ELITE=3, DAY1=21, DAY2=30, DAY3=4.
-  Divergence: ALIGNED=17, APEX_HIGH=23, APEX_LOW=0, APEX_LOW_PVC_STRUCTURAL=18.
-  Latest backup: data/apex_top50_rescored_session15.json.
+APEX: Operational. 59 active 2026 scored prospects (50 top-consensus re-scored Session 26) +
+  12 calibration artifacts (is_calibration_artifact=1, excluded from board).
+  Tiers (active non-cal): ELITE=3, DAY1=23, DAY2=31, DAY3=5.
+  Divergence: ALIGNED=16, APEX_HIGH=26, APEX_LOW=0, APEX_LOW_PVC_STRUCTURAL=20.
+  Latest backup: data/apex_top50_rescored_session26.json (147KB).
   Love (pid=61): RB-1 59.8 DAY2 Tier A v_injury=9.0 (carry clock CLEAR, Session 21).
+  CALIBRATION_OVERRIDES: all 11 PIDs corrected Session 26.
   Migrations applied: 0001–0039. Next migration: 0040.
-  NOTE: Current APEX scores use pre-archetype trait vectors from Session 4. Top-50 re-score
-  with positional libraries is pending.
+  NOTE: All scores now use positional archetype library trait vectors (Session 26 re-score complete).
 
 TAGS: Operational. Session 24 trigger engine built and active.
   Scripts: run_tag_triggers_2026.py (engine), accept_tag_recs_2026.py (workflow),
     draftos/tags/evaluator.py (pure function library).
   Schema: tag_definitions=27, tag_trigger_rules=14.
-  Rec status: accepted=55, dismissed=22, pending=0.
+  Rec status: accepted=55, dismissed=22, pending=9 (from Session 26 re-score).
+  Pending: Howell/Faulk/Mcdonald/Rutledge/Cooper Dev Bet; Josephs/Iheanachor Compression;
+    Ponds/Ramsey Divergence Alert.
   Active tags: Development Bet=28, Compression Flag=13, Divergence Alert=7, Elite RAS=4,
     Poor RAS=1, Great RAS=1, Injury Flag=1.
 
@@ -162,24 +170,32 @@ EXPORTS: board_2026_v1_default.csv last produced Session 21. Current for that sn
 19. ~~Session 23b: Source key correction, nflcom_2026 ingest (source_id=30), ngs deactivated~~ COMPLETE
 20. ~~Session 24: Tag trigger engine built (evaluator.py, run_tag_triggers_2026, accept_tag_recs_2026)~~ COMPLETE
 21. ~~Session 25: Full clean weekly pipeline run end-to-end (18 steps)~~ COMPLETE
-22. **APEX top-50 re-score with positional archetype libraries** ← NEXT
-23. RAS re-ingest after pro days complete — run ingest_ras_2026.py with updated file
-24. Post-draft audit framework activation (after April 2026 draft)
+22. ~~Session 26: APEX full re-score — calibration (11) + top-50 (50), CALIBRATION_OVERRIDES PIDs fixed~~ COMPLETE
+23. **Triage 9 new pending tag recs from Session 26 re-score** ← NEXT
+24. RAS re-ingest after pro days complete — run ingest_ras_2026.py with updated file
+25. Post-draft audit framework activation (after April 2026 draft)
 
 ---
 
 ## APEX Status
 
 - Version: v2.2
-- Active 2026 scored: 58 (is_active=1, is_calibration_artifact=0)
+- Active 2026 scored: 59 (is_active=1, is_calibration_artifact=0, top 50 re-scored Session 26)
 - Calibration artifacts: 12 (PIDs: 230,304,313,455,504,880,1050,1278,1371,1391,1729,1925)
-- Tier dist: ELITE=3, DAY1=21, DAY2=30, DAY3=4
-- Divergence: ALIGNED=17, APEX_HIGH=23, APEX_LOW=0, APEX_LOW_PVC_STRUCTURAL=18
-- Top APEX_HIGH (premium positions, actionable): Thieneman S +23, Mesidor EDGE +16,
-  Josephs EDGE +26, Howell EDGE +8
+  All re-scored Session 26 with correct PIDs and positions.
+- Tier dist (active non-cal): ELITE=3, DAY1=23, DAY2=31, DAY3=5
+- Divergence: ALIGNED=16, APEX_HIGH=26, APEX_LOW=0, APEX_LOW_PVC_STRUCTURAL=20
+- Top APEX_HIGH (premium positions, actionable):
+    Devin Moore CB: MAJOR +33 (previously MINOR — now the strongest actionable CB signal)
+    Kamari Ramsey S: MODERATE +28 (new signal from re-score)
+    Colton Hood CB: MODERATE +26
+    Joshua Josephs EDGE: MODERATE +22
+    Keith Abney CB: MODERATE +22
+    Dillon Thieneman S: MINOR +8 (was MAJOR +23 — signal compressed after real trait vectors)
+    Akheem Mesidor EDGE: ALIGNED +4 (was APEX_HIGH +16 — consensus was right, signal resolved)
 - CRITICAL: TOP50_POSITION_OVERRIDES and ARCHETYPE_OVERRIDES in run_apex_scoring_2026.py
-  corrected Session 15. If DB is ever rebuilt, re-verify ALL prospect_ids in both dicts.
-- Known issue: Akheem Mesidor shows EDGE-1 but correct eval is EDGE-4. Needs re-score.
+  corrected Session 15. CALIBRATION_OVERRIDES corrected Session 26.
+  If DB is ever rebuilt, re-verify ALL prospect_ids in ALL THREE dicts before running.
 - APEX LOW on non-premium positions (ILB, OLB, OG, C, TE, RB) is structural PVC, not
   actionable. Monitor APEX_HIGH on premium positions (QB, CB, EDGE, OT, S) only.
 
@@ -187,13 +203,20 @@ EXPORTS: board_2026_v1_default.csv last produced Session 21. Current for that sn
 
 ## Divergence Status
 
-- JALON KILGORE CB (pid=449, consensus=210): CB-3 ELITE 90.0, APEX_HIGH +209.
+- DEVIN MOORE CB (pid=37): APEX_HIGH MAJOR +33 — strongest actionable premium signal post Session 26.
+  Was MINOR in prior sessions; re-score elevated. Review CB PAA before acting.
+- KAMARI RAMSEY S (pid=148): APEX_HIGH MODERATE +28 — new signal from Session 26. Premium. Actionable.
+  Rec_id=85 pending review.
+- COLTON HOOD CB (pid=72): APEX_HIGH MODERATE +26 — persistent signal. CB-3 confirmed.
+- JALON KILGORE CB (pid=449): APEX_HIGH MAJOR +260 — divergence artifact (CB entry for Safety).
   Re-scored to S-3 DAY2 63.1 Session 18. Divergence Alert rec held pending combine
   man-coverage confirmation. Do NOT cite as signal until resolved.
-- KYRON DRONES QB (pid=1420, consensus=351): QB-5 DAY3 49.1, APEX_HIGH +294.
-  Very low consensus rank. Verify correct player in DB before acting on divergence.
-- D'Angelo Ponds (pid=3236): no consensus rank row — excluded from divergence recompute.
-  Non-blocking.
+- D'ANGELO PONDS CB (pid=3236): APEX_HIGH MAJOR +95 — no consensus rank row. Non-blocking.
+- KYRON DRONES QB (pid=1420, consensus=351): QB-5 DAY3 49.1, APEX_HIGH MAJOR +369.
+  Very low consensus rank. Artifact.
+- JALEN CATALON S (pid=1464): APEX_HIGH MAJOR +283 — artifact, very low consensus coverage.
+- DILLON THIENEMAN S (pid=29): APEX_HIGH MINOR +8 — compressed from +23 after real trait vectors.
+  Still positive signal but substantially less aggressive than prior sessions.
 
 ---
 
@@ -223,11 +246,11 @@ Inactive (data preserved): ngs_2026 (source_id=29, is_active=0) — model score,
 
 2) System Snapshot Output
 === DRAFTOS SYSTEM SNAPSHOT ===
-generated_utc: 2026-03-12T22:02:38.470749+00:00
+generated_utc: 2026-03-12T22:53:10.311657+00:00
 
 ## Git
 branch: main
-commit: 46cf63fc6f8e2d78551eea7035e4020dbd1fa60d
+commit: 5716138b9b6f13f2769b1f3d863343709747545f
 status: clean
 
 ## Tables
