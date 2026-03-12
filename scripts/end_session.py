@@ -28,6 +28,64 @@ def ensure_clean_git() -> None:
         raise SystemExit(1)
 
 
+def validate_state_snapshot_content() -> None:
+    """
+    Gate: refuse to close if STATE_SNAPSHOT.md looks like it hasn't
+    been updated this session.
+
+    Checks:
+    1. ## Last Completed Milestone section exists and is non-empty
+    2. ## Next Milestone (Single Target) section exists and is not the
+       generic placeholder text ("Additional source ingest..." or "UNKNOWN")
+    3. The file is more than 500 characters (not a stub)
+
+    If any check fails: print a descriptive error and raise SystemExit(1).
+    The analyst must update STATE_SNAPSHOT.md before session close will
+    proceed.
+    """
+    if not STATE_FILE.exists():
+        print("FAIL: STATE_SNAPSHOT.md not found.")
+        raise SystemExit(1)
+
+    content = STATE_FILE.read_text(encoding="utf-8")
+
+    if len(content.strip()) < 500:
+        print("FAIL: STATE_SNAPSHOT.md looks like a stub (< 500 chars).")
+        print("Update it with this session's work before closing.")
+        raise SystemExit(1)
+
+    if "## Last Completed Milestone" not in content:
+        print("FAIL: STATE_SNAPSHOT.md missing '## Last Completed Milestone' section.")
+        raise SystemExit(1)
+
+    # Extract next milestone text
+    m = re.search(
+        r"^##\s*Next Milestone\s*\(Single Target\)\s*$",
+        content, flags=re.MULTILINE
+    )
+    if not m:
+        print("FAIL: STATE_SNAPSHOT.md missing '## Next Milestone (Single Target)' heading.")
+        raise SystemExit(1)
+
+    after = content[m.end():]
+    stop = re.search(r"^\s*##\s+", after, flags=re.MULTILINE)
+    block = (after[: stop.start()] if stop else after).strip()
+
+    stale_markers = [
+        "Additional source ingest (source universe stable",
+        "UNKNOWN",
+        "Full clean weekly pipeline run",
+    ]
+    for marker in stale_markers:
+        if block.startswith(marker):
+            print(f"FAIL: Next Milestone appears to be the default placeholder text.")
+            print(f"  Found: {block[:80]}")
+            print("Update STATE_SNAPSHOT.md with this session's actual next milestone.")
+            raise SystemExit(1)
+
+    print("OK: STATE_SNAPSHOT.md content validated.")
+
+
 def update_state_timestamp() -> None:
     if not STATE_FILE.exists():
         print("STATE_SNAPSHOT.md missing.")
@@ -88,6 +146,19 @@ def extract_next_milestone(state_text: str) -> str:
     return "UNKNOWN (Next Milestone block was empty in STATE_SNAPSHOT.md)"
 
 
+def commit_session_artifacts() -> None:
+    """
+    Stage STATE_SNAPSHOT.md and BOOTSTRAP_PACKET.txt, commit, and push.
+    Called after both files are written. This is the ONLY git write
+    in the script — all work-in-progress must be committed before
+    end_session.py is invoked.
+    """
+    run(["git", "add", "STATE_SNAPSHOT.md", "BOOTSTRAP_PACKET.txt"])
+    run(["git", "commit", "-m", "session close: update STATE_SNAPSHOT + BOOTSTRAP_PACKET"])
+    run(["git", "push", "origin", "main"])
+    print("OK: STATE_SNAPSHOT.md + BOOTSTRAP_PACKET.txt committed and pushed.")
+
+
 def main() -> None:
     print("=== END SESSION ORCHESTRATOR ===")
 
@@ -101,6 +172,8 @@ def main() -> None:
 
     print("Running scripts/doctor_snapshot.py...")
     snapshot_output = run(["python", "scripts/doctor_snapshot.py"])
+
+    validate_state_snapshot_content()
 
     update_state_timestamp()
 
@@ -143,7 +216,9 @@ Include verification commands.
     BOOTSTRAP_FILE.write_text(packet.rstrip() + "\n", encoding="utf-8")
 
     print("BOOTSTRAP_PACKET.txt ready.")
-    print("Copy contents into next chat.")
+
+    commit_session_artifacts()
+
     print("=== SESSION CLOSED CLEANLY ===")
 
 
