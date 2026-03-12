@@ -225,69 +225,69 @@ def _resolve_position(prospect_id: int, position_group: str, position_raw: str |
 # ---------------------------------------------------------------------------
 CALIBRATION_OVERRIDES: dict[str, dict] = {
     "Carson Schwesinger": {
-        "prospect_id":  1464,
+        "prospect_id":  1925,   # corrected Session 26 (was 1464=Jalen Catalon)
         "position":     "ILB",
         "school":       "UCLA",
         "display_name": "Carson Schwesinger",
     },
     "Travis Hunter": {
-        "prospect_id":  885,
+        "prospect_id":  455,    # corrected Session 26 (was 885=Travis Kelce)
         "position":     "CB",
         "school":       "Colorado",
         "display_name": "Travis Hunter",
     },
     "Shedeur Sanders": {
-        "prospect_id":  813,
+        "prospect_id":  230,    # corrected Session 26 (was 813=Tyler Allgeier)
         "position":     "QB",
         "school":       "Colorado",
         "display_name": "Shedeur Sanders",
     },
     "Armand Membou": {
-        "prospect_id":  1717,
+        "prospect_id":  1371,   # corrected Session 26 (was 1717=Danny Striggow)
         "position":     "OT",
         "school":       "Missouri",
         "display_name": "Armand Membou",
     },
     "Tate Ratledge": {
-        "prospect_id":  1254,
+        "prospect_id":  880,    # corrected Session 26 (was 1254=Logan Webb)
         "position":     "OG",
         "school":       "Georgia",
         "display_name": "Tate Ratledge",
     },
-    # Gunnar Helm (pid=842) removed — 2025 draftee, cross-season contamination.
+    # Gunnar Helm (pid=313) removed — 2025 draftee, cross-season contamination.
     # Ghost row introduced via spamml (TEN NFL rows) + stale PFF list. Do NOT re-score.
     "Trevor Etienne": {
-        "prospect_id":  838,
+        "prospect_id":  304,    # corrected Session 26 (was 838=Kaimi Fairbairn)
         "position":     "RB",
         "school":       "Georgia",
         "display_name": "Trevor Etienne",
     },
     "Nick Emmanwori": {
-        "prospect_id":  1591,
+        "prospect_id":  1278,   # corrected Session 26 (was 1591=Jordan Clark)
         "position":     "S",
         "school":       "South Carolina",
         "display_name": "Nick Emmanwori",
     },
     "Donovan Ezeiruaku": {
-        "prospect_id":  1420,
+        "prospect_id":  1729,   # corrected Session 26 (was 1420=Kyron Drones)
         "position":     "EDGE",
         "school":       "Boston College",
         "display_name": "Donovan Ezeiruaku",
     },
     "Tyleik Williams": {
-        "prospect_id":  1405,
+        "prospect_id":  1050,   # corrected Session 26 (was 1405=Tj Sanders)
         "position":     "IDL",
         "school":       "Ohio State",
         "display_name": "Tyleik Williams",
     },
     "Chris Paul": {
-        "prospect_id":  916,
+        "prospect_id":  504,    # corrected Session 26 (was 916=Demario Douglas)
         "position":     "C",
         "school":       "Pittsburgh",
         "display_name": "Chris Paul Jr.",
     },
     "Jared Wilson": {
-        "prospect_id":  1736,
+        "prospect_id":  1391,   # corrected Session 26 (was 1736=Ethan Downs)
         "position":     "C",
         "school":       "Georgia",
         "display_name": "Jared Wilson",
