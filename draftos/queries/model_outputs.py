@@ -193,10 +193,12 @@ def get_big_board(
       ras_score,
       divergence_flag, jfosterfilm_rank, divergence_delta,
       apex_rank, apex_delta,
-      apex_composite, apex_tier, apex_archetype
+      apex_composite, apex_tier, apex_archetype,
+      tag_names  (pipe-delimited string of tag_name values, "" if none)
 
     Notes:
       - Snapshot scope: latest snapshot only (MAX id for season_id + model_id).
+      - coverage_count: sourced from prospect_board_snapshot_coverage (not snapshot_rows).
       - RAS: joined on prospect_id + season_id; column is ras_total.
       - divergence_delta: jfosterfilm_rank - consensus_rank
           negative = jf ranks prospect higher than consensus
@@ -207,6 +209,7 @@ def get_big_board(
           None if no apex rank set
       - apex_composite, apex_tier, apex_archetype: from apex_scores (APEX v2.2)
           None if not yet scored
+      - tag_names: pipe-delimited accepted tag names from prospect_tags
 
     TODO Session 3: Prospect detail expander — click row, show explain_json breakdown,
       source-by-source rank table, confidence reasons, APEX notes field.
@@ -243,7 +246,7 @@ def get_big_board(
           cf.confidence_score,
           cf.sources_present,
 
-          sr.coverage_count,
+          cov.coverage_count,
           ps.snapshot_date_utc   AS snapshot_date,
 
           r.ras_total            AS ras_score,
@@ -272,6 +275,10 @@ def get_big_board(
          AND cf.prospect_id  = sr.prospect_id
          AND cf.season_id    = sr.season_id
          AND cf.model_id     = sr.model_id
+
+        LEFT JOIN prospect_board_snapshot_coverage cov
+          ON cov.snapshot_id  = sr.snapshot_id
+         AND cov.prospect_id  = sr.prospect_id
 
         LEFT JOIN ras r
           ON r.prospect_id = sr.prospect_id
@@ -322,5 +329,22 @@ def get_big_board(
             row["apex_delta"] = row["consensus_rank"] - apex_rank
         else:
             row["apex_delta"] = None
+
+    # --- Tags: accepted tags per prospect (pipe-delimited tag_name string) ---
+    tag_rows = conn.execute(
+        """
+        SELECT pt.prospect_id,
+               GROUP_CONCAT(td.tag_name, '|') AS tag_names
+        FROM prospect_tags pt
+        JOIN tag_definitions td ON pt.tag_def_id = td.tag_def_id
+        GROUP BY pt.prospect_id
+        """
+    ).fetchall()
+    tags_by_pid: dict[int, str] = {
+        int(r["prospect_id"]): r["tag_names"] for r in tag_rows
+    }
+
+    for row in board:
+        row["tag_names"] = tags_by_pid.get(row["prospect_id"], "") or ""
 
     return board
