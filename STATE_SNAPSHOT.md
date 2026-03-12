@@ -10,7 +10,26 @@ Last Updated (UTC): 2026-03-12T23:58:49.816504+00:00
 
 ## Last Completed Milestone
 
-Session 27 — Max Klare position fix (LB→TE) + tag rec triage (9 pending → 0 pending).
+Session 28 — Tag UI live: inline tag pills, sidebar tag filter, coverage fix, UI polish.
+
+- Tag pills: "Tags" column added to main board dataframe. Emoji text labels per tag type
+  (⚡ DIV, 📈 DEV, ⚖ COMP, 🔥 ERAS, ✓ GRAS, ⚠ PRAS, 🩹 INJ). 44 tagged prospects visible.
+- Tag filter: sidebar checkboxes (7 tag types), OR logic. Selecting any tag collapses board
+  to matching prospects. Uncheck all = full board restored.
+- Tagged prospects expander: colored HTML pill badges (amber/blue/purple/green/teal/red/orange)
+  rendered via st.markdown unsafe_allow_html. Each tagged row shows rank + APEX + pills.
+- Coverage fix: get_big_board() now LEFT JOINs prospect_board_snapshot_coverage on
+  snapshot_id + prospect_id. prospect_board_snapshot_rows.coverage_count was always NULL.
+  Sadiq now shows coverage=14 (was NULL/0). All 995 board rows fixed.
+- APEX tier sort: _apex_tier_sort integer key added (ELITE=0, DAY1=1 ... UDFA=5).
+  Hidden from display. APEX scores panel now pre-sorted ELITE→DAY1→DAY2→DAY3.
+- Em dash: APEX and Δ APEX cells show — instead of blank for unscored prospects.
+- Tag legend: collapsible sidebar expander below tag checkboxes. Describes all 7 tag types.
+- Column guide: collapsible expander above the board. Markdown table defining all 14 columns.
+- Files changed: app/app.py, draftos/queries/model_outputs.py.
+- Doctor: PASSED. No schema changes. No pipeline changes.
+
+Prior: Session 27 — Max Klare position fix (LB→TE) + tag rec triage (9 pending → 0 pending).
 
 - Max Klare (pid=6): position_group updated LB→TE. Two inactive duplicate rows deactivated
   (pid=3559 TE Ohio State, pid=4369 LB dedup) after UNIQUE constraint blocked direct update.
@@ -81,8 +100,8 @@ Prior sessions on record: 12 (DB rebuild), 13 (weekly pipeline), 13b (school/arc
 
 ## Next Milestone (Single Target)
 
-- run_weekly_update --fast to rebuild snapshot with correct coverage data (resolves
-  Sadiq coverage_count NULL in UI). Then: RAS re-ingest after pro days complete.
+- RAS re-ingest after pro days complete (ingest_ras_2026.py with updated file).
+  Then: Kamari Ramsey S full PAA run — APEX_HIGH MODERATE +28, strongest unreviewed S signal.
 
 ---
 
@@ -171,8 +190,9 @@ EXPORTS: board_2026_v1_default.csv last produced Session 21. Current for that sn
 21. ~~Session 25: Full clean weekly pipeline run end-to-end (18 steps)~~ COMPLETE
 22. ~~Session 26: APEX full re-score — calibration (11) + top-50 (50), CALIBRATION_OVERRIDES PIDs fixed~~ COMPLETE
 23. ~~Session 27: Max Klare LB→TE fix + 9 pending tag recs triaged~~ COMPLETE
-24. **run_weekly_update --fast to rebuild snapshot (resolves coverage_count NULL)** ← NEXT
-25. RAS re-ingest after pro days complete — run ingest_ras_2026.py with updated file
+24. ~~Session 28: Tag UI live — pills, filter, coverage fix, APEX sort, legend, column guide~~ COMPLETE
+25. **RAS re-ingest after pro days complete — run ingest_ras_2026.py with updated file** ← NEXT
+26. Kamari Ramsey S evaluation — APEX_HIGH MODERATE +28, strong signal, no PAA run yet
 26. Post-draft audit framework activation (after April 2026 draft)
 
 ---
