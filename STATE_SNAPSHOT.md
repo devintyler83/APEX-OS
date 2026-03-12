@@ -10,7 +10,31 @@ Last Updated (UTC): 2026-03-12T08:21:26.451330+00:00
 
 ## Last Completed Milestone
 
-Session 23b — Source key correction, nflcom_2026 ingest, ngs_2026 deactivation.
+Session 24 — Tag trigger evaluation engine built and activated. CI workflow removed.
+
+- Built draftos/tags/evaluator.py: pure function library, no DB access.
+  evaluate_rule(rule_expression, ctx) -> (bool, str). Never raises. Handles compound
+  "and" chains recursively. Returns (False, "") on missing fields — no false positives.
+- Built scripts/run_tag_triggers_2026.py: new engine with --apply/--prospect_id/--season.
+  Imports from draftos.tags.evaluator. Backs up DB before writes.
+  59 prospects evaluated, 14 rules checked, 65 recs already existed (idempotent), 0 new.
+  4 unfireable rules documented: floor_play, possible_bust_system, riser_tier_jump, faller_tier_drop.
+  74 non-premium divergence checks skipped (structural PVC — not actionable).
+- Built scripts/accept_tag_recs_2026.py: new acceptance workflow with --action interface.
+  --action list|accept|dismiss|accept-all-tag|dismiss-all-tag.
+  --position filter added to list. Sorted by display_order ASC, position, name.
+  Kilgore Divergence Alert (rec_id=48) accepted during verification (ptag_id=55, source=system).
+- Removed .github/workflows/python-package-conda.yml — DraftOS is local-first, CI not applicable.
+- Session infra fixes: end_session.py now validates STATE_SNAPSHOT + commits + pushes artifacts.
+  CLAUDE.md tracked in git. STATE_SNAPSHOT.md updated to Session 23b clean state.
+- Doctor: PASSED. Snapshot integrity: PASSED.
+- Active tags post-S24: Development Bet=28, Compression Flag=13, Divergence Alert=7,
+  Elite RAS=4, Poor RAS=1, Great RAS=1, Injury Flag=1. Rec status: accepted=55, dismissed=22, pending=0.
+
+Prior sessions: 23b (source key correction), 23 (combine+NGS ingest), 21 (dev bet triage),
+  20 (divergence triage), 19 (tag acceptance workflow), 18 (Kilgore re-score, trigger engine seed),
+  16 (bleacherreport ingest), 15 (APEX board audit + override fix), 13b (school/archetype fix),
+  13 (weekly pipeline), 12 (DB rebuild).
 
 - Renamed source nflcom_2026 (source_id=28) → combine_ranks_2026. 735 ranking rows and all
   RAS measurables intact. Notes field updated. ras rows unaffected (stored by prospect_id).
@@ -35,9 +59,9 @@ Prior sessions on record: 12 (DB rebuild), 13 (weekly pipeline), 13b (school/arc
 
 ## Next Milestone (Single Target)
 
-- Tag system activation — build trigger evaluation engine: evaluate tag_trigger_rules against
-  scored prospects, generate prospect_tag_recommendations rows, build acceptance workflow.
-  Schema deployed (Layer 10), seed data live. Trigger engine not yet built.
+- Full clean weekly pipeline run (18 steps) end-to-end to verify all layers pass cleanly
+  post-session-23b source changes (combine_ranks_2026 rename, nflcom_2026 added, ngs deactivated).
+  Run: python -m scripts.run_weekly_update --fast
 
 ---
 
@@ -86,10 +110,12 @@ APEX: Operational. 58 active 2026 scored prospects + 12 calibration artifacts
   NOTE: Current APEX scores use pre-archetype trait vectors from Session 4. Top-50 re-score
   with positional libraries is pending.
 
-TAGS: Operational. Session 21 triage complete.
-  Schema: tag_definitions=27, tag_trigger_rules=14. Trigger engine NOT YET BUILT.
-  Rec status: accepted=54, dismissed=22, pending=1 (Kilgore Divergence Alert, held for combine).
-  Active tags: Development Bet=28, Compression Flag=13, Divergence Alert=6, Elite RAS=4,
+TAGS: Operational. Session 24 trigger engine built and active.
+  Scripts: run_tag_triggers_2026.py (engine), accept_tag_recs_2026.py (workflow),
+    draftos/tags/evaluator.py (pure function library).
+  Schema: tag_definitions=27, tag_trigger_rules=14.
+  Rec status: accepted=55, dismissed=22, pending=0.
+  Active tags: Development Bet=28, Compression Flag=13, Divergence Alert=7, Elite RAS=4,
     Poor RAS=1, Great RAS=1, Injury Flag=1.
 
 EXPORTS: board_2026_v1_default.csv last produced Session 21. Current for that snapshot.
@@ -117,8 +143,8 @@ EXPORTS: board_2026_v1_default.csv last produced Session 21. Current for that sn
 17. ~~Session 21: Love re-score (RB-1 59.8), Dev Bet triage (28 accepted), Compression Flag triage~~ COMPLETE
 18. ~~Session 23: combine_ranks_2026 ingest (source_id=28), ngs_2026 ingest (source_id=29)~~ COMPLETE
 19. ~~Session 23b: Source key correction, nflcom_2026 ingest (source_id=30), ngs deactivated~~ COMPLETE
-20. **Tag system activation** — trigger evaluation engine + acceptance workflow ← NEXT
-21. Full clean weekly pipeline run end-to-end (18 steps) — validate current state
+20. ~~Session 24: Tag trigger engine built (evaluator.py, run_tag_triggers_2026, accept_tag_recs_2026)~~ COMPLETE
+21. **Full clean weekly pipeline run end-to-end (18 steps)** ← NEXT
 22. RAS re-ingest after pro days complete — run ingest_ras_2026.py with updated file
 23. APEX top-50 re-score with positional archetype libraries (current use generic Session 4 vectors)
 24. Post-draft audit framework activation (after April 2026 draft)
