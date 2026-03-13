@@ -162,6 +162,7 @@ TOP50_POSITION_OVERRIDES: dict[int, str] = {
     55:   "OT",    # Emmanuel Pregnon  (Oregon)
     96:   "OT",    # Blake Miller      (Clemson)
     98:   "OG",    # Olaivavega Ioane  (Penn State)
+    136:  "OG",    # Keylan Rutledge   (Georgia) — position_raw='G' not in _CLEAN_POSITIONS; added Session 37
     225:  "C",     # Connor Lew        (Auburn)
     # DT -> IDL
     75:   "IDL",   # Caleb Banks       (Florida)

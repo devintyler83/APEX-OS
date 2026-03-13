@@ -1,5 +1,5 @@
 """
-DraftOS Big Board — Session 31
+DraftOS Big Board — Session 37
 Read-only Streamlit UI with divergence flags, APEX rank input, APEX v2.2 scores,
 tag display, and prospect detail drawer.
 No DB writes except through save_apex_rank() and clear_apex_rank(). No business logic.
@@ -20,63 +20,10 @@ _ON_SELECT_AVAILABLE = tuple(
 st.set_page_config(layout="wide", page_title="DraftOS Big Board")
 
 # ---------------------------------------------------------------------------
-# Tag helpers
+# Tag display maps
 # ---------------------------------------------------------------------------
 
-# Actual tag_name values as stored in tag_definitions
-_TAG_COLOR_MAP: dict[str, str] = {
-    "Divergence Alert":  "#F59E0B",
-    "Development Bet":   "#3B82F6",
-    "Compression Flag":  "#8B5CF6",
-    "Elite RAS":         "#10B981",
-    "Great RAS":         "#14B8A6",
-    "Poor RAS":          "#EF4444",
-    "Injury Flag":       "#F97316",
-}
-
-_TAG_LABEL_MAP: dict[str, str] = {
-    "Divergence Alert":  "⚡ DIV",
-    "Development Bet":   "📈 DEV",
-    "Compression Flag":  "⚖ COMP",
-    "Elite RAS":         "🔥 ERAS",
-    "Great RAS":         "✓ GRAS",
-    "Poor RAS":          "⚠ PRAS",
-    "Injury Flag":       "🩹 INJ",
-}
-
-# Ordered list for sidebar checkboxes
-_SIDEBAR_TAGS: list[str] = [
-    "Divergence Alert",
-    "Development Bet",
-    "Compression Flag",
-    "Elite RAS",
-    "Great RAS",
-    "Poor RAS",
-    "Injury Flag",
-]
-
-# APEX tier canonical sort order
-_APEX_TIER_ORDER: dict[str, int] = {
-    "ELITE":  0,
-    "DAY1":   1,
-    "DAY2":   2,
-    "DAY3":   3,
-    "UDFA-P": 4,
-    "UDFA":   5,
-}
-
-# Tag color emoji for drawer panels
-_TAG_EMOJI_MAP: dict[str, str] = {
-    "green": "🟢",
-    "red":   "🔴",
-    "blue":  "🔵",
-    "gold":  "🟡",
-}
-
-# ---------------------------------------------------------------------------
-# Frontend display aliases — backend strings NEVER shown to users
-# Keys are the exact tag_name values from tag_definitions.
-# ---------------------------------------------------------------------------
+# Frontend display labels — used in board column text AND pill labels (unified)
 _TAGS_DISPLAY_MAP: dict[str, str] = {
     # Athletic scores
     "Elite RAS":          "🌟 Elite Athlete",
@@ -110,7 +57,7 @@ _TAGS_DISPLAY_MAP: dict[str, str] = {
     "Great Pro Day":      "💪 Great Pro Day",
     "Trade-Up Target":    "🔝 Trade-Up",
     "Value Zone":         "💰 Value Zone",
-    # Legacy engine tags (from apex_scores.tags comma field)
+    # Legacy engine tags
     "Smith Rule":         "⚠️ Char. Cap",
     "CRUSH":              "💎 Priority",
     "Walk-On Flag":       "🏃 Walk-On",
@@ -118,62 +65,160 @@ _TAGS_DISPLAY_MAP: dict[str, str] = {
     "Schwesinger Rule":   "🚀 Elite Char.",
 }
 
-_GAP_LABEL_DISPLAY_MAP: dict[str, str] = {
-    "CLEAN"       : "✅ Clean Fit",
-    "SOLID"       : "🟢 Solid Fit",
-    "TWEENER"     : "⚠️ Tweener",
-    "COMPRESSION" : "🔵 Elite Tweener",
-    "NO_FIT"      : "🔴 No Dominant Fit",
+# Pill colors: (background, border, text) — dark theme styled
+_TAG_PILL_COLORS: dict[str, tuple[str, str, str]] = {
+    "Elite RAS":          ("#1a2e1a", "#2d5a2d", "#7defa7"),
+    "Great RAS":          ("#1a2e28", "#2d5040", "#5de8a0"),
+    "Poor RAS":           ("#2e1a1a", "#5a2d2d", "#ef7d7d"),
+    "Terrible RAS":       ("#1e0a0a", "#4a1a1a", "#ef5252"),
+    "Injury Flag":        ("#2e1a00", "#5a3500", "#ef9f44"),
+    "Injury Risk":        ("#2e1a00", "#5a3500", "#ef9f44"),
+    "Character Watch":    ("#2e0000", "#5a0000", "#ef4444"),
+    "Off-Field Concerns": ("#2e0000", "#5a0000", "#ef4444"),
+    "Film Concern":       ("#1a1a2e", "#2d2d5a", "#9898ef"),
+    "Possible Bust":      ("#2e1a00", "#5a3800", "#ef8844"),
+    "Compression Flag":   ("#1e1a2e", "#3d2d5a", "#c4a8ef"),
+    "Divergence Alert":   ("#2e2400", "#5a4800", "#ffd666"),
+    "Scheme Dependent":   ("#1a1a2e", "#2d2d5a", "#7d7def"),
+    "Development Bet":    ("#1a1f2e", "#2d3d5a", "#7ab8ef"),
+    "Floor Play":         ("#1a2e1a", "#2d5a2d", "#7def7d"),
+    "Riser":              ("#1a2e1a", "#2d5a2d", "#7def7d"),
+    "Faller":             ("#2e1a1a", "#5a2d2d", "#ef7d7d"),
+    "Scheme Fit":         ("#1a2e28", "#2d5040", "#5de8a0"),
+    "Want":               ("#1a2e1a", "#2d5a2d", "#7defa7"),
+    "Do Not Want":        ("#2e1a1a", "#5a2d2d", "#ef7d7d"),
+    "Sleeper":            ("#1a2400", "#385500", "#b8ef44"),
+    "Top 5 NextGen":      ("#2e2400", "#5a4800", "#ffd666"),
+    "Film Favorite":      ("#1a1a2e", "#2d2d5a", "#9898ef"),
+    "Great Combine":      ("#1a2e28", "#2d5040", "#5de8a0"),
+    "Great Pro Day":      ("#1a2e28", "#2d5040", "#5de8a0"),
+    "Trade-Up Target":    ("#2e2400", "#5a4800", "#ffd666"),
+    "Value Zone":         ("#1a2e1a", "#2d5a2d", "#7defa7"),
+    "Smith Rule":         ("#2e0000", "#5a0000", "#ef4444"),
+    "CRUSH":              ("#2e2400", "#5a4800", "#ffd666"),
+    "Walk-On Flag":       ("#1a1a1a", "#333333", "#aaaaaa"),
+    "Two-Way Premium":    ("#1a2e28", "#2d5040", "#5de8a0"),
+    "Schwesinger Rule":   ("#1a2e1a", "#2d5a2d", "#7defa7"),
+}
+_TAG_PILL_DEFAULT: tuple[str, str, str] = ("#1e1e2e", "#3d3d5a", "#9d9dba")
+
+# Short labels for sidebar checkboxes (concise UI)
+_TAG_LABEL_MAP: dict[str, str] = {
+    "Divergence Alert":  "⚡ DIV",
+    "Development Bet":   "📈 DEV",
+    "Compression Flag":  "⚖ COMP",
+    "Elite RAS":         "🔥 ERAS",
+    "Great RAS":         "✓ GRAS",
+    "Poor RAS":          "⚠ PRAS",
+    "Injury Flag":       "🩹 INJ",
 }
 
-# Tag names that exist in prospect_tags for system purposes but should
-# never appear in board display columns.
+# Ordered list for sidebar checkboxes
+_SIDEBAR_TAGS: list[str] = [
+    "Divergence Alert",
+    "Development Bet",
+    "Compression Flag",
+    "Elite RAS",
+    "Great RAS",
+    "Poor RAS",
+    "Injury Flag",
+]
+
+# APEX tier canonical sort order
+_APEX_TIER_ORDER: dict[str, int] = {
+    "ELITE":  0,
+    "DAY1":   1,
+    "DAY2":   2,
+    "DAY3":   3,
+    "UDFA-P": 4,
+    "UDFA":   5,
+}
+
+_GAP_LABEL_DISPLAY_MAP: dict[str, str] = {
+    "CLEAN":       "✅ Clean Fit",
+    "SOLID":       "🟢 Solid Fit",
+    "TWEENER":     "⚠️ Tweener",
+    "COMPRESSION": "🔵 Elite Tweener",
+    "NO_FIT":      "🔴 No Dominant Fit",
+}
+
 _INTERNAL_TAG_NAMES: frozenset[str] = frozenset({
     "apex_rank_2026",
 })
 
+# ---------------------------------------------------------------------------
+# Position and tier visual config (detail card)
+# ---------------------------------------------------------------------------
 
-def _render_tags(raw_tags_string: str) -> list[str]:
-    """
-    Split apex_scores.tags comma string, map each to frontend display label.
-    Returns list of display strings. Unknown tags pass through title-cased.
-    """
-    if not raw_tags_string:
-        return []
-    return [
-        _TAGS_DISPLAY_MAP.get(t.strip(), t.strip().title())
-        for t in raw_tags_string.split(",")
-        if t.strip()
-    ]
+_POS_BADGE_COLORS: dict[str, str] = {
+    "QB":   "#7b2fff",
+    "EDGE": "#ff5e3a",
+    "CB":   "#00b4d8",
+    "ILB":  "#f4a261",
+    "OLB":  "#f4a261",
+    "OT":   "#48cae4",
+    "OG":   "#48cae4",
+    "C":    "#48cae4",
+    "S":    "#06d6a0",
+    "WR":   "#ff9f1c",
+    "TE":   "#e9c46a",
+    "RB":   "#ef476f",
+    "IDL":  "#a8dadc",
+}
+
+# (badge background, badge text)
+_APEX_TIER_BADGE: dict[str, tuple[str, str]] = {
+    "ELITE":  ("#ffd700", "#000000"),
+    "DAY1":   ("#1a73e8", "#ffffff"),
+    "DAY2":   ("#2e7d32", "#ffffff"),
+    "DAY3":   ("#f57f17", "#000000"),
+    "UDFA-P": ("#546e7a", "#ffffff"),
+    "UDFA":   ("#37474f", "#cccccc"),
+}
+
+# Score text colors by tier
+_APEX_SCORE_COLORS: dict[str, str] = {
+    "ELITE":  "#ffd700",
+    "DAY1":   "#7ab8ef",
+    "DAY2":   "#69f0ae",
+    "DAY3":   "#ffd740",
+    "UDFA-P": "#90a4ae",
+    "UDFA":   "#78909c",
+}
+
+# Archetype fit badge: (bg, text)
+_GAP_BADGE_COLORS: dict[str, tuple[str, str]] = {
+    "CLEAN":       ("#00e676", "#000000"),
+    "SOLID":       ("#69f0ae", "#000000"),
+    "TWEENER":     ("#ffd740", "#000000"),
+    "COMPRESSION": ("#82b1ff", "#000000"),
+    "NO_FIT":      ("#ff5252", "#ffffff"),
+}
 
 
-def _render_gap_label(gap_label: str | None, archetype_gap: float | None) -> str:
+# ---------------------------------------------------------------------------
+# Tag helpers
+# ---------------------------------------------------------------------------
+
+def _render_tag_pill(tag_name: str) -> str:
     """
-    Return a clean badge string for archetype fit quality.
-    Raw gap number is suppressed from display — shown only via this badge.
+    Return a styled HTML pill for a single tag_name.
+    Uses _TAGS_DISPLAY_MAP for label — consistent with board column text.
     """
-    if not gap_label:
-        return ""
-    display_label = _GAP_LABEL_DISPLAY_MAP.get(
-        gap_label.strip().upper(),
-        gap_label.strip().title()
+    label = _TAGS_DISPLAY_MAP.get(tag_name, tag_name)
+    bg, border, text = _TAG_PILL_COLORS.get(tag_name, _TAG_PILL_DEFAULT)
+    return (
+        f'<span style="background:{bg};border:1px solid {border};color:{text};'
+        f'border-radius:999px;padding:2px 10px;font-size:11px;font-weight:600;'
+        f'display:inline-block;margin:2px">{label}</span>'
     )
-    return display_label  # gap float intentionally NOT shown
 
 
 def render_tag_pills(tag_names: list[str]) -> str:
-    """Return HTML string of colored pill spans for the given tag names."""
-    pills = []
-    for tag in tag_names:
-        color = _TAG_COLOR_MAP.get(tag, "#6B7280")
-        label = _TAG_LABEL_MAP.get(tag, tag[:4].upper())
-        pill = (
-            f'<span style="background:{color};color:white;padding:2px 6px;'
-            f'border-radius:4px;font-size:11px;font-weight:600;'
-            f'margin-right:3px;white-space:nowrap">{label}</span>'
-        )
-        pills.append(pill)
-    return "".join(pills)
+    """Return HTML string of styled pill spans for the given tag names."""
+    return "".join(
+        _render_tag_pill(t) for t in tag_names if t not in _INTERNAL_TAG_NAMES
+    )
 
 
 def _fmt_tags_text(tag_names_str: str) -> str:
@@ -190,6 +235,426 @@ def _parse_tags(tag_names_str: str) -> list[str]:
     if not tag_names_str:
         return []
     return [t.strip() for t in tag_names_str.split("|") if t.strip()]
+
+
+def _fmt_tags(raw) -> str:
+    """Format comma-delimited tag names for board display. Filters internal system tags."""
+    if not raw or (isinstance(raw, float) and pd.isna(raw)):
+        return ""
+    parts = [t.strip() for t in str(raw).split(",") if t.strip()]
+    parts = [p for p in parts if p not in _INTERNAL_TAG_NAMES]
+    return "  ".join(_TAGS_DISPLAY_MAP.get(p, p) for p in parts)
+
+
+def _render_gap_label(gap_label: str | None, archetype_gap: float | None) -> str:
+    if not gap_label:
+        return ""
+    return _GAP_LABEL_DISPLAY_MAP.get(gap_label.strip().upper(), gap_label.strip().title())
+
+
+# ---------------------------------------------------------------------------
+# Trait bar helpers (detail card)
+# ---------------------------------------------------------------------------
+
+def _bar_color(val: float) -> str:
+    if val >= 9.0:
+        return "#00e676"
+    if val >= 7.0:
+        return "#69f0ae"
+    if val >= 5.0:
+        return "#ffd740"
+    return "#ff5252"
+
+
+def _trait_bar_html(label: str, val: float | None) -> str:
+    if val is None:
+        return (
+            f'<div style="display:flex;align-items:center;margin-bottom:6px">'
+            f'<div style="width:175px;font-size:12px;color:#777">{label}</div>'
+            f'<div style="flex:1;background:#222;border-radius:3px;height:8px;margin:0 10px"></div>'
+            f'<div style="width:28px;text-align:right;font-size:12px;color:#555">—</div>'
+            f'</div>'
+        )
+    pct   = min(max(val / 10.0 * 100, 0), 100)
+    color = _bar_color(val)
+    return (
+        f'<div style="display:flex;align-items:center;margin-bottom:6px">'
+        f'<div style="width:175px;font-size:12px;color:#bbb">{label}</div>'
+        f'<div style="flex:1;background:#222;border-radius:3px;height:8px;margin:0 10px">'
+        f'<div style="width:{pct:.0f}%;background:{color};height:100%;border-radius:3px"></div></div>'
+        f'<div style="width:28px;text-align:right;font-size:12px;color:{color};font-weight:700">{val:.1f}</div>'
+        f'</div>'
+    )
+
+
+# ---------------------------------------------------------------------------
+# Dynamic bullet generator
+# ---------------------------------------------------------------------------
+
+def _generate_bullets(d: dict) -> tuple[list[str], list[str]]:
+    """
+    Generate strength and flag bullets from trait scores.
+    Returns (strengths, flags) — each a list of bullet strings.
+    """
+    strengths: list[str] = []
+    flags:     list[str] = []
+
+    v_ath  = d.get("v_athleticism")
+    v_proc = d.get("v_processing")
+    v_prod = d.get("v_production")
+    v_dev  = d.get("v_dev_traj")
+    v_comp = d.get("v_comp_tough")
+    v_vers = d.get("v_scheme_vers")
+    v_inj  = d.get("v_injury")
+    c2     = d.get("c2_motivation")
+    c3     = d.get("c3_psych_profile")
+    ras    = d.get("ras_score") or d.get("ras_total")
+    gap    = (d.get("gap_label") or "").strip().upper()
+    fit_sc = d.get("archetype_gap")
+    e_conf = d.get("eval_confidence") or ""
+    schwes = bool(d.get("schwesinger_full")) or bool(d.get("schwesinger_half"))
+
+    # ── Strengths ──────────────────────────────────────────────────────────
+    if v_ath is not None:
+        ras_str = f"{float(ras):.2f}" if ras is not None else "N/A"
+        if v_ath >= 9.5:
+            strengths.append(
+                f"Elite athletic profile — {v_ath:.1f}/10 athleticism with {ras_str} RAS"
+            )
+        elif v_ath >= 8.5:
+            strengths.append(
+                f"Above-average athlete — {v_ath:.1f}/10, moves well for the position"
+            )
+
+    if v_proc is not None:
+        if v_proc >= 9.0:
+            strengths.append(
+                f"Elite pre-snap processor — {v_proc:.1f}/10, anticipates before the snap"
+            )
+        elif v_proc >= 8.0:
+            strengths.append(
+                f"Advanced diagnostic ability — {v_proc:.1f}/10, quick read-to-react"
+            )
+
+    if v_prod is not None and v_prod >= 9.0:
+        strengths.append(f"Elite production baseline — {v_prod:.1f}/10 in a proven role")
+
+    if v_dev is not None and v_dev >= 9.0:
+        strengths.append(
+            f"Exceptional development trajectory — {v_dev:.1f}/10, improving fast"
+        )
+
+    if c2 is not None and c2 >= 8.0:
+        strengths.append(
+            f"Motor and drive rated {c2:.1f}/10 — coaches consistently note elite work ethic"
+        )
+
+    if v_comp is not None and v_comp >= 9.0:
+        strengths.append(f"Rises in big games — {v_comp:.1f}/10 competitive toughness")
+
+    if v_vers is not None and v_vers >= 9.0:
+        strengths.append(
+            f"Scheme-transcendent — {v_vers:.1f}/10, deploys across multiple systems"
+        )
+
+    if v_inj is not None and v_inj >= 9.0:
+        strengths.append(
+            f"Elite durability profile — {v_inj:.1f}/10, consistently available"
+        )
+
+    if schwes:
+        strengths.append(
+            "Character multiplier active — C2+C3 combo boosts Dev Trajectory"
+        )
+
+    if gap == "CLEAN" and fit_sc is not None:
+        strengths.append(
+            f"Clean archetype match — {fit_sc:.1f} fit score, clear translation path"
+        )
+
+    # ── Flags ──────────────────────────────────────────────────────────────
+    if v_ath is not None and v_ath < 6.0:
+        flags.append(
+            f"Athleticism concern — {v_ath:.1f}/10 raises FM-1 risk at NFL speed"
+        )
+
+    if v_proc is not None and v_proc < 6.0:
+        flags.append(
+            f"Processing ceiling flagged — {v_proc:.1f}/10, FM-3 risk in NFL complexity"
+        )
+
+    if v_vers is not None and v_vers < 5.0:
+        flags.append(
+            f"Scheme-dependent — {v_vers:.1f}/10, FM-2/FM-6 risk without right fit"
+        )
+
+    if v_inj is not None and v_inj < 6.0:
+        flags.append(
+            f"Injury/durability concern — {v_inj:.1f}/10, FM-4 risk over full season"
+        )
+
+    if c2 is not None and c2 < 5.0:
+        flags.append(f"Motor/drive below threshold — {c2:.1f}/10, FM-5 watch list")
+
+    if c3 is not None and c3 < 3.0:
+        flags.append("Smith Rule active — C3 score caps character ceiling")
+
+    if v_dev is not None and v_dev < 5.0:
+        flags.append(
+            f"Limited development runway — {v_dev:.1f}/10, near finished product"
+        )
+
+    if v_prod is not None and v_prod < 6.0:
+        flags.append(
+            f"Production questions — {v_prod:.1f}/10, limited sample or scheme-aided"
+        )
+
+    if gap == "TWEENER":
+        flags.append("Tweener archetype fit — falls between profiles, deployment TBD")
+    elif gap == "NO_FIT" and fit_sc is not None:
+        flags.append(
+            f"Archetype miss — {fit_sc:.1f} fit score, translation confidence low"
+        )
+
+    if ras is None:
+        flags.append("Combine data not yet available")
+
+    if "C" in e_conf:
+        flags.append(
+            "Eval Confidence Tier C — heavy projection required, Tier C discount applied"
+        )
+
+    # Defaults
+    if not strengths:
+        strengths = [
+            "Sufficient tape evidence exists; no standout strength vectors above threshold."
+        ]
+    if not flags:
+        flags = [
+            "No significant flags identified at current eval confidence level."
+        ]
+
+    return strengths, flags
+
+
+# ---------------------------------------------------------------------------
+# Detail card renderers
+# ---------------------------------------------------------------------------
+
+def _render_apex_detail(d: dict) -> None:
+    """Render full APEX evaluation card with styled HTML sections and dynamic bullets."""
+
+    # ── Header ────────────────────────────────────────────────────────────────
+    pos    = d.get("position_group") or "?"
+    name   = d.get("display_name") or "Unknown"
+    school = d.get("school_canonical") or "—"
+    score  = d.get("apex_composite")
+    tier   = (d.get("apex_tier") or "").strip().upper()
+    crank  = d.get("consensus_rank")
+    conf   = d.get("confidence_band") or "—"
+    ras    = d.get("ras_score") or d.get("ras_total")
+
+    pos_color   = _POS_BADGE_COLORS.get(pos, "#555555")
+    tier_bg, tier_text = _APEX_TIER_BADGE.get(tier, ("#555555", "#ffffff"))
+    score_color = _APEX_SCORE_COLORS.get(tier, "#e0e0e0")
+    score_str   = f"{score:.1f}" if score is not None else "—"
+    rank_str    = f"#{int(crank)}" if crank is not None and pd.notna(crank) else "—"
+    ras_str     = f"{float(ras):.2f}" if ras is not None and pd.notna(ras) else "—"
+
+    header_html = f"""
+<div style="display:flex;align-items:center;gap:10px;padding:14px 0 10px 0;flex-wrap:wrap;
+            border-bottom:1px solid #333">
+  <span style="background:{pos_color};color:white;padding:5px 12px;border-radius:6px;
+               font-size:13px;font-weight:800;letter-spacing:0.5px">{pos}</span>
+  <span style="font-size:22px;font-weight:800;color:#f0f0f0">{name}</span>
+  <div style="flex:1"></div>
+  <span style="font-size:30px;font-weight:900;color:{score_color}">{score_str}</span>
+  <span style="background:{tier_bg};color:{tier_text};padding:5px 14px;border-radius:6px;
+               font-size:15px;font-weight:800">{tier or "—"}</span>
+</div>
+<div style="font-size:13px;color:#888;padding:8px 0 12px 0">
+  {school} &nbsp;·&nbsp; Consensus {rank_str} &nbsp;·&nbsp; Confidence: {conf}
+  &nbsp;·&nbsp; RAS: {ras_str}
+</div>
+"""
+    st.markdown(header_html, unsafe_allow_html=True)
+
+    # ── Trait Vector Bars ─────────────────────────────────────────────────────
+    st.markdown(
+        '<div style="font-size:12px;font-weight:700;color:#999;letter-spacing:1px;'
+        'margin-bottom:8px">TRAIT VECTORS</div>',
+        unsafe_allow_html=True,
+    )
+
+    traits = [
+        ("Processing & Instincts", d.get("v_processing")),
+        ("Athleticism",            d.get("v_athleticism")),
+        ("Scheme Versatility",     d.get("v_scheme_vers")),
+        ("Competitive Toughness",  d.get("v_comp_tough")),
+        ("Character & Intangibles",d.get("v_character")),
+        ("Dev. Trajectory",        d.get("v_dev_traj")),
+        ("Production",             d.get("v_production")),
+        ("Injury & Durability",    d.get("v_injury")),
+    ]
+
+    bar_col1, bar_col2 = st.columns(2)
+    with bar_col1:
+        st.markdown(
+            "".join(_trait_bar_html(lbl, val) for lbl, val in traits[:4]),
+            unsafe_allow_html=True,
+        )
+    with bar_col2:
+        st.markdown(
+            "".join(_trait_bar_html(lbl, val) for lbl, val in traits[4:]),
+            unsafe_allow_html=True,
+        )
+
+    # Character sub-scores
+    c1 = d.get("c1_public_record")
+    c2 = d.get("c2_motivation")
+    c3 = d.get("c3_psych_profile")
+    if any(v is not None for v in [c1, c2, c3]):
+        sub = []
+        if c1 is not None: sub.append(f"Off-field record: **{c1:.1f}**")
+        if c2 is not None: sub.append(f"Motor & drive: **{c2:.1f}**")
+        if c3 is not None: sub.append(f"Mental makeup: **{c3:.1f}**")
+        st.caption("  ·  ".join(sub))
+
+    # Special rule badges
+    badges = []
+    if d.get("smith_rule"):
+        badges.append("⚠️ Character cap applied — reduces draft capital")
+    if d.get("schwesinger_full"):
+        badges.append("🚀 Elite character bonus — Dev Trajectory boosted (full)")
+    if d.get("schwesinger_half"):
+        badges.append("📈 Character bonus — Dev Trajectory boosted")
+    if d.get("two_way_premium"):
+        badges.append("⭐ Two-way prospect — scored at higher-value position")
+    for b in badges:
+        st.caption(b)
+
+    st.divider()
+
+    # ── Archetype Block ───────────────────────────────────────────────────────
+    arch      = d.get("matched_archetype") or "—"
+    gap_label = (d.get("gap_label") or "").strip().upper()
+    fit_score = d.get("archetype_gap")
+    gap_bg, gap_text = _GAP_BADGE_COLORS.get(gap_label, ("#555555", "#ffffff"))
+    fit_str      = f"{fit_score:.1f} pts" if fit_score is not None else "—"
+    gap_display  = _GAP_LABEL_DISPLAY_MAP.get(gap_label, gap_label)
+
+    arch_html = f"""
+<div style="background:#1a1a2a;border:1px solid #2a2a40;border-radius:8px;
+            padding:12px 16px;margin:6px 0">
+  <div style="font-size:11px;color:#666;letter-spacing:1px;margin-bottom:6px">ARCHETYPE</div>
+  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+    <span style="font-size:16px;font-weight:700;color:#e0e0e0">{arch}</span>
+    <span style="font-size:13px;color:#888">Fit: {fit_str}</span>
+    <span style="background:{gap_bg};color:{gap_text};padding:3px 10px;border-radius:999px;
+                 font-size:11px;font-weight:700">{gap_display}</span>
+  </div>
+</div>
+"""
+    st.markdown(arch_html, unsafe_allow_html=True)
+
+    if d.get("override_arch"):
+        od = d.get("override_delta") or 0
+        st.warning(
+            f"🔧 **OVERRIDE:** {d['override_arch']} "
+            f"(Δ{od:+.1f}) — "
+            f"{d.get('override_rationale') or 'No rationale recorded.'}"
+        )
+
+    # ── Draft Capital ─────────────────────────────────────────────────────────
+    cap_base = d.get("capital_base") or "—"
+    cap_adj  = d.get("capital_adjusted") or "—"
+
+    capital_html = f"""
+<div style="background:#1a1a2a;border:1px solid #2a2a40;border-radius:8px;
+            padding:12px 16px;margin:6px 0 14px 0">
+  <div style="font-size:11px;color:#666;letter-spacing:1px;margin-bottom:8px">DRAFT CAPITAL</div>
+  <div style="display:flex;gap:40px;flex-wrap:wrap">
+    <div>
+      <div style="font-size:11px;color:#666;margin-bottom:2px">Base</div>
+      <div style="font-size:16px;font-weight:700;color:#e0e0e0">{cap_base}</div>
+    </div>
+    <div>
+      <div style="font-size:11px;color:#666;margin-bottom:2px">Adjusted (PVC)</div>
+      <div style="font-size:16px;font-weight:700;color:#e0e0e0">{cap_adj}</div>
+    </div>
+  </div>
+</div>
+"""
+    st.markdown(capital_html, unsafe_allow_html=True)
+
+    st.divider()
+
+    # ── Strengths / Red Flags — Summary vs Bullet Points ─────────────────────
+    _view_mode = st.radio(
+        "View mode",
+        options=["Summary", "Bullet Points"],
+        index=0,
+        horizontal=True,
+        key=f"detail_view_mode_{d.get('prospect_id', 0)}",
+    )
+
+    s_col, r_col = st.columns(2)
+
+    if _view_mode == "Bullet Points":
+        str_bullets, flg_bullets = _generate_bullets(d)
+        with s_col:
+            st.markdown("**✅ Strengths**")
+            for b in str_bullets:
+                st.markdown(f"• {b}")
+        with r_col:
+            st.markdown("**🚨 Red Flags**")
+            for b in flg_bullets:
+                st.markdown(f"• {b}")
+    else:
+        with s_col:
+            st.markdown("**✅ Strengths**")
+            st.markdown(d.get("strengths") or "*No strengths recorded.*")
+        with r_col:
+            st.markdown("**🚨 Red Flags**")
+            st.markdown(d.get("red_flags") or "*No red flags recorded.*")
+
+    # ── Eval Confidence ───────────────────────────────────────────────────────
+    st.divider()
+    conf_field = d.get("eval_confidence") or "—"
+    conf_color = {"Tier A": "🟢", "Tier B": "🟡", "Tier C": "🔴"}.get(conf_field, "⚪")
+    scored_at  = d.get("scored_at") or ""
+    st.caption(
+        f"**Eval Confidence:** {conf_color} {conf_field}   |   "
+        f"Scored: {scored_at[:10] if scored_at else '—'}"
+    )
+
+
+def _render_consensus_card(row) -> None:
+    """Minimal detail card for prospects not yet APEX-scored."""
+    h1, h2, h3, h4 = st.columns([3, 1, 2, 2])
+    h1.markdown(f"**{row['display_name']}**")
+    h2.markdown(f"`{row['position_group']}`")
+    h3.markdown(f"{row['school_canonical'] or '—'}")
+    _crank = int(row["consensus_rank"]) if pd.notna(row.get("consensus_rank")) else "—"
+    h4.markdown(f"Consensus #{_crank}")
+    _ras = row.get("ras_score")
+    _ras_str = f"{_ras:.2f}" if _ras is not None and pd.notna(_ras) else "—"
+    st.caption(
+        f"Tier: {row.get('consensus_tier', '—')}   |   "
+        f"Confidence: {row.get('confidence_band', '—')}   |   "
+        f"Sources: {row.get('coverage_count', '—')}   |   "
+        f"RAS: {_ras_str}"
+    )
+    _dflag = row.get("divergence_flag")
+    if _dflag is not None and pd.notna(_dflag) and _dflag == 1:
+        _delta = row.get("divergence_delta")
+        _direction = "higher" if _delta and _delta < 0 else "lower"
+        _delta_abs = abs(_delta) if _delta else "?"
+        st.info(
+            f"⚡ Divergence flag: JFoster ranks this prospect "
+            f"{_direction} than consensus ({_delta_abs} spots)."
+        )
+    st.caption("*Not yet APEX-scored. Run apex_scoring to generate full profile.*")
 
 
 # ---------------------------------------------------------------------------
@@ -241,9 +706,9 @@ df["_apex_tier_sort"] = df["apex_tier"].map(
 # ---------------------------------------------------------------------------
 # Header
 # ---------------------------------------------------------------------------
-snapshot_date    = df["snapshot_date"].iloc[0] if "snapshot_date" in df.columns else "unknown"
-total_prospects  = len(df)
-apex_scored      = df["apex_composite"].notna().sum() if "apex_composite" in df.columns else 0
+snapshot_date   = df["snapshot_date"].iloc[0] if "snapshot_date" in df.columns else "unknown"
+total_prospects = len(df)
+apex_scored     = df["apex_composite"].notna().sum() if "apex_composite" in df.columns else 0
 
 st.title("DraftOS — 2026 Big Board")
 st.caption(
@@ -426,198 +891,6 @@ def _fmt_apex_composite(val) -> str:
         return "-"
 
 
-def _fmt_tags(raw) -> str:
-    """Format comma-delimited tag names for board display. Filters internal system tags."""
-    if not raw or (isinstance(raw, float) and pd.isna(raw)):
-        return ""
-    parts = [t.strip() for t in str(raw).split(",") if t.strip()]
-    parts = [p for p in parts if p not in _INTERNAL_TAG_NAMES]
-    return "  ".join(_TAGS_DISPLAY_MAP.get(p, p) for p in parts)
-
-
-def _render_apex_detail(d: dict) -> None:
-    """Render full APEX evaluation breakdown inside an expander."""
-
-    # ── Header ────────────────────────────────────────────────────────────────
-    col_h1, col_h2, col_h3, col_h4, col_h5 = st.columns([3, 1, 2, 2, 2])
-    col_h1.markdown(f"**{d['display_name']}**")
-    col_h2.markdown(f"`{d['position_group']}`")
-    col_h3.markdown(f"{d['school_canonical'] or '—'}")
-    score_str = f"**{d['apex_composite']:.1f}**" if d.get('apex_composite') is not None else "—"
-    col_h4.markdown(f"APEX {score_str}")
-    tier = d.get('apex_tier') or "—"
-    tier_color = {
-        "ELITE":  "🟢", "DAY1": "🔵", "DAY2": "🟡",
-        "DAY3":   "🟠", "UDFA-P": "🔴", "UDFA": "⚫",
-    }.get(tier, "⚪")
-    col_h5.markdown(f"{tier_color} {tier}")
-
-    st.divider()
-
-    # ── Trait Vectors ─────────────────────────────────────────────────────────
-    st.markdown("**Trait Vectors** *(1–10)*")
-    traits = [
-        ("Processing & Instincts", d.get("v_processing")),
-        ("Athleticism",            d.get("v_athleticism")),
-        ("Scheme Versatility",     d.get("v_scheme_vers")),
-        ("Competitive Toughness",  d.get("v_comp_tough")),
-        ("Character & Intangibles",d.get("v_character")),
-        ("Dev. Trajectory",        d.get("v_dev_traj")),
-        ("Production",             d.get("v_production")),
-        ("Injury & Durability",    d.get("v_injury")),
-    ]
-    t_cols = st.columns(4)
-    for i, (label, val) in enumerate(traits):
-        col = t_cols[i % 4]
-        val_str = f"{val:.1f}" if val is not None else "—"
-        col.metric(label=label, value=val_str)
-
-    # Character sub-scores — plain English labels
-    c1 = d.get("c1_public_record")
-    c2 = d.get("c2_motivation")
-    c3 = d.get("c3_psych_profile")
-    if any(v is not None for v in [c1, c2, c3]):
-        sub = []
-        if c1 is not None: sub.append(f"Off-field record: **{c1:.1f}**")
-        if c2 is not None: sub.append(f"Motor & drive: **{c2:.1f}**")
-        if c3 is not None: sub.append(f"Mental makeup: **{c3:.1f}**")
-        st.caption("  ·  ".join(sub))
-
-    # Special rule badges — plain English
-    badges = []
-    if d.get("smith_rule"):
-        badges.append("⚠️ Character cap applied — reduces draft capital")
-    if d.get("schwesinger_full"):
-        badges.append("🚀 Elite character bonus — Dev Trajectory boosted (full)")
-    if d.get("schwesinger_half"):
-        badges.append("📈 Character bonus — Dev Trajectory boosted")
-    if d.get("two_way_premium"):
-        badges.append("⭐ Two-way prospect — scored at higher-value position")
-    for b in badges:
-        st.caption(b)
-
-    st.divider()
-
-    # ── Archetype Block ───────────────────────────────────────────────────────
-    arch_col1, arch_col2, arch_col3 = st.columns([3, 2, 2])
-    arch_col1.markdown(f"**Archetype:** {d.get('matched_archetype') or '—'}")
-    _agap = d.get("archetype_gap")
-    if _agap is not None:
-        if _agap > 15:
-            _gap_ctx = "Clean fit — clear archetype match"
-        elif _agap >= 8:
-            _gap_ctx = "Solid fit — good match with some overlap"
-        else:
-            _gap_ctx = "Tweener — no dominant archetype"
-        arch_col2.markdown(f"**Archetype fit:** {_agap:.1f} pts  \n*{_gap_ctx}*")
-    else:
-        arch_col2.markdown("**Archetype fit:** —")
-    gap_label = (d.get("gap_label") or "—").strip().upper()
-    gap_colors = {
-        "CLEAN": "🟢", "SOLID": "🟡", "TWEENER": "🟠",
-        "COMPRESSION": "🔴", "NO_FIT": "⚫",
-    }
-    arch_col3.markdown(f"**Fit label:** {gap_colors.get(gap_label, '⚪')} {gap_label}")
-
-    if d.get("override_arch"):
-        _od = d.get("override_delta") or 0
-        st.warning(
-            f"🔧 **OVERRIDE:** {d['override_arch']} "
-            f"(Δ{_od:+.1f}) — "
-            f"{d.get('override_rationale') or 'No rationale recorded.'}"
-        )
-
-    st.divider()
-
-    # ── Capital Block ─────────────────────────────────────────────────────────
-    cap_col1, cap_col2 = st.columns(2)
-    cap_col1.markdown(f"**Draft capital (base):** {d.get('capital_base') or '—'}")
-    cap_col2.markdown(f"**Draft capital (adjusted):** {d.get('capital_adjusted') or '—'}")
-
-    st.divider()
-
-    # ── Strengths / Red Flags — toggle bullets vs prose ───────────────────────
-    import re as _re
-
-    def _to_bullets(text: str | None) -> list[str]:
-        if not text:
-            return []
-        sentences = _re.split(r'(?<=[.!?])\s+', text.strip())
-        return [s.strip() for s in sentences if len(s.strip()) > 10]
-
-    _view_mode = st.radio(
-        "View mode",
-        options=["Summary", "Bullet Points"],
-        index=0,
-        horizontal=True,
-        key=f"detail_view_mode_{d.get('prospect_id', 0)}",
-    )
-
-    s_col, r_col = st.columns(2)
-    with s_col:
-        st.markdown("**✅ Strengths**")
-        _strengths = d.get("strengths") or ""
-        if _view_mode == "Bullet Points":
-            _bullets = _to_bullets(_strengths)
-            if _bullets:
-                for _b in _bullets:
-                    st.markdown(f"• {_b}")
-            else:
-                st.markdown("*No strengths recorded.*")
-        else:
-            st.markdown(_strengths or "*No strengths recorded.*")
-    with r_col:
-        st.markdown("**🚨 Red Flags**")
-        _redflags = d.get("red_flags") or ""
-        if _view_mode == "Bullet Points":
-            _bullets = _to_bullets(_redflags)
-            if _bullets:
-                for _b in _bullets:
-                    st.markdown(f"• {_b}")
-            else:
-                st.markdown("*No red flags recorded.*")
-        else:
-            st.markdown(_redflags or "*No red flags recorded.*")
-
-    # ── Eval Confidence ───────────────────────────────────────────────────────
-    st.divider()
-    conf = d.get("eval_confidence") or "—"
-    conf_color = {"Tier A": "🟢", "Tier B": "🟡", "Tier C": "🔴"}.get(conf, "⚪")
-    scored_at = d.get("scored_at") or ""
-    st.caption(
-        f"**Eval Confidence:** {conf_color} {conf}   |   "
-        f"Scored: {scored_at[:10] if scored_at else '—'}"
-    )
-
-
-def _render_consensus_card(row) -> None:
-    """Minimal detail card for prospects not yet APEX-scored."""
-    h1, h2, h3, h4 = st.columns([3, 1, 2, 2])
-    h1.markdown(f"**{row['display_name']}**")
-    h2.markdown(f"`{row['position_group']}`")
-    h3.markdown(f"{row['school_canonical'] or '—'}")
-    _crank = int(row["consensus_rank"]) if pd.notna(row.get("consensus_rank")) else "—"
-    h4.markdown(f"Consensus #{_crank}")
-    _ras = row.get("ras_score")
-    _ras_str = f"{_ras:.2f}" if _ras is not None and pd.notna(_ras) else "—"
-    st.caption(
-        f"Tier: {row.get('consensus_tier', '—')}   |   "
-        f"Confidence: {row.get('confidence_band', '—')}   |   "
-        f"Sources: {row.get('coverage_count', '—')}   |   "
-        f"RAS: {_ras_str}"
-    )
-    _dflag = row.get("divergence_flag")
-    if _dflag is not None and pd.notna(_dflag) and _dflag == 1:
-        _delta = row.get("divergence_delta")
-        _direction = "higher" if _delta and _delta < 0 else "lower"
-        _delta_abs = abs(_delta) if _delta else "?"
-        st.info(
-            f"⚡ Divergence flag: JFoster ranks this prospect "
-            f"{_direction} than consensus ({_delta_abs} spots)."
-        )
-    st.caption("*Not yet APEX-scored. Run apex_scoring to generate full profile.*")
-
-
 display = pd.DataFrame()
 display["Rank"]       = filtered["consensus_rank"].astype("Int64")
 display["Player"]     = filtered["display_name"]
@@ -644,8 +917,6 @@ if "apex_composite" in filtered.columns:
     )
     display["APEX Tier"]  = filtered["apex_tier"].fillna("")
     display["Archetype"]  = filtered["apex_archetype"].fillna("-")
-    # T# — visible sort key: 1=ELITE 2=DAY1 3=DAY2 4=DAY3 5=UDFA-P 6=UDFA
-    # Click T# column header for correct draft-capital tier sort order
 else:
     display["APEX Score"] = None
     display["APEX Tier"]  = ""
@@ -687,12 +958,12 @@ def _style_confidence(val: str) -> str:
     return CONFIDENCE_COLORS.get(val, "")
 
 
-# Consensus tier: text color only (no background fill) — distinguishes from APEX Tier
+# Consensus tier: text color only (no background fill)
 _CONSENSUS_TIER_COLORS = {
-    "Elite":    "color: #4ade80; font-weight: 600",   # green text
-    "Strong":   "color: #60a5fa; font-weight: 600",   # blue text
-    "Playable": "color: #facc15; font-weight: 600",   # yellow text
-    "Watch":    "color: #f97316; font-weight: 600",   # orange text
+    "Elite":    "color: #4ade80; font-weight: 600",
+    "Strong":   "color: #60a5fa; font-weight: 600",
+    "Playable": "color: #facc15; font-weight: 600",
+    "Watch":    "color: #f97316; font-weight: 600",
 }
 
 
@@ -712,9 +983,9 @@ def _style_apex_delta(val: str) -> str:
     except (ValueError, AttributeError):
         return ""
     if n > 0:
-        return "background-color: #1a5a1a; color: white"   # green — you rank higher
+        return "background-color: #1a5a1a; color: white"
     if n < 0:
-        return "background-color: #6a1a1a; color: white"   # red — you rank lower
+        return "background-color: #6a1a1a; color: white"
     return ""
 
 
@@ -723,7 +994,8 @@ def _style_apex_tier(val: str) -> str:
 
 
 _NUM_COLS = ["Rank", "Score", "Sources", "Coverage", "RAS", "APEX Score"]
-_STR_COLS = ["Player", "School", "Pos", "Consensus", "Confidence", "APEX Tier", "Archetype", "Tags", "Snapshot", "⚡ Div", "\u0394 APEX"]
+_STR_COLS = ["Player", "School", "Pos", "Consensus", "Confidence", "APEX Tier",
+             "Archetype", "Tags", "Snapshot", "⚡ Div", "\u0394 APEX"]
 
 styled = (
     display.style
@@ -745,12 +1017,12 @@ with st.expander("📋 Column Guide", expanded=False):
     st.markdown("""
 | Column | Description |
 |--------|-------------|
-| Rank | Consensus rank across 14 active sources (weighted by tier) |
+| Rank | Consensus rank across active sources (weighted by tier) |
 | Score | Weighted consensus score (0–100 scale) |
 | Consensus | Consensus tier: Elite / Strong / Playable / Watch |
 | Confidence | Source coverage × agreement quality (High / Medium / Low) |
 | Sources | Active sources that have ranked this prospect |
-| Coverage | Sources covering this prospect out of 14 active |
+| Coverage | Sources covering this prospect out of active canonical set |
 | RAS | Relative Athletic Score (scale 2.74–10.0) |
 | ⚡ Div | Divergence flag — APEX vs consensus rank signal (premium positions only) |
 | APEX | Auto-derived APEX rank from apex_composite sort order (manual override takes precedence) |
@@ -800,20 +1072,25 @@ with tab_bb:
     tagged_filtered = filtered[filtered["tag_names"] != ""].copy()
     if not tagged_filtered.empty:
         with st.expander(f"Tagged prospects on this board ({len(tagged_filtered)})", expanded=False):
-            st.markdown(
-                "Tag pills: "
-                + " ".join(
-                    f'<span style="background:{_TAG_COLOR_MAP.get(t, "#6B7280")};color:white;'
-                    f'padding:2px 6px;border-radius:4px;font-size:11px;font-weight:600;'
-                    f'margin-right:3px">{_TAGS_DISPLAY_MAP.get(t, t)}</span>'
-                    for t in _SIDEBAR_TAGS
-                    if any(t in _parse_tags(row) for row in tagged_filtered["tag_names"])
-                ),
-                unsafe_allow_html=True,
-            )
+            # Legend: tags present on current filtered board
+            active_legend_tags = [
+                t for t in _SIDEBAR_TAGS
+                if any(t in _parse_tags(row) for row in tagged_filtered["tag_names"])
+            ]
+            if active_legend_tags:
+                st.markdown(
+                    "Tags on this board: "
+                    + "".join(_render_tag_pill(t) for t in active_legend_tags),
+                    unsafe_allow_html=True,
+                )
             st.markdown("---")
             for _, row in tagged_filtered.sort_values("consensus_rank").iterrows():
-                tags = _parse_tags(row["tag_names"])
+                tags = [
+                    t for t in _parse_tags(row["tag_names"])
+                    if t not in _INTERNAL_TAG_NAMES
+                ]
+                if not tags:
+                    continue
                 pill_html = render_tag_pills(tags)
                 rank = int(row["consensus_rank"]) if pd.notna(row["consensus_rank"]) else "?"
                 name = row["display_name"]
@@ -821,7 +1098,8 @@ with tab_bb:
                 apex = _fmt_apex_composite(row.get("apex_composite"))
                 tier = row.get("apex_tier") or ""
                 st.markdown(
-                    f"**#{rank} {name}** ({pos}) &nbsp; APEX {apex} {tier} &nbsp;&nbsp; {pill_html}",
+                    f"**#{rank} {name}** ({pos}) &nbsp; APEX {apex} {tier}"
+                    f" &nbsp;&nbsp; {pill_html}",
                     unsafe_allow_html=True,
                 )
 
@@ -829,14 +1107,12 @@ with tab_apex:
     if apex_scored > 0 and "apex_composite" in df.columns:
         apex_df = df[df["apex_composite"].notna()].copy()
 
-        # Primary sort: auto_apex_rank ascending (rank 1 at top)
         apex_df = apex_df.sort_values(
             ["auto_apex_rank", "apex_composite"],
             ascending=[True, False],
             na_position="last",
         )
 
-        # Build display frame — column order is the board contract
         ab = pd.DataFrame()
         ab["APEX Rank"]  = apex_df["auto_apex_rank"].astype("Int64")
         ab["Player"]     = apex_df["display_name"]
@@ -846,10 +1122,11 @@ with tab_apex:
         ab["APEX Tier"]  = apex_df["apex_tier"].fillna("")
         ab["Archetype"]  = apex_df["apex_archetype"].fillna("-")
 
-        # Gap column
         if "gap_label" in apex_df.columns:
             ab["Fit"] = apex_df["gap_label"].map(
-                lambda v: _GAP_LABEL_DISPLAY_MAP.get(str(v).strip().upper(), str(v)) if pd.notna(v) else "-"
+                lambda v: _GAP_LABEL_DISPLAY_MAP.get(
+                    str(v).strip().upper(), str(v)
+                ) if pd.notna(v) else "-"
             )
         else:
             ab["Fit"] = "-"
@@ -867,7 +1144,6 @@ with tab_apex:
         else:
             ab["Tags"] = ""
 
-        # Ordered prospect_id list — aligns with ab row positions
         _apex_prospect_ids: list[int] = apex_df["prospect_id"].tolist()
 
         ab = ab.reset_index(drop=True)
@@ -975,6 +1251,13 @@ else:
             with connect() as conn:
                 _detail = get_apex_detail(conn, prospect_id=_selected_pid)
             if _detail:
+                # Supplement with board row data for header and bullet generation
+                if not _detail.get("consensus_rank"):
+                    _detail["consensus_rank"] = _pr.get("consensus_rank")
+                if not _detail.get("confidence_band"):
+                    _detail["confidence_band"] = _pr.get("confidence_band")
+                # Expose board-side RAS for _generate_bullets (ras_total from ras table)
+                _detail["ras_score"] = _pr.get("ras_score")
                 _render_apex_detail(_detail)
             else:
                 st.warning("APEX detail record not found despite apex_composite being set.")
