@@ -1,11 +1,8 @@
 """
-DraftOS Big Board — Session 3
-Read-only Streamlit UI with divergence flags, APEX rank input, APEX v2.2 scores, and tag display.
-No DB writes except through save_apex_rank(). No business logic.
-
-TODO Session 3: Prospect detail expander — click row, show explain_json breakdown,
-  source-by-source rank table, confidence reasons, APEX notes field
-TODO Session 3: Movers panel — delta_rank from snapshot comparison, top risers/fallers
+DraftOS Big Board — Session 31
+Read-only Streamlit UI with divergence flags, APEX rank input, APEX v2.2 scores,
+tag display, and prospect detail drawer.
+No DB writes except through save_apex_rank() and clear_apex_rank(). No business logic.
 """
 
 import pandas as pd
@@ -13,7 +10,7 @@ import streamlit as st
 
 from draftos.db.connect import connect
 from draftos.queries.apex import save_apex_rank, clear_apex_rank
-from draftos.queries.model_outputs import get_big_board
+from draftos.queries.model_outputs import get_big_board, get_prospect_detail
 
 st.set_page_config(layout="wide", page_title="DraftOS Big Board")
 
@@ -63,6 +60,61 @@ _APEX_TIER_ORDER: dict[str, int] = {
     "UDFA":   5,
 }
 
+# Tag color emoji for drawer panels
+_TAG_EMOJI_MAP: dict[str, str] = {
+    "green": "🟢",
+    "red":   "🔴",
+    "blue":  "🔵",
+    "gold":  "🟡",
+}
+
+# ---------------------------------------------------------------------------
+# Frontend display aliases — backend strings NEVER shown to users
+# ---------------------------------------------------------------------------
+_TAGS_DISPLAY_MAP: dict[str, str] = {
+    "Smith Rule"       : "⚠️ Character Cap Active",
+    "CRUSH"            : "💎 Priority Target",
+    "Walk-On Flag"     : "🏃 Walk-On Origin",
+    "Two-Way Premium"  : "🔄 Two-Way Athlete",
+    "Schwesinger Rule" : "🚀 Elite Character Bonus",
+}
+
+_GAP_LABEL_DISPLAY_MAP: dict[str, str] = {
+    "CLEAN"       : "✅ Clean Fit",
+    "SOLID"       : "🟢 Solid Fit",
+    "TWEENER"     : "⚠️ Tweener",
+    "COMPRESSION" : "🔵 Elite Tweener",
+    "NO_FIT"      : "🔴 No Dominant Fit",
+}
+
+
+def _render_tags(raw_tags_string: str) -> list[str]:
+    """
+    Split apex_scores.tags comma string, map each to frontend display label.
+    Returns list of display strings. Unknown tags pass through title-cased.
+    """
+    if not raw_tags_string:
+        return []
+    return [
+        _TAGS_DISPLAY_MAP.get(t.strip(), t.strip().title())
+        for t in raw_tags_string.split(",")
+        if t.strip()
+    ]
+
+
+def _render_gap_label(gap_label: str | None, archetype_gap: float | None) -> str:
+    """
+    Return a clean badge string for archetype fit quality.
+    Raw gap number is suppressed from display — shown only via this badge.
+    """
+    if not gap_label:
+        return ""
+    display_label = _GAP_LABEL_DISPLAY_MAP.get(
+        gap_label.strip().upper(),
+        gap_label.strip().title()
+    )
+    return display_label  # gap float intentionally NOT shown
+
 
 def render_tag_pills(tag_names: list[str]) -> str:
     """Return HTML string of colored pill spans for the given tag names."""
@@ -104,6 +156,15 @@ def _load_board() -> list[dict] | None:
             return get_big_board(conn)
     except Exception as e:
         st.session_state["_load_error"] = str(e)
+        return None
+
+
+@st.cache_data(ttl=30)
+def _load_detail(prospect_id: int) -> dict | None:
+    try:
+        with connect() as conn:
+            return get_prospect_detail(conn, prospect_id=prospect_id)
+    except Exception:
         return None
 
 
@@ -316,42 +377,38 @@ def _fmt_apex_composite(val) -> str:
         return "-"
 
 
-def _fmt_apex_rank(val) -> str:
-    """Return rank string or em dash when NULL."""
-    try:
-        i = int(val)
-        return str(i)
-    except (TypeError, ValueError):
-        return "\u2014"
-
-
 display = pd.DataFrame()
 display["Rank"]       = filtered["consensus_rank"].astype("Int64")
 display["Player"]     = filtered["display_name"]
 display["School"]     = filtered["school_canonical"]
 display["Pos"]        = filtered["position_group"]
-display["Score"]      = filtered["consensus_score"].round(1)
+display["Score"]      = filtered["consensus_score"].apply(
+    lambda x: round(float(x), 1) if pd.notna(x) else None
+)
 display["Tier"]       = filtered["consensus_tier"]
 display["Confidence"] = filtered["confidence_band"]
 display["Sources"]    = filtered["sources_present"].astype("Int64")
 display["Coverage"]   = filtered["coverage_count"].astype("Int64")
-display["RAS"]        = filtered["ras_score"].round(1)
+display["RAS"]        = filtered["ras_score"].apply(
+    lambda x: round(float(x), 1) if pd.notna(x) else None
+)
 display["⚡ Div"]    = filtered.apply(_fmt_div, axis=1)
-display["APEX"]       = filtered["apex_rank"].apply(_fmt_apex_rank)
+display["APEX"]       = filtered["apex_rank"].astype("Int64")
 display["\u0394 APEX"] = filtered["apex_delta"].apply(_fmt_apex_delta)
 
-# APEX v2.2 engine columns — NULL-safe: '-' for missing score, '' for missing tier/archetype
+# APEX v2.2 engine columns — NULL-safe
 if "apex_composite" in filtered.columns:
-    display["APEX Score"] = filtered["apex_composite"].apply(_fmt_apex_composite)
+    display["APEX Score"] = filtered["apex_composite"].apply(
+        lambda x: round(float(x), 1) if pd.notna(x) else None
+    )
     display["APEX Tier"]  = filtered["apex_tier"].fillna("")
     display["Archetype"]  = filtered["apex_archetype"].fillna("-")
-    # Sort key — integer, hidden from display
-    display["_apex_tier_sort"] = filtered["_apex_tier_sort"]
+    # T# — visible sort key: 1=ELITE 2=DAY1 3=DAY2 4=DAY3 5=UDFA-P 6=UDFA
+    # Click T# column header for correct draft-capital tier sort order
 else:
-    display["APEX Score"] = "-"
+    display["APEX Score"] = None
     display["APEX Tier"]  = ""
     display["Archetype"]  = "-"
-    display["_apex_tier_sort"] = 99
 
 display["Tags"] = filtered["tag_names"].apply(_fmt_tags_text)
 
@@ -411,11 +468,15 @@ def _style_apex_tier(val: str) -> str:
     return APEX_TIER_COLORS.get(val, "")
 
 
-# Columns to show (exclude hidden sort key)
-_display_cols = [c for c in display.columns if c != "_apex_tier_sort"]
+_NUM_COLS = ["Rank", "Score", "Sources", "Coverage", "RAS", "APEX Score"]
+_STR_COLS = ["Player", "School", "Pos", "Tier", "Confidence", "APEX Tier", "Archetype", "Tags", "Snapshot", "⚡ Div", "\u0394 APEX"]
 
 styled = (
-    display[_display_cols].style
+    display.style
+    .set_properties(subset=[c for c in _NUM_COLS if c in display.columns],
+                    **{"text-align": "right"})
+    .set_properties(subset=[c for c in _STR_COLS if c in display.columns],
+                    **{"text-align": "left"})
     .map(_style_confidence, subset=["Confidence"])
     .map(_style_divergence, subset=["⚡ Div"])
     .map(_style_apex_delta, subset=["\u0394 APEX"])
@@ -448,7 +509,21 @@ with st.expander("📋 Column Guide", expanded=False):
 # ---------------------------------------------------------------------------
 # Render table
 # ---------------------------------------------------------------------------
-st.dataframe(styled, use_container_width=True, hide_index=True)
+st.dataframe(
+    styled,
+    column_config={
+        "Score":      st.column_config.NumberColumn("Score",      format="%.1f"),
+        "RAS":        st.column_config.NumberColumn("RAS",        format="%.1f"),
+        "APEX Score": st.column_config.NumberColumn("APEX Score", format="%.1f"),
+        "APEX Tier":  st.column_config.TextColumn(
+                          "APEX Tier",
+                          disabled=True,
+                          help="Draft capital tier — derived from APEX Score. Sort by APEX Score column.",
+                      ),
+    },
+    use_container_width=True,
+    hide_index=True,
+)
 st.caption(f"Showing {len(display)} of {total_prospects} prospects")
 
 # ---------------------------------------------------------------------------
@@ -457,8 +532,7 @@ st.caption(f"Showing {len(display)} of {total_prospects} prospects")
 st.caption(
     "**APEX v2.2 Tiers:** "
     "ELITE (≥85) | DAY1 (≥70) | DAY2 (≥55) | DAY3 (≥40) | UDFA-P (≥28) | UDFA (<28)   "
-    "**Sort tip:** click APEX Tier column header — rows sort ELITE → DAY1 → DAY2 → DAY3 → UDFA "
-    "because the hidden _apex_tier_sort key drives correct order."
+    "**Sort tip:** click APEX Tier to group by tier (DAY tiers cluster, UDFA sorts last)."
 )
 
 # ---------------------------------------------------------------------------
@@ -507,16 +581,32 @@ if apex_scored > 0 and "apex_composite" in df.columns:
     apex_display["Pos"]        = apex_df["position_group"]
     apex_display["School"]     = apex_df["school_canonical"]
     apex_display["Archetype"]  = apex_df["apex_archetype"].fillna("-")
-    apex_display["APEX Score"] = apex_df["apex_composite"].apply(_fmt_apex_composite)
+    apex_display["APEX Score"] = apex_df["apex_composite"].apply(
+        lambda x: round(float(x), 1) if pd.notna(x) else None
+    )
     apex_display["APEX Tier"]  = apex_df["apex_tier"].fillna("")
     apex_display["Consensus"]  = apex_df["consensus_rank"].astype("Int64")
 
     apex_styled = (
         apex_display.style
+        .set_properties(subset=["APEX Score", "Consensus"], **{"text-align": "right"})
+        .set_properties(subset=["Player", "Pos", "School", "Archetype", "APEX Tier"], **{"text-align": "left"})
         .map(_style_apex_tier, subset=["APEX Tier"])
     )
 
-    st.dataframe(apex_styled, use_container_width=True, hide_index=True)
+    st.dataframe(
+        apex_styled,
+        column_config={
+            "APEX Score": st.column_config.NumberColumn("APEX Score", format="%.1f"),
+            "APEX Tier":  st.column_config.TextColumn(
+                              "APEX Tier",
+                              disabled=True,
+                              help="Draft capital tier — derived from APEX Score. Sort by APEX Score column.",
+                          ),
+        },
+        use_container_width=True,
+        hide_index=True,
+    )
 
 # ---------------------------------------------------------------------------
 # APEX rank input panel (analyst overrides)
@@ -566,3 +656,253 @@ if clear_clicked and selected_name:
         st.success(f"Cleared APEX rank for {selected_name}")
         _load_board.clear()
         st.rerun()
+
+# ---------------------------------------------------------------------------
+# Prospect Detail Drawer
+# ---------------------------------------------------------------------------
+st.divider()
+st.subheader("Prospect Detail")
+
+# Build sorted option list from filtered board (prospects with consensus_rank only)
+_sorted_filtered = filtered.dropna(subset=["consensus_rank"]).sort_values("consensus_rank")
+_prospect_options = ["— select a prospect —"]
+_pid_for_label: dict[str, int] = {}
+for _, _row in _sorted_filtered.iterrows():
+    _rank = int(_row["consensus_rank"])
+    _name = _row["display_name"]
+    _pos  = _row["position_group"]
+    _label = f"{_rank}. {_name} ({_pos})"
+    _prospect_options.append(_label)
+    _pid_for_label[_label] = int(_row["prospect_id"])
+
+selected_label = st.selectbox(
+    "Select prospect to view full APEX profile",
+    options=_prospect_options,
+    index=0,
+    key="detail_select",
+)
+
+if selected_label != "— select a prospect —":
+    _pid = _pid_for_label.get(selected_label)
+    if _pid is not None:
+        detail = _load_detail(_pid)
+
+        if detail is None:
+            st.error("Could not load prospect detail. Check DB connection.")
+        else:
+            # ── PANEL 1: IDENTITY + CONSENSUS ──────────────────────────────
+            st.markdown("---")
+            p1c1, p1c2, p1c3, p1c4 = st.columns([2, 1, 1, 1])
+            with p1c1:
+                st.markdown(f"### {detail['display_name']}")
+                _school = detail.get("school_canonical") or "Unknown"
+                _pos_label = detail.get("position_group") or "—"
+                st.caption(f"{_pos_label}  |  {_school}")
+            with p1c2:
+                _crank = detail.get("consensus_rank")
+                st.metric("Consensus Rank", f"#{_crank}" if _crank is not None else "—")
+            with p1c3:
+                _ctier = detail.get("consensus_tier") or "—"
+                st.metric("Consensus Tier", _ctier)
+            with p1c4:
+                _cband = detail.get("confidence_band") or "—"
+                _cov   = detail.get("coverage_count")
+                _cov_str = f"{int(_cov)} sources" if _cov is not None else "—"
+                st.metric("Confidence", _cband)
+                st.caption(f"Coverage: {_cov_str}")
+
+            # ── PANEL 2: APEX PROFILE ───────────────────────────────────────
+            st.markdown("---")
+            st.markdown("**APEX v2.2 Profile**")
+            _apex = detail.get("apex_composite")
+
+            if _apex is None:
+                st.info("APEX v2.2: Not yet scored")
+            else:
+                # Row 1 — 4 key metrics
+                _r1c1, _r1c2, _r1c3, _r1c4 = st.columns(4)
+                with _r1c1:
+                    st.metric("APEX Score", f"{_apex:.1f}")
+                with _r1c2:
+                    st.metric("Tier", detail.get("apex_tier") or "—")
+                with _r1c3:
+                    _cap = detail.get("capital_adjusted") or detail.get("capital_base") or "—"
+                    st.metric("Capital", _cap)
+                with _r1c4:
+                    st.metric("Eval Confidence", detail.get("eval_confidence") or "—")
+
+                # Row 2 — Archetype line with human-readable gap label
+                _arch        = detail.get("apex_archetype") or "—"
+                _gap_display = _render_gap_label(
+                    detail.get("gap_label"),
+                    detail.get("archetype_gap"),
+                )
+                if _gap_display:
+                    st.markdown(f"**Archetype:** {_arch}  &nbsp;|&nbsp;  {_gap_display}")
+                else:
+                    st.markdown(f"**Archetype:** {_arch}")
+
+                # Row 3 — Modifier flags (human-readable labels from _TAGS_DISPLAY_MAP)
+                if detail.get("schwesinger_full") or detail.get("schwesinger_half"):
+                    st.success(_TAGS_DISPLAY_MAP["Schwesinger Rule"])
+                if detail.get("smith_rule"):
+                    st.error(_TAGS_DISPLAY_MAP["Smith Rule"])
+
+                # Row 4 — Trait vector table (2-column layout)
+                st.markdown("**Trait Vectors**")
+                _TRAITS = [
+                    ("Processing & Instincts", "v_processing"),
+                    ("Athleticism",             "v_athleticism"),
+                    ("Scheme Versatility",      "v_scheme_vers"),
+                    ("Competitive Toughness",   "v_comp_tough"),
+                    ("Character",               "v_character"),
+                    ("Dev. Trajectory",         "v_dev_traj"),
+                    ("Production",              "v_production"),
+                    ("Injury & Durability",     "v_injury"),
+                ]
+                _tc1, _tc2 = st.columns(2)
+                for _idx, (_tlabel, _tkey) in enumerate(_TRAITS):
+                    _tval = detail.get(_tkey)
+                    _tstr = f"{_tval:.1f}" if _tval is not None else "—"
+                    # Color based on score
+                    if _tval is not None and _tval >= 8.0:
+                        _style = "color: #10B981; font-weight: 600"
+                    elif _tval is not None and _tval <= 4.0:
+                        _style = "color: #EF4444; font-weight: 600"
+                    else:
+                        _style = ""
+                    _html = (
+                        f'<span style="{_style}">{_tstr}</span>'
+                        if _style else _tstr
+                    )
+                    _col = _tc1 if _idx % 2 == 0 else _tc2
+                    with _col:
+                        st.markdown(
+                            f"**{_tlabel}:** {_html}",
+                            unsafe_allow_html=True,
+                        )
+                        # Character sub-components
+                        if _tkey == "v_character":
+                            _c1 = detail.get("c1_public_record")
+                            _c2 = detail.get("c2_motivation")
+                            _c3 = detail.get("c3_psych_profile")
+                            _c1s = f"{_c1:.1f}" if _c1 is not None else "—"
+                            _c2s = f"{_c2:.1f}" if _c2 is not None else "—"
+                            _c3s = f"{_c3:.1f}" if _c3 is not None else "—"
+                            st.caption(f"  C1: {_c1s}  C2: {_c2s}  C3: {_c3s}")
+
+                # Row 5 — Strengths / Red Flags
+                _sc1, _sc2 = st.columns(2)
+                with _sc1:
+                    st.caption("Strengths")
+                    st.write(detail.get("strengths") or "—")
+                with _sc2:
+                    st.caption("Red Flags")
+                    st.write(detail.get("red_flags") or "—")
+
+                # Row 6 — Engine tags (rendered with frontend display aliases)
+                _etag_list = _render_tags(detail.get("apex_tags") or "")
+                if _etag_list:
+                    st.caption("Modifier Flags")
+                    for _etag in _etag_list:
+                        st.markdown(f"`{_etag}`")
+
+                # Row 7 — Override log
+                _ov_arch  = detail.get("override_arch")
+                _ov_delta = detail.get("override_delta")
+                _ov_rat   = detail.get("override_rationale")
+                if _ov_arch or _ov_delta or _ov_rat:
+                    _ov_d_str = f"{_ov_delta:+.1f}" if _ov_delta is not None else "0"
+                    st.warning(
+                        f"Override: arch={_ov_arch or '—'}  "
+                        f"Δ={_ov_d_str}  "
+                        f"Rationale: {_ov_rat or '—'}"
+                    )
+                    st.caption(f"Scored: {detail.get('scored_at') or '—'}")
+
+            # ── PANEL 3: DIVERGENCE ─────────────────────────────────────────
+            st.markdown("---")
+            st.markdown("**Divergence Signal**")
+            _dflag = detail.get("divergence_flag")
+            if _dflag is None:
+                st.caption("Divergence: Not computed")
+            else:
+                _ddelta = detail.get("divergence_rank_delta")
+                _dmag   = detail.get("divergence_mag") or ""
+                _ddelta_str = f"{_ddelta:+d}" if _ddelta is not None else "—"
+                _div_content = f"{_dflag}  |  Rank delta: {_ddelta_str}  |  {_dmag}"
+                if _dflag == "APEX_HIGH":
+                    st.success(_div_content)
+                    st.caption("APEX values this prospect higher than market consensus.")
+                elif _dflag == "APEX_LOW_PVC_STRUCTURAL":
+                    st.info(_div_content)
+                    st.caption("Structural — PVC discount, not actionable.")
+                elif _dflag == "APEX_LOW":
+                    st.error(_div_content)
+                    st.caption("APEX values this prospect lower — monitor.")
+                else:
+                    st.info(_div_content)
+
+            # ── PANEL 4: RAS ────────────────────────────────────────────────
+            st.markdown("---")
+            st.markdown("**RAS Measurables**")
+            _ras = detail.get("ras_total")
+            if _ras is None:
+                st.caption("RAS: Not yet measured")
+            else:
+                st.metric("RAS Total", f"{_ras:.2f}")
+                _rc1, _rc2, _rc3, _rc4 = st.columns(4)
+                _ras_ath  = detail.get("ras_ath")
+                _ras_size = detail.get("ras_size")
+                _ras_spd  = detail.get("ras_speed")
+                _ras_agi  = detail.get("ras_agility")
+                with _rc1:
+                    st.metric("Athleticism", f"{_ras_ath:.2f}" if _ras_ath is not None else "—")
+                with _rc2:
+                    st.metric("Size",        f"{_ras_size:.2f}" if _ras_size is not None else "—")
+                with _rc3:
+                    st.metric("Speed",       f"{_ras_spd:.2f}"  if _ras_spd  is not None else "—")
+                with _rc4:
+                    st.metric("Agility",     f"{_ras_agi:.2f}"  if _ras_agi  is not None else "—")
+                # Measurables row
+                _meas_parts = []
+                _hs = detail.get("hand_size")
+                _al = detail.get("arm_length")
+                _ws = detail.get("wingspan")
+                if _hs is not None:
+                    _meas_parts.append(f'Hand: {_hs}"')
+                if _al is not None:
+                    _meas_parts.append(f'Arm: {_al}"')
+                if _ws is not None:
+                    _meas_parts.append(f'Wingspan: {_ws}"')
+                if _meas_parts:
+                    st.caption("  ".join(_meas_parts))
+
+            # ── PANEL 5: SOURCE RANKS ───────────────────────────────────────
+            st.markdown("---")
+            st.markdown("**Source Rankings**")
+            _sranks = detail.get("source_ranks", [])
+            if not _sranks:
+                st.caption("No source rankings found for this prospect.")
+            else:
+                _sr_df = pd.DataFrame(_sranks)[["source_name", "source_tier", "weight", "overall_rank"]]
+                _sr_df.columns = ["Source", "Tier", "Weight", "Rank"]
+                st.dataframe(_sr_df, use_container_width=True, hide_index=True)
+                st.caption(f"Ranked by {len(_sranks)} of 14 active sources")
+
+            # ── PANEL 6: ACTIVE TAGS ────────────────────────────────────────
+            st.markdown("---")
+            st.markdown("**Active Tags**")
+            _atags = detail.get("active_tags", [])
+            if not _atags:
+                st.caption("No active tags.")
+            else:
+                for _tag in _atags:
+                    _tcolor = (_tag.get("tag_color") or "").lower()
+                    _emoji  = _TAG_EMOJI_MAP.get(_tcolor, "⚪")
+                    _tname  = _tag.get("tag_name") or "—"
+                    _tnote  = _tag.get("note")
+                    if _tnote:
+                        st.markdown(f"{_emoji} **{_tname}** — {_tnote}")
+                    else:
+                        st.markdown(f"{_emoji} **{_tname}**")

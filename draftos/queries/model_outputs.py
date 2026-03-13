@@ -8,6 +8,24 @@ from draftos.queries.apex import get_apex_ranks
 
 _APEX_MODEL_VERSION = "apex_v2.2"
 
+# Tier/weight lookup — sources table has no tier/weight columns; inferred from CLAUDE.md canonical list
+_SOURCE_TIER_WEIGHT: dict[str, tuple[str, float]] = {
+    "pff_2026":              ("T1", 1.3),
+    "thedraftnetwork_2026":  ("T1", 1.3),
+    "theringer_2026":        ("T1", 1.3),
+    "nfldraftbuzz_2026_v2":  ("T2", 1.0),
+    "cbssports_2026":        ("T2", 1.0),
+    "espn_2026":             ("T2", 1.0),
+    "nytimes_2026":          ("T2", 1.0),
+    "pfsn_2026":             ("T2", 1.0),
+    "jfosterfilm_2026":      ("T2", 1.0),
+    "combine_ranks_2026":    ("T2", 1.0),
+    "nflcom_2026":           ("T2", 1.0),
+    "bleacherreport_2026":   ("T2", 1.0),
+    "bnbfootball_2026":      ("T3", 0.7),
+    "tankathon_2026":        ("T3", 0.7),
+}
+
 
 def _try_json(s: Any):
     if isinstance(s, str) and s:
@@ -211,8 +229,6 @@ def get_big_board(
           None if not yet scored
       - tag_names: pipe-delimited accepted tag names from prospect_tags
 
-    TODO Session 3: Prospect detail expander — click row, show explain_json breakdown,
-      source-by-source rank table, confidence reasons, APEX notes field.
     TODO Session 3: Movers panel — delta_rank from snapshot comparison, top risers/fallers.
     """
     # Resolve latest snapshot id for this season + model
@@ -348,3 +364,220 @@ def get_big_board(
         row["tag_names"] = tags_by_pid.get(row["prospect_id"], "") or ""
 
     return board
+
+
+def get_prospect_detail(
+    conn,
+    *,
+    prospect_id: int,
+    season_id: int = 1,
+    model_version: str = "apex_v2.2",
+) -> dict | None:
+    """
+    Return a full detail dict for a single prospect, joining all drawer-relevant tables.
+
+    Returns None only if the prospect does not exist (is_active=1 required).
+    All APEX / divergence / RAS / confidence fields are None if not yet computed.
+
+    Keys returned:
+      Identity: prospect_id, display_name, full_name, school_canonical, position_group
+      Consensus: consensus_rank, consensus_tier, consensus_score, confidence_band,
+                 confidence_score, coverage_count
+      APEX: apex_composite, apex_tier, apex_archetype, archetype_gap, gap_label,
+            raw_score, pvc, capital_base, capital_adjusted, eval_confidence,
+            strengths, red_flags, v_processing, v_athleticism, v_scheme_vers,
+            v_comp_tough, v_character, v_dev_traj, v_production, v_injury,
+            c1_public_record, c2_motivation, c3_psych_profile,
+            schwesinger_full, schwesinger_half, smith_rule, apex_tags,
+            override_arch, override_delta, override_rationale, scored_at
+      APEX RAS sub-scores: ras_ath, ras_size, ras_speed, ras_agility
+      Divergence: divergence_flag, divergence_rank_delta, divergence_raw_delta,
+                  divergence_mag
+      RAS: ras_total, hand_size, arm_length, wingspan
+      source_ranks: list[dict] — one entry per active source with a rank
+      active_tags: list[dict] — all is_active=1 prospect_tags for this prospect
+    """
+    # ------------------------------------------------------------------ main query
+    row = conn.execute(
+        """
+        SELECT
+          p.prospect_id,
+          p.display_name,
+          p.full_name,
+          p.school_canonical,
+          p.position_group,
+
+          cr.consensus_rank,
+          cr.tier          AS consensus_tier,
+          cr.score         AS consensus_score,
+          cr.sources_covered AS coverage_count,
+
+          cf.confidence_band,
+          cf.confidence_score,
+
+          aps.apex_composite,
+          aps.apex_tier,
+          aps.matched_archetype  AS apex_archetype,
+          aps.archetype_gap,
+          aps.gap_label,
+          aps.raw_score,
+          aps.pvc,
+          aps.capital_base,
+          aps.capital_adjusted,
+          aps.eval_confidence,
+          aps.strengths,
+          aps.red_flags,
+          aps.v_processing,
+          aps.v_athleticism,
+          aps.v_scheme_vers,
+          aps.v_comp_tough,
+          aps.v_character,
+          aps.v_dev_traj,
+          aps.v_production,
+          aps.v_injury,
+          aps.c1_public_record,
+          aps.c2_motivation,
+          aps.c3_psych_profile,
+          COALESCE(aps.schwesinger_full, 0)  AS schwesinger_full,
+          COALESCE(aps.schwesinger_half, 0)  AS schwesinger_half,
+          COALESCE(aps.smith_rule, 0)         AS smith_rule,
+          aps.tags           AS apex_tags,
+          aps.override_arch,
+          aps.override_delta,
+          aps.override_rationale,
+          aps.scored_at,
+          aps.ath_score      AS ras_ath,
+          aps.size_score     AS ras_size,
+          aps.speed_score    AS ras_speed,
+          aps.agi_score      AS ras_agility,
+
+          df.divergence_flag,
+          df.divergence_rank_delta,
+          df.divergence_raw_delta,
+          df.divergence_mag,
+
+          r.ras_total,
+          r.hand_size,
+          r.arm_length,
+          r.wingspan
+
+        FROM prospects p
+
+        LEFT JOIN prospect_consensus_rankings cr
+          ON cr.prospect_id = p.prospect_id
+         AND cr.season_id   = ?
+
+        LEFT JOIN prospect_model_outputs pmo
+          ON pmo.prospect_id = p.prospect_id
+         AND pmo.season_id   = ?
+         AND pmo.model_id    = 1
+
+        LEFT JOIN prospect_board_snapshot_confidence cf
+          ON cf.prospect_id = p.prospect_id
+         AND cf.season_id   = ?
+         AND cf.model_id    = 1
+         AND cf.snapshot_id = (
+               SELECT MAX(id)
+               FROM prospect_board_snapshots
+               WHERE season_id = ? AND model_id = 1
+             )
+
+        LEFT JOIN apex_scores aps
+          ON aps.prospect_id   = p.prospect_id
+         AND aps.season_id     = ?
+         AND aps.model_version = ?
+
+        LEFT JOIN divergence_flags df
+          ON df.prospect_id   = p.prospect_id
+         AND df.season_id     = ?
+         AND df.model_version = ?
+
+        LEFT JOIN ras r
+          ON r.prospect_id = p.prospect_id
+         AND r.ras_total IS NOT NULL
+
+        WHERE p.prospect_id = ?
+          AND p.season_id   = ?
+          AND p.is_active   = 1
+        """,
+        (
+            season_id,       # cr
+            season_id,       # pmo
+            season_id,       # cf outer
+            season_id,       # cf subquery
+            season_id,       # aps
+            model_version,   # aps
+            season_id,       # df
+            model_version,   # df
+            prospect_id,     # WHERE
+            season_id,       # WHERE
+        ),
+    ).fetchone()
+
+    if row is None:
+        return None
+
+    detail = dict(row)
+
+    # ------------------------------------------------------------------ source ranks
+    source_rank_rows = conn.execute(
+        """
+        SELECT
+          s.source_name,
+          sr.overall_rank
+        FROM sources s
+        JOIN source_rankings sr
+          ON sr.source_id = s.source_id
+        JOIN source_player_map spm
+          ON spm.source_player_id = sr.source_player_id
+         AND spm.prospect_id = ?
+        WHERE s.is_active = 1
+          AND sr.season_id  = ?
+          AND sr.overall_rank IS NOT NULL
+          AND sr.ranking_date = (
+                SELECT MAX(r2.ranking_date)
+                FROM source_rankings r2
+                WHERE r2.source_id  = s.source_id
+                  AND r2.season_id  = ?
+              )
+        ORDER BY sr.overall_rank ASC
+        """,
+        (prospect_id, season_id, season_id),
+    ).fetchall()
+
+    source_ranks: list[dict] = []
+    for sr in source_rank_rows:
+        sname = sr["source_name"]
+        tier, weight = _SOURCE_TIER_WEIGHT.get(sname, ("T2", 1.0))
+        source_ranks.append(
+            {
+                "source_name":  sname,
+                "source_tier":  tier,
+                "weight":       weight,
+                "overall_rank": int(sr["overall_rank"]),
+            }
+        )
+    detail["source_ranks"] = source_ranks
+
+    # ------------------------------------------------------------------ active tags
+    tag_rows = conn.execute(
+        """
+        SELECT
+          td.tag_name,
+          td.tag_color,
+          td.tag_category,
+          pt.note,
+          pt.created_at
+        FROM prospect_tags pt
+        JOIN tag_definitions td
+          ON td.tag_def_id = pt.tag_def_id
+        WHERE pt.prospect_id = ?
+          AND pt.is_active   = 1
+        ORDER BY td.display_order ASC
+        """,
+        (prospect_id,),
+    ).fetchall()
+
+    detail["active_tags"] = [dict(r) for r in tag_rows]
+
+    return detail
