@@ -10,14 +10,14 @@ Non-negotiables:
 - Provide run order + verification commands
 
 Goal for this chat:
-Session 30: Prospect detail drawer — clicking a board row shows full APEX profile inline.
+Session 37: APEX top-50 re-score with positional archetype libraries.
 
 Authoritative State:
 
 1) STATE_SNAPSHOT.md
 # DraftOS State Snapshot
 
-Last Updated (UTC): 2026-03-13T03:46:39.220111+00:00
+Last Updated (UTC): 2026-03-13T19:11:17.205045+00:00
 
 ---
 
@@ -27,23 +27,39 @@ Last Updated (UTC): 2026-03-13T03:46:39.220111+00:00
 
 ## Last Completed Milestone
 
-Session 31 — UI polish pass 1: score formatting, gap labels, modifier flag aliases, column alignment.
+Sessions 34–36 — Prospect detail expander, unified detail panel, clickable rows, UI polish.
 
-- Score formatting: consensus_score, RAS, APEX Score now display as 98.6 not 98.600000.
-  All float display columns use `.apply(lambda x: round(float(x), 1))` + NumberColumn format="%.1f".
-- Gap label display: archetype gap now renders as ✅ Clean Fit / 🟢 Solid Fit / ⚠️ Tweener /
-  🔵 Elite Tweener / 🔴 No Dominant Fit. Raw `gap_label` string and `archetype_gap` float suppressed.
-- Modifier flag aliases: apex_scores.tags comma string mapped through _TAGS_DISPLAY_MAP.
-  CRUSH→💎 Priority Target, Smith Rule→⚠️ Character Cap Active, Walk-On Flag→🏃 Walk-On Origin,
-  Schwesinger Rule→🚀 Elite Character Bonus, Two-Way Premium→🔄 Two-Way Athlete.
-  Boolean columns (schwesinger_full/half, smith_rule) use same map — no raw backend strings in UI.
-- Column alignment: numeric columns right-aligned, string columns left-aligned via Styler set_properties.
-  _NUM_COLS and _STR_COLS lists drive alignment. column_config kept for format strings only.
-- APEX Tier sort: Streamlit 1.53 limitation accepted — column sorts alphabetically on click
-  (DAY tiers cluster, ELITE groups, UDFA sorts last). disabled=True + help tooltip added.
-  _apex_tier_sort and T# proxy columns fully removed from display DataFrames.
-- _TAGS_DISPLAY_MAP, _GAP_LABEL_DISPLAY_MAP, _render_tags(), _render_gap_label() added near top of app.py.
-- Doctor: PASSED. No DB changes. No migrations.
+Session 34: APEX Board prospect detail expander.
+- draftos/queries/apex.py: get_apex_detail() added. JOINs apex_scores+prospects, returns full
+  trait vector dict. two_way_premium derived from apex_scores.tags comma field.
+- app.py: _render_apex_detail() helper added. Inspect selectbox under APEX Board → expander.
+
+Session 35: Unified prospect detail panel + clickable board rows.
+- Streamlit 1.53.0 → Plan A (on_select="rerun", selection_mode="single-row").
+- Big Board and APEX Board both use on_select. Row click writes selected_pid to session_state.
+- Row alignment: _bb_prospect_ids / _apex_prospect_ids lists pre-captured before display builds.
+- Old "Prospect Detail Drawer" (250-line inline render) removed.
+- Old Session 34 "apex_inspect_select" selectbox removed.
+- _render_consensus_card() added for unscored prospects. _ON_SELECT_AVAILABLE constant added.
+- Single unified "📋 Prospect Detail" panel at page bottom.
+
+Session 36: Tabbed boards, tag display overhaul, detail card polish, color disambiguation.
+- Tabbed boards: st.tabs(["📋 Big Board", "⚡ APEX Board — N scored"]).
+  Tagged prospects expander inside Big Board tab. APEX Board inside APEX tab.
+  Free-standing tier legend captions removed — content moved into Column Guide expander.
+- Tags: _TAGS_DISPLAY_MAP expanded to all 28 DB tag_names. "APE" bug fixed —
+  _fmt_tags_text was using t[:3].upper() fallback → now uses _TAGS_DISPLAY_MAP + raw tag_name.
+  Both _fmt_tags and _fmt_tags_text use two-space separator.
+- Color disambiguation: "Tier" column renamed "Consensus" in display DataFrame.
+  _style_consensus_tier() added (text-color only). APEX Tier keeps background-fill badge.
+  Visual contract: Consensus = text color · APEX Tier = filled badge.
+- Detail card (_render_apex_detail):
+  Character sub-scores → plain English (Off-field record / Motor & drive / Mental makeup).
+  Schwesinger/Smith rule badges → plain English descriptions, one per line.
+  Archetype gap → "Archetype fit: N pts — [Clean/Solid/Tweener context]".
+  Strengths/Red Flags → radio toggle Summary vs Bullet Points (key namespaced by prospect_id).
+- No DB changes. No migrations. No query changes. app.py only.
+- Doctor: PASSED (no pipeline changes).
 
 Prior: Session 29 — RAS re-ingest (pro day scores) + Kamari Ramsey S-3 re-score.
 
@@ -135,8 +151,12 @@ Prior sessions on record: 12 (DB rebuild), 13 (weekly pipeline), 13b (school/arc
 
 ## Next Milestone (Single Target)
 
-- Session 30: Prospect detail drawer — clicking a board row shows full APEX profile inline.
-  Then: weekly pipeline run to capture all pro day RAS updates in snapshot.
+- Session 37: APEX top-50 re-score with positional archetype libraries.
+  Detail panel and tabbed boards are fully wired. Every trait vector currently shows generic
+  ~8.5–9.5 placeholder values from the pre-library scoring pass. Re-score will produce
+  differentiated, position-specific trait vectors that make the detail card meaningful.
+  Command: python -m scripts.run_apex_scoring_2026 --batch top50 --force --apply 1
+  Always export after: sqlite3 .\data\edge\draftos.sqlite ".mode json" ".output data/apex_top50_rescored_session37.json" "SELECT * FROM apex_scores;"
 
 ---
 
@@ -230,8 +250,13 @@ EXPORTS: board_2026_v1_default.csv last produced Session 21. Current for that sn
 24. ~~Session 28: Tag UI live — pills, filter, coverage fix, APEX sort, legend, column guide~~ COMPLETE
 25. ~~Session 29: RAS re-ingest (814 rows, 95 scored) + Ramsey S-3 re-score~~ COMPLETE
 26. ~~Session 29: Kamari Ramsey S-3 re-score — APEX_HIGH MODERATE +29~~ COMPLETE
-27. **Session 30: Prospect detail drawer — board row click shows full APEX profile inline** ← NEXT
-26. Post-draft audit framework activation (after April 2026 draft)
+27. ~~Session 30–31: Prospect detail drawer + UI polish (score fmt, gap labels, column alignment)~~ COMPLETE
+28. ~~Session 32–33: Auto-APEX-Rank + APEX Board v2.2 + tag filter~~ COMPLETE
+29. ~~Session 34: APEX Board prospect detail expander (get_apex_detail, _render_apex_detail)~~ COMPLETE
+30. ~~Session 35: Unified detail panel, clickable board rows, on_select API~~ COMPLETE
+31. ~~Session 36: Tabbed boards, tag overhaul, detail card polish, color disambiguation~~ COMPLETE
+32. **Session 37: APEX top-50 re-score — real trait vectors needed** ← NEXT
+33. Post-draft audit framework activation (after April 2026 draft)
 
 ---
 
@@ -306,11 +331,11 @@ Inactive (data preserved): ngs_2026 (source_id=29, is_active=0) — model score,
 
 2) System Snapshot Output
 === DRAFTOS SYSTEM SNAPSHOT ===
-generated_utc: 2026-03-13T03:46:38.560658+00:00
+generated_utc: 2026-03-13T19:11:15.839239+00:00
 
 ## Git
 branch: main
-commit: 421f2067e2789343f0ef4731e14d0d5dee4a812f
+commit: 189c348b59600267b03b336c563fd29d7e5dfab1
 status: clean
 
 ## Tables
