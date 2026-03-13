@@ -10,22 +10,25 @@ Last Updated (UTC): 2026-03-13T03:25:50.412462+00:00
 
 ## Last Completed Milestone
 
-Session 29 — RAS re-ingest (pro day scores) + Kamari Ramsey S-3 re-score.
+Session 31 — UI polish pass 1: score formatting, gap labels, modifier flag aliases, column alignment.
 
-- RAS re-ingest: ras_2026.csv (718 rows, 262 scored). Matched 166 via name_only. DB: 698→814 total
-  rows, 88→95 scored rows (7 new pro day scores added). 552 unmatched is expected — school_aliases
-  table empty; duplicate prospect rows block name_only for top prospects (pre-existing limitation).
-  Tag triggers re-run: 0 new recs (new scored prospects not in apex_scores table).
-- Kamari Ramsey re-scored: S-1 Centerfielder → S-3 Multiplier Safety.
-  ARCHETYPE_OVERRIDES entry added (pid=148, Session 29). forced_archetype="S-3 Multiplier Safety".
-  Final: 61.4 DAY2, FM-2 Scheme Ghost (primary) + FM-3 Processing Wall (secondary). Tier B. R3.
-  Divergence recomputed: APEX_HIGH MODERATE +29 (was +28 with S-1 — signal persists).
-- Divergence dist (post-recompute): ALIGNED=16, APEX_HIGH=26, APEX_LOW=0, APEX_LOW_PVC_STRUCTURAL=20.
-- Backup: data/apex_top50_rescored_session29.json (147KB).
-- Doctor: PASSED. Snapshot integrity: PASSED (snapshot_id=3, rows=995).
-- Tag rec status: accepted=57, dismissed=30 (rec_id=87 Max Klare Dev Bet pre-existing), pending=0.
+- Score formatting: consensus_score, RAS, APEX Score now display as 98.6 not 98.600000.
+  All float display columns use `.apply(lambda x: round(float(x), 1))` + NumberColumn format="%.1f".
+- Gap label display: archetype gap now renders as ✅ Clean Fit / 🟢 Solid Fit / ⚠️ Tweener /
+  🔵 Elite Tweener / 🔴 No Dominant Fit. Raw `gap_label` string and `archetype_gap` float suppressed.
+- Modifier flag aliases: apex_scores.tags comma string mapped through _TAGS_DISPLAY_MAP.
+  CRUSH→💎 Priority Target, Smith Rule→⚠️ Character Cap Active, Walk-On Flag→🏃 Walk-On Origin,
+  Schwesinger Rule→🚀 Elite Character Bonus, Two-Way Premium→🔄 Two-Way Athlete.
+  Boolean columns (schwesinger_full/half, smith_rule) use same map — no raw backend strings in UI.
+- Column alignment: numeric columns right-aligned, string columns left-aligned via Styler set_properties.
+  _NUM_COLS and _STR_COLS lists drive alignment. column_config kept for format strings only.
+- APEX Tier sort: Streamlit 1.53 limitation accepted — column sorts alphabetically on click
+  (DAY tiers cluster, ELITE groups, UDFA sorts last). disabled=True + help tooltip added.
+  _apex_tier_sort and T# proxy columns fully removed from display DataFrames.
+- _TAGS_DISPLAY_MAP, _GAP_LABEL_DISPLAY_MAP, _render_tags(), _render_gap_label() added near top of app.py.
+- Doctor: PASSED. No DB changes. No migrations.
 
-Prior: Session 28 — Tag UI live: inline tag pills, sidebar tag filter, coverage fix, UI polish.
+Prior: Session 29 — RAS re-ingest (pro day scores) + Kamari Ramsey S-3 re-score.
 
 - Tag pills: "Tags" column added to main board dataframe. Emoji text labels per tag type
   (⚡ DIV, 📈 DEV, ⚖ COMP, 🔥 ERAS, ✓ GRAS, ⚠ PRAS, 🩹 INJ). 44 tagged prospects visible.
