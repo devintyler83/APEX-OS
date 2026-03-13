@@ -10,14 +10,14 @@ Non-negotiables:
 - Provide run order + verification commands
 
 Goal for this chat:
-RAS re-ingest after pro days complete (ingest_ras_2026.py with updated file).
+Session 30: Prospect detail drawer — clicking a board row shows full APEX profile inline.
 
 Authoritative State:
 
 1) STATE_SNAPSHOT.md
 # DraftOS State Snapshot
 
-Last Updated (UTC): 2026-03-13T00:49:22.451473+00:00
+Last Updated (UTC): 2026-03-13T03:25:50.412462+00:00
 
 ---
 
@@ -27,7 +27,22 @@ Last Updated (UTC): 2026-03-13T00:49:22.451473+00:00
 
 ## Last Completed Milestone
 
-Session 28 — Tag UI live: inline tag pills, sidebar tag filter, coverage fix, UI polish.
+Session 29 — RAS re-ingest (pro day scores) + Kamari Ramsey S-3 re-score.
+
+- RAS re-ingest: ras_2026.csv (718 rows, 262 scored). Matched 166 via name_only. DB: 698→814 total
+  rows, 88→95 scored rows (7 new pro day scores added). 552 unmatched is expected — school_aliases
+  table empty; duplicate prospect rows block name_only for top prospects (pre-existing limitation).
+  Tag triggers re-run: 0 new recs (new scored prospects not in apex_scores table).
+- Kamari Ramsey re-scored: S-1 Centerfielder → S-3 Multiplier Safety.
+  ARCHETYPE_OVERRIDES entry added (pid=148, Session 29). forced_archetype="S-3 Multiplier Safety".
+  Final: 61.4 DAY2, FM-2 Scheme Ghost (primary) + FM-3 Processing Wall (secondary). Tier B. R3.
+  Divergence recomputed: APEX_HIGH MODERATE +29 (was +28 with S-1 — signal persists).
+- Divergence dist (post-recompute): ALIGNED=16, APEX_HIGH=26, APEX_LOW=0, APEX_LOW_PVC_STRUCTURAL=20.
+- Backup: data/apex_top50_rescored_session29.json (147KB).
+- Doctor: PASSED. Snapshot integrity: PASSED (snapshot_id=3, rows=995).
+- Tag rec status: accepted=57, dismissed=30 (rec_id=87 Max Klare Dev Bet pre-existing), pending=0.
+
+Prior: Session 28 — Tag UI live: inline tag pills, sidebar tag filter, coverage fix, UI polish.
 
 - Tag pills: "Tags" column added to main board dataframe. Emoji text labels per tag type
   (⚡ DIV, 📈 DEV, ⚖ COMP, 🔥 ERAS, ✓ GRAS, ⚠ PRAS, 🩹 INJ). 44 tagged prospects visible.
@@ -117,8 +132,8 @@ Prior sessions on record: 12 (DB rebuild), 13 (weekly pipeline), 13b (school/arc
 
 ## Next Milestone (Single Target)
 
-- RAS re-ingest after pro days complete (ingest_ras_2026.py with updated file).
-  Then: Kamari Ramsey S full PAA run — APEX_HIGH MODERATE +28, strongest unreviewed S signal.
+- Session 30: Prospect detail drawer — clicking a board row shows full APEX profile inline.
+  Then: weekly pipeline run to capture all pro day RAS updates in snapshot.
 
 ---
 
@@ -160,8 +175,10 @@ APEX: Operational. 59 active 2026 scored prospects (50 top-consensus re-scored S
   12 calibration artifacts (is_calibration_artifact=1, excluded from board).
   Tiers (active non-cal): ELITE=3, DAY1=23, DAY2=31, DAY3=5.
   Divergence: ALIGNED=16, APEX_HIGH=26, APEX_LOW=0, APEX_LOW_PVC_STRUCTURAL=20.
-  Latest backup: data/apex_top50_rescored_session26.json (147KB).
+  Latest backup: data/apex_top50_rescored_session29.json (147KB).
   Love (pid=61): RB-1 59.8 DAY2 Tier A v_injury=9.0 (carry clock CLEAR, Session 21).
+  Ramsey (pid=148): S-3 Multiplier Safety 61.4 DAY2. Re-scored Session 29 (was S-1 61.2).
+    FM-2 Scheme Ghost + FM-3 Processing Wall. Tier B. R3. APEX_HIGH MODERATE +29.
   CALIBRATION_OVERRIDES: all 11 PIDs corrected Session 26.
   Max Klare (pid=6): position_group corrected LB→TE (Session 27). Re-scored TE-5 51.3 DAY3.
   Migrations applied: 0001–0039. Next migration: 0040.
@@ -208,8 +225,9 @@ EXPORTS: board_2026_v1_default.csv last produced Session 21. Current for that sn
 22. ~~Session 26: APEX full re-score — calibration (11) + top-50 (50), CALIBRATION_OVERRIDES PIDs fixed~~ COMPLETE
 23. ~~Session 27: Max Klare LB→TE fix + 9 pending tag recs triaged~~ COMPLETE
 24. ~~Session 28: Tag UI live — pills, filter, coverage fix, APEX sort, legend, column guide~~ COMPLETE
-25. **RAS re-ingest after pro days complete — run ingest_ras_2026.py with updated file** ← NEXT
-26. Kamari Ramsey S evaluation — APEX_HIGH MODERATE +28, strong signal, no PAA run yet
+25. ~~Session 29: RAS re-ingest (814 rows, 95 scored) + Ramsey S-3 re-score~~ COMPLETE
+26. ~~Session 29: Kamari Ramsey S-3 re-score — APEX_HIGH MODERATE +29~~ COMPLETE
+27. **Session 30: Prospect detail drawer — board row click shows full APEX profile inline** ← NEXT
 26. Post-draft audit framework activation (after April 2026 draft)
 
 ---
@@ -224,7 +242,7 @@ EXPORTS: board_2026_v1_default.csv last produced Session 21. Current for that sn
 - Divergence: ALIGNED=16, APEX_HIGH=26, APEX_LOW=0, APEX_LOW_PVC_STRUCTURAL=20
 - Top APEX_HIGH (premium positions, actionable):
     Devin Moore CB: MAJOR +33 (previously MINOR — now the strongest actionable CB signal)
-    Kamari Ramsey S: MODERATE +28 (new signal from re-score)
+    Kamari Ramsey S: MODERATE +29 (S-3 re-score Session 29 — S-1→S-3 archetype corrected)
     Colton Hood CB: MODERATE +26
     Joshua Josephs EDGE: MODERATE +22
     Keith Abney CB: MODERATE +22
@@ -242,8 +260,10 @@ EXPORTS: board_2026_v1_default.csv last produced Session 21. Current for that sn
 
 - DEVIN MOORE CB (pid=37): APEX_HIGH MAJOR +33 — strongest actionable premium signal post Session 26.
   Was MINOR in prior sessions; re-score elevated. Review CB PAA before acting.
-- KAMARI RAMSEY S (pid=148): APEX_HIGH MODERATE +28 — new signal from Session 26. Premium. Actionable.
-  Rec_id=85 pending review.
+- KAMARI RAMSEY S (pid=148): APEX_HIGH MODERATE +29 — S-3 re-score Session 29. Premium. Actionable.
+  S-3 Multiplier Safety confirmed. Zone-dominant production. Processing 7.0 — S-1 ruled out.
+  FM-2 Scheme Ghost primary. FM-3 Processing Wall secondary. Tier B. R3 capital.
+  Divergence Alert rec accepted (rec_id=85, Session 27).
 - COLTON HOOD CB (pid=72): APEX_HIGH MODERATE +26 — persistent signal. CB-3 confirmed.
 - JALON KILGORE CB (pid=449): APEX_HIGH MAJOR +260 — divergence artifact (CB entry for Safety).
   Re-scored to S-3 DAY2 63.1 Session 18. Divergence Alert rec held pending combine
@@ -283,11 +303,11 @@ Inactive (data preserved): ngs_2026 (source_id=29, is_active=0) — model score,
 
 2) System Snapshot Output
 === DRAFTOS SYSTEM SNAPSHOT ===
-generated_utc: 2026-03-13T00:49:21.362330+00:00
+generated_utc: 2026-03-13T03:25:49.742484+00:00
 
 ## Git
 branch: main
-commit: 01a39c4bef8dc01f8e92c27ad989225289a16cc7
+commit: 9e05f79229dc9e85b373164cb936a6eeeefe09d7
 status: clean
 
 ## Tables
