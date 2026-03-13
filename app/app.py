@@ -75,13 +75,47 @@ _TAG_EMOJI_MAP: dict[str, str] = {
 
 # ---------------------------------------------------------------------------
 # Frontend display aliases — backend strings NEVER shown to users
+# Keys are the exact tag_name values from tag_definitions.
 # ---------------------------------------------------------------------------
 _TAGS_DISPLAY_MAP: dict[str, str] = {
-    "Smith Rule"       : "⚠️ Character Cap Active",
-    "CRUSH"            : "💎 Priority Target",
-    "Walk-On Flag"     : "🏃 Walk-On Origin",
-    "Two-Way Premium"  : "🔄 Two-Way Athlete",
-    "Schwesinger Rule" : "🚀 Elite Character Bonus",
+    # Athletic scores
+    "Elite RAS":          "🌟 Elite Athlete",
+    "Great RAS":          "✅ Good Athlete",
+    "Poor RAS":           "⚠️ Ath. Concern",
+    "Terrible RAS":       "🚫 Poor Athlete",
+    # Risk
+    "Injury Flag":        "🚨 Injury Risk",
+    "Injury Risk":        "🚨 Injury Risk",
+    "Character Watch":    "🔴 Char. Watch",
+    "Off-Field Concerns": "🔴 Off-Field",
+    "Film Concern":       "🎬 Film Concern",
+    "Possible Bust":      "💣 Bust Risk",
+    # Informational
+    "Compression Flag":   "🔀 Tweener",
+    "Divergence Alert":   "⚡ Divergence",
+    "Scheme Dependent":   "🔒 Scheme Lock",
+    "Development Bet":    "📈 Dev Bet",
+    "Floor Play":         "🛡️ Safe Floor",
+    "Riser":              "📈 Riser",
+    "Faller":             "📉 Faller",
+    "Scheme Fit":         "🎯 Scheme Fit",
+    # Conviction
+    "Want":               "💚 Want",
+    "Do Not Want":        "❌ Do Not Want",
+    "Sleeper":            "👀 Sleeper",
+    "Top 5 NextGen":      "🏆 Top 5",
+    # Editorial
+    "Film Favorite":      "🎬 Film Fav",
+    "Great Combine":      "💪 Great Combine",
+    "Great Pro Day":      "💪 Great Pro Day",
+    "Trade-Up Target":    "🔝 Trade-Up",
+    "Value Zone":         "💰 Value Zone",
+    # Legacy engine tags (from apex_scores.tags comma field)
+    "Smith Rule":         "⚠️ Char. Cap",
+    "CRUSH":              "💎 Priority",
+    "Walk-On Flag":       "🏃 Walk-On",
+    "Two-Way Premium":    "🔄 Two-Way",
+    "Schwesinger Rule":   "🚀 Elite Char.",
 }
 
 _GAP_LABEL_DISPLAY_MAP: dict[str, str] = {
@@ -143,11 +177,12 @@ def render_tag_pills(tag_names: list[str]) -> str:
 
 
 def _fmt_tags_text(tag_names_str: str) -> str:
-    """Format pipe-delimited tag names as compact emoji text for dataframe cells."""
+    """Format pipe-delimited tag names as display text for dataframe cells."""
     if not tag_names_str:
         return ""
     tags = [t.strip() for t in tag_names_str.split("|") if t.strip()]
-    return " ".join(_TAG_LABEL_MAP.get(t, t[:3].upper()) for t in tags)
+    tags = [t for t in tags if t not in _INTERNAL_TAG_NAMES]
+    return "  ".join(_TAGS_DISPLAY_MAP.get(t, t) for t in tags)
 
 
 def _parse_tags(tag_names_str: str) -> list[str]:
@@ -392,13 +427,12 @@ def _fmt_apex_composite(val) -> str:
 
 
 def _fmt_tags(raw) -> str:
-    """Format prospect_tags for board display. Filters internal system tags."""
+    """Format comma-delimited tag names for board display. Filters internal system tags."""
     if not raw or (isinstance(raw, float) and pd.isna(raw)):
         return ""
     parts = [t.strip() for t in str(raw).split(",") if t.strip()]
     parts = [p for p in parts if p not in _INTERNAL_TAG_NAMES]
-    mapped = [_TAGS_DISPLAY_MAP.get(p, p) for p in parts]
-    return ", ".join(mapped)
+    return "  ".join(_TAGS_DISPLAY_MAP.get(p, p) for p in parts)
 
 
 def _render_apex_detail(d: dict) -> None:
@@ -438,40 +472,52 @@ def _render_apex_detail(d: dict) -> None:
         val_str = f"{val:.1f}" if val is not None else "—"
         col.metric(label=label, value=val_str)
 
-    # Character sub-scores
+    # Character sub-scores — plain English labels
     c1 = d.get("c1_public_record")
     c2 = d.get("c2_motivation")
     c3 = d.get("c3_psych_profile")
     if any(v is not None for v in [c1, c2, c3]):
-        st.caption(
-            f"Character sub-scores — "
-            f"C1 Public Record: {c1 if c1 is not None else '—'} | "
-            f"C2 Motivation: {c2 if c2 is not None else '—'} | "
-            f"C3 Psych Profile: {c3 if c3 is not None else '—'}"
-        )
+        sub = []
+        if c1 is not None: sub.append(f"Off-field record: **{c1:.1f}**")
+        if c2 is not None: sub.append(f"Motor & drive: **{c2:.1f}**")
+        if c3 is not None: sub.append(f"Mental makeup: **{c3:.1f}**")
+        st.caption("  ·  ".join(sub))
 
-    # Special rule badges
+    # Special rule badges — plain English
     badges = []
-    if d.get("smith_rule"):       badges.append("⚠️ Smith Rule Active")
-    if d.get("schwesinger_full"): badges.append("✅ Schwesinger Rule (Full)")
-    if d.get("schwesinger_half"): badges.append("✅ Schwesinger Rule (Half)")
-    if d.get("two_way_premium"):  badges.append("⭐ Two-Way Premium")
-    if badges:
-        st.markdown(" · ".join(badges))
+    if d.get("smith_rule"):
+        badges.append("⚠️ Character cap applied — reduces draft capital")
+    if d.get("schwesinger_full"):
+        badges.append("🚀 Elite character bonus — Dev Trajectory boosted (full)")
+    if d.get("schwesinger_half"):
+        badges.append("📈 Character bonus — Dev Trajectory boosted")
+    if d.get("two_way_premium"):
+        badges.append("⭐ Two-way prospect — scored at higher-value position")
+    for b in badges:
+        st.caption(b)
 
     st.divider()
 
     # ── Archetype Block ───────────────────────────────────────────────────────
-    arch_col1, arch_col2, arch_col3 = st.columns([3, 1, 2])
+    arch_col1, arch_col2, arch_col3 = st.columns([3, 2, 2])
     arch_col1.markdown(f"**Archetype:** {d.get('matched_archetype') or '—'}")
     _agap = d.get("archetype_gap")
-    arch_col2.markdown(f"**Gap:** {_agap:.1f} pts" if _agap is not None else "**Gap:** —")
+    if _agap is not None:
+        if _agap > 15:
+            _gap_ctx = "Clean fit — clear archetype match"
+        elif _agap >= 8:
+            _gap_ctx = "Solid fit — good match with some overlap"
+        else:
+            _gap_ctx = "Tweener — no dominant archetype"
+        arch_col2.markdown(f"**Archetype fit:** {_agap:.1f} pts  \n*{_gap_ctx}*")
+    else:
+        arch_col2.markdown("**Archetype fit:** —")
     gap_label = (d.get("gap_label") or "—").strip().upper()
     gap_colors = {
         "CLEAN": "🟢", "SOLID": "🟡", "TWEENER": "🟠",
         "COMPRESSION": "🔴", "NO_FIT": "⚫",
     }
-    arch_col3.markdown(f"**Label:** {gap_colors.get(gap_label, '⚪')} {gap_label}")
+    arch_col3.markdown(f"**Fit label:** {gap_colors.get(gap_label, '⚪')} {gap_label}")
 
     if d.get("override_arch"):
         _od = d.get("override_delta") or 0
@@ -485,19 +531,53 @@ def _render_apex_detail(d: dict) -> None:
 
     # ── Capital Block ─────────────────────────────────────────────────────────
     cap_col1, cap_col2 = st.columns(2)
-    cap_col1.markdown(f"**Capital Base:** {d.get('capital_base') or '—'}")
-    cap_col2.markdown(f"**Capital Adjusted:** {d.get('capital_adjusted') or '—'}")
+    cap_col1.markdown(f"**Draft capital (base):** {d.get('capital_base') or '—'}")
+    cap_col2.markdown(f"**Draft capital (adjusted):** {d.get('capital_adjusted') or '—'}")
 
     st.divider()
 
-    # ── Strengths / Red Flags ─────────────────────────────────────────────────
+    # ── Strengths / Red Flags — toggle bullets vs prose ───────────────────────
+    import re as _re
+
+    def _to_bullets(text: str | None) -> list[str]:
+        if not text:
+            return []
+        sentences = _re.split(r'(?<=[.!?])\s+', text.strip())
+        return [s.strip() for s in sentences if len(s.strip()) > 10]
+
+    _view_mode = st.radio(
+        "View mode",
+        options=["Summary", "Bullet Points"],
+        index=0,
+        horizontal=True,
+        key=f"detail_view_mode_{d.get('prospect_id', 0)}",
+    )
+
     s_col, r_col = st.columns(2)
     with s_col:
         st.markdown("**✅ Strengths**")
-        st.markdown(d.get("strengths") or "*No strengths recorded.*")
+        _strengths = d.get("strengths") or ""
+        if _view_mode == "Bullet Points":
+            _bullets = _to_bullets(_strengths)
+            if _bullets:
+                for _b in _bullets:
+                    st.markdown(f"• {_b}")
+            else:
+                st.markdown("*No strengths recorded.*")
+        else:
+            st.markdown(_strengths or "*No strengths recorded.*")
     with r_col:
         st.markdown("**🚨 Red Flags**")
-        st.markdown(d.get("red_flags") or "*No red flags recorded.*")
+        _redflags = d.get("red_flags") or ""
+        if _view_mode == "Bullet Points":
+            _bullets = _to_bullets(_redflags)
+            if _bullets:
+                for _b in _bullets:
+                    st.markdown(f"• {_b}")
+            else:
+                st.markdown("*No red flags recorded.*")
+        else:
+            st.markdown(_redflags or "*No red flags recorded.*")
 
     # ── Eval Confidence ───────────────────────────────────────────────────────
     st.divider()
@@ -546,7 +626,7 @@ display["Pos"]        = filtered["position_group"]
 display["Score"]      = filtered["consensus_score"].apply(
     lambda x: round(float(x), 1) if pd.notna(x) else None
 )
-display["Tier"]       = filtered["consensus_tier"]
+display["Consensus"]  = filtered["consensus_tier"]
 display["Confidence"] = filtered["confidence_band"]
 display["Sources"]    = filtered["sources_present"].astype("Int64")
 display["Coverage"]   = filtered["coverage_count"].astype("Int64")
@@ -607,6 +687,19 @@ def _style_confidence(val: str) -> str:
     return CONFIDENCE_COLORS.get(val, "")
 
 
+# Consensus tier: text color only (no background fill) — distinguishes from APEX Tier
+_CONSENSUS_TIER_COLORS = {
+    "Elite":    "color: #4ade80; font-weight: 600",   # green text
+    "Strong":   "color: #60a5fa; font-weight: 600",   # blue text
+    "Playable": "color: #facc15; font-weight: 600",   # yellow text
+    "Watch":    "color: #f97316; font-weight: 600",   # orange text
+}
+
+
+def _style_consensus_tier(val: str) -> str:
+    return _CONSENSUS_TIER_COLORS.get(val, "")
+
+
 def _style_divergence(val: str) -> str:
     return DIVERGENCE_COLOR if val != "" else ""
 
@@ -630,7 +723,7 @@ def _style_apex_tier(val: str) -> str:
 
 
 _NUM_COLS = ["Rank", "Score", "Sources", "Coverage", "RAS", "APEX Score"]
-_STR_COLS = ["Player", "School", "Pos", "Tier", "Confidence", "APEX Tier", "Archetype", "Tags", "Snapshot", "⚡ Div", "\u0394 APEX"]
+_STR_COLS = ["Player", "School", "Pos", "Consensus", "Confidence", "APEX Tier", "Archetype", "Tags", "Snapshot", "⚡ Div", "\u0394 APEX"]
 
 styled = (
     display.style
@@ -639,6 +732,7 @@ styled = (
     .set_properties(subset=[c for c in _STR_COLS if c in display.columns],
                     **{"text-align": "left"})
     .map(_style_confidence, subset=["Confidence"])
+    .map(_style_consensus_tier, subset=["Consensus"])
     .map(_style_divergence, subset=["⚡ Div"])
     .map(_style_apex_delta, subset=["\u0394 APEX"])
     .map(_style_apex_tier, subset=["APEX Tier"])
@@ -653,174 +747,158 @@ with st.expander("📋 Column Guide", expanded=False):
 |--------|-------------|
 | Rank | Consensus rank across 14 active sources (weighted by tier) |
 | Score | Weighted consensus score (0–100 scale) |
-| Tier | Consensus tier: Elite / Strong / Playable / Watch |
-| Confidence | Source coverage × agreement quality |
+| Consensus | Consensus tier: Elite / Strong / Playable / Watch |
+| Confidence | Source coverage × agreement quality (High / Medium / Low) |
 | Sources | Active sources that have ranked this prospect |
 | Coverage | Sources covering this prospect out of 14 active |
 | RAS | Relative Athletic Score (scale 2.74–10.0) |
-| ⚡ Div | Divergence flag — APEX vs consensus rank signal |
+| ⚡ Div | Divergence flag — APEX vs consensus rank signal (premium positions only) |
 | APEX | Auto-derived APEX rank from apex_composite sort order (manual override takes precedence) |
 | Δ APEX | consensus_rank − APEX rank (positive = APEX values prospect higher than market) |
 | APEX Score | APEX v2.2 composite score (0–100) |
-| APEX Tier | ELITE ≥85 / DAY1 ≥70 / DAY2 ≥55 / DAY3 ≥40 / UDFA |
-| Archetype | How this prospect wins — from APEX v2.2 positional library |
+| APEX Tier | **ELITE** ≥85 · **DAY1** ≥70 · **DAY2** ≥55 · **DAY3** ≥40 · **UDFA-P** ≥28 · **UDFA** <28 |
+| Archetype | How this prospect wins — matched from APEX v2.2 positional library |
+| Archetype Fit | **Clean Fit** >15 pts · **Solid Fit** 8–15 pts · **Tweener** <8 pts · **No Fit** = concern |
 | Tags | System-generated signals. See Tag Legend in sidebar. |
 """)
 
 # ---------------------------------------------------------------------------
-# Render table
+# Tabbed boards
 # ---------------------------------------------------------------------------
-bb_event = st.dataframe(
-    styled,
-    column_config={
-        "Score":      st.column_config.NumberColumn("Score",      format="%.1f"),
-        "RAS":        st.column_config.NumberColumn("RAS",        format="%.1f"),
-        "APEX Score": st.column_config.NumberColumn("APEX Score", format="%.1f"),
-        "APEX Tier":  st.column_config.TextColumn(
-                          "APEX Tier",
-                          disabled=True,
-                          help="Draft capital tier — derived from APEX Score. Sort by APEX Score column.",
-                      ),
-    },
-    use_container_width=True,
-    hide_index=True,
-    on_select="rerun",
-    selection_mode="single-row",
-    key="big_board_table",
-)
-if bb_event and bb_event.selection and bb_event.selection.rows:
-    _bb_row_idx = bb_event.selection.rows[0]
-    st.session_state["selected_pid"] = int(_bb_prospect_ids[_bb_row_idx])
+tab_bb, tab_apex = st.tabs([
+    "📋  Big Board",
+    f"⚡  APEX Board — {apex_scored} scored",
+])
 
-st.caption(f"Showing {len(display)} of {total_prospects} prospects")
-st.caption("💡 Click any row to load the prospect detail panel below.")
-
-# ---------------------------------------------------------------------------
-# APEX v2.2 tier legend
-# ---------------------------------------------------------------------------
-st.caption(
-    "**APEX v2.2 Tiers:** "
-    "ELITE (≥85) | DAY1 (≥70) | DAY2 (≥55) | DAY3 (≥40) | UDFA-P (≥28) | UDFA (<28)   "
-    "**Sort tip:** click APEX Tier to group by tier (DAY tiers cluster, UDFA sorts last)."
-)
-
-# ---------------------------------------------------------------------------
-# Tagged prospects pill view (HTML rendering for color)
-# ---------------------------------------------------------------------------
-tagged_filtered = filtered[filtered["tag_names"] != ""].copy()
-if not tagged_filtered.empty:
-    with st.expander(f"Tagged prospects on this board ({len(tagged_filtered)})", expanded=False):
-        st.markdown(
-            "Tag pills: "
-            + " ".join(
-                f'<span style="background:{_TAG_COLOR_MAP.get(t, "#6B7280")};color:white;'
-                f'padding:2px 6px;border-radius:4px;font-size:11px;font-weight:600;'
-                f'margin-right:3px">{_TAG_LABEL_MAP.get(t, t)}</span>'
-                for t in _SIDEBAR_TAGS
-                if any(t in _parse_tags(row) for row in tagged_filtered["tag_names"])
-            ),
-            unsafe_allow_html=True,
-        )
-        st.markdown("---")
-        for _, row in tagged_filtered.sort_values("consensus_rank").iterrows():
-            tags = _parse_tags(row["tag_names"])
-            pill_html = render_tag_pills(tags)
-            rank = int(row["consensus_rank"]) if pd.notna(row["consensus_rank"]) else "?"
-            name = row["display_name"]
-            pos  = row["position_group"]
-            apex = _fmt_apex_composite(row.get("apex_composite"))
-            tier = row.get("apex_tier") or ""
-            st.markdown(
-                f"**#{rank} {name}** ({pos}) &nbsp; APEX {apex} {tier} &nbsp;&nbsp; {pill_html}",
-                unsafe_allow_html=True,
-            )
-
-# ---------------------------------------------------------------------------
-# APEX Board — v2.2
-# ---------------------------------------------------------------------------
-if apex_scored > 0 and "apex_composite" in df.columns:
-    st.divider()
-    st.subheader(f"APEX Board — v2.2 ({apex_scored} prospects scored)")
-
-    apex_df = df[df["apex_composite"].notna()].copy()
-
-    # Primary sort: auto_apex_rank ascending (rank 1 at top)
-    # Fallback: apex_composite descending for any rows where auto_apex_rank
-    # is somehow None (should not occur post-Session 32, but defensive)
-    apex_df = apex_df.sort_values(
-        ["auto_apex_rank", "apex_composite"],
-        ascending=[True, False],
-        na_position="last",
-    )
-
-    # Build display frame — column order is the board contract
-    ab = pd.DataFrame()
-    ab["APEX Rank"]  = apex_df["auto_apex_rank"].astype("Int64")
-    ab["Player"]     = apex_df["display_name"]
-    ab["Pos"]        = apex_df["position_group"]
-    ab["School"]     = apex_df["school_canonical"]
-    ab["APEX Score"] = apex_df["apex_composite"].apply(_fmt_apex_composite)
-    ab["APEX Tier"]  = apex_df["apex_tier"].fillna("")
-    ab["Archetype"]  = apex_df["apex_archetype"].fillna("-")
-
-    # Gap column — reuse existing _GAP_LABEL_DISPLAY_MAP
-    if "gap_label" in apex_df.columns:
-        ab["Gap"] = apex_df["gap_label"].map(
-            lambda v: _GAP_LABEL_DISPLAY_MAP.get(str(v).strip().upper(), str(v)) if pd.notna(v) else "-"
-        )
-    else:
-        ab["Gap"] = "-"
-
-    ab["Consensus"]  = apex_df["consensus_rank"].astype("Int64")
-    ab["\u0394 APEX"] = apex_df["auto_apex_delta"].apply(_fmt_apex_delta)
-
-    # Eval Confidence
-    if "eval_confidence" in apex_df.columns:
-        ab["Eval Conf"] = apex_df["eval_confidence"].fillna("-")
-    else:
-        ab["Eval Conf"] = "-"
-
-    # Tags column — module-level _fmt_tags filters internal system tags
-    if "apex_tags" in apex_df.columns:
-        ab["Tags"] = apex_df["apex_tags"].apply(_fmt_tags)
-    else:
-        ab["Tags"] = ""
-
-    # Ordered prospect_id list — aligns with ab DataFrame row positions
-    _apex_prospect_ids: list[int] = apex_df["prospect_id"].tolist()
-
-    ab = ab.reset_index(drop=True)
-
-    _right_cols_apex = ["APEX Rank", "APEX Score", "Consensus", "\u0394 APEX"]
-    _left_cols_apex  = ["Player", "Pos", "School", "APEX Tier", "Archetype",
-                        "Gap", "Eval Conf", "Tags"]
-
-    apex_styled = (
-        ab.style
-        .map(_style_apex_tier, subset=["APEX Tier"])
-        .map(_style_apex_delta, subset=["\u0394 APEX"])
-        .set_properties(subset=_right_cols_apex, **{"text-align": "right"})
-        .set_properties(subset=_left_cols_apex,  **{"text-align": "left"})
-    )
-
-    ab_event = st.dataframe(
-        apex_styled,
+with tab_bb:
+    bb_event = st.dataframe(
+        styled,
+        column_config={
+            "Score":      st.column_config.NumberColumn("Score",      format="%.1f"),
+            "RAS":        st.column_config.NumberColumn("RAS",        format="%.1f"),
+            "APEX Score": st.column_config.NumberColumn("APEX Score", format="%.1f"),
+            "APEX Tier":  st.column_config.TextColumn(
+                              "APEX Tier",
+                              disabled=True,
+                              help="Draft capital tier — derived from APEX Score.",
+                          ),
+        },
         use_container_width=True,
         hide_index=True,
         on_select="rerun",
         selection_mode="single-row",
-        key="apex_board_table",
+        key="big_board_table",
     )
-    if ab_event and ab_event.selection and ab_event.selection.rows:
-        _ab_row_idx = ab_event.selection.rows[0]
-        st.session_state["selected_pid"] = int(_apex_prospect_ids[_ab_row_idx])
+    if bb_event and bb_event.selection and bb_event.selection.rows:
+        _bb_row_idx = bb_event.selection.rows[0]
+        st.session_state["selected_pid"] = int(_bb_prospect_ids[_bb_row_idx])
 
-    st.caption(
-        "**APEX v2.2 Tiers:** "
-        "ELITE (\u226585) | DAY1 (\u226570) | DAY2 (\u226555) | DAY3 (\u226540) | UDFA-P (\u226528) | UDFA (<28)  "
-        "\u00b7 **Gap:** \u2705 Clean Fit (>15) | \U0001f7e2 Solid Fit (8\u201315) | \u26a0\ufe0f Tweener (<8)"
-    )
+    st.caption(f"Showing {len(display)} of {total_prospects} prospects")
     st.caption("💡 Click any row to load the prospect detail panel below.")
+
+    # Tagged prospects pill view
+    tagged_filtered = filtered[filtered["tag_names"] != ""].copy()
+    if not tagged_filtered.empty:
+        with st.expander(f"Tagged prospects on this board ({len(tagged_filtered)})", expanded=False):
+            st.markdown(
+                "Tag pills: "
+                + " ".join(
+                    f'<span style="background:{_TAG_COLOR_MAP.get(t, "#6B7280")};color:white;'
+                    f'padding:2px 6px;border-radius:4px;font-size:11px;font-weight:600;'
+                    f'margin-right:3px">{_TAGS_DISPLAY_MAP.get(t, t)}</span>'
+                    for t in _SIDEBAR_TAGS
+                    if any(t in _parse_tags(row) for row in tagged_filtered["tag_names"])
+                ),
+                unsafe_allow_html=True,
+            )
+            st.markdown("---")
+            for _, row in tagged_filtered.sort_values("consensus_rank").iterrows():
+                tags = _parse_tags(row["tag_names"])
+                pill_html = render_tag_pills(tags)
+                rank = int(row["consensus_rank"]) if pd.notna(row["consensus_rank"]) else "?"
+                name = row["display_name"]
+                pos  = row["position_group"]
+                apex = _fmt_apex_composite(row.get("apex_composite"))
+                tier = row.get("apex_tier") or ""
+                st.markdown(
+                    f"**#{rank} {name}** ({pos}) &nbsp; APEX {apex} {tier} &nbsp;&nbsp; {pill_html}",
+                    unsafe_allow_html=True,
+                )
+
+with tab_apex:
+    if apex_scored > 0 and "apex_composite" in df.columns:
+        apex_df = df[df["apex_composite"].notna()].copy()
+
+        # Primary sort: auto_apex_rank ascending (rank 1 at top)
+        apex_df = apex_df.sort_values(
+            ["auto_apex_rank", "apex_composite"],
+            ascending=[True, False],
+            na_position="last",
+        )
+
+        # Build display frame — column order is the board contract
+        ab = pd.DataFrame()
+        ab["APEX Rank"]  = apex_df["auto_apex_rank"].astype("Int64")
+        ab["Player"]     = apex_df["display_name"]
+        ab["Pos"]        = apex_df["position_group"]
+        ab["School"]     = apex_df["school_canonical"]
+        ab["APEX Score"] = apex_df["apex_composite"].apply(_fmt_apex_composite)
+        ab["APEX Tier"]  = apex_df["apex_tier"].fillna("")
+        ab["Archetype"]  = apex_df["apex_archetype"].fillna("-")
+
+        # Gap column
+        if "gap_label" in apex_df.columns:
+            ab["Fit"] = apex_df["gap_label"].map(
+                lambda v: _GAP_LABEL_DISPLAY_MAP.get(str(v).strip().upper(), str(v)) if pd.notna(v) else "-"
+            )
+        else:
+            ab["Fit"] = "-"
+
+        ab["Consensus"]   = apex_df["consensus_rank"].astype("Int64")
+        ab["\u0394 APEX"] = apex_df["auto_apex_delta"].apply(_fmt_apex_delta)
+
+        if "eval_confidence" in apex_df.columns:
+            ab["Eval Conf"] = apex_df["eval_confidence"].fillna("-")
+        else:
+            ab["Eval Conf"] = "-"
+
+        if "apex_tags" in apex_df.columns:
+            ab["Tags"] = apex_df["apex_tags"].apply(_fmt_tags)
+        else:
+            ab["Tags"] = ""
+
+        # Ordered prospect_id list — aligns with ab row positions
+        _apex_prospect_ids: list[int] = apex_df["prospect_id"].tolist()
+
+        ab = ab.reset_index(drop=True)
+
+        _right_cols_apex = ["APEX Rank", "APEX Score", "Consensus", "\u0394 APEX"]
+        _left_cols_apex  = ["Player", "Pos", "School", "APEX Tier", "Archetype",
+                            "Fit", "Eval Conf", "Tags"]
+
+        apex_styled = (
+            ab.style
+            .map(_style_apex_tier, subset=["APEX Tier"])
+            .map(_style_apex_delta, subset=["\u0394 APEX"])
+            .set_properties(subset=_right_cols_apex, **{"text-align": "right"})
+            .set_properties(subset=_left_cols_apex,  **{"text-align": "left"})
+        )
+
+        ab_event = st.dataframe(
+            apex_styled,
+            use_container_width=True,
+            hide_index=True,
+            on_select="rerun",
+            selection_mode="single-row",
+            key="apex_board_table",
+        )
+        if ab_event and ab_event.selection and ab_event.selection.rows:
+            _ab_row_idx = ab_event.selection.rows[0]
+            st.session_state["selected_pid"] = int(_apex_prospect_ids[_ab_row_idx])
+
+        st.caption("💡 Click any row to load the prospect detail panel below.")
+    else:
+        st.info("No APEX-scored prospects yet. Run apex_scoring to populate this board.")
 
 # ---------------------------------------------------------------------------
 # APEX rank input panel (analyst overrides)
