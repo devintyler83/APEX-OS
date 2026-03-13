@@ -87,6 +87,12 @@ _GAP_LABEL_DISPLAY_MAP: dict[str, str] = {
     "NO_FIT"      : "🔴 No Dominant Fit",
 }
 
+# Tag names that exist in prospect_tags for system purposes but should
+# never appear in board display columns.
+_INTERNAL_TAG_NAMES: frozenset[str] = frozenset({
+    "apex_rank_2026",
+})
+
 
 def _render_tags(raw_tags_string: str) -> list[str]:
     """
@@ -216,7 +222,7 @@ with st.sidebar:
 
     show_divergence_only = st.checkbox("Show divergence flags only (⚡)", value=False)
 
-    show_apex_only = st.checkbox("Show APEX ranked only (analyst)", value=False)
+    show_apex_only = st.checkbox("Show APEX scored only (auto-rank)", value=False)
 
     show_apex_scored_only = st.checkbox("Show APEX v2.2 scored only", value=False)
 
@@ -306,7 +312,7 @@ if show_divergence_only:
     filtered = filtered[filtered["divergence_flag"] == 1]
 
 if show_apex_only:
-    filtered = filtered[filtered["apex_rank"].notna()]
+    filtered = filtered[filtered["auto_apex_rank"].notna()]
 
 if show_apex_scored_only and "apex_composite" in filtered.columns:
     filtered = filtered[filtered["apex_composite"].notna()]
@@ -377,6 +383,16 @@ def _fmt_apex_composite(val) -> str:
         return "-"
 
 
+def _fmt_tags(raw) -> str:
+    """Format prospect_tags for board display. Filters internal system tags."""
+    if not raw or (isinstance(raw, float) and pd.isna(raw)):
+        return ""
+    parts = [t.strip() for t in str(raw).split(",") if t.strip()]
+    parts = [p for p in parts if p not in _INTERNAL_TAG_NAMES]
+    mapped = [_TAGS_DISPLAY_MAP.get(p, p) for p in parts]
+    return ", ".join(mapped)
+
+
 display = pd.DataFrame()
 display["Rank"]       = filtered["consensus_rank"].astype("Int64")
 display["Player"]     = filtered["display_name"]
@@ -393,8 +409,8 @@ display["RAS"]        = filtered["ras_score"].apply(
     lambda x: round(float(x), 1) if pd.notna(x) else None
 )
 display["⚡ Div"]    = filtered.apply(_fmt_div, axis=1)
-display["APEX"]       = filtered["apex_rank"].astype("Int64")
-display["\u0394 APEX"] = filtered["apex_delta"].apply(_fmt_apex_delta)
+display["APEX"]       = filtered["auto_apex_rank"].astype("Int64")
+display["\u0394 APEX"] = filtered["auto_apex_delta"].apply(_fmt_apex_delta)
 
 # APEX v2.2 engine columns — NULL-safe
 if "apex_composite" in filtered.columns:
@@ -498,8 +514,8 @@ with st.expander("📋 Column Guide", expanded=False):
 | Coverage | Sources covering this prospect out of 14 active |
 | RAS | Relative Athletic Score (scale 2.74–10.0) |
 | ⚡ Div | Divergence flag — APEX vs consensus rank signal |
-| APEX | Analyst-assigned APEX rank override |
-| Δ APEX | Rank delta between analyst APEX rank and consensus |
+| APEX | Auto-derived APEX rank from apex_composite sort order (manual override takes precedence) |
+| Δ APEX | consensus_rank − APEX rank (positive = APEX values prospect higher than market) |
 | APEX Score | APEX v2.2 composite score (0–100) |
 | APEX Tier | ELITE ≥85 / DAY1 ≥70 / DAY2 ≥55 / DAY3 ≥40 / UDFA |
 | Archetype | How this prospect wins — from APEX v2.2 positional library |
@@ -567,95 +583,124 @@ if not tagged_filtered.empty:
             )
 
 # ---------------------------------------------------------------------------
-# APEX v2.2 scores panel (if any prospects scored)
+# APEX Board — v2.2
 # ---------------------------------------------------------------------------
 if apex_scored > 0 and "apex_composite" in df.columns:
     st.divider()
-    st.subheader(f"APEX v2.2 Engine — {apex_scored} Prospects Scored")
+    st.subheader(f"APEX Board — v2.2 ({apex_scored} prospects scored)")
 
     apex_df = df[df["apex_composite"].notna()].copy()
-    apex_df = apex_df.sort_values(["_apex_tier_sort", "apex_composite"], ascending=[True, False])
 
-    apex_display = pd.DataFrame()
-    apex_display["Player"]     = apex_df["display_name"]
-    apex_display["Pos"]        = apex_df["position_group"]
-    apex_display["School"]     = apex_df["school_canonical"]
-    apex_display["Archetype"]  = apex_df["apex_archetype"].fillna("-")
-    apex_display["APEX Score"] = apex_df["apex_composite"].apply(
-        lambda x: round(float(x), 1) if pd.notna(x) else None
+    # Primary sort: auto_apex_rank ascending (rank 1 at top)
+    # Fallback: apex_composite descending for any rows where auto_apex_rank
+    # is somehow None (should not occur post-Session 32, but defensive)
+    apex_df = apex_df.sort_values(
+        ["auto_apex_rank", "apex_composite"],
+        ascending=[True, False],
+        na_position="last",
     )
-    apex_display["APEX Tier"]  = apex_df["apex_tier"].fillna("")
-    apex_display["Consensus"]  = apex_df["consensus_rank"].astype("Int64")
+
+    # Build display frame — column order is the board contract
+    ab = pd.DataFrame()
+    ab["APEX Rank"]  = apex_df["auto_apex_rank"].astype("Int64")
+    ab["Player"]     = apex_df["display_name"]
+    ab["Pos"]        = apex_df["position_group"]
+    ab["School"]     = apex_df["school_canonical"]
+    ab["APEX Score"] = apex_df["apex_composite"].apply(_fmt_apex_composite)
+    ab["APEX Tier"]  = apex_df["apex_tier"].fillna("")
+    ab["Archetype"]  = apex_df["apex_archetype"].fillna("-")
+
+    # Gap column — reuse existing _GAP_LABEL_DISPLAY_MAP
+    if "gap_label" in apex_df.columns:
+        ab["Gap"] = apex_df["gap_label"].map(
+            lambda v: _GAP_LABEL_DISPLAY_MAP.get(str(v).strip().upper(), str(v)) if pd.notna(v) else "-"
+        )
+    else:
+        ab["Gap"] = "-"
+
+    ab["Consensus"]  = apex_df["consensus_rank"].astype("Int64")
+    ab["\u0394 APEX"] = apex_df["auto_apex_delta"].apply(_fmt_apex_delta)
+
+    # Eval Confidence
+    if "eval_confidence" in apex_df.columns:
+        ab["Eval Conf"] = apex_df["eval_confidence"].fillna("-")
+    else:
+        ab["Eval Conf"] = "-"
+
+    # Tags column — module-level _fmt_tags filters internal system tags
+    if "apex_tags" in apex_df.columns:
+        ab["Tags"] = apex_df["apex_tags"].apply(_fmt_tags)
+    else:
+        ab["Tags"] = ""
+
+    ab = ab.reset_index(drop=True)
+
+    _right_cols_apex = ["APEX Rank", "APEX Score", "Consensus", "\u0394 APEX"]
+    _left_cols_apex  = ["Player", "Pos", "School", "APEX Tier", "Archetype",
+                        "Gap", "Eval Conf", "Tags"]
 
     apex_styled = (
-        apex_display.style
-        .set_properties(subset=["APEX Score", "Consensus"], **{"text-align": "right"})
-        .set_properties(subset=["Player", "Pos", "School", "Archetype", "APEX Tier"], **{"text-align": "left"})
+        ab.style
         .map(_style_apex_tier, subset=["APEX Tier"])
+        .map(_style_apex_delta, subset=["\u0394 APEX"])
+        .set_properties(subset=_right_cols_apex, **{"text-align": "right"})
+        .set_properties(subset=_left_cols_apex,  **{"text-align": "left"})
     )
 
-    st.dataframe(
-        apex_styled,
-        column_config={
-            "APEX Score": st.column_config.NumberColumn("APEX Score", format="%.1f"),
-            "APEX Tier":  st.column_config.TextColumn(
-                              "APEX Tier",
-                              disabled=True,
-                              help="Draft capital tier — derived from APEX Score. Sort by APEX Score column.",
-                          ),
-        },
-        use_container_width=True,
-        hide_index=True,
+    st.dataframe(apex_styled, use_container_width=True, hide_index=True)
+
+    st.caption(
+        "**APEX v2.2 Tiers:** "
+        "ELITE (\u226585) | DAY1 (\u226570) | DAY2 (\u226555) | DAY3 (\u226540) | UDFA-P (\u226528) | UDFA (<28)  "
+        "\u00b7 **Gap:** \u2705 Clean Fit (>15) | \U0001f7e2 Solid Fit (8\u201315) | \u26a0\ufe0f Tweener (<8)"
     )
 
 # ---------------------------------------------------------------------------
 # APEX rank input panel (analyst overrides)
 # ---------------------------------------------------------------------------
-st.divider()
-st.subheader("Set APEX Rank (Analyst Override)")
+with st.expander("🔧 Set APEX Rank (Analyst Override — optional)", expanded=False):
+    all_names = sorted(df["display_name"].dropna().unique().tolist())
 
-all_names = sorted(df["display_name"].dropna().unique().tolist())
+    col1, col2, col3, col4 = st.columns([3, 1, 1, 1])
+    with col1:
+        selected_name = st.selectbox(
+            "Prospect",
+            options=all_names,
+            key="apex_prospect_select",
+        )
+    with col2:
+        apex_rank_input = st.number_input(
+            "Rank",
+            min_value=1,
+            max_value=total_prospects,
+            value=1,
+            step=1,
+            key="apex_rank_input",
+        )
+    with col3:
+        save_clicked = st.button("Save APEX", type="primary")
+    with col4:
+        clear_clicked = st.button("Clear APEX")
 
-col1, col2, col3, col4 = st.columns([3, 1, 1, 1])
-with col1:
-    selected_name = st.selectbox(
-        "Prospect",
-        options=all_names,
-        key="apex_prospect_select",
-    )
-with col2:
-    apex_rank_input = st.number_input(
-        "Rank",
-        min_value=1,
-        max_value=total_prospects,
-        value=1,
-        step=1,
-        key="apex_rank_input",
-    )
-with col3:
-    save_clicked = st.button("Save APEX", type="primary")
-with col4:
-    clear_clicked = st.button("Clear APEX")
+    if save_clicked and selected_name:
+        pid_rows = df[df["display_name"] == selected_name]["prospect_id"]
+        if not pid_rows.empty:
+            pid = int(pid_rows.iloc[0])
+            with connect() as conn:
+                save_apex_rank(conn, prospect_id=pid, apex_rank=int(apex_rank_input))
+            st.success(f"Saved: {selected_name} → APEX #{apex_rank_input}")
+            _load_board.clear()
+            st.rerun()
 
-if save_clicked and selected_name:
-    pid_rows = df[df["display_name"] == selected_name]["prospect_id"]
-    if not pid_rows.empty:
-        pid = int(pid_rows.iloc[0])
-        with connect() as conn:
-            save_apex_rank(conn, prospect_id=pid, apex_rank=int(apex_rank_input))
-        st.success(f"Saved: {selected_name} → APEX #{apex_rank_input}")
-        _load_board.clear()
-        st.rerun()
-
-if clear_clicked and selected_name:
-    pid_rows = df[df["display_name"] == selected_name]["prospect_id"]
-    if not pid_rows.empty:
-        pid = int(pid_rows.iloc[0])
-        with connect() as conn:
-            clear_apex_rank(conn, prospect_id=pid)
-        st.success(f"Cleared APEX rank for {selected_name}")
-        _load_board.clear()
-        st.rerun()
+    if clear_clicked and selected_name:
+        pid_rows = df[df["display_name"] == selected_name]["prospect_id"]
+        if not pid_rows.empty:
+            pid = int(pid_rows.iloc[0])
+            with connect() as conn:
+                clear_apex_rank(conn, prospect_id=pid)
+            st.success(f"Cleared APEX rank for {selected_name}")
+            _load_board.clear()
+            st.rerun()
 
 # ---------------------------------------------------------------------------
 # Prospect Detail Drawer

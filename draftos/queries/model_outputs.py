@@ -269,7 +269,16 @@ def get_big_board(
 
           aps.apex_composite,
           aps.apex_tier,
-          aps.matched_archetype  AS apex_archetype
+          aps.matched_archetype  AS apex_archetype,
+          aps.gap_label,
+          aps.eval_confidence,
+          (
+              SELECT GROUP_CONCAT(td2.tag_name, ', ')
+              FROM prospect_tags pt2
+              JOIN tag_definitions td2 ON td2.tag_def_id = pt2.tag_def_id
+              WHERE pt2.prospect_id = p.prospect_id
+                AND pt2.is_active   = 1
+          ) AS apex_tags
 
         FROM prospect_board_snapshot_rows sr
 
@@ -345,6 +354,37 @@ def get_big_board(
             row["apex_delta"] = row["consensus_rank"] - apex_rank
         else:
             row["apex_delta"] = None
+
+    # --- AUTO-APEX-RANK: derive rank from apex_composite sort order ---
+    # Sort scored prospects descending by apex_composite, assign rank 1..N.
+    # Manual override (apex_rank from prospect_tags) takes precedence if set.
+    scored_rows = sorted(
+        [r for r in board if r.get("apex_composite") is not None],
+        key=lambda r: r["apex_composite"],
+        reverse=True,
+    )
+    auto_rank_map: dict[int, int] = {
+        r["prospect_id"]: (i + 1)
+        for i, r in enumerate(scored_rows)
+    }
+
+    for row in board:
+        pid = row["prospect_id"]
+        manual = row.get("apex_rank")   # set by analyst, or None
+
+        # Effective APEX rank: manual takes precedence over auto
+        if manual is not None:
+            row["auto_apex_rank"] = manual
+        else:
+            row["auto_apex_rank"] = auto_rank_map.get(pid)  # None if not scored
+
+        # Δ APEX: consensus_rank - effective_apex_rank
+        # Positive = APEX likes this prospect more than consensus
+        consensus = row.get("consensus_rank")
+        if row["auto_apex_rank"] is not None and consensus is not None:
+            row["auto_apex_delta"] = consensus - row["auto_apex_rank"]
+        else:
+            row["auto_apex_delta"] = None
 
     # --- Tags: accepted tags per prospect (pipe-delimited tag_name string) ---
     tag_rows = conn.execute(
