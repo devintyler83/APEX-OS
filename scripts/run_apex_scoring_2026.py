@@ -656,6 +656,31 @@ ARCHETYPE_OVERRIDES: dict[int, dict] = {
             "and correct. Do not suppress the composite below what the mechanism earns."
         ),
     },
+
+    # ---------------------------------------------------------------------------
+    # Session 29 overrides
+    # ---------------------------------------------------------------------------
+
+    # Kamari Ramsey — S (pid=148). PAA confirmed S-3 Multiplier Safety (Developing).
+    # Session 26 scored S-1 Centerfielder 61.2 DAY2. S-1 is incorrect — processing
+    # profile (7.0) does not support Centerfielder mechanism. Zone-dominant production
+    # is the confirmed primary mechanism. S-3 is the correct archetype.
+    148: {
+        "forced_archetype":    "S-3 Multiplier Safety",
+        "archetype_direction": (
+            "S-3 Multiplier Safety (Developing). PAA complete. "
+            "Zone-dominant production confirmed. Man coverage floor PARTIAL — "
+            "functional but not tested at volume vs. elite competition. "
+            "Post-snap assignment adjustment DEVELOPING — not confirmed. "
+            "SOS gate PASSED. Do NOT assign S-1 Centerfielder — processing "
+            "profile (7.0) does not support that mechanism. "
+            "S-3 is the correct archetype. Capital: R3. Eval confidence: Tier B."
+        ),
+        "archetype_rationale": "PAA-confirmed S-3. Zone-first mechanism. Processing developing.",
+        "eval_confidence":     "Tier B",
+        "capital_range":       "R3",
+        "fm_flags":            ["FM-2 Scheme Ghost (primary)", "FM-3 Processing Wall (secondary)"],
+    },
 }
 
 # ---------------------------------------------------------------------------
