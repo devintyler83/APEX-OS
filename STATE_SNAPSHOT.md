@@ -10,23 +10,30 @@ Last Updated (UTC): 2026-03-13T03:46:39.220111+00:00
 
 ## Last Completed Milestone
 
-Session 31 — UI polish pass 1: score formatting, gap labels, modifier flag aliases, column alignment.
+Sessions 32–33 — Auto-APEX-Rank + APEX Board v2.2 + tag filter.
 
-- Score formatting: consensus_score, RAS, APEX Score now display as 98.6 not 98.600000.
-  All float display columns use `.apply(lambda x: round(float(x), 1))` + NumberColumn format="%.1f".
-- Gap label display: archetype gap now renders as ✅ Clean Fit / 🟢 Solid Fit / ⚠️ Tweener /
-  🔵 Elite Tweener / 🔴 No Dominant Fit. Raw `gap_label` string and `archetype_gap` float suppressed.
-- Modifier flag aliases: apex_scores.tags comma string mapped through _TAGS_DISPLAY_MAP.
-  CRUSH→💎 Priority Target, Smith Rule→⚠️ Character Cap Active, Walk-On Flag→🏃 Walk-On Origin,
-  Schwesinger Rule→🚀 Elite Character Bonus, Two-Way Premium→🔄 Two-Way Athlete.
-  Boolean columns (schwesinger_full/half, smith_rule) use same map — no raw backend strings in UI.
-- Column alignment: numeric columns right-aligned, string columns left-aligned via Styler set_properties.
-  _NUM_COLS and _STR_COLS lists drive alignment. column_config kept for format strings only.
-- APEX Tier sort: Streamlit 1.53 limitation accepted — column sorts alphabetically on click
-  (DAY tiers cluster, ELITE groups, UDFA sorts last). disabled=True + help tooltip added.
-  _apex_tier_sort and T# proxy columns fully removed from display DataFrames.
-- _TAGS_DISPLAY_MAP, _GAP_LABEL_DISPLAY_MAP, _render_tags(), _render_gap_label() added near top of app.py.
-- Doctor: PASSED. No DB changes. No migrations.
+Session 32: Auto-APEX-Rank derived from apex_composite sort order.
+- model_outputs.py: auto_apex_rank computed in get_big_board() — scored prospects sorted by
+  apex_composite DESC, assigned rank 1..N. Manual apex_rank from prospect_tags takes precedence.
+  auto_apex_delta = consensus_rank − auto_apex_rank (positive = APEX values higher than market).
+  Original apex_rank / apex_delta keys retained for override panel state.
+- app.py: Main board APEX / Δ APEX columns switched from apex_rank → auto_apex_rank / auto_apex_delta.
+  Sidebar filter "Show APEX scored only (auto-rank)" now filters on auto_apex_rank.
+  Manual override panel demoted to st.expander("🔧 Set APEX Rank (Analyst Override — optional)").
+
+Session 33: APEX Board v2.2 panel refactored into ranked draft board.
+- model_outputs.py: gap_label, eval_confidence, apex_tags (correlated subquery over prospect_tags)
+  added to get_big_board() SELECT from apex_scores.
+- app.py: Old apex_display block (sorted by _apex_tier_sort/apex_composite) replaced with APEX Board:
+  Primary sort: auto_apex_rank ASC (rank 1 at top).
+  Columns: APEX Rank | Player | Pos | School | APEX Score | APEX Tier | Archetype | Gap |
+           Consensus | Δ APEX | Eval Conf | Tags.
+  Gap uses _GAP_LABEL_DISPLAY_MAP. Δ APEX uses _style_apex_delta coloring.
+  _INTERNAL_TAG_NAMES frozenset + module-level _fmt_tags() filter apex_rank_2026 from Tags column.
+  apex_tags sourced from prospect_tags (analyst/trigger tags), not apex_scores.tags (engine flags).
+- apex_tags correlated subquery: GROUP_CONCAT(td2.tag_name) WHERE pt2.is_active=1.
+  No engine flags (SAA Gate, FM-1 Risk, etc.) reach the board Tags column.
+- Doctor: PASSED. No schema changes. No migrations.
 
 Prior: Session 29 — RAS re-ingest (pro day scores) + Kamari Ramsey S-3 re-score.
 
@@ -118,8 +125,9 @@ Prior sessions on record: 12 (DB rebuild), 13 (weekly pipeline), 13b (school/arc
 
 ## Next Milestone (Single Target)
 
-- Session 30: Prospect detail drawer — clicking a board row shows full APEX profile inline.
-  Then: weekly pipeline run to capture all pro day RAS updates in snapshot.
+- Session 34: Prospect detail expander on APEX Board — clicking a row shows full trait vector
+  breakdown, archetype gap scores, bust risk profile, capital recommendation, and landing spot note.
+  explain_json already in apex_scores. Surface it inline below the board table.
 
 ---
 
@@ -213,8 +221,10 @@ EXPORTS: board_2026_v1_default.csv last produced Session 21. Current for that sn
 24. ~~Session 28: Tag UI live — pills, filter, coverage fix, APEX sort, legend, column guide~~ COMPLETE
 25. ~~Session 29: RAS re-ingest (814 rows, 95 scored) + Ramsey S-3 re-score~~ COMPLETE
 26. ~~Session 29: Kamari Ramsey S-3 re-score — APEX_HIGH MODERATE +29~~ COMPLETE
-27. **Session 30: Prospect detail drawer — board row click shows full APEX profile inline** ← NEXT
-26. Post-draft audit framework activation (after April 2026 draft)
+27. ~~Session 30–31: Prospect detail drawer + UI polish (score fmt, gap labels, column alignment)~~ COMPLETE
+28. ~~Session 32–33: Auto-APEX-Rank + APEX Board v2.2 + tag filter~~ COMPLETE
+29. **Session 34: Prospect detail expander on APEX Board (explain_json, trait vectors, bust risk)** ← NEXT
+30. Post-draft audit framework activation (after April 2026 draft)
 
 ---
 
