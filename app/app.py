@@ -12,6 +12,11 @@ from draftos.db.connect import connect
 from draftos.queries.apex import save_apex_rank, clear_apex_rank, get_apex_detail
 from draftos.queries.model_outputs import get_big_board, get_prospect_detail
 
+# Streamlit ≥ 1.35 supports on_select / selection_mode on st.dataframe
+_ON_SELECT_AVAILABLE = tuple(
+    int(x) for x in st.__version__.split(".")[:2]
+) >= (1, 35)
+
 st.set_page_config(layout="wide", page_title="DraftOS Big Board")
 
 # ---------------------------------------------------------------------------
@@ -351,6 +356,9 @@ if selected_tags:
 filtered = filtered.sort_values("consensus_rank", ascending=True)
 filtered = filtered.head(int(top_n))
 
+# Ordered prospect_id list — aligns with display DataFrame row positions
+_bb_prospect_ids: list[int] = filtered["prospect_id"].tolist()
+
 # ---------------------------------------------------------------------------
 # Build display table
 # ---------------------------------------------------------------------------
@@ -502,6 +510,34 @@ def _render_apex_detail(d: dict) -> None:
     )
 
 
+def _render_consensus_card(row) -> None:
+    """Minimal detail card for prospects not yet APEX-scored."""
+    h1, h2, h3, h4 = st.columns([3, 1, 2, 2])
+    h1.markdown(f"**{row['display_name']}**")
+    h2.markdown(f"`{row['position_group']}`")
+    h3.markdown(f"{row['school_canonical'] or '—'}")
+    _crank = int(row["consensus_rank"]) if pd.notna(row.get("consensus_rank")) else "—"
+    h4.markdown(f"Consensus #{_crank}")
+    _ras = row.get("ras_score")
+    _ras_str = f"{_ras:.2f}" if _ras is not None and pd.notna(_ras) else "—"
+    st.caption(
+        f"Tier: {row.get('consensus_tier', '—')}   |   "
+        f"Confidence: {row.get('confidence_band', '—')}   |   "
+        f"Sources: {row.get('coverage_count', '—')}   |   "
+        f"RAS: {_ras_str}"
+    )
+    _dflag = row.get("divergence_flag")
+    if _dflag is not None and pd.notna(_dflag) and _dflag == 1:
+        _delta = row.get("divergence_delta")
+        _direction = "higher" if _delta and _delta < 0 else "lower"
+        _delta_abs = abs(_delta) if _delta else "?"
+        st.info(
+            f"⚡ Divergence flag: JFoster ranks this prospect "
+            f"{_direction} than consensus ({_delta_abs} spots)."
+        )
+    st.caption("*Not yet APEX-scored. Run apex_scoring to generate full profile.*")
+
+
 display = pd.DataFrame()
 display["Rank"]       = filtered["consensus_rank"].astype("Int64")
 display["Player"]     = filtered["display_name"]
@@ -634,7 +670,7 @@ with st.expander("📋 Column Guide", expanded=False):
 # ---------------------------------------------------------------------------
 # Render table
 # ---------------------------------------------------------------------------
-st.dataframe(
+bb_event = st.dataframe(
     styled,
     column_config={
         "Score":      st.column_config.NumberColumn("Score",      format="%.1f"),
@@ -648,8 +684,16 @@ st.dataframe(
     },
     use_container_width=True,
     hide_index=True,
+    on_select="rerun",
+    selection_mode="single-row",
+    key="big_board_table",
 )
+if bb_event and bb_event.selection and bb_event.selection.rows:
+    _bb_row_idx = bb_event.selection.rows[0]
+    st.session_state["selected_pid"] = int(_bb_prospect_ids[_bb_row_idx])
+
 st.caption(f"Showing {len(display)} of {total_prospects} prospects")
+st.caption("💡 Click any row to load the prospect detail panel below.")
 
 # ---------------------------------------------------------------------------
 # APEX v2.2 tier legend
@@ -742,6 +786,9 @@ if apex_scored > 0 and "apex_composite" in df.columns:
     else:
         ab["Tags"] = ""
 
+    # Ordered prospect_id list — aligns with ab DataFrame row positions
+    _apex_prospect_ids: list[int] = apex_df["prospect_id"].tolist()
+
     ab = ab.reset_index(drop=True)
 
     _right_cols_apex = ["APEX Rank", "APEX Score", "Consensus", "\u0394 APEX"]
@@ -756,38 +803,24 @@ if apex_scored > 0 and "apex_composite" in df.columns:
         .set_properties(subset=_left_cols_apex,  **{"text-align": "left"})
     )
 
-    st.dataframe(apex_styled, use_container_width=True, hide_index=True)
+    ab_event = st.dataframe(
+        apex_styled,
+        use_container_width=True,
+        hide_index=True,
+        on_select="rerun",
+        selection_mode="single-row",
+        key="apex_board_table",
+    )
+    if ab_event and ab_event.selection and ab_event.selection.rows:
+        _ab_row_idx = ab_event.selection.rows[0]
+        st.session_state["selected_pid"] = int(_apex_prospect_ids[_ab_row_idx])
 
     st.caption(
         "**APEX v2.2 Tiers:** "
         "ELITE (\u226585) | DAY1 (\u226570) | DAY2 (\u226555) | DAY3 (\u226540) | UDFA-P (\u226528) | UDFA (<28)  "
         "\u00b7 **Gap:** \u2705 Clean Fit (>15) | \U0001f7e2 Solid Fit (8\u201315) | \u26a0\ufe0f Tweener (<8)"
     )
-
-    # ── Inspect Selectbox ────────────────────────────────────────────────────
-    inspect_options = ["(none)"] + apex_df["display_name"].tolist()
-    inspect_name = st.selectbox(
-        "🔍 Inspect Prospect →",
-        options=inspect_options,
-        index=0,
-        key="apex_inspect_select",
-    )
-
-    if inspect_name != "(none)":
-        pid_rows = apex_df[apex_df["display_name"] == inspect_name]["prospect_id"]
-        if not pid_rows.empty:
-            pid = int(pid_rows.iloc[0])
-            with connect() as conn:
-                detail = get_apex_detail(conn, prospect_id=pid)
-
-            if detail:
-                with st.expander(
-                    f"📋 {detail['display_name']} — APEX Detail",
-                    expanded=True,
-                ):
-                    _render_apex_detail(detail)
-            else:
-                st.warning(f"No APEX detail found for {inspect_name}.")
+    st.caption("💡 Click any row to load the prospect detail panel below.")
 
 # ---------------------------------------------------------------------------
 # APEX rank input panel (analyst overrides)
@@ -837,251 +870,35 @@ with st.expander("🔧 Set APEX Rank (Analyst Override — optional)", expanded=
             st.rerun()
 
 # ---------------------------------------------------------------------------
-# Prospect Detail Drawer
+# Prospect Detail Panel (unified)
 # ---------------------------------------------------------------------------
 st.divider()
-st.subheader("Prospect Detail")
+st.subheader("📋 Prospect Detail")
 
-# Build sorted option list from filtered board (prospects with consensus_rank only)
-_sorted_filtered = filtered.dropna(subset=["consensus_rank"]).sort_values("consensus_rank")
-_prospect_options = ["— select a prospect —"]
-_pid_for_label: dict[str, int] = {}
-for _, _row in _sorted_filtered.iterrows():
-    _rank = int(_row["consensus_rank"])
-    _name = _row["display_name"]
-    _pos  = _row["position_group"]
-    _label = f"{_rank}. {_name} ({_pos})"
-    _prospect_options.append(_label)
-    _pid_for_label[_label] = int(_row["prospect_id"])
+_selected_pid = st.session_state.get("selected_pid")
 
-selected_label = st.selectbox(
-    "Select prospect to view full APEX profile",
-    options=_prospect_options,
-    index=0,
-    key="detail_select",
-)
+if _selected_pid is None:
+    _hint = (
+        "Click a row in either board above to load their profile."
+        if _ON_SELECT_AVAILABLE
+        else "Use the selector above to choose a prospect."
+    )
+    st.caption(f"No prospect selected. {_hint}")
+else:
+    _prospect_row = df[df["prospect_id"] == _selected_pid]
+    if _prospect_row.empty:
+        st.warning("Prospect not found in current board.")
+        st.session_state.pop("selected_pid", None)
+    else:
+        _pr = _prospect_row.iloc[0]
+        _has_apex = pd.notna(_pr.get("apex_composite"))
 
-if selected_label != "— select a prospect —":
-    _pid = _pid_for_label.get(selected_label)
-    if _pid is not None:
-        detail = _load_detail(_pid)
-
-        if detail is None:
-            st.error("Could not load prospect detail. Check DB connection.")
+        if _has_apex:
+            with connect() as conn:
+                _detail = get_apex_detail(conn, prospect_id=_selected_pid)
+            if _detail:
+                _render_apex_detail(_detail)
+            else:
+                st.warning("APEX detail record not found despite apex_composite being set.")
         else:
-            # ── PANEL 1: IDENTITY + CONSENSUS ──────────────────────────────
-            st.markdown("---")
-            p1c1, p1c2, p1c3, p1c4 = st.columns([2, 1, 1, 1])
-            with p1c1:
-                st.markdown(f"### {detail['display_name']}")
-                _school = detail.get("school_canonical") or "Unknown"
-                _pos_label = detail.get("position_group") or "—"
-                st.caption(f"{_pos_label}  |  {_school}")
-            with p1c2:
-                _crank = detail.get("consensus_rank")
-                st.metric("Consensus Rank", f"#{_crank}" if _crank is not None else "—")
-            with p1c3:
-                _ctier = detail.get("consensus_tier") or "—"
-                st.metric("Consensus Tier", _ctier)
-            with p1c4:
-                _cband = detail.get("confidence_band") or "—"
-                _cov   = detail.get("coverage_count")
-                _cov_str = f"{int(_cov)} sources" if _cov is not None else "—"
-                st.metric("Confidence", _cband)
-                st.caption(f"Coverage: {_cov_str}")
-
-            # ── PANEL 2: APEX PROFILE ───────────────────────────────────────
-            st.markdown("---")
-            st.markdown("**APEX v2.2 Profile**")
-            _apex = detail.get("apex_composite")
-
-            if _apex is None:
-                st.info("APEX v2.2: Not yet scored")
-            else:
-                # Row 1 — 4 key metrics
-                _r1c1, _r1c2, _r1c3, _r1c4 = st.columns(4)
-                with _r1c1:
-                    st.metric("APEX Score", f"{_apex:.1f}")
-                with _r1c2:
-                    st.metric("Tier", detail.get("apex_tier") or "—")
-                with _r1c3:
-                    _cap = detail.get("capital_adjusted") or detail.get("capital_base") or "—"
-                    st.metric("Capital", _cap)
-                with _r1c4:
-                    st.metric("Eval Confidence", detail.get("eval_confidence") or "—")
-
-                # Row 2 — Archetype line with human-readable gap label
-                _arch        = detail.get("apex_archetype") or "—"
-                _gap_display = _render_gap_label(
-                    detail.get("gap_label"),
-                    detail.get("archetype_gap"),
-                )
-                if _gap_display:
-                    st.markdown(f"**Archetype:** {_arch}  &nbsp;|&nbsp;  {_gap_display}")
-                else:
-                    st.markdown(f"**Archetype:** {_arch}")
-
-                # Row 3 — Modifier flags (human-readable labels from _TAGS_DISPLAY_MAP)
-                if detail.get("schwesinger_full") or detail.get("schwesinger_half"):
-                    st.success(_TAGS_DISPLAY_MAP["Schwesinger Rule"])
-                if detail.get("smith_rule"):
-                    st.error(_TAGS_DISPLAY_MAP["Smith Rule"])
-
-                # Row 4 — Trait vector table (2-column layout)
-                st.markdown("**Trait Vectors**")
-                _TRAITS = [
-                    ("Processing & Instincts", "v_processing"),
-                    ("Athleticism",             "v_athleticism"),
-                    ("Scheme Versatility",      "v_scheme_vers"),
-                    ("Competitive Toughness",   "v_comp_tough"),
-                    ("Character",               "v_character"),
-                    ("Dev. Trajectory",         "v_dev_traj"),
-                    ("Production",              "v_production"),
-                    ("Injury & Durability",     "v_injury"),
-                ]
-                _tc1, _tc2 = st.columns(2)
-                for _idx, (_tlabel, _tkey) in enumerate(_TRAITS):
-                    _tval = detail.get(_tkey)
-                    _tstr = f"{_tval:.1f}" if _tval is not None else "—"
-                    # Color based on score
-                    if _tval is not None and _tval >= 8.0:
-                        _style = "color: #10B981; font-weight: 600"
-                    elif _tval is not None and _tval <= 4.0:
-                        _style = "color: #EF4444; font-weight: 600"
-                    else:
-                        _style = ""
-                    _html = (
-                        f'<span style="{_style}">{_tstr}</span>'
-                        if _style else _tstr
-                    )
-                    _col = _tc1 if _idx % 2 == 0 else _tc2
-                    with _col:
-                        st.markdown(
-                            f"**{_tlabel}:** {_html}",
-                            unsafe_allow_html=True,
-                        )
-                        # Character sub-components
-                        if _tkey == "v_character":
-                            _c1 = detail.get("c1_public_record")
-                            _c2 = detail.get("c2_motivation")
-                            _c3 = detail.get("c3_psych_profile")
-                            _c1s = f"{_c1:.1f}" if _c1 is not None else "—"
-                            _c2s = f"{_c2:.1f}" if _c2 is not None else "—"
-                            _c3s = f"{_c3:.1f}" if _c3 is not None else "—"
-                            st.caption(f"  C1: {_c1s}  C2: {_c2s}  C3: {_c3s}")
-
-                # Row 5 — Strengths / Red Flags
-                _sc1, _sc2 = st.columns(2)
-                with _sc1:
-                    st.caption("Strengths")
-                    st.write(detail.get("strengths") or "—")
-                with _sc2:
-                    st.caption("Red Flags")
-                    st.write(detail.get("red_flags") or "—")
-
-                # Row 6 — Engine tags (rendered with frontend display aliases)
-                _etag_list = _render_tags(detail.get("apex_tags") or "")
-                if _etag_list:
-                    st.caption("Modifier Flags")
-                    for _etag in _etag_list:
-                        st.markdown(f"`{_etag}`")
-
-                # Row 7 — Override log
-                _ov_arch  = detail.get("override_arch")
-                _ov_delta = detail.get("override_delta")
-                _ov_rat   = detail.get("override_rationale")
-                if _ov_arch or _ov_delta or _ov_rat:
-                    _ov_d_str = f"{_ov_delta:+.1f}" if _ov_delta is not None else "0"
-                    st.warning(
-                        f"Override: arch={_ov_arch or '—'}  "
-                        f"Δ={_ov_d_str}  "
-                        f"Rationale: {_ov_rat or '—'}"
-                    )
-                    st.caption(f"Scored: {detail.get('scored_at') or '—'}")
-
-            # ── PANEL 3: DIVERGENCE ─────────────────────────────────────────
-            st.markdown("---")
-            st.markdown("**Divergence Signal**")
-            _dflag = detail.get("divergence_flag")
-            if _dflag is None:
-                st.caption("Divergence: Not computed")
-            else:
-                _ddelta = detail.get("divergence_rank_delta")
-                _dmag   = detail.get("divergence_mag") or ""
-                _ddelta_str = f"{_ddelta:+d}" if _ddelta is not None else "—"
-                _div_content = f"{_dflag}  |  Rank delta: {_ddelta_str}  |  {_dmag}"
-                if _dflag == "APEX_HIGH":
-                    st.success(_div_content)
-                    st.caption("APEX values this prospect higher than market consensus.")
-                elif _dflag == "APEX_LOW_PVC_STRUCTURAL":
-                    st.info(_div_content)
-                    st.caption("Structural — PVC discount, not actionable.")
-                elif _dflag == "APEX_LOW":
-                    st.error(_div_content)
-                    st.caption("APEX values this prospect lower — monitor.")
-                else:
-                    st.info(_div_content)
-
-            # ── PANEL 4: RAS ────────────────────────────────────────────────
-            st.markdown("---")
-            st.markdown("**RAS Measurables**")
-            _ras = detail.get("ras_total")
-            if _ras is None:
-                st.caption("RAS: Not yet measured")
-            else:
-                st.metric("RAS Total", f"{_ras:.2f}")
-                _rc1, _rc2, _rc3, _rc4 = st.columns(4)
-                _ras_ath  = detail.get("ras_ath")
-                _ras_size = detail.get("ras_size")
-                _ras_spd  = detail.get("ras_speed")
-                _ras_agi  = detail.get("ras_agility")
-                with _rc1:
-                    st.metric("Athleticism", f"{_ras_ath:.2f}" if _ras_ath is not None else "—")
-                with _rc2:
-                    st.metric("Size",        f"{_ras_size:.2f}" if _ras_size is not None else "—")
-                with _rc3:
-                    st.metric("Speed",       f"{_ras_spd:.2f}"  if _ras_spd  is not None else "—")
-                with _rc4:
-                    st.metric("Agility",     f"{_ras_agi:.2f}"  if _ras_agi  is not None else "—")
-                # Measurables row
-                _meas_parts = []
-                _hs = detail.get("hand_size")
-                _al = detail.get("arm_length")
-                _ws = detail.get("wingspan")
-                if _hs is not None:
-                    _meas_parts.append(f'Hand: {_hs}"')
-                if _al is not None:
-                    _meas_parts.append(f'Arm: {_al}"')
-                if _ws is not None:
-                    _meas_parts.append(f'Wingspan: {_ws}"')
-                if _meas_parts:
-                    st.caption("  ".join(_meas_parts))
-
-            # ── PANEL 5: SOURCE RANKS ───────────────────────────────────────
-            st.markdown("---")
-            st.markdown("**Source Rankings**")
-            _sranks = detail.get("source_ranks", [])
-            if not _sranks:
-                st.caption("No source rankings found for this prospect.")
-            else:
-                _sr_df = pd.DataFrame(_sranks)[["source_name", "source_tier", "weight", "overall_rank"]]
-                _sr_df.columns = ["Source", "Tier", "Weight", "Rank"]
-                st.dataframe(_sr_df, use_container_width=True, hide_index=True)
-                st.caption(f"Ranked by {len(_sranks)} of 14 active sources")
-
-            # ── PANEL 6: ACTIVE TAGS ────────────────────────────────────────
-            st.markdown("---")
-            st.markdown("**Active Tags**")
-            _atags = detail.get("active_tags", [])
-            if not _atags:
-                st.caption("No active tags.")
-            else:
-                for _tag in _atags:
-                    _tcolor = (_tag.get("tag_color") or "").lower()
-                    _emoji  = _TAG_EMOJI_MAP.get(_tcolor, "⚪")
-                    _tname  = _tag.get("tag_name") or "—"
-                    _tnote  = _tag.get("note")
-                    if _tnote:
-                        st.markdown(f"{_emoji} **{_tname}** — {_tnote}")
-                    else:
-                        st.markdown(f"{_emoji} **{_tname}**")
+            _render_consensus_card(_pr)
