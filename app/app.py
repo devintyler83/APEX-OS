@@ -9,7 +9,7 @@ import pandas as pd
 import streamlit as st
 
 from draftos.db.connect import connect
-from draftos.queries.apex import save_apex_rank, clear_apex_rank
+from draftos.queries.apex import save_apex_rank, clear_apex_rank, get_apex_detail
 from draftos.queries.model_outputs import get_big_board, get_prospect_detail
 
 st.set_page_config(layout="wide", page_title="DraftOS Big Board")
@@ -393,6 +393,115 @@ def _fmt_tags(raw) -> str:
     return ", ".join(mapped)
 
 
+def _render_apex_detail(d: dict) -> None:
+    """Render full APEX evaluation breakdown inside an expander."""
+
+    # ── Header ────────────────────────────────────────────────────────────────
+    col_h1, col_h2, col_h3, col_h4, col_h5 = st.columns([3, 1, 2, 2, 2])
+    col_h1.markdown(f"**{d['display_name']}**")
+    col_h2.markdown(f"`{d['position_group']}`")
+    col_h3.markdown(f"{d['school_canonical'] or '—'}")
+    score_str = f"**{d['apex_composite']:.1f}**" if d.get('apex_composite') is not None else "—"
+    col_h4.markdown(f"APEX {score_str}")
+    tier = d.get('apex_tier') or "—"
+    tier_color = {
+        "ELITE":  "🟢", "DAY1": "🔵", "DAY2": "🟡",
+        "DAY3":   "🟠", "UDFA-P": "🔴", "UDFA": "⚫",
+    }.get(tier, "⚪")
+    col_h5.markdown(f"{tier_color} {tier}")
+
+    st.divider()
+
+    # ── Trait Vectors ─────────────────────────────────────────────────────────
+    st.markdown("**Trait Vectors** *(1–10)*")
+    traits = [
+        ("Processing & Instincts", d.get("v_processing")),
+        ("Athleticism",            d.get("v_athleticism")),
+        ("Scheme Versatility",     d.get("v_scheme_vers")),
+        ("Competitive Toughness",  d.get("v_comp_tough")),
+        ("Character & Intangibles",d.get("v_character")),
+        ("Dev. Trajectory",        d.get("v_dev_traj")),
+        ("Production",             d.get("v_production")),
+        ("Injury & Durability",    d.get("v_injury")),
+    ]
+    t_cols = st.columns(4)
+    for i, (label, val) in enumerate(traits):
+        col = t_cols[i % 4]
+        val_str = f"{val:.1f}" if val is not None else "—"
+        col.metric(label=label, value=val_str)
+
+    # Character sub-scores
+    c1 = d.get("c1_public_record")
+    c2 = d.get("c2_motivation")
+    c3 = d.get("c3_psych_profile")
+    if any(v is not None for v in [c1, c2, c3]):
+        st.caption(
+            f"Character sub-scores — "
+            f"C1 Public Record: {c1 if c1 is not None else '—'} | "
+            f"C2 Motivation: {c2 if c2 is not None else '—'} | "
+            f"C3 Psych Profile: {c3 if c3 is not None else '—'}"
+        )
+
+    # Special rule badges
+    badges = []
+    if d.get("smith_rule"):       badges.append("⚠️ Smith Rule Active")
+    if d.get("schwesinger_full"): badges.append("✅ Schwesinger Rule (Full)")
+    if d.get("schwesinger_half"): badges.append("✅ Schwesinger Rule (Half)")
+    if d.get("two_way_premium"):  badges.append("⭐ Two-Way Premium")
+    if badges:
+        st.markdown(" · ".join(badges))
+
+    st.divider()
+
+    # ── Archetype Block ───────────────────────────────────────────────────────
+    arch_col1, arch_col2, arch_col3 = st.columns([3, 1, 2])
+    arch_col1.markdown(f"**Archetype:** {d.get('matched_archetype') or '—'}")
+    _agap = d.get("archetype_gap")
+    arch_col2.markdown(f"**Gap:** {_agap:.1f} pts" if _agap is not None else "**Gap:** —")
+    gap_label = (d.get("gap_label") or "—").strip().upper()
+    gap_colors = {
+        "CLEAN": "🟢", "SOLID": "🟡", "TWEENER": "🟠",
+        "COMPRESSION": "🔴", "NO_FIT": "⚫",
+    }
+    arch_col3.markdown(f"**Label:** {gap_colors.get(gap_label, '⚪')} {gap_label}")
+
+    if d.get("override_arch"):
+        _od = d.get("override_delta") or 0
+        st.warning(
+            f"🔧 **OVERRIDE:** {d['override_arch']} "
+            f"(Δ{_od:+.1f}) — "
+            f"{d.get('override_rationale') or 'No rationale recorded.'}"
+        )
+
+    st.divider()
+
+    # ── Capital Block ─────────────────────────────────────────────────────────
+    cap_col1, cap_col2 = st.columns(2)
+    cap_col1.markdown(f"**Capital Base:** {d.get('capital_base') or '—'}")
+    cap_col2.markdown(f"**Capital Adjusted:** {d.get('capital_adjusted') or '—'}")
+
+    st.divider()
+
+    # ── Strengths / Red Flags ─────────────────────────────────────────────────
+    s_col, r_col = st.columns(2)
+    with s_col:
+        st.markdown("**✅ Strengths**")
+        st.markdown(d.get("strengths") or "*No strengths recorded.*")
+    with r_col:
+        st.markdown("**🚨 Red Flags**")
+        st.markdown(d.get("red_flags") or "*No red flags recorded.*")
+
+    # ── Eval Confidence ───────────────────────────────────────────────────────
+    st.divider()
+    conf = d.get("eval_confidence") or "—"
+    conf_color = {"Tier A": "🟢", "Tier B": "🟡", "Tier C": "🔴"}.get(conf, "⚪")
+    scored_at = d.get("scored_at") or ""
+    st.caption(
+        f"**Eval Confidence:** {conf_color} {conf}   |   "
+        f"Scored: {scored_at[:10] if scored_at else '—'}"
+    )
+
+
 display = pd.DataFrame()
 display["Rank"]       = filtered["consensus_rank"].astype("Int64")
 display["Player"]     = filtered["display_name"]
@@ -654,6 +763,31 @@ if apex_scored > 0 and "apex_composite" in df.columns:
         "ELITE (\u226585) | DAY1 (\u226570) | DAY2 (\u226555) | DAY3 (\u226540) | UDFA-P (\u226528) | UDFA (<28)  "
         "\u00b7 **Gap:** \u2705 Clean Fit (>15) | \U0001f7e2 Solid Fit (8\u201315) | \u26a0\ufe0f Tweener (<8)"
     )
+
+    # ── Inspect Selectbox ────────────────────────────────────────────────────
+    inspect_options = ["(none)"] + apex_df["display_name"].tolist()
+    inspect_name = st.selectbox(
+        "🔍 Inspect Prospect →",
+        options=inspect_options,
+        index=0,
+        key="apex_inspect_select",
+    )
+
+    if inspect_name != "(none)":
+        pid_rows = apex_df[apex_df["display_name"] == inspect_name]["prospect_id"]
+        if not pid_rows.empty:
+            pid = int(pid_rows.iloc[0])
+            with connect() as conn:
+                detail = get_apex_detail(conn, prospect_id=pid)
+
+            if detail:
+                with st.expander(
+                    f"📋 {detail['display_name']} — APEX Detail",
+                    expanded=True,
+                ):
+                    _render_apex_detail(detail)
+            else:
+                st.warning(f"No APEX detail found for {inspect_name}.")
 
 # ---------------------------------------------------------------------------
 # APEX rank input panel (analyst overrides)

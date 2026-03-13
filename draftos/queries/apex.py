@@ -131,3 +131,70 @@ def clear_apex_rank(conn, *, prospect_id: int, season_id: int = 1) -> None:
         (datetime.now(timezone.utc).isoformat(), prospect_id, int(row["tag_def_id"]), _DEFAULT_USER_ID),
     )
     conn.commit()
+
+
+def get_apex_detail(conn, *, prospect_id: int, season_id: int = 1) -> dict | None:
+    """
+    Return a full APEX evaluation record for a single prospect.
+
+    Joins apex_scores to prospects for display_name, position_group, school_canonical.
+    Returns the most recently scored row (ORDER BY scored_at DESC LIMIT 1).
+    Returns None if the prospect has no APEX score or is not active.
+    """
+    row = conn.execute(
+        """
+        SELECT
+            a.prospect_id,
+            p.display_name,
+            p.position_group,
+            p.school_canonical,
+            a.apex_composite,
+            a.apex_tier,
+            a.matched_archetype,
+            a.archetype_gap,
+            a.gap_label,
+            a.v_processing,
+            a.v_athleticism,
+            a.v_scheme_vers,
+            a.v_comp_tough,
+            a.v_character,
+            a.c1_public_record,
+            a.c2_motivation,
+            a.c3_psych_profile,
+            a.v_dev_traj,
+            a.v_production,
+            a.v_injury,
+            a.capital_base,
+            a.capital_adjusted,
+            a.eval_confidence,
+            a.strengths,
+            a.red_flags,
+            a.override_arch,
+            a.override_delta,
+            a.override_rationale,
+            a.smith_rule,
+            a.schwesinger_full,
+            a.schwesinger_half,
+            a.tags,
+            a.scored_at
+        FROM apex_scores a
+        JOIN prospects p
+          ON p.prospect_id = a.prospect_id
+         AND p.season_id   = a.season_id
+        WHERE a.prospect_id = ?
+          AND a.season_id   = ?
+          AND p.is_active   = 1
+        ORDER BY a.scored_at DESC
+        LIMIT 1
+        """,
+        (prospect_id, season_id),
+    ).fetchone()
+
+    if row is None:
+        return None
+
+    d = dict(row)
+    # Derive two_way_premium from the comma-separated tags field
+    tags_str = d.get("tags") or ""
+    d["two_way_premium"] = 1 if "Two-Way Premium" in tags_str else 0
+    return d
