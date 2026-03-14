@@ -1,6 +1,6 @@
 # DraftOS State Snapshot
 
-Last Updated (UTC): 2026-03-14T07:59:56.674606+00:00
+Last Updated (UTC): 2026-03-14T12:00:00.000000+00:00
 
 ---
 
@@ -201,14 +201,15 @@ Prior sessions on record: 12 (DB rebuild), 13 (weekly pipeline), 13b (school/arc
 
 ## Next Milestone (Single Target)
 
-- Session 43: Re-score ~10 prospects with correct position libraries (lost invalid LB scores):
+- Session 43: Three-part target:
+  1. Re-score ~10 position-fixed prospects (lost invalid LB scores in Session 42):
     Bud Clark S (pid=3590), Drew Shelton OL (pid=3706), Eli Stowers TE (pid=3637),
     Jack Endries TE (pid=3683), Jake Slaughter OL (pid=3687), Joe Royer TE (pid=3664),
     Josh Cameron WR (pid=3616), Max Iheanachor OL (pid=3532), Sam Hecht OL (pid=3564),
     Zion Young EDGE (pid=3551), Ted Hurst WR (pid=3536).
     Use canonical active PIDs (correct positions). Add to TOP50_POSITION_OVERRIDES as needed.
-  Then: Score ranks 151-250 (build target PID list, dry run, live score).
-  Then: tag trigger re-run + triage new recs.
+  2. Score ranks 151-250 (build target PID list, dry run, live score).
+  3. Triage 147 pending tag recs (tag trigger was re-run post-Session 42, pending=147).
   Neal MONITOR tag — hold until combine 3-cone data.
 
 ---
@@ -220,8 +221,8 @@ RAW CSVs: 15 raw CSVs present in data/imports/rankings/raw/2026/ (includes combi
 
 STAGING: Staged CSVs present per source under data/imports/rankings/staged/2026/.
 
-INGEST: Operational. 30 sources (14 active canonical), source_players: 8916,
-  source_rankings: 29947.
+INGEST: Operational. 31 sources (14 active canonical), source_players: 9919,
+  source_rankings: 42143.
   analyst_grade column active on source_rankings (migration 0038). Populated for
   bleacherreport_2026 only.
   combine_2026.csv → combine_ranks_2026 (source_id=28): 735 rows. Also writes
@@ -230,16 +231,16 @@ INGEST: Operational. 30 sources (14 active canonical), source_players: 8916,
   ngs_2026.csv → ngs_2026 (source_id=29, is_active=0): 312 rows. ngs_score in grade column.
     Not in consensus — model score, not scout ranking.
 
-BOOTSTRAP: Operational. prospects: 4482 total (active managed by is_active flag).
+BOOTSTRAP: Operational. prospects: 4536 total (active managed by is_active flag).
 
 UNIVERSE: Operational. data/universe/prospect_universe_2026.csv (861 players).
   Migration 0033 applied.
 
-CONSENSUS: Operational. 995 rows (14 active sources, Session 25 rebuild).
-  Top: Sonny Styles LB | Fernando Mendoza QB | Caleb Downs S.
-  Styles #1 is genuine multi-source convergence — confirmed after NGS deactivation.
+CONSENSUS: Operational. 849 rows (14 active sources, Session 42 rebuild).
+  Top: Fernando Mendoza QB 98.32 | Jeremiyah Love RB 95.80 | David Bailey EDGE 94.96.
+  Styles LB dropped from #1 after Session 42 consensus rebuild (position audit changed weighting).
 
-MODEL OUTPUTS: Operational. 999 rows (Session 25 rebuild — grew from 615 with 14 active sources).
+MODEL OUTPUTS: Operational. 1003 rows (Session 42 rebuild).
 
 SNAPSHOTS: Operational. Latest: snapshot_id=5 (2026-03-14). rows=999, coverage=999,
   confidence=999 — PASSED (Session 42 rebuild after position fix).
@@ -247,12 +248,13 @@ SNAPSHOTS: Operational. Latest: snapshot_id=5 (2026-03-14). rows=999, coverage=9
   compute_source_snapshot_metrics → compute_snapshot_coverage →
   compute_snapshot_confidence → verify_snapshot_integrity
 
-APEX: Operational. ~138 active 2026 scored prospects (non-cal, v2.3, post-position-fix) + 12 calibration artifacts.
-  ~10 prospects need re-score with correct position libraries (Session 43 target — see Next Milestone).
-  Scored coverage: ranks 1-150 (with some gaps — targeted PID list method).
-  Tiers (v2.3 active non-cal): ELITE=3, DAY1=28, DAY2=73, DAY3=40, UDFA-P=5 (Session 39).
-  Divergence (149 prospects, Session 39): ALIGNED=25, APEX_HIGH=67, APEX_LOW=3,
-    APEX_LOW_PVC_STRUCTURAL=54.
+APEX: Operational. 131 v2.3 active non-cal + 55 v2.2 active non-cal = 186 total active scored (non-cal)
+  + 12 calibration artifacts. ~10 prospects need re-score with correct position libraries
+  (Session 43 target — see Next Milestone).
+  Scored coverage: ranks 1-150 (with some gaps — targeted PID list method). Ranks 151+ use v2.2 scores.
+  Tiers (v2.3 active non-cal, post Session 42): ELITE=3, DAY1=27, DAY2=67, DAY3=29, UDFA-P=~5.
+  Divergence (current, post Session 42): ALIGNED=45, APEX_HIGH=92, APEX_LOW=3,
+    APEX_LOW_PVC_STRUCTURAL=70.
   Latest backup: data/apex_51_150_session5_scored.json (563KB).
   Igbinosun (pid=36): CB-3 Press Man Corner 68.4 DAY2, Tier B, FM-2 CONDITIONAL, R2 early–R3 top.
     PAA gate injection applied Session 39. Prior score (CB-2 76.4) corrected. Delta: +23 MODERATE.
@@ -264,19 +266,22 @@ APEX: Operational. ~138 active 2026 scored prospects (non-cal, v2.3, post-positi
   Keylan Rutledge (pid=136): TOP50_POSITION_OVERRIDES OG added Session 37 (position_raw='G' fix).
   Igbinosun (pid=36): ARCHETYPE_OVERRIDES[36] added Session 39 with PAA gate findings.
   Ghost cleanup (Session 39): pid=3559, 4369 (Klare dups) is_active=0. pid=4347 (Ponds LB) is_active=0.
-  Migrations applied: 0001–0039. Next migration: 0040.
-  Tag trigger re-run pending — 149 v2.3 scores not yet evaluated against trigger rules.
+  Migrations applied: 0001–0041. Next migration: 0042.
+    Migration 0040 (apex_v23_mechanism_fields): failure_mode_primary, failure_mode_secondary,
+      signature_play, translation_risk columns added to apex_scores — APPLIED. All 149 v2.3 rows populated.
+    Migration 0041 (apex_bust_warning): bust_warning column added — APPLIED.
+  Tag trigger re-run executed post-Session 42 — 147 pending recs generated (see TAGS).
 
 TAGS: Operational. Session 24 trigger engine built and active.
   Scripts: run_tag_triggers_2026.py (engine), accept_tag_recs_2026.py (workflow),
     draftos/tags/evaluator.py (pure function library).
   Schema: tag_definitions=28 (added Monitor id=54 Session 39), tag_trigger_rules=14.
-  Rec status: accepted=57, dismissed=29, pending=0.
-  Active tags: Development Bet=28, Compression Flag=14, Divergence Alert=8, Elite RAS=4,
-    Poor RAS=1, Great RAS=1, Injury Flag=1, Monitor=1 (Neal pid=109).
+  Rec status: accepted=57, dismissed=30, pending=147.
+    147 pending recs generated by tag trigger re-run post-Session 42 — triage is Session 43 target.
+  Active tags (71 total prospect_tags rows): Development Bet=28, Compression Flag=14,
+    Divergence Alert=8, Elite RAS=4, Poor RAS=1, Great RAS=1, Injury Flag=1, Monitor=1 (Neal pid=109).
   Monitor tag (id=54, Session 39): editorial, gray, note_required=1.
     Applied to Julian Neal CB — 3-cone gate pending.
-  Tag trigger re-run NOT yet executed against 149 v2.3 scores — will fire Session 40.
 
 EXPORTS: board_2026_v1_default.csv last produced Session 21. Current for that snapshot.
 
@@ -327,12 +332,14 @@ EXPORTS: board_2026_v1_default.csv last produced Session 21. Current for that sn
 ## APEX Status
 
 - Version: v2.2 (scorer engine) / v2.3 (model_version written to DB)
-- Active 2026 scored: 149 (v2.3, is_active=1, is_calibration_artifact=0)
+- v2.3 mechanism fields applied (migration 0040): failure_mode_primary, failure_mode_secondary,
+  signature_play, translation_risk. bust_warning added (migration 0041). All 149 v2.3 rows populated.
+- Active 2026 scored: 131 v2.3 + 55 v2.2 = 186 total (is_active=1, is_calibration_artifact=0)
 - Calibration artifacts: 12 (PIDs: 230,304,313,455,504,880,1050,1278,1371,1391,1729,1925)
   All re-scored Session 26 with correct PIDs and positions.
-- Tier dist (v2.3 active non-cal, Session 39): ELITE=3, DAY1=28, DAY2=73, DAY3=40, UDFA-P=5
-- Divergence (Session 39, 149 prospects): ALIGNED=25, APEX_HIGH=67, APEX_LOW=3,
-  APEX_LOW_PVC_STRUCTURAL=54
+- Tier dist (v2.3 active non-cal, post Session 42): ELITE=3, DAY1=27, DAY2=67, DAY3=29, UDFA-P=~5
+- Divergence (current, post Session 42): ALIGNED=45, APEX_HIGH=92, APEX_LOW=3,
+  APEX_LOW_PVC_STRUCTURAL=70
 - Notable Session 39 additions:
     Davison Igbinosun CB: PAA-corrected 68.4 DAY2 CB-3, Tier B, FM-2 CONDITIONAL, +23 MODERATE
     Julian Neal CB: MONITOR tag active — 3-cone gate pending (sub-6.9s = R2, above = R3)
@@ -356,7 +363,8 @@ EXPORTS: board_2026_v1_default.csv last produced Session 21. Current for that sn
 
 ## Divergence Status
 
-Current recompute: Session 39 (149 v2.3 prospects). Total APEX_HIGH=67, APEX_LOW=3.
+Current recompute: post-Session 42 (186 active scored prospects). Total APEX_HIGH=92, APEX_LOW=3.
+(Note: divergence_flags table also contains 12 stale rows in old space-format "APEX HIGH"/"APEX LOW" — ignore those.)
 
 Premium actionable signals (confirmed, non-artifact):
 - DOMANI JACKSON CB (pid=108): APEX_HIGH MAJOR +88 — rank #150. New signal from 51-150 batch.
@@ -393,17 +401,17 @@ Artifacts / held:
 
 | ID | Key | Tier | Weight |
 |----|-----|------|--------|
-| 2  | pff_2026 | T1 | 1.3 |
-| 3  | thedraftnetwork_2026 | T1 | 1.3 |
-| 4  | theringer_2026 | T1 | 1.3 |
-| 5  | nfldraftbuzz_2026_v2 | T2 | 1.0 |
-| 6  | cbssports_2026 | T2 | 1.0 |
-| 7  | espn_2026 | T2 | 1.0 |
-| 8  | nytimes_2026 | T2 | 1.0 |
-| 9  | pfsn_2026 | T2 | 1.0 |
-| 10 | jfosterfilm_2026 | T2 | 1.0 |
-| 25 | bnbfootball_2026 | T3 | 0.7 |
-| 26 | tankathon_2026 | T3 | 0.7 |
+| 13 | pff_2026 | T1 | 1.3 |
+| 24 | thedraftnetwork_2026 | T1 | 1.3 |
+| 25 | theringer_2026 | T1 | 1.3 |
+| 9  | nfldraftbuzz_2026_v2 | T2 | 1.0 |
+| 3  | cbssports_2026 | T2 | 1.0 |
+| 6  | espn_2026 | T2 | 1.0 |
+| 10 | nytimes_2026 | T2 | 1.0 |
+| 15 | pfsn_2026 | T2 | 1.0 |
+| 1  | jfosterfilm_2026 | T2 | 1.0 |
+| 2  | bnbfootball_2026 | T3 | 0.7 |
+| 23 | tankathon_2026 | T3 | 0.7 |
 | 27 | bleacherreport_2026 | T2 | 1.0 |
 | 28 | combine_ranks_2026 | T2 | 1.0 |
 | 30 | nflcom_2026 | T2 | 1.0 |
