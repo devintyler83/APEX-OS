@@ -10,14 +10,14 @@ Non-negotiables:
 - Provide run order + verification commands
 
 Goal for this chat:
-Session 37: APEX top-50 re-score with positional archetype libraries.
+Session 38: Tag trigger re-run (new scores may fire new recs) + triage any new pending recs.
 
 Authoritative State:
 
 1) STATE_SNAPSHOT.md
 # DraftOS State Snapshot
 
-Last Updated (UTC): 2026-03-13T20:29:52.303806+00:00
+Last Updated (UTC): 2026-03-14T01:00:34.054367+00:00
 
 ---
 
@@ -27,21 +27,29 @@ Last Updated (UTC): 2026-03-13T20:29:52.303806+00:00
 
 ## Last Completed Milestone
 
-Sessions 34–36 — Prospect detail expander, unified detail panel, clickable rows, UI polish.
+Session 37 — APEX top-50 re-score with positional archetype libraries + UI tag/detail card overhaul.
 
-Session 34: APEX Board prospect detail expander.
-- draftos/queries/apex.py: get_apex_detail() added. JOINs apex_scores+prospects, returns full
-  trait vector dict. two_way_premium derived from apex_scores.tags comma field.
-- app.py: _render_apex_detail() helper added. Inspect selectbox under APEX Board → expander.
+Session 37: APEX top-50 re-score (50 prospects) + UI fixes.
+- app/app.py: Unified tag rendering. Board Tags column and Tagged expander pills now use same
+  _render_tag_pill() function and same _TAGS_DISPLAY_MAP lookup. Root cause was _TAG_LABEL_MAP
+  (emoji-short) vs _TAGS_DISPLAY_MAP (full label) divergence — both now use _TAGS_DISPLAY_MAP.
+  _TAG_COLOR_MAP removed. New _TAG_PILL_COLORS 3-tuple dict (bg/border/text) covers all 32 tags.
+- app/app.py: Prospect detail card redesigned. Colored HTML trait bars via _trait_bar_html().
+  APEX tier badge with fill color (_APEX_TIER_BADGE dict). Position badge (_POS_BADGE_COLORS dict).
+  Dynamic bullet points from _generate_bullets() — threshold-based from trait scores, not echoing
+  summary text. Radio toggle preserved (Summary / Bullet Points) namespaced by prospect_id.
+- run_apex_scoring_2026.py: pid=136 (Keylan Rutledge, position_raw='G') added to
+  TOP50_POSITION_OVERRIDES as "OG". 'G' not in _CLEAN_POSITIONS → would have scored as OL.
+- APEX top-50 batch: 50 prospects scored, 0 failed. All positional archetype libraries applied.
+  Notable: Fernando Mendoza QB-1 86.4 ELITE | David Bailey EDGE-1 88.4 ELITE | Rueben Bain 87.1
+  Caleb Downs S-1 81.4 DAY1 | Jermod McCoy CB-1 82.1 DAY1 (FM-4 Medical Flag Active).
+  5 new prospects scored: Concepcion ILB-3 59.8, Trotter ILB-3 62.7, Simpson ILB-3 61.0,
+  Ioane OG-1 59.0, Rutledge OG-3 54.6 DAY3.
+- Divergence recomputed (59 active non-cal): ALIGNED=20, APEX_HIGH=26, APEX_LOW=0, APEX_LOW_PVC_STRUCTURAL=16.
+- Backup: data/apex_top50_rescored_session37.json (144KB).
+- Doctor: PASSED. No schema changes. No migrations.
 
-Session 35: Unified prospect detail panel + clickable board rows.
-- Streamlit 1.53.0 → Plan A (on_select="rerun", selection_mode="single-row").
-- Big Board and APEX Board both use on_select. Row click writes selected_pid to session_state.
-- Row alignment: _bb_prospect_ids / _apex_prospect_ids lists pre-captured before display builds.
-- Old "Prospect Detail Drawer" (250-line inline render) removed.
-- Old Session 34 "apex_inspect_select" selectbox removed.
-- _render_consensus_card() added for unscored prospects. _ON_SELECT_AVAILABLE constant added.
-- Single unified "📋 Prospect Detail" panel at page bottom.
+Prior: Sessions 34–36 — Prospect detail expander, unified detail panel, clickable rows, UI polish.
 
 Session 36: Tabbed boards, tag display overhaul, detail card polish, color disambiguation.
 - Tabbed boards: st.tabs(["📋 Big Board", "⚡ APEX Board — N scored"]).
@@ -151,12 +159,10 @@ Prior sessions on record: 12 (DB rebuild), 13 (weekly pipeline), 13b (school/arc
 
 ## Next Milestone (Single Target)
 
-- Session 37: APEX top-50 re-score with positional archetype libraries.
-  Detail panel and tabbed boards are fully wired. Every trait vector currently shows generic
-  ~8.5–9.5 placeholder values from the pre-library scoring pass. Re-score will produce
-  differentiated, position-specific trait vectors that make the detail card meaningful.
-  Command: python -m scripts.run_apex_scoring_2026 --batch top50 --force --apply 1
-  Always export after: sqlite3 .\data\edge\draftos.sqlite ".mode json" ".output data/apex_top50_rescored_session37.json" "SELECT * FROM apex_scores;"
+- Session 38: Tag trigger re-run (new scores may fire new recs) + triage any new pending recs.
+  Also: evaluate Kilgore Divergence Alert (held pending combine man-coverage confirmation).
+  Optional: divergence flag naming cleanup (legacy "APEX HIGH" with space vs "APEX_HIGH" underscore).
+  Command for tag re-run: python -m scripts.run_weekly_update --fast (or evaluate_tag_triggers step only).
 
 ---
 
@@ -194,18 +200,20 @@ SNAPSHOTS: Operational. Latest: snapshot_id=3 (2026-03-12). rows=995, coverage=9
   compute_source_snapshot_metrics → compute_snapshot_coverage →
   compute_snapshot_confidence → verify_snapshot_integrity
 
-APEX: Operational. 59 active 2026 scored prospects (50 top-consensus re-scored Session 26) +
+APEX: Operational. 59 active 2026 scored prospects (50 top-consensus re-scored Session 37) +
   12 calibration artifacts (is_calibration_artifact=1, excluded from board).
-  Tiers (active non-cal): ELITE=3, DAY1=23, DAY2=31, DAY3=5.
-  Divergence: ALIGNED=16, APEX_HIGH=26, APEX_LOW=0, APEX_LOW_PVC_STRUCTURAL=20.
-  Latest backup: data/apex_top50_rescored_session29.json (147KB).
+  Tiers (active non-cal): ELITE=3, DAY1=21, DAY2=22, DAY3=4 (updated Session 37).
+  Divergence: ALIGNED=20, APEX_HIGH=26, APEX_LOW=0, APEX_LOW_PVC_STRUCTURAL=16 (Session 37).
+  Latest backup: data/apex_top50_rescored_session37.json (144KB).
   Love (pid=61): RB-1 59.8 DAY2 Tier A v_injury=9.0 (carry clock CLEAR, Session 21).
   Ramsey (pid=148): S-3 Multiplier Safety 61.4 DAY2. Re-scored Session 29 (was S-1 61.2).
     FM-2 Scheme Ghost + FM-3 Processing Wall. Tier B. R3. APEX_HIGH MODERATE +29.
   CALIBRATION_OVERRIDES: all 11 PIDs corrected Session 26.
   Max Klare (pid=6): position_group corrected LB→TE (Session 27). Re-scored TE-5 51.3 DAY3.
+  Keylan Rutledge (pid=136): TOP50_POSITION_OVERRIDES OG added Session 37 (position_raw='G' fix).
   Migrations applied: 0001–0039. Next migration: 0040.
-  NOTE: All scores now use positional archetype library trait vectors (Session 26 re-score complete).
+  NOTE: All scores now use positional archetype library trait vectors (Session 37 re-score complete).
+  Tag re-run needed — new scores may fire new tag trigger rules.
 
 TAGS: Operational. Session 24 trigger engine built and active.
   Scripts: run_tag_triggers_2026.py (engine), accept_tag_recs_2026.py (workflow),
@@ -255,29 +263,37 @@ EXPORTS: board_2026_v1_default.csv last produced Session 21. Current for that sn
 29. ~~Session 34: APEX Board prospect detail expander (get_apex_detail, _render_apex_detail)~~ COMPLETE
 30. ~~Session 35: Unified detail panel, clickable board rows, on_select API~~ COMPLETE
 31. ~~Session 36: Tabbed boards, tag overhaul, detail card polish, color disambiguation~~ COMPLETE
-32. **Session 37: APEX top-50 re-score — real trait vectors needed** ← NEXT
-33. Post-draft audit framework activation (after April 2026 draft)
+32. ~~Session 37: APEX top-50 re-score — real trait vectors, UI tag/detail card overhaul~~ COMPLETE
+33. **Session 38: Tag trigger re-run + triage new pending recs** ← NEXT
+34. Post-draft audit framework activation (after April 2026 draft)
 
 ---
 
 ## APEX Status
 
 - Version: v2.2
-- Active 2026 scored: 59 (is_active=1, is_calibration_artifact=0, top 50 re-scored Session 26)
+- Active 2026 scored: 59 (is_active=1, is_calibration_artifact=0, top 50 re-scored Session 37)
 - Calibration artifacts: 12 (PIDs: 230,304,313,455,504,880,1050,1278,1371,1391,1729,1925)
   All re-scored Session 26 with correct PIDs and positions.
-- Tier dist (active non-cal): ELITE=3, DAY1=23, DAY2=31, DAY3=5
-- Divergence: ALIGNED=16, APEX_HIGH=26, APEX_LOW=0, APEX_LOW_PVC_STRUCTURAL=20
-- Top APEX_HIGH (premium positions, actionable):
-    Devin Moore CB: MAJOR +33 (previously MINOR — now the strongest actionable CB signal)
-    Kamari Ramsey S: MODERATE +29 (S-3 re-score Session 29 — S-1→S-3 archetype corrected)
-    Colton Hood CB: MODERATE +26
-    Joshua Josephs EDGE: MODERATE +22
-    Keith Abney CB: MODERATE +22
-    Dillon Thieneman S: MINOR +8 (was MAJOR +23 — signal compressed after real trait vectors)
-    Akheem Mesidor EDGE: ALIGNED +4 (was APEX_HIGH +16 — consensus was right, signal resolved)
+- Tier dist (active non-cal, Session 37): ELITE=3, DAY1=21, DAY2=22, DAY3=4
+- Divergence (Session 37): ALIGNED=20, APEX_HIGH=26, APEX_LOW=0, APEX_LOW_PVC_STRUCTURAL=16
+- Notable Session 37 scores:
+    Fernando Mendoza QB-1 Field General: 86.4 ELITE, Tier A, R1 Picks 11-32
+    David Bailey EDGE-1: 88.4 ELITE, Tier A
+    Rueben Bain EDGE-1: 87.1 ELITE, Tier A
+    Caleb Downs S-1 Centerfielder: 81.4 DAY1, Tier A, R1 Picks 1-10
+    Jermod McCoy CB-1: 82.1 DAY1, Tier B — FM-4 Medical Flag Active
+    Kadyn Proctor OT: Smith Rule + Transfer Questions tags fired, capital suppressed to R3
+- Top APEX_HIGH (premium positions, actionable, Session 37):
+    Devin Moore CB: check tag triage post-re-score
+    Kamari Ramsey S: MODERATE (S-3 re-score Session 29 confirmed)
+    Colton Hood CB: persistent signal
+    Joshua Josephs EDGE: accepted Divergence Alert
+    Keith Abney CB: accepted Divergence Alert
+    Dillon Thieneman S: MINOR (was MAJOR +23 — compressed post Session 26)
 - CRITICAL: TOP50_POSITION_OVERRIDES and ARCHETYPE_OVERRIDES in run_apex_scoring_2026.py
   corrected Session 15. CALIBRATION_OVERRIDES corrected Session 26.
+  Rutledge (pid=136) OG added to TOP50_POSITION_OVERRIDES Session 37.
   If DB is ever rebuilt, re-verify ALL prospect_ids in ALL THREE dicts before running.
 - APEX LOW on non-premium positions (ILB, OLB, OG, C, TE, RB) is structural PVC, not
   actionable. Monitor APEX_HIGH on premium positions (QB, CB, EDGE, OT, S) only.
@@ -331,11 +347,11 @@ Inactive (data preserved): ngs_2026 (source_id=29, is_active=0) — model score,
 
 2) System Snapshot Output
 === DRAFTOS SYSTEM SNAPSHOT ===
-generated_utc: 2026-03-13T20:29:51.590383+00:00
+generated_utc: 2026-03-14T01:00:33.376099+00:00
 
 ## Git
 branch: main
-commit: af5eb7a95cd3f1c2dfc7bc3bc6e2eb4e6f8d13c6
+commit: c60aced7269ebd293d3348ffe4af44c50a4f5ca0
 status: clean
 
 ## Tables
@@ -430,6 +446,7 @@ status: clean
 - 0037_seed_bleacherreport_2026 @ 2026-03-11T02:59:55.767870+00:00
 - 0038_source_rankings_analyst_grade @ 2026-03-11T02:59:55.773017+00:00
 - 0039_combine_measurables @ 2026-03-12T07:35:36.180978+00:00
+- 0040_apex_v23_mechanism_fields @ 2026-03-13T22:04:51.261321+00:00
 
 ## Active Season
 no is_active column
