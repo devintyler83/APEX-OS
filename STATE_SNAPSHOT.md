@@ -10,32 +10,30 @@ Last Updated (UTC): 2026-03-14T12:00:00.000000+00:00
 
 ## Last Completed Milestone
 
-Session 42 — Position audit + UX polish (Fix 3.2, Sessions 5.3/5.4/41).
+Session 43 — Weekly pipeline first clean run + tag triage + end_session.py hardening.
 
-Session 42:
-- Position audit: scripts/audit_position_mismatches_2026.py (new).
-  RAS CSV is ground truth for position_group. Bootstrap uses LB fallback — caused ~427 wrong positions.
-  Pre-processes OC→C and ED→DE to fix normalize_position() bugs. Strips pipe prefix from RAS codes.
-  FIXED 238 prospect position_group values. DEACTIVATED 265 duplicate rows (correct-position row existed).
-  Scored PIDs with invalid ILB-library scores deactivated — correct-position canonical PIDs
-  (Ty Simpson QB pid=3531, R Mason Thomas EDGE pid=3538, Lee Hunter DT pid=3527,
-   Gabe Jacas EDGE pid=3542, Treydan Stukes CB pid=160) already had valid apex_scores.
-  ~10 prospects (Bud Clark S, Drew Shelton OL, Eli Stowers TE, Jack Endries TE, Jake Slaughter OL,
-   Joe Royer TE, Josh Cameron WR, Max Iheanachor OL, Sam Hecht OL, Zion Young EDGE, Ted Hurst WR)
-  lost invalid LB-library scores — need re-score with correct position libraries.
-  Consensus rebuilt: 849 rows. Snapshot_id=5. Full metrics pipeline. Doctor: PASSED.
-- UX polish (app/app.py):
-  Fix 3.2: FM mechanism text rendered outside card border (caption below HR).
-  Session 5.3: Click-to-expand detail card, stacking AND-logic tag filter (multiselect),
-    side-by-side prospect compare panel (_render_compare_panel).
-  Session 5.4: Deterministic one-sentence divergence narrative in detail card.
-    build_divergence_narrative() — delta threshold ≥5, PVC-structural fallback.
-  Session 41: Clear button (reset-counter pattern), suppress detail during compare,
-    FM text outside card border. StreamlitAPIException fix: key=f"detail_select_{reset_n}".
-- Migration 0041: apex_scores.bust_warning TEXT column added.
-  apex.py get_apex_detail() updated to include bust_warning (parity fix).
+Session 43:
+- triage_pending_tags_2026.py (new): auto-accept/dismiss all 147 pending system tag recs.
+  Gates: RAS tags always accept; V23_GATED_TAGS require apex_v2.3 score; Divergence Alert
+  requires >= 3 active source rankings (joined via source_player_map + sources.is_active=1).
+  Calibration artifacts auto-dismissed. All 147 accepted (0 dismissed, 0 left pending).
+  prospect_tags now has 211 system-source rows. Rec status: accepted=204, dismissed=30, pending=0.
+  INSERT OR IGNORE idempotency. rec_id backlink populated on each prospect_tags row.
+- Weekly pipeline (run_weekly_update.py): first clean 18-step run post-Session 42.
+  All steps completed with exit code 0. Final line: OK: weekly pipeline completed successfully.
+  Snapshot_id=5 (2026-03-14): rows=1007, coverage=1007, confidence=1007 — PASSED.
+  Tag trigger re-run: 0 new recs (all 185 existing recs already in DB — idempotent).
+  prospects: 4555 (post-bootstrap), source_rankings: 42143, sources_active=14. Doctor: PASSED.
+  ngs_2026.csv and ras_2026.csv skipped by stage step — expected (non-standard format).
+- end_session.py hardened (scripts/end_session.py):
+  CURRENT_SESSION constant added — developer increments each session before running.
+  print_pre_run_checklist(): ASCII box + 5-second abort window fires at startup.
+  validate_state_snapshot_content(): new stale-session check — FAIL if Last Completed
+    Milestone references Session N < CURRENT_SESSION.
+  Post-packet confirmation: prints Next Milestone + 3-second abort window before commit.
+  Reminder comment documents next-session update protocol.
 
-Prior: Session 39 — APEX scoring expansion (ranks 51-150) + housekeeping + Igbinosun PAA re-score.
+Prior: Session 42 — Position audit + UX polish (Fix 3.2, Sessions 5.3/5.4/41).
 
 Session 39:
 - APEX v2.3 scoring expansion: 99 prospects ranked 51-150 scored. Total v2.3 non-cal: 149.
@@ -201,15 +199,14 @@ Prior sessions on record: 12 (DB rebuild), 13 (weekly pipeline), 13b (school/arc
 
 ## Next Milestone (Single Target)
 
-- Session 43: Three-part target:
+- Session 44: Two-part target:
   1. Re-score ~10 position-fixed prospects (lost invalid LB scores in Session 42):
     Bud Clark S (pid=3590), Drew Shelton OL (pid=3706), Eli Stowers TE (pid=3637),
     Jack Endries TE (pid=3683), Jake Slaughter OL (pid=3687), Joe Royer TE (pid=3664),
     Josh Cameron WR (pid=3616), Max Iheanachor OL (pid=3532), Sam Hecht OL (pid=3564),
     Zion Young EDGE (pid=3551), Ted Hurst WR (pid=3536).
     Use canonical active PIDs (correct positions). Add to TOP50_POSITION_OVERRIDES as needed.
-  2. Score ranks 151-250 (build target PID list, dry run, live score).
-  3. Triage 147 pending tag recs (tag trigger was re-run post-Session 42, pending=147).
+  2. Score ranks 151-250 (build target PID list from consensus, dry run, live score).
   Neal MONITOR tag — hold until combine 3-cone data.
 
 ---
@@ -231,7 +228,7 @@ INGEST: Operational. 31 sources (14 active canonical), source_players: 9919,
   ngs_2026.csv → ngs_2026 (source_id=29, is_active=0): 312 rows. ngs_score in grade column.
     Not in consensus — model score, not scout ranking.
 
-BOOTSTRAP: Operational. prospects: 4536 total (active managed by is_active flag).
+BOOTSTRAP: Operational. prospects: 4555 total (active managed by is_active flag).
 
 UNIVERSE: Operational. data/universe/prospect_universe_2026.csv (861 players).
   Migration 0033 applied.
@@ -242,8 +239,8 @@ CONSENSUS: Operational. 849 rows (14 active sources, Session 42 rebuild).
 
 MODEL OUTPUTS: Operational. 1003 rows (Session 42 rebuild).
 
-SNAPSHOTS: Operational. Latest: snapshot_id=5 (2026-03-14). rows=999, coverage=999,
-  confidence=999 — PASSED (Session 42 rebuild after position fix).
+SNAPSHOTS: Operational. Latest: snapshot_id=5 (2026-03-14). rows=1007, coverage=1007,
+  confidence=1007 — PASSED (Session 43 weekly pipeline clean run).
   Full pipeline: build_consensus → snapshot_board → compute_snapshot_metrics →
   compute_source_snapshot_metrics → compute_snapshot_coverage →
   compute_snapshot_confidence → verify_snapshot_integrity
@@ -276,10 +273,11 @@ TAGS: Operational. Session 24 trigger engine built and active.
   Scripts: run_tag_triggers_2026.py (engine), accept_tag_recs_2026.py (workflow),
     draftos/tags/evaluator.py (pure function library).
   Schema: tag_definitions=28 (added Monitor id=54 Session 39), tag_trigger_rules=14.
-  Rec status: accepted=57, dismissed=30, pending=147.
-    147 pending recs generated by tag trigger re-run post-Session 42 — triage is Session 43 target.
-  Active tags (71 total prospect_tags rows): Development Bet=28, Compression Flag=14,
-    Divergence Alert=8, Elite RAS=4, Poor RAS=1, Great RAS=1, Injury Flag=1, Monitor=1 (Neal pid=109).
+  Rec status: accepted=204, dismissed=30, pending=0.
+    All 147 pending recs triaged Session 43 via triage_pending_tags_2026.py (all accepted).
+  Active tags (211 total system prospect_tags rows): Development Bet=70, Elite RAS=45,
+    Compression Flag=32, Divergence Alert=31, Great RAS=18, Top 5 NextGen=7,
+    Scheme Dependent=6, Poor RAS=1, Injury Flag=1, Monitor=1 (Neal pid=109).
   Monitor tag (id=54, Session 39): editorial, gray, note_required=1.
     Applied to Julian Neal CB — 3-cone gate pending.
 
@@ -324,8 +322,9 @@ EXPORTS: board_2026_v1_default.csv last produced Session 21. Current for that sn
 33. ~~Session 38: Minimal maintenance — Top 5 NextGen tag description fix + gitignore cleanup~~ COMPLETE
 34. ~~Session 39: APEX ranks 51-150 scoring expansion (99 prospects) + Igbinosun PAA re-score~~ COMPLETE
 35. ~~Session 40-42: UX polish (FM text, compare panel, divergence narrative, tag filter) + position audit~~ COMPLETE
-36. **Session 43: Re-score ~10 position-fixed prospects + ranks 151-250 + tag trigger re-run** ← NEXT
-36. Post-draft audit framework activation (after April 2026 draft)
+36. ~~Session 43: Tag triage (147 recs → 204 accepted) + weekly pipeline clean run (rows=1007) + end_session.py hardening~~ COMPLETE
+37. **Session 44: Re-score ~10 position-fixed prospects + ranks 151-250** ← NEXT
+38. Post-draft audit framework activation (after April 2026 draft)
 
 ---
 
