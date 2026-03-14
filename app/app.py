@@ -174,6 +174,147 @@ _INTERNAL_TAG_NAMES: frozenset[str] = frozenset({
 })
 
 # ---------------------------------------------------------------------------
+# Divergence narrative — deterministic one-sentence explanation
+# ---------------------------------------------------------------------------
+
+_TRAIT_LABELS: dict[str, str] = {
+    "v_processing":  "Processing & Instincts",
+    "v_athleticism": "Athleticism",
+    "v_scheme_vers": "Scheme Versatility",
+    "v_comp_tough":  "Competitive Toughness",
+    "v_character":   "Character & Intangibles",
+    "v_dev_traj":    "Development Trajectory",
+    "v_production":  "Production",
+    "v_injury":      "Injury & Durability",
+}
+
+# Positional average baselines — traits above these are "model sees",
+# traits below are "market discounting"
+_POSITIONAL_BASELINES: dict[str, dict[str, float]] = {
+    "QB":   {"v_processing":8.0,"v_athleticism":7.0,"v_scheme_vers":7.5,
+             "v_comp_tough":7.5,"v_character":7.0,"v_dev_traj":7.5,
+             "v_production":7.5,"v_injury":7.5},
+    "EDGE": {"v_processing":7.0,"v_athleticism":8.0,"v_scheme_vers":6.5,
+             "v_comp_tough":7.5,"v_character":7.0,"v_dev_traj":7.0,
+             "v_production":7.0,"v_injury":7.5},
+    "CB":   {"v_processing":7.5,"v_athleticism":8.0,"v_scheme_vers":7.0,
+             "v_comp_tough":7.5,"v_character":7.0,"v_dev_traj":7.0,
+             "v_production":7.0,"v_injury":7.5},
+    "OT":   {"v_processing":7.0,"v_athleticism":7.5,"v_scheme_vers":7.0,
+             "v_comp_tough":7.5,"v_character":7.0,"v_dev_traj":7.0,
+             "v_production":7.0,"v_injury":7.5},
+    "IDL":  {"v_processing":7.0,"v_athleticism":7.5,"v_scheme_vers":6.5,
+             "v_comp_tough":7.5,"v_character":7.0,"v_dev_traj":7.0,
+             "v_production":7.0,"v_injury":7.5},
+    "ILB":  {"v_processing":7.5,"v_athleticism":7.0,"v_scheme_vers":7.0,
+             "v_comp_tough":7.5,"v_character":7.0,"v_dev_traj":7.0,
+             "v_production":7.0,"v_injury":7.5},
+    "OLB":  {"v_processing":7.0,"v_athleticism":7.5,"v_scheme_vers":7.0,
+             "v_comp_tough":7.5,"v_character":7.0,"v_dev_traj":7.0,
+             "v_production":7.0,"v_injury":7.5},
+    "S":    {"v_processing":7.5,"v_athleticism":7.5,"v_scheme_vers":7.5,
+             "v_comp_tough":7.5,"v_character":7.0,"v_dev_traj":7.0,
+             "v_production":7.0,"v_injury":7.5},
+    "OG":   {"v_processing":7.0,"v_athleticism":7.0,"v_scheme_vers":7.0,
+             "v_comp_tough":7.5,"v_character":7.0,"v_dev_traj":7.0,
+             "v_production":7.0,"v_injury":7.5},
+    "C":    {"v_processing":7.5,"v_athleticism":7.0,"v_scheme_vers":7.0,
+             "v_comp_tough":7.5,"v_character":7.0,"v_dev_traj":7.0,
+             "v_production":7.0,"v_injury":7.5},
+    "TE":   {"v_processing":7.0,"v_athleticism":7.5,"v_scheme_vers":7.5,
+             "v_comp_tough":7.0,"v_character":7.0,"v_dev_traj":7.0,
+             "v_production":7.0,"v_injury":7.5},
+    "RB":   {"v_processing":7.0,"v_athleticism":8.0,"v_scheme_vers":6.5,
+             "v_comp_tough":7.5,"v_character":7.0,"v_dev_traj":7.0,
+             "v_production":7.5,"v_injury":7.0},
+    "WR":   {"v_processing":7.5,"v_athleticism":8.0,"v_scheme_vers":7.0,
+             "v_comp_tough":7.0,"v_character":7.0,"v_dev_traj":7.0,
+             "v_production":7.5,"v_injury":7.5},
+}
+_DEFAULT_BASELINE: dict[str, float] = {k: 7.5 for k in _TRAIT_LABELS}
+
+
+def _fallback_narrative(name: str, delta: int, fm: str | None, position: str) -> str:
+    direction = "above" if delta > 0 else "below"
+    abs_delta = abs(delta)
+    if fm and delta < 0:
+        return (
+            f"APEX ranks {abs_delta} spots {direction} consensus: "
+            f"model flags {fm} bust risk not priced into market ranking."
+        )
+    return (
+        f"APEX ranks {abs_delta} spots {direction} consensus: "
+        f"positional value framework ({position}) diverges from market consensus ranking."
+    )
+
+
+def build_divergence_narrative(
+    display_name: str,
+    position: str,
+    divergence_delta: int,
+    trait_scores: dict,
+    fm_primary: str | None,
+) -> str | None:
+    """
+    Return a one-sentence divergence narrative, or None if abs(delta) < 5.
+    Deterministic: same inputs always produce the same sentence.
+    """
+    if abs(divergence_delta) < 5:
+        return None
+
+    baseline = _POSITIONAL_BASELINES.get(position, _DEFAULT_BASELINE)
+
+    # Compute delta-from-baseline for each trait that has a value
+    deltas = {
+        k: round((trait_scores.get(k) or 0.0) - baseline.get(k, 7.5), 1)
+        for k in _TRAIT_LABELS
+        if trait_scores.get(k) is not None
+    }
+
+    if not deltas:
+        return _fallback_narrative(display_name, divergence_delta, fm_primary, position)
+
+    sorted_deltas = sorted(deltas.items(), key=lambda x: x[1], reverse=True)
+
+    # Top 2 above baseline = "model sees"
+    model_sees = [(k, v) for k, v in sorted_deltas if v > 0][:2]
+    # Bottom 1-2 below baseline = "market discounting"
+    market_discounts = [(k, v) for k, v in sorted_deltas if v < 0][-2:]
+
+    direction = "above" if divergence_delta > 0 else "below"
+    abs_delta = abs(divergence_delta)
+
+    if model_sees and market_discounts:
+        sees_str = " and ".join(
+            f"{_TRAIT_LABELS[k]} ({trait_scores[k]:.1f})"
+            for k, _ in model_sees
+        )
+        discount_str = " and ".join(
+            f"{_TRAIT_LABELS[k]} ({trait_scores[k]:.1f})"
+            for k, _ in market_discounts
+        )
+        return (
+            f"APEX ranks {abs_delta} spots {direction} consensus: "
+            f"model weights {sees_str} above positional norm; "
+            f"market is discounting {discount_str}."
+        )
+    elif model_sees and divergence_delta > 0:
+        # APEX higher than consensus and traits are uniformly strong: cite top traits
+        sees_str = " and ".join(
+            f"{_TRAIT_LABELS[k]} ({trait_scores[k]:.1f})"
+            for k, _ in model_sees
+        )
+        return (
+            f"APEX ranks {abs_delta} spots {direction} consensus: "
+            f"model weights {sees_str} significantly above positional norm."
+        )
+    else:
+        # APEX lower than consensus with strong traits = PVC structural discount,
+        # or no interpretable pattern — use positional framework fallback
+        return _fallback_narrative(display_name, divergence_delta, fm_primary, position)
+
+
+# ---------------------------------------------------------------------------
 # Position and tier visual config (detail card)
 # ---------------------------------------------------------------------------
 
@@ -399,6 +540,29 @@ def _render_apex_detail(d: dict) -> None:
         )
 
     st.markdown("<hr style='border-color:#333;margin:8px 0 12px 0'>", unsafe_allow_html=True)
+
+    # ── Divergence Narrative ──────────────────────────────────────────────────
+    _div_delta = d.get("auto_apex_delta")
+    if _div_delta is not None:
+        _narr_traits = {
+            "v_processing":  d.get("v_processing"),
+            "v_athleticism": d.get("v_athleticism"),
+            "v_scheme_vers": d.get("v_scheme_vers"),
+            "v_comp_tough":  d.get("v_comp_tough"),
+            "v_character":   d.get("v_character"),
+            "v_dev_traj":    d.get("v_dev_traj"),
+            "v_production":  d.get("v_production"),
+            "v_injury":      d.get("v_injury"),
+        }
+        _narrative = build_divergence_narrative(
+            display_name=d.get("display_name", ""),
+            position=d.get("position_group", ""),
+            divergence_delta=int(_div_delta),
+            trait_scores=_narr_traits,
+            fm_primary=d.get("failure_mode_primary"),
+        )
+        if _narrative:
+            st.caption(f"📊 {_narrative}")
 
     # ── Player Profile / Trait Vectors Bars ──────────────────────────────────
     _traits_raw = {
@@ -1561,6 +1725,8 @@ else:
                     _detail["confidence_band"] = _pr.get("confidence_band")
                 # Expose board-side RAS for detail card (ras_total from ras table)
                 _detail["ras_score"] = _pr.get("ras_score")
+                # Expose auto_apex_delta for divergence narrative
+                _detail["auto_apex_delta"] = _pr.get("auto_apex_delta")
                 _render_apex_detail(_detail)
             else:
                 st.warning("APEX detail record not found despite apex_composite being set.")
