@@ -647,3 +647,34 @@ def get_prospect_detail(
     detail["active_tags"] = [dict(r) for r in tag_rows]
 
     return detail
+
+
+def get_prospect_tags_map(
+    conn,
+    prospect_ids: list[int],
+) -> dict[int, list[str]]:
+    """
+    Return {prospect_id: [tag_name, ...]} for the given prospect_ids.
+    Only accepted (is_active=1) tags from active tag_definitions are included.
+    Results are ordered by tag display_order within each prospect.
+    """
+    if not prospect_ids:
+        return {}
+    placeholders = ",".join("?" * len(prospect_ids))
+    rows = conn.execute(
+        f"""
+        SELECT pt.prospect_id, td.tag_name
+        FROM prospect_tags pt
+        JOIN tag_definitions td ON td.tag_def_id = pt.tag_def_id
+        WHERE pt.prospect_id IN ({placeholders})
+          AND pt.is_active   = 1
+          AND td.is_active   = 1
+        ORDER BY pt.prospect_id, td.display_order
+        """,
+        prospect_ids,
+    ).fetchall()
+    result: dict[int, list[str]] = {}
+    for row in rows:
+        pid, tag_name = row[0], row[1]
+        result.setdefault(pid, []).append(tag_name)
+    return result

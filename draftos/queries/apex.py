@@ -173,6 +173,7 @@ def get_apex_detail(conn, *, prospect_id: int, season_id: int = 1) -> dict | Non
             a.red_flags,
             a.failure_mode_primary,
             a.failure_mode_secondary,
+            a.bust_warning,
             a.signature_play,
             a.translation_risk,
             a.override_arch,

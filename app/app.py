@@ -1,7 +1,7 @@
 """
-DraftOS Big Board — Session 37
+DraftOS Big Board — Session 40
 Read-only Streamlit UI with divergence flags, APEX rank input, APEX scores,
-tag display, and prospect detail drawer.
+tag display, prospect detail drawer, stacking filters, and side-by-side comparison.
 No DB writes except through save_apex_rank() and clear_apex_rank(). No business logic.
 """
 
@@ -10,7 +10,7 @@ import streamlit as st
 
 from draftos.db.connect import connect
 from draftos.queries.apex import save_apex_rank, clear_apex_rank, get_apex_detail
-from draftos.queries.model_outputs import get_big_board, get_prospect_detail
+from draftos.queries.model_outputs import get_big_board, get_prospect_detail, get_prospect_tags_map
 from draftos.ui.profile_dimensions import get_profile_dimensions
 
 # Streamlit ≥ 1.35 supports on_select / selection_mode on st.dataframe
@@ -41,12 +41,12 @@ _TAGS_DISPLAY_MAP: dict[str, str] = {
     # Informational
     "Compression Flag":   "🔀 Tweener",
     "Divergence Alert":   "⚡ Divergence",
-    "Scheme Dependent":   "🔒 Scheme Lock",
+    "Scheme Dependent":   "🎯 Scheme Dep.",
     "Development Bet":    "📈 Dev Bet",
-    "Floor Play":         "🛡️ Safe Floor",
+    "Floor Play":         "🛡️ Floor Play",
     "Riser":              "📈 Riser",
     "Faller":             "📉 Faller",
-    "Scheme Fit":         "🎯 Scheme Fit",
+    "Scheme Fit":         "✅ Scheme Fit",
     # Conviction
     "Want":               "💚 Want",
     "Do Not Want":        "❌ Do Not Want",
@@ -401,7 +401,6 @@ def _render_apex_detail(d: dict) -> None:
     st.markdown("<hr style='border-color:#333;margin:8px 0 12px 0'>", unsafe_allow_html=True)
 
     # ── Player Profile / Trait Vectors Bars ──────────────────────────────────
-    # Build traits dict; None → 0.0 for safe math in profile_dimensions
     _traits_raw = {
         "v_processing":     d.get("v_processing"),
         "v_athleticism":    d.get("v_athleticism"),
@@ -428,7 +427,6 @@ def _render_apex_detail(d: dict) -> None:
         profile_dims = get_profile_dimensions(d.get("position_group", ""), _traits)
         has_profile = len(profile_dims) > 0 and any(s > 0 for _, s in profile_dims)
 
-        # Section header with view toggle
         prof_col1, prof_col2 = st.columns([4, 1])
         with prof_col1:
             st.markdown(
@@ -449,7 +447,6 @@ def _render_apex_detail(d: dict) -> None:
             else:
                 profile_view = "System"
 
-        # Determine which bars to render
         if profile_view == "Football" and has_profile:
             display_bars = profile_dims
         else:
@@ -477,7 +474,7 @@ def _render_apex_detail(d: dict) -> None:
                 unsafe_allow_html=True,
             )
 
-    # Character sub-scores (shown in both views when data exists)
+    # Character sub-scores
     c1 = d.get("c1_public_record")
     c2 = d.get("c2_motivation")
     c3 = d.get("c3_psych_profile")
@@ -525,7 +522,6 @@ def _render_apex_detail(d: dict) -> None:
 """
     st.markdown(arch_html, unsafe_allow_html=True)
 
-    # Gap label explanation (Step 3 — translation confidence)
     gap_explanation = _GAP_LABEL_EXPLANATIONS.get(gap_label, "")
     if gap_explanation:
         st.caption(gap_explanation)
@@ -715,6 +711,127 @@ def _render_consensus_card(row) -> None:
     st.caption("*Not yet APEX-scored. Run apex_scoring to generate full profile.*")
 
 
+def _render_compare_panel(name_a: str, name_b: str, board_df: pd.DataFrame) -> None:
+    """Render side-by-side prospect comparison panel."""
+    row_a = board_df[board_df["display_name"] == name_a]
+    row_b = board_df[board_df["display_name"] == name_b]
+    if row_a.empty or row_b.empty:
+        st.warning("One or both prospects not found in current board.")
+        return
+
+    pa = row_a.iloc[0]
+    pb = row_b.iloc[0]
+    pid_a = int(pa["prospect_id"])
+    pid_b = int(pb["prospect_id"])
+
+    # Load APEX detail for capital + FM fields (only for scored prospects)
+    da: dict | None = None
+    db: dict | None = None
+    if pd.notna(pa.get("apex_composite")):
+        with connect() as conn:
+            da = get_apex_detail(conn, prospect_id=pid_a)
+    if pd.notna(pb.get("apex_composite")):
+        with connect() as conn:
+            db = get_apex_detail(conn, prospect_id=pid_b)
+
+    def _get(detail, row, key, board_key=None, fmt=None):
+        """Pull value from detail dict (preferred) or board row, return formatted string."""
+        v = None
+        if detail and detail.get(key) is not None:
+            _raw = detail[key]
+            if not (isinstance(_raw, float) and pd.isna(_raw)):
+                v = _raw
+        if v is None and board_key is not None:
+            _raw = row.get(board_key)
+            if _raw is not None and not (isinstance(_raw, float) and pd.isna(_raw)):
+                v = _raw
+        if v is None:
+            return "—"
+        if fmt:
+            try:
+                return fmt(v)
+            except Exception:
+                return str(v)
+        return str(v)
+
+    def _num(v):
+        if v is None or (isinstance(v, float) and pd.isna(v)):
+            return None
+        try:
+            return float(v)
+        except Exception:
+            return None
+
+    apex_a = _num(pa.get("apex_composite"))
+    apex_b = _num(pb.get("apex_composite"))
+    rpg_a  = _num(pa.get("raw_score"))
+    rpg_b  = _num(pb.get("raw_score"))
+    rank_a = _num(pa.get("consensus_rank"))
+    rank_b = _num(pb.get("consensus_rank"))
+
+    fmt_score = lambda v: f"{float(v):.1f}"
+    fmt_rank  = lambda v: f"#{int(v)}"
+
+    # (label, val_a_str, val_b_str, direction, raw_a, raw_b)
+    # direction: "high" = higher wins, "low" = lower wins, None = no highlight
+    compare_rows = [
+        ("Name",            name_a,                                                              name_b,                                                              None,   None,   None),
+        ("Position",        str(pa.get("position_group") or "—"),                               str(pb.get("position_group") or "—"),                               None,   None,   None),
+        ("School",          str(pa.get("school_canonical") or "—"),                             str(pb.get("school_canonical") or "—"),                             None,   None,   None),
+        ("Archetype",       _get(da, pa, "matched_archetype", "apex_archetype"),                _get(db, pb, "matched_archetype", "apex_archetype"),                None,   None,   None),
+        ("APEX Score",      _get(da, pa, "apex_composite", "apex_composite", fmt_score),        _get(db, pb, "apex_composite", "apex_composite", fmt_score),        "high", apex_a, apex_b),
+        ("APEX Tier",       str(pa.get("apex_tier") or "—"),                                    str(pb.get("apex_tier") or "—"),                                    None,   None,   None),
+        ("Consensus Rank",  _get(da, pa, "consensus_rank", "consensus_rank", fmt_rank),         _get(db, pb, "consensus_rank", "consensus_rank", fmt_rank),         "low",  rank_a, rank_b),
+        ("RPG",             _get(da, pa, "raw_score", "raw_score", fmt_score),                  _get(db, pb, "raw_score", "raw_score", fmt_score),                  "high", rpg_a,  rpg_b),
+        ("FM Primary",      _get(da, pa, "failure_mode_primary", "failure_mode_primary"),       _get(db, pb, "failure_mode_primary", "failure_mode_primary"),       None,   None,   None),
+        ("Capital (Base)",  _get(da, pa, "capital_base"),                                       _get(db, pb, "capital_base"),                                       None,   None,   None),
+        ("Capital (Adj.)",  _get(da, pa, "capital_adjusted"),                                   _get(db, pb, "capital_adjusted"),                                   None,   None,   None),
+        ("Eval Confidence", _get(da, pa, "eval_confidence", "eval_confidence"),                 _get(db, pb, "eval_confidence", "eval_confidence"),                 None,   None,   None),
+    ]
+
+    st.subheader("⚖️ Comparison")
+    hdr_lbl, hdr_a, hdr_b = st.columns([2, 3, 3])
+    with hdr_lbl:
+        st.markdown('<div style="font-size:11px;color:#666;letter-spacing:1px">FIELD</div>', unsafe_allow_html=True)
+    with hdr_a:
+        st.markdown(f'<div style="font-size:14px;font-weight:700;color:#63B3ED">{name_a}</div>', unsafe_allow_html=True)
+    with hdr_b:
+        st.markdown(f'<div style="font-size:14px;font-weight:700;color:#68D391">{name_b}</div>', unsafe_allow_html=True)
+
+    st.markdown("<hr style='border-color:#333;margin:4px 0 8px 0'>", unsafe_allow_html=True)
+
+    for label, va, vb, direction, raw_a, raw_b in compare_rows:
+        style_a = style_b = "color:#E2E8F0"
+        if direction and raw_a is not None and raw_b is not None:
+            try:
+                fa, fb = float(raw_a), float(raw_b)
+                if direction == "high":
+                    if fa > fb:
+                        style_a = "color:#69f0ae;font-weight:700"
+                    elif fb > fa:
+                        style_b = "color:#69f0ae;font-weight:700"
+                elif direction == "low":
+                    if fa < fb:
+                        style_a = "color:#69f0ae;font-weight:700"
+                    elif fb < fa:
+                        style_b = "color:#69f0ae;font-weight:700"
+            except Exception:
+                pass
+
+        col_lbl, col_a, col_b = st.columns([2, 3, 3])
+        with col_lbl:
+            st.markdown(f'<div style="font-size:11px;color:#718096;padding:3px 0">{label}</div>', unsafe_allow_html=True)
+        with col_a:
+            st.markdown(f'<div style="font-size:13px;{style_a};padding:3px 0">{va}</div>', unsafe_allow_html=True)
+        with col_b:
+            st.markdown(f'<div style="font-size:13px;{style_b};padding:3px 0">{vb}</div>', unsafe_allow_html=True)
+
+    if da is None:
+        st.caption(f"APEX score pending for {name_a}.")
+    if db is None:
+        st.caption(f"APEX score pending for {name_b}.")
+
+
 # ---------------------------------------------------------------------------
 # Load data
 # ---------------------------------------------------------------------------
@@ -858,15 +975,27 @@ with st.sidebar:
         step=10,
     )
 
-    # --- Tag filter — dynamic: shows all tags currently in use ---
+    # --- Tag filter — multiselect with AND logic (all selected tags must be present) ---
     st.markdown("### Tags")
-    selected_tags: list[str] = []
     _active_tag_defs = _load_active_tag_defs()
-    for _tdef in _active_tag_defs:
-        tag_name = _tdef["tag_name"]
-        display_label = _TAGS_DISPLAY_MAP.get(tag_name, tag_name)
-        if st.checkbox(display_label, key=f"tag_{tag_name}"):
-            selected_tags.append(tag_name)
+    _tag_name_to_label = {
+        d["tag_name"]: _TAGS_DISPLAY_MAP.get(d["tag_name"], d["tag_name"])
+        for d in _active_tag_defs
+    }
+    _tag_label_to_name = {v: k for k, v in _tag_name_to_label.items()}
+    _tag_display_opts = [_tag_name_to_label[d["tag_name"]] for d in _active_tag_defs]
+
+    selected_tag_labels = st.multiselect(
+        "Tags (all must match)",
+        options=_tag_display_opts,
+        default=[],
+        key="tag_multiselect",
+    )
+    selected_tags: list[str] = [
+        _tag_label_to_name[lbl]
+        for lbl in selected_tag_labels
+        if lbl in _tag_label_to_name
+    ]
 
     # --- Tag legend — dynamic: mirrors active tag defs ---
     with st.expander("📖 Tag Legend", expanded=False):
@@ -894,6 +1023,37 @@ a good CB (RPG 74, APEX 74) because the NFL pays, drafts,
 and replaces running backs differently than cornerbacks.
 This reflects draft economics, not player talent.
 """)
+
+    # --- Prospect Detail selectbox — write to selected_pid ---
+    st.markdown("---")
+    st.markdown("### 🔍 Prospect Detail")
+    _all_sorted_names = sorted(df["display_name"].dropna().unique().tolist())
+    _detail_dropdown = st.selectbox(
+        "Select prospect",
+        options=["— select —"] + _all_sorted_names,
+        key="detail_select",
+    )
+    if _detail_dropdown != "— select —":
+        _pid_rows = df[df["display_name"] == _detail_dropdown]["prospect_id"]
+        if not _pid_rows.empty:
+            st.session_state["selected_pid"] = int(_pid_rows.iloc[0])
+
+    # --- Compare Two Prospects expander ---
+    with st.expander("⚖️ Compare Two Prospects"):
+        _cmp_names = ["—"] + _all_sorted_names
+        compare_a_input = st.selectbox("Prospect A", options=_cmp_names, key="cmp_a")
+        compare_b_input = st.selectbox("Prospect B", options=_cmp_names, key="cmp_b")
+        cmp_col1, cmp_col2 = st.columns(2)
+        with cmp_col1:
+            run_compare = st.button("Compare ⚖️", key="run_cmp", use_container_width=True)
+        with cmp_col2:
+            clear_compare = st.button("Clear", key="clear_cmp", use_container_width=True)
+        if run_compare and compare_a_input != "—" and compare_b_input != "—":
+            st.session_state["compare_a"] = compare_a_input
+            st.session_state["compare_b"] = compare_b_input
+        if clear_compare:
+            st.session_state.pop("compare_a", None)
+            st.session_state.pop("compare_b", None)
 
 # ---------------------------------------------------------------------------
 # Apply filters
@@ -933,14 +1093,15 @@ if ras_range is not None:
     in_range = filtered["ras_score"].between(ras_lo, ras_hi)
     filtered = filtered[~has_ras | in_range]
 
-# Tag filter — OR logic: show prospects matching ANY selected tag
+# Tag filter — AND logic: all selected tags must be present on the prospect
 if selected_tags:
     selected_set = set(selected_tags)
 
-    def _has_any_tag(tag_str: str) -> bool:
-        return bool(selected_set.intersection(_parse_tags(tag_str)))
+    def _has_all_tags(tag_str: str) -> bool:
+        present = set(_parse_tags(tag_str))
+        return selected_set.issubset(present)
 
-    tag_mask = filtered["tag_names"].apply(_has_any_tag)
+    tag_mask = filtered["tag_names"].apply(_has_all_tags)
     filtered = filtered[tag_mask]
 
 filtered = filtered.sort_values("consensus_rank", ascending=True)
@@ -1188,8 +1349,11 @@ with tab_bb:
         _bb_row_idx = bb_event.selection.rows[0]
         st.session_state["selected_pid"] = int(_bb_prospect_ids[_bb_row_idx])
 
-    st.caption(f"Showing {len(display)} of {total_prospects} prospects")
-    st.caption("💡 Click any row to load the prospect detail panel below.")
+    st.caption(
+        f"Showing **{len(display)}** of {total_prospects} prospects"
+        + (f" · {len(selected_tags)} tag filter(s) active" if selected_tags else "")
+    )
+    st.caption("💡 Click any row to load the prospect detail panel below, or use **🔍 Prospect Detail** in the sidebar.")
 
     # Tagged prospects pill view
     tagged_filtered = filtered[filtered["tag_names"] != ""].copy()
@@ -1355,6 +1519,16 @@ with st.expander("🔧 Set APEX Rank (Analyst Override — optional)", expanded=
             st.rerun()
 
 # ---------------------------------------------------------------------------
+# Compare Panel (renders when both A and B are set)
+# ---------------------------------------------------------------------------
+_cmp_a = st.session_state.get("compare_a")
+_cmp_b = st.session_state.get("compare_b")
+
+if _cmp_a and _cmp_b:
+    st.divider()
+    _render_compare_panel(_cmp_a, _cmp_b, df)
+
+# ---------------------------------------------------------------------------
 # Prospect Detail Panel (unified)
 # ---------------------------------------------------------------------------
 st.divider()
@@ -1363,12 +1537,10 @@ st.subheader("📋 Prospect Detail")
 _selected_pid = st.session_state.get("selected_pid")
 
 if _selected_pid is None:
-    _hint = (
-        "Click a row in either board above to load their profile."
-        if _ON_SELECT_AVAILABLE
-        else "Use the selector above to choose a prospect."
+    st.caption(
+        "No prospect selected. Click a row in either board above, or use "
+        "**🔍 Prospect Detail** in the sidebar to load a profile."
     )
-    st.caption(f"No prospect selected. {_hint}")
 else:
     _prospect_row = df[df["prospect_id"] == _selected_pid]
     if _prospect_row.empty:
