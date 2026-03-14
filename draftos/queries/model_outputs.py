@@ -212,6 +212,9 @@ def get_big_board(
       divergence_flag, jfosterfilm_rank, divergence_delta,
       apex_rank, apex_delta,
       apex_composite, apex_tier, apex_archetype,
+      v_processing, v_athleticism, v_scheme_vers, v_comp_tough,
+      v_character, v_dev_traj, v_production, v_injury,
+      c1_public_record, c2_motivation, c3_psych_profile,
       tag_names  (pipe-delimited string of tag_name values, "" if none)
 
     Notes:
@@ -278,6 +281,17 @@ def get_big_board(
           aps.failure_mode_secondary,
           aps.signature_play,
           aps.translation_risk,
+          aps.v_processing,
+          aps.v_athleticism,
+          aps.v_scheme_vers,
+          aps.v_comp_tough,
+          aps.v_character,
+          aps.v_dev_traj,
+          aps.v_production,
+          aps.v_injury,
+          aps.c1_public_record,
+          aps.c2_motivation,
+          aps.c3_psych_profile,
           (
               SELECT GROUP_CONCAT(td2.tag_name, ', ')
               FROM prospect_tags pt2

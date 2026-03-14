@@ -11,6 +11,7 @@ import streamlit as st
 from draftos.db.connect import connect
 from draftos.queries.apex import save_apex_rank, clear_apex_rank, get_apex_detail
 from draftos.queries.model_outputs import get_big_board, get_prospect_detail
+from draftos.ui.profile_dimensions import get_profile_dimensions
 
 # Streamlit ≥ 1.35 supports on_select / selection_mode on st.dataframe
 _ON_SELECT_AVAILABLE = tuple(
@@ -390,37 +391,84 @@ def _render_apex_detail(d: dict) -> None:
 
     st.markdown("<hr style='border-color:#333;margin:8px 0 12px 0'>", unsafe_allow_html=True)
 
-    # ── Trait Vector Bars ─────────────────────────────────────────────────────
-    st.markdown(
-        '<div style="font-size:12px;font-weight:700;color:#999;letter-spacing:1px;'
-        'margin-bottom:8px">TRAIT VECTORS</div>',
-        unsafe_allow_html=True,
-    )
+    # ── Player Profile / Trait Vectors Bars ──────────────────────────────────
+    # Build traits dict; None → 0.0 for safe math in profile_dimensions
+    _traits_raw = {
+        "v_processing":     d.get("v_processing"),
+        "v_athleticism":    d.get("v_athleticism"),
+        "v_scheme_vers":    d.get("v_scheme_vers"),
+        "v_comp_tough":     d.get("v_comp_tough"),
+        "v_character":      d.get("v_character"),
+        "v_dev_traj":       d.get("v_dev_traj"),
+        "v_production":     d.get("v_production"),
+        "v_injury":         d.get("v_injury"),
+        "c1_public_record": d.get("c1_public_record"),
+        "c2_motivation":    d.get("c2_motivation"),
+        "c3_psych_profile": d.get("c3_psych_profile"),
+    }
+    _traits = {
+        k: (float(v) if v is not None and not (isinstance(v, float) and pd.isna(v)) else 0.0)
+        for k, v in _traits_raw.items()
+    }
 
-    traits = [
-        ("Processing & Instincts", d.get("v_processing")),
-        ("Athleticism",            d.get("v_athleticism")),
-        ("Scheme Versatility",     d.get("v_scheme_vers")),
-        ("Competitive Toughness",  d.get("v_comp_tough")),
-        ("Character & Intangibles",d.get("v_character")),
-        ("Dev. Trajectory",        d.get("v_dev_traj")),
-        ("Production",             d.get("v_production")),
-        ("Injury & Durability",    d.get("v_injury")),
-    ]
+    _has_apex_data = any(v > 0 for v in _traits.values())
 
-    bar_col1, bar_col2 = st.columns(2)
-    with bar_col1:
-        st.markdown(
-            "".join(_trait_bar_html(lbl, val) for lbl, val in traits[:4]),
-            unsafe_allow_html=True,
-        )
-    with bar_col2:
-        st.markdown(
-            "".join(_trait_bar_html(lbl, val) for lbl, val in traits[4:]),
-            unsafe_allow_html=True,
-        )
+    if not _has_apex_data:
+        st.caption("APEX evaluation not yet available.")
+    else:
+        profile_dims = get_profile_dimensions(d.get("position_group", ""), _traits)
+        has_profile = len(profile_dims) > 0 and any(s > 0 for _, s in profile_dims)
 
-    # Character sub-scores
+        # Section header with view toggle
+        prof_col1, prof_col2 = st.columns([4, 1])
+        with prof_col1:
+            st.markdown(
+                '<div style="font-size:12px;font-weight:700;color:#999;letter-spacing:1px;'
+                'margin-bottom:8px">PLAYER PROFILE</div>',
+                unsafe_allow_html=True,
+            )
+        with prof_col2:
+            if has_profile:
+                profile_view = st.radio(
+                    "View",
+                    options=["Football", "System"],
+                    index=0,
+                    horizontal=True,
+                    key=f"profile_view_{d['prospect_id']}",
+                    label_visibility="collapsed",
+                )
+            else:
+                profile_view = "System"
+
+        # Determine which bars to render
+        if profile_view == "Football" and has_profile:
+            display_bars = profile_dims
+        else:
+            display_bars = [
+                ("Processing & Instincts",  _traits["v_processing"]),
+                ("Athleticism",             _traits["v_athleticism"]),
+                ("Scheme Versatility",      _traits["v_scheme_vers"]),
+                ("Competitive Toughness",   _traits["v_comp_tough"]),
+                ("Character & Intangibles", _traits["v_character"]),
+                ("Dev. Trajectory",         _traits["v_dev_traj"]),
+                ("Production",              _traits["v_production"]),
+                ("Injury & Durability",     _traits["v_injury"]),
+            ]
+
+        mid = (len(display_bars) + 1) // 2
+        bar_col1, bar_col2 = st.columns(2)
+        with bar_col1:
+            st.markdown(
+                "".join(_trait_bar_html(lbl, val) for lbl, val in display_bars[:mid]),
+                unsafe_allow_html=True,
+            )
+        with bar_col2:
+            st.markdown(
+                "".join(_trait_bar_html(lbl, val) for lbl, val in display_bars[mid:]),
+                unsafe_allow_html=True,
+            )
+
+    # Character sub-scores (shown in both views when data exists)
     c1 = d.get("c1_public_record")
     c2 = d.get("c2_motivation")
     c3 = d.get("c3_psych_profile")

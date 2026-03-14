@@ -682,6 +682,62 @@ ARCHETYPE_OVERRIDES: dict[int, dict] = {
         "capital_range":       "R3",
         "fm_flags":            ["FM-2 Scheme Ghost (primary)", "FM-3 Processing Wall (secondary)"],
     },
+
+    # ---------------------------------------------------------------------------
+    # Session 5 (scoring expansion) overrides
+    # ---------------------------------------------------------------------------
+
+    # Davison Igbinosun — CB (pid=36). Session 5 batch scored CB-2 Zone Architect 76.4 DAY1
+    # without PAA gate findings. CB-2 is incorrect — analyst full PAA run confirms CB-3 press
+    # dominance as primary mechanism and man coverage floor. Re-score with gate injection.
+    # Override type: PAA gate injection + capital revision. NOT a hard forced archetype —
+    # archetype_direction guides the scorer; forced_archetype is False (gate enforcement only).
+    36: {
+        "forced_archetype":    False,  # gate enforcement, not hard override
+        "archetype_direction": (
+            "Archetype: CB-3 Press Man Corner with CB-1 development pathway.\n\n"
+            "Q1 Win mechanism CONFIRMED: CB-3 press dominance — wins at the line through "
+            "length and contact timing, not spatial processing. Do NOT assign CB-2 Zone "
+            "Architect — he is not a spatial processor reading the quarterback.\n\n"
+            "Q2 Man coverage floor CONFIRMED: functional man coverage confirmed, not zone-only. "
+            "This is a genuine floor confirmation — not a CB-2 partial.\n\n"
+            "Q3 Technique trajectory CONFIRMED upward: technique is improving year-over-year. "
+            "CB-1 development pathway is FLAG-level — realistic ceiling trajectory, not "
+            "speculative. This is a ceiling expander, not a reclassification.\n\n"
+            "Q4 Scheme dependency PARTIAL: press is the primary working mechanism. "
+            "Off-coverage gap is active — technique in off-alignment lags CB-3 norm. "
+            "FM-2 Scheme Ghost is CONDITIONAL, landing-spot dependent, NOT structural. "
+            "It fires only in zone-heavy or off-coverage-dominant deployments.\n\n"
+            "SOS Gate PASSES: dual P4 confirmation (Ole Miss + Ohio State). Production held "
+            "against top-25 competition. No SOS discount applied.\n\n"
+            "Capital: R2 early to R3 top. LSM (landing spot match) is critical — "
+            "press-heavy scheme amplifies ceiling; zone-heavy scheme activates FM-2. "
+            "Eval Confidence: Tier B (Q4 off-coverage gap partially unresolved)."
+        ),
+        "paa_findings": {
+            "Q1_win_mechanism":       "CB-3 press dominance — CONFIRMED",
+            "Q2_man_coverage_floor":  "CONFIRMED — not zone-only",
+            "Q3_technique_trajectory": "CONFIRMED upward — CB-1 pathway FLAG",
+            "Q4_scheme_dependency":   "PARTIAL — press OK, off-coverage gap active",
+            "fm_primary":             "FM-2 Scheme Ghost — CONDITIONAL, landing spot dependent",
+            "sos_gate":               "PASSES — Ole Miss + Ohio State dual P4",
+            "archetype_lock":         "CB-3 + CB-1 development pathway — Tier B",
+            "capital_revised":        "R2 early – R3 top. LSM critical.",
+        },
+        "eval_confidence":  "Tier B",
+        "capital_range":    "R2 early – R3 top (LSM critical)",
+        "fm_flags":         ["FM-2 Scheme Ghost — CONDITIONAL (landing spot dependent)"],
+        "archetype_rationale": (
+            "CB-3 Press Man Corner is the analyst-confirmed primary mechanism. "
+            "CB-2 Zone Architect was produced by the batch scorer without PAA findings and "
+            "is incorrect — Igbinosun wins through press-line physical dominance, not "
+            "spatial zone processing. Man coverage floor is confirmed (Q2 CLEAR). "
+            "CB-1 development pathway is a real and trending ceiling trajectory (Q3 upward). "
+            "FM-2 is conditional only — scheme ghost activates in zone-heavy deployment, "
+            "not guaranteed. Capital: R2 early to R3 top, with LSM as the critical variable. "
+            "Do NOT score as CB-2. Score against CB-3 archetype weight table."
+        ),
+    },
 }
 
 # ---------------------------------------------------------------------------

@@ -1,6 +1,6 @@
 # DraftOS State Snapshot
 
-Last Updated (UTC): 2026-03-14T01:00:34.054367+00:00
+Last Updated (UTC): 2026-03-14T04:00:00.000000+00:00
 
 ---
 
@@ -10,7 +10,30 @@ Last Updated (UTC): 2026-03-14T01:00:34.054367+00:00
 
 ## Last Completed Milestone
 
-Session 38 — Tag description fix + gitignore cleanup.
+Session 39 — APEX scoring expansion (ranks 51-150) + housekeeping + Igbinosun PAA re-score.
+
+Session 39:
+- APEX v2.3 scoring expansion: 99 prospects ranked 51-150 scored. Total v2.3 non-cal: 149.
+  Batch used --prospect-ids (targeted, no --force). Dry run confirmed 99 prospects, 0 failed.
+  Quality check: PASS. Backup: data/apex_51_150_session5_scored.json (563KB).
+- Ghost deactivation (housekeeping): pid=3559 Max Klare TE (__dedup_3559__) is_active=0.
+  pid=4369 Max Klare LB (__dedup_4369__) is_active=0. Both confirmed dedup artifacts.
+  pid=4347 D'Angelo Ponds LB (Tankathon only) is_active=0 — canonical is pid=3236 CB Indiana.
+  div_id=697 (stale v2.2 divergence row for Ponds) deleted — div_id=966 (v2.3) retained.
+- Igbinosun re-score (pid=36, CB, Ohio State): PAA gate injection applied.
+  Session 5 batch scored CB-2 Zone Architect 76.4 DAY1 without PAA findings — incorrect.
+  PAA re-score: CB-3 Press Man Corner 68.4 DAY2, Tier B, FM-2 CONDITIONAL, R2 early–R3 top.
+  ARCHETYPE_OVERRIDES[36] added to run_apex_scoring_2026.py with 8 confirmed gate results.
+  Divergence: APEX_HIGH +48 MAJOR → +23 MODERATE. CB-2 was over-scoring by ~8 pts.
+  Override logged: PAA gate injection + capital revision per doctrine.
+- Monitor tag added: tag_def_id=54 (editorial, gray, note_required=1).
+  Applied to Julian Neal (pid=109, CB, rank=70): 3-cone gate trigger, R2 vs R3 hinge.
+  Do not re-score until combine 3-cone data ingested.
+- Divergence recomputed (149 prospects): ALIGNED=25, APEX_HIGH=67, APEX_LOW=3,
+  APEX_LOW_PVC_STRUCTURAL=54.
+- Doctor: PASSED.
+
+Prior: Session 38 — Tag description fix + gitignore cleanup.
 
 Session 38: Minimal maintenance session.
 - tag_definitions: Updated 'Top 5 NextGen' description to accurate NGS composite explanation.
@@ -153,10 +176,12 @@ Prior sessions on record: 12 (DB rebuild), 13 (weekly pipeline), 13b (school/arc
 
 ## Next Milestone (Single Target)
 
-- Session 39: Tag trigger re-run (new scores may fire new recs) + triage any new pending recs.
-  Also: evaluate Kilgore Divergence Alert (held pending combine man-coverage confirmation).
-  Optional: divergence flag naming cleanup (legacy "APEX HIGH" with space vs "APEX_HIGH" underscore).
-  Command for tag re-run: python -m scripts.evaluate_tag_triggers_2026 --apply 1
+- Session 40: Score ranks 151-250 (same pattern — build target PID list, dry run, live score).
+  Then: tag trigger re-run against all 149 v2.3 scores (new scores may fire new recs).
+  Then: triage any new pending recs. Neal MONITOR tag — hold until combine 3-cone data.
+  Commands:
+    python -m scripts.evaluate_tag_triggers_2026 --apply 1
+    python -m scripts.accept_tag_recs_2026 --list
 
 ---
 
@@ -194,31 +219,35 @@ SNAPSHOTS: Operational. Latest: snapshot_id=3 (2026-03-12). rows=995, coverage=9
   compute_source_snapshot_metrics → compute_snapshot_coverage →
   compute_snapshot_confidence → verify_snapshot_integrity
 
-APEX: Operational. 59 active 2026 scored prospects (50 top-consensus re-scored Session 37) +
-  12 calibration artifacts (is_calibration_artifact=1, excluded from board).
-  Tiers (active non-cal): ELITE=3, DAY1=21, DAY2=22, DAY3=4 (updated Session 37).
-  Divergence: ALIGNED=20, APEX_HIGH=26, APEX_LOW=0, APEX_LOW_PVC_STRUCTURAL=16 (Session 37).
-  Latest backup: data/apex_top50_rescored_session37.json (144KB).
+APEX: Operational. 149 active 2026 scored prospects (non-cal, v2.3) + 12 calibration artifacts.
+  Scored coverage: ranks 1-150 (with some gaps — targeted PID list method).
+  Tiers (v2.3 active non-cal): ELITE=3, DAY1=28, DAY2=73, DAY3=40, UDFA-P=5 (Session 39).
+  Divergence (149 prospects, Session 39): ALIGNED=25, APEX_HIGH=67, APEX_LOW=3,
+    APEX_LOW_PVC_STRUCTURAL=54.
+  Latest backup: data/apex_51_150_session5_scored.json (563KB).
+  Igbinosun (pid=36): CB-3 Press Man Corner 68.4 DAY2, Tier B, FM-2 CONDITIONAL, R2 early–R3 top.
+    PAA gate injection applied Session 39. Prior score (CB-2 76.4) corrected. Delta: +23 MODERATE.
   Love (pid=61): RB-1 59.8 DAY2 Tier A v_injury=9.0 (carry clock CLEAR, Session 21).
-  Ramsey (pid=148): S-3 Multiplier Safety 61.4 DAY2. Re-scored Session 29 (was S-1 61.2).
-    FM-2 Scheme Ghost + FM-3 Processing Wall. Tier B. R3. APEX_HIGH MODERATE +29.
+  Ramsey (pid=148): S-3 72.6 DAY2 Tier B R3. APEX_HIGH MODERATE +29 (Session 39 divergence).
+  Neal (pid=109): MONITOR tag active — 3-cone gate pending. Do not re-score until combine data.
   CALIBRATION_OVERRIDES: all 11 PIDs corrected Session 26.
   Max Klare (pid=6): position_group corrected LB→TE (Session 27). Re-scored TE-5 51.3 DAY3.
   Keylan Rutledge (pid=136): TOP50_POSITION_OVERRIDES OG added Session 37 (position_raw='G' fix).
+  Igbinosun (pid=36): ARCHETYPE_OVERRIDES[36] added Session 39 with PAA gate findings.
+  Ghost cleanup (Session 39): pid=3559, 4369 (Klare dups) is_active=0. pid=4347 (Ponds LB) is_active=0.
   Migrations applied: 0001–0039. Next migration: 0040.
-  NOTE: All scores now use positional archetype library trait vectors (Session 37 re-score complete).
-  Tag re-run needed — new scores may fire new tag trigger rules.
+  Tag trigger re-run pending — 149 v2.3 scores not yet evaluated against trigger rules.
 
 TAGS: Operational. Session 24 trigger engine built and active.
   Scripts: run_tag_triggers_2026.py (engine), accept_tag_recs_2026.py (workflow),
     draftos/tags/evaluator.py (pure function library).
-  Schema: tag_definitions=27, tag_trigger_rules=14.
+  Schema: tag_definitions=28 (added Monitor id=54 Session 39), tag_trigger_rules=14.
   Rec status: accepted=57, dismissed=29, pending=0.
   Active tags: Development Bet=28, Compression Flag=14, Divergence Alert=8, Elite RAS=4,
-    Poor RAS=1, Great RAS=1, Injury Flag=1.
-  Session 27 accepted: Josephs EDGE Compression Flag, Ramsey S Divergence Alert.
-  Session 27 dismissed: Iheanachor Compression, Ponds Divergence, Howell/Faulk/Mcdonald/
-    Cooper/Rutledge Dev Bet (all consensus rank <75, market priced).
+    Poor RAS=1, Great RAS=1, Injury Flag=1, Monitor=1 (Neal pid=109).
+  Monitor tag (id=54, Session 39): editorial, gray, note_required=1.
+    Applied to Julian Neal CB — 3-cone gate pending.
+  Tag trigger re-run NOT yet executed against 149 v2.3 scores — will fire Session 40.
 
 EXPORTS: board_2026_v1_default.csv last produced Session 21. Current for that snapshot.
 
@@ -259,36 +288,36 @@ EXPORTS: board_2026_v1_default.csv last produced Session 21. Current for that sn
 31. ~~Session 36: Tabbed boards, tag overhaul, detail card polish, color disambiguation~~ COMPLETE
 32. ~~Session 37: APEX top-50 re-score — real trait vectors, UI tag/detail card overhaul~~ COMPLETE
 33. ~~Session 38: Minimal maintenance — Top 5 NextGen tag description fix + gitignore cleanup~~ COMPLETE
-34. **Session 39: Tag trigger re-run + triage new pending recs** ← NEXT
-35. Post-draft audit framework activation (after April 2026 draft)
+34. ~~Session 39: APEX ranks 51-150 scoring expansion (99 prospects) + Igbinosun PAA re-score~~ COMPLETE
+35. **Session 40: Score ranks 151-250 + tag trigger re-run against all 149 v2.3 scores** ← NEXT
+36. Post-draft audit framework activation (after April 2026 draft)
 
 ---
 
 ## APEX Status
 
-- Version: v2.2
-- Active 2026 scored: 59 (is_active=1, is_calibration_artifact=0, top 50 re-scored Session 37)
+- Version: v2.2 (scorer engine) / v2.3 (model_version written to DB)
+- Active 2026 scored: 149 (v2.3, is_active=1, is_calibration_artifact=0)
 - Calibration artifacts: 12 (PIDs: 230,304,313,455,504,880,1050,1278,1371,1391,1729,1925)
   All re-scored Session 26 with correct PIDs and positions.
-- Tier dist (active non-cal, Session 37): ELITE=3, DAY1=21, DAY2=22, DAY3=4
-- Divergence (Session 37): ALIGNED=20, APEX_HIGH=26, APEX_LOW=0, APEX_LOW_PVC_STRUCTURAL=16
-- Notable Session 37 scores:
-    Fernando Mendoza QB-1 Field General: 86.4 ELITE, Tier A, R1 Picks 11-32
-    David Bailey EDGE-1: 88.4 ELITE, Tier A
-    Rueben Bain EDGE-1: 87.1 ELITE, Tier A
-    Caleb Downs S-1 Centerfielder: 81.4 DAY1, Tier A, R1 Picks 1-10
-    Jermod McCoy CB-1: 82.1 DAY1, Tier B — FM-4 Medical Flag Active
-    Kadyn Proctor OT: Smith Rule + Transfer Questions tags fired, capital suppressed to R3
-- Top APEX_HIGH (premium positions, actionable, Session 37):
-    Devin Moore CB: check tag triage post-re-score
-    Kamari Ramsey S: MODERATE (S-3 re-score Session 29 confirmed)
-    Colton Hood CB: persistent signal
-    Joshua Josephs EDGE: accepted Divergence Alert
-    Keith Abney CB: accepted Divergence Alert
-    Dillon Thieneman S: MINOR (was MAJOR +23 — compressed post Session 26)
+- Tier dist (v2.3 active non-cal, Session 39): ELITE=3, DAY1=28, DAY2=73, DAY3=40, UDFA-P=5
+- Divergence (Session 39, 149 prospects): ALIGNED=25, APEX_HIGH=67, APEX_LOW=3,
+  APEX_LOW_PVC_STRUCTURAL=54
+- Notable Session 39 additions:
+    Davison Igbinosun CB: PAA-corrected 68.4 DAY2 CB-3, Tier B, FM-2 CONDITIONAL, +23 MODERATE
+    Julian Neal CB: MONITOR tag active — 3-cone gate pending (sub-6.9s = R2, above = R3)
+- Top APEX_HIGH premium signals (actionable — Session 39 divergence):
+    Domani Jackson CB +88 MAJOR | Mansoor Delane CB +63 MAJOR | Romello Height EDGE +49 MAJOR
+    Tacario Davis CB +49 MAJOR | Julian Neal CB +48 MAJOR | Jadon Canady CB +48 MAJOR
+    Jaishawn Barham EDGE +53 MAJOR | Chandler Rivers CB +36 MAJOR | Jude Bowry EDGE +41 MAJOR
+    Michael Taaffe S +36 MAJOR | Garrett Nussmeier QB +37 MAJOR | Kamari Ramsey S +29 MODERATE
+    Davison Igbinosun CB +23 MODERATE | Keyron Crawford EDGE +22 MODERATE | Derrick Moore EDGE +21 MODERATE
+  (D'Angelo Ponds CB +91 is artifact — duplicate divergence source, exclude)
+  (Jalon Kilgore S +38 held — combine man-coverage gate pending)
 - CRITICAL: TOP50_POSITION_OVERRIDES and ARCHETYPE_OVERRIDES in run_apex_scoring_2026.py
   corrected Session 15. CALIBRATION_OVERRIDES corrected Session 26.
   Rutledge (pid=136) OG added to TOP50_POSITION_OVERRIDES Session 37.
+  Igbinosun (pid=36) PAA gate injection added to ARCHETYPE_OVERRIDES Session 39.
   If DB is ever rebuilt, re-verify ALL prospect_ids in ALL THREE dicts before running.
 - APEX LOW on non-premium positions (ILB, OLB, OG, C, TE, RB) is structural PVC, not
   actionable. Monitor APEX_HIGH on premium positions (QB, CB, EDGE, OT, S) only.
@@ -297,22 +326,34 @@ EXPORTS: board_2026_v1_default.csv last produced Session 21. Current for that sn
 
 ## Divergence Status
 
-- DEVIN MOORE CB (pid=37): APEX_HIGH MAJOR +33 — strongest actionable premium signal post Session 26.
-  Was MINOR in prior sessions; re-score elevated. Review CB PAA before acting.
-- KAMARI RAMSEY S (pid=148): APEX_HIGH MODERATE +29 — S-3 re-score Session 29. Premium. Actionable.
-  S-3 Multiplier Safety confirmed. Zone-dominant production. Processing 7.0 — S-1 ruled out.
-  FM-2 Scheme Ghost primary. FM-3 Processing Wall secondary. Tier B. R3 capital.
-  Divergence Alert rec accepted (rec_id=85, Session 27).
-- COLTON HOOD CB (pid=72): APEX_HIGH MODERATE +26 — persistent signal. CB-3 confirmed.
-- JALON KILGORE CB (pid=449): APEX_HIGH MAJOR +260 — divergence artifact (CB entry for Safety).
-  Re-scored to S-3 DAY2 63.1 Session 18. Divergence Alert rec held pending combine
-  man-coverage confirmation. Do NOT cite as signal until resolved.
-- D'ANGELO PONDS CB (pid=3236): APEX_HIGH MAJOR +95 — no consensus rank row. Non-blocking.
-- KYRON DRONES QB (pid=1420, consensus=351): QB-5 DAY3 49.1, APEX_HIGH MAJOR +369.
-  Very low consensus rank. Artifact.
-- JALEN CATALON S (pid=1464): APEX_HIGH MAJOR +283 — artifact, very low consensus coverage.
-- DILLON THIENEMAN S (pid=29): APEX_HIGH MINOR +8 — compressed from +23 after real trait vectors.
-  Still positive signal but substantially less aggressive than prior sessions.
+Current recompute: Session 39 (149 v2.3 prospects). Total APEX_HIGH=67, APEX_LOW=3.
+
+Premium actionable signals (confirmed, non-artifact):
+- DOMANI JACKSON CB (pid=108): APEX_HIGH MAJOR +88 — rank #150. New signal from 51-150 batch.
+- JAISHAWN BARHAM EDGE (pid=258): APEX_HIGH MAJOR +53 — rank #122. New from batch.
+- ROMELLO HEIGHT EDGE (pid=43): APEX_HIGH MAJOR +49 — rank #68. New from batch.
+- TACARIO DAVIS CB (pid=159): APEX_HIGH MAJOR +49 — rank #123. New from batch.
+- JULIAN NEAL CB (pid=109): APEX_HIGH MAJOR +48 — rank #70. MONITOR tag active (3-cone gate).
+- JADON CANADY CB (pid=252): APEX_HIGH MAJOR +48 — rank #139. New from batch.
+- JUDE BOWRY EDGE (pid=115): APEX_HIGH MAJOR +41 — rank #144. New from batch.
+- KAMARI RAMSEY S (pid=148): APEX_HIGH MODERATE +29 — S-3 confirmed. R3 capital.
+- DAVISON IGBINOSUN CB (pid=36): APEX_HIGH MODERATE +23 — PAA-corrected Session 39. CB-3 68.4.
+- COLTON HOOD CB (pid=72): APEX_HIGH MODERATE +26 — persistent. CB-3 confirmed.
+- KEYRON CRAWFORD EDGE (pid=116): APEX_HIGH MODERATE +22 — rank #101. New from batch.
+- DERRICK MOORE EDGE (pid=81): APEX_HIGH MODERATE +21 — rank #59. New from batch.
+- MANSOOR DELANE CB (pid=3509): APEX_HIGH MAJOR +63 — rank #96. New from batch.
+- CHANDLER RIVERS CB (pid=34): APEX_HIGH MAJOR +36 — rank #80. Confirmed from batch.
+- MICHAEL TAAFFE S (pid=310): APEX_HIGH MAJOR +36 — rank #140. New from batch.
+- GARRETT NUSSMEIER QB (pid=58): APEX_HIGH MAJOR +37 — rank #115. New from batch.
+- DEVIN MOORE CB (pid=37): Prior APEX_HIGH — verify with tag triage post-batch.
+- DILLON THIENEMAN S (pid=29): APEX_HIGH MINOR +12 — minor signal.
+
+Artifacts / held:
+- D'ANGELO PONDS CB (pid=3236): +91 MAJOR — artifact (dup divergence source; pid=4347 deactivated S39).
+- JALON KILGORE S (pid=309): +38 MAJOR — held pending combine man-coverage confirmation.
+- JALON KILGORE CB (pid=449): large delta — CB entry for Safety; position artifact.
+- KYRON DRONES QB (pid=1420, rank=351): +369 — very low consensus rank artifact.
+- JALEN CATALON S (pid=1464): large delta — very low consensus coverage artifact.
 
 ---
 
