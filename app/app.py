@@ -160,6 +160,15 @@ _FM_COLORS: dict[str, str] = {
     "FM-6": "#9F7AEA",   # purple — Role Mismatch
 }
 
+_FM_DESCRIPTIONS: dict[str, str] = {
+    "FM-1": "Athleticism Mirage — tests well, functional athleticism does not survive NFL speed.",
+    "FM-2": "Scheme Ghost — production manufactured by system; remove scheme, production collapses.",
+    "FM-3": "Processing Wall — college instincts hit NFL complexity ceiling; read-to-action gap becomes fatal.",
+    "FM-4": "Body Breakdown — physical profile cannot sustain NFL volume; great when healthy, healthy is not sustainable.",
+    "FM-5": "Motivation Cliff — external driver disappears post-contract; effort becomes variable.",
+    "FM-6": "Role Mismatch — skills real but deployment context never materializes on the NFL roster.",
+}
+
 _INTERNAL_TAG_NAMES: frozenset[str] = frozenset({
     "apex_rank_2026",
 })
@@ -555,6 +564,12 @@ def _render_apex_detail(d: dict) -> None:
                 f'{fm_secondary}</span>'
             )
 
+        bust_warning = d.get("bust_warning")
+        if _fm_is_present(bust_warning):
+            fm_mechanism_text = str(bust_warning).strip()
+        else:
+            fm_mechanism_text = _FM_DESCRIPTIONS.get(fm_code, str(fm_primary))
+
         st.markdown(
             f"""
             <div style="background:#1A202C;border:1px solid #2D3748;border-radius:12px;
@@ -564,6 +579,9 @@ def _render_apex_detail(d: dict) -> None:
                 <span style="background:{fm_color};color:white;padding:6px 14px;
                 border-radius:6px;font-size:13px;font-weight:700">{fm_primary}</span>
                 {fm_secondary_html}
+                <div style="color:#CBD5E0;font-size:13px;margin-top:10px;line-height:1.5">
+                    {fm_mechanism_text}
+                </div>
             </div>
             """,
             unsafe_allow_html=True,
