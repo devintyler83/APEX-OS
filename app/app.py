@@ -733,19 +733,17 @@ def _render_apex_detail(d: dict) -> None:
         st.markdown(
             f"""
             <div style="background:#1A202C;border:1px solid #2D3748;border-radius:12px;
-                        padding:16px;margin:8px 0">
+                        padding:16px;margin:8px 0 4px 0">
                 <div style="font-size:11px;color:#718096;text-transform:uppercase;
                             letter-spacing:1px;margin-bottom:8px">Failure Mode Risk</div>
                 <span style="background:{fm_color};color:white;padding:6px 14px;
                 border-radius:6px;font-size:13px;font-weight:700">{fm_primary}</span>
                 {fm_secondary_html}
-                <div style="color:#CBD5E0;font-size:13px;margin-top:10px;line-height:1.5">
-                    {fm_mechanism_text}
-                </div>
             </div>
             """,
             unsafe_allow_html=True,
         )
+        st.caption(fm_mechanism_text)
 
     # ── Draft Capital ─────────────────────────────────────────────────────────
     cap_base = d.get("capital_base") or "—"
@@ -1192,12 +1190,23 @@ This reflects draft economics, not player talent.
     st.markdown("---")
     st.markdown("### 🔍 Prospect Detail")
     _all_sorted_names = sorted(df["display_name"].dropna().unique().tolist())
-    _detail_dropdown = st.selectbox(
-        "Select prospect",
-        options=["— select —"] + _all_sorted_names,
-        key="detail_select",
-    )
-    if _detail_dropdown != "— select —":
+    _det_col_sel, _det_col_clr = st.columns([3, 1])
+    with _det_col_sel:
+        _detail_dropdown = st.selectbox(
+            "Select prospect",
+            options=["— select —"] + _all_sorted_names,
+            key="detail_select",
+            label_visibility="collapsed",
+        )
+    with _det_col_clr:
+        st.write("")  # vertical alignment spacer
+        if st.button("Clear", key="detail_clear", use_container_width=True):
+            st.session_state["selected_pid"] = None
+            st.session_state["detail_select"] = "— select —"
+            st.rerun()
+    if _detail_dropdown == "— select —":
+        st.session_state["selected_pid"] = None
+    else:
         _pid_rows = df[df["display_name"] == _detail_dropdown]["prospect_id"]
         if not _pid_rows.empty:
             st.session_state["selected_pid"] = int(_pid_rows.iloc[0])
@@ -1694,7 +1703,14 @@ if _cmp_a and _cmp_b:
 
 # ---------------------------------------------------------------------------
 # Prospect Detail Panel (unified)
+# Compare is active when both compare_a and compare_b are set in session_state.
+# When compare is active, suppress the full detail card to avoid a confusing
+# three-prospect view — show a brief info note instead.
 # ---------------------------------------------------------------------------
+_compare_active = bool(
+    st.session_state.get("compare_a") and st.session_state.get("compare_b")
+)
+
 st.divider()
 st.subheader("📋 Prospect Detail")
 
@@ -1704,6 +1720,11 @@ if _selected_pid is None:
     st.caption(
         "No prospect selected. Click a row in either board above, or use "
         "**🔍 Prospect Detail** in the sidebar to load a profile."
+    )
+elif _compare_active:
+    st.caption(
+        "ℹ️ Prospect detail hidden while Compare is active. "
+        "Clear the comparison to view an individual profile."
     )
 else:
     _prospect_row = df[df["prospect_id"] == _selected_pid]
