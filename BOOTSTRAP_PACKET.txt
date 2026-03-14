@@ -10,14 +10,14 @@ Non-negotiables:
 - Provide run order + verification commands
 
 Goal for this chat:
-Session 43: Three-part target:
+Session 44: Two-part target:
 
 Authoritative State:
 
 1) STATE_SNAPSHOT.md
 # DraftOS State Snapshot
 
-Last Updated (UTC): 2026-03-14T12:00:00.000000+00:00
+Last Updated (UTC): 2026-03-14T23:17:06.069048+00:00
 
 ---
 
@@ -27,32 +27,30 @@ Last Updated (UTC): 2026-03-14T12:00:00.000000+00:00
 
 ## Last Completed Milestone
 
-Session 42 — Position audit + UX polish (Fix 3.2, Sessions 5.3/5.4/41).
+Session 43 — Weekly pipeline first clean run + tag triage + end_session.py hardening.
 
-Session 42:
-- Position audit: scripts/audit_position_mismatches_2026.py (new).
-  RAS CSV is ground truth for position_group. Bootstrap uses LB fallback — caused ~427 wrong positions.
-  Pre-processes OC→C and ED→DE to fix normalize_position() bugs. Strips pipe prefix from RAS codes.
-  FIXED 238 prospect position_group values. DEACTIVATED 265 duplicate rows (correct-position row existed).
-  Scored PIDs with invalid ILB-library scores deactivated — correct-position canonical PIDs
-  (Ty Simpson QB pid=3531, R Mason Thomas EDGE pid=3538, Lee Hunter DT pid=3527,
-   Gabe Jacas EDGE pid=3542, Treydan Stukes CB pid=160) already had valid apex_scores.
-  ~10 prospects (Bud Clark S, Drew Shelton OL, Eli Stowers TE, Jack Endries TE, Jake Slaughter OL,
-   Joe Royer TE, Josh Cameron WR, Max Iheanachor OL, Sam Hecht OL, Zion Young EDGE, Ted Hurst WR)
-  lost invalid LB-library scores — need re-score with correct position libraries.
-  Consensus rebuilt: 849 rows. Snapshot_id=5. Full metrics pipeline. Doctor: PASSED.
-- UX polish (app/app.py):
-  Fix 3.2: FM mechanism text rendered outside card border (caption below HR).
-  Session 5.3: Click-to-expand detail card, stacking AND-logic tag filter (multiselect),
-    side-by-side prospect compare panel (_render_compare_panel).
-  Session 5.4: Deterministic one-sentence divergence narrative in detail card.
-    build_divergence_narrative() — delta threshold ≥5, PVC-structural fallback.
-  Session 41: Clear button (reset-counter pattern), suppress detail during compare,
-    FM text outside card border. StreamlitAPIException fix: key=f"detail_select_{reset_n}".
-- Migration 0041: apex_scores.bust_warning TEXT column added.
-  apex.py get_apex_detail() updated to include bust_warning (parity fix).
+Session 43:
+- triage_pending_tags_2026.py (new): auto-accept/dismiss all 147 pending system tag recs.
+  Gates: RAS tags always accept; V23_GATED_TAGS require apex_v2.3 score; Divergence Alert
+  requires >= 3 active source rankings (joined via source_player_map + sources.is_active=1).
+  Calibration artifacts auto-dismissed. All 147 accepted (0 dismissed, 0 left pending).
+  prospect_tags now has 211 system-source rows. Rec status: accepted=204, dismissed=30, pending=0.
+  INSERT OR IGNORE idempotency. rec_id backlink populated on each prospect_tags row.
+- Weekly pipeline (run_weekly_update.py): first clean 18-step run post-Session 42.
+  All steps completed with exit code 0. Final line: OK: weekly pipeline completed successfully.
+  Snapshot_id=5 (2026-03-14): rows=1007, coverage=1007, confidence=1007 — PASSED.
+  Tag trigger re-run: 0 new recs (all 185 existing recs already in DB — idempotent).
+  prospects: 4555 (post-bootstrap), source_rankings: 42143, sources_active=14. Doctor: PASSED.
+  ngs_2026.csv and ras_2026.csv skipped by stage step — expected (non-standard format).
+- end_session.py hardened (scripts/end_session.py):
+  CURRENT_SESSION constant added — developer increments each session before running.
+  print_pre_run_checklist(): ASCII box + 5-second abort window fires at startup.
+  validate_state_snapshot_content(): new stale-session check — FAIL if Last Completed
+    Milestone references Session N < CURRENT_SESSION.
+  Post-packet confirmation: prints Next Milestone + 3-second abort window before commit.
+  Reminder comment documents next-session update protocol.
 
-Prior: Session 39 — APEX scoring expansion (ranks 51-150) + housekeeping + Igbinosun PAA re-score.
+Prior: Session 42 — Position audit + UX polish (Fix 3.2, Sessions 5.3/5.4/41).
 
 Session 39:
 - APEX v2.3 scoring expansion: 99 prospects ranked 51-150 scored. Total v2.3 non-cal: 149.
@@ -218,15 +216,14 @@ Prior sessions on record: 12 (DB rebuild), 13 (weekly pipeline), 13b (school/arc
 
 ## Next Milestone (Single Target)
 
-- Session 43: Three-part target:
+- Session 44: Two-part target:
   1. Re-score ~10 position-fixed prospects (lost invalid LB scores in Session 42):
     Bud Clark S (pid=3590), Drew Shelton OL (pid=3706), Eli Stowers TE (pid=3637),
     Jack Endries TE (pid=3683), Jake Slaughter OL (pid=3687), Joe Royer TE (pid=3664),
     Josh Cameron WR (pid=3616), Max Iheanachor OL (pid=3532), Sam Hecht OL (pid=3564),
     Zion Young EDGE (pid=3551), Ted Hurst WR (pid=3536).
     Use canonical active PIDs (correct positions). Add to TOP50_POSITION_OVERRIDES as needed.
-  2. Score ranks 151-250 (build target PID list, dry run, live score).
-  3. Triage 147 pending tag recs (tag trigger was re-run post-Session 42, pending=147).
+  2. Score ranks 151-250 (build target PID list from consensus, dry run, live score).
   Neal MONITOR tag — hold until combine 3-cone data.
 
 ---
@@ -248,7 +245,7 @@ INGEST: Operational. 31 sources (14 active canonical), source_players: 9919,
   ngs_2026.csv → ngs_2026 (source_id=29, is_active=0): 312 rows. ngs_score in grade column.
     Not in consensus — model score, not scout ranking.
 
-BOOTSTRAP: Operational. prospects: 4536 total (active managed by is_active flag).
+BOOTSTRAP: Operational. prospects: 4555 total (active managed by is_active flag).
 
 UNIVERSE: Operational. data/universe/prospect_universe_2026.csv (861 players).
   Migration 0033 applied.
@@ -259,8 +256,8 @@ CONSENSUS: Operational. 849 rows (14 active sources, Session 42 rebuild).
 
 MODEL OUTPUTS: Operational. 1003 rows (Session 42 rebuild).
 
-SNAPSHOTS: Operational. Latest: snapshot_id=5 (2026-03-14). rows=999, coverage=999,
-  confidence=999 — PASSED (Session 42 rebuild after position fix).
+SNAPSHOTS: Operational. Latest: snapshot_id=5 (2026-03-14). rows=1007, coverage=1007,
+  confidence=1007 — PASSED (Session 43 weekly pipeline clean run).
   Full pipeline: build_consensus → snapshot_board → compute_snapshot_metrics →
   compute_source_snapshot_metrics → compute_snapshot_coverage →
   compute_snapshot_confidence → verify_snapshot_integrity
@@ -293,10 +290,11 @@ TAGS: Operational. Session 24 trigger engine built and active.
   Scripts: run_tag_triggers_2026.py (engine), accept_tag_recs_2026.py (workflow),
     draftos/tags/evaluator.py (pure function library).
   Schema: tag_definitions=28 (added Monitor id=54 Session 39), tag_trigger_rules=14.
-  Rec status: accepted=57, dismissed=30, pending=147.
-    147 pending recs generated by tag trigger re-run post-Session 42 — triage is Session 43 target.
-  Active tags (71 total prospect_tags rows): Development Bet=28, Compression Flag=14,
-    Divergence Alert=8, Elite RAS=4, Poor RAS=1, Great RAS=1, Injury Flag=1, Monitor=1 (Neal pid=109).
+  Rec status: accepted=204, dismissed=30, pending=0.
+    All 147 pending recs triaged Session 43 via triage_pending_tags_2026.py (all accepted).
+  Active tags (211 total system prospect_tags rows): Development Bet=70, Elite RAS=45,
+    Compression Flag=32, Divergence Alert=31, Great RAS=18, Top 5 NextGen=7,
+    Scheme Dependent=6, Poor RAS=1, Injury Flag=1, Monitor=1 (Neal pid=109).
   Monitor tag (id=54, Session 39): editorial, gray, note_required=1.
     Applied to Julian Neal CB — 3-cone gate pending.
 
@@ -341,8 +339,9 @@ EXPORTS: board_2026_v1_default.csv last produced Session 21. Current for that sn
 33. ~~Session 38: Minimal maintenance — Top 5 NextGen tag description fix + gitignore cleanup~~ COMPLETE
 34. ~~Session 39: APEX ranks 51-150 scoring expansion (99 prospects) + Igbinosun PAA re-score~~ COMPLETE
 35. ~~Session 40-42: UX polish (FM text, compare panel, divergence narrative, tag filter) + position audit~~ COMPLETE
-36. **Session 43: Re-score ~10 position-fixed prospects + ranks 151-250 + tag trigger re-run** ← NEXT
-36. Post-draft audit framework activation (after April 2026 draft)
+36. ~~Session 43: Tag triage (147 recs → 204 accepted) + weekly pipeline clean run (rows=1007) + end_session.py hardening~~ COMPLETE
+37. **Session 44: Re-score ~10 position-fixed prospects + ranks 151-250** ← NEXT
+38. Post-draft audit framework activation (after April 2026 draft)
 
 ---
 
@@ -436,413 +435,211 @@ Artifacts / held:
 Inactive (data preserved): ngs_2026 (source_id=29, is_active=0) — model score, not ranking.
 
 2) System Snapshot Output
-=== DRAFTOS SYSTEM SNAPSHOT ===
-
-generated_utc: 2026-03-14T07:59:56.020015+00:00
-
-
-
-## Git
-
-branch: main
-
-commit: a2c7b7c7f3495bfc465a78670f2001873ff99fd9
-
-status: clean
-
-
-
-## Tables
-
-- apex_scores
-
-- board_snapshots
-
-- consensus_rankings
-
-- divergence_flags
-
-- draft_results
-
-- measurables
-
-- meta_migrations
-
-- model_outputs
-
-- models
-
-- name_aliases
-
-- notes
-
-- override_log
-
-- production
-
-- prospect_board_snapshot_confidence
-
-- prospect_board_snapshot_coverage
-
-- prospect_board_snapshot_metrics
-
-- prospect_board_snapshot_rows
-
-- prospect_board_snapshots
-
-- prospect_canonical_map
-
-- prospect_consensus_rankings
-
-- prospect_model_outputs
-
-- prospect_tag_history
-
-- prospect_tag_recommendations
-
-- prospect_tags
-
-- prospects
-
-- ras
-
-- ras_staging
-
-- school_aliases
-
-- seasons
-
-- source_board_snapshot_metrics
-
-- source_canonical_map
-
-- source_player_map
-
-- source_player_review_queue
-
-- source_players
-
-- source_rankings
-
-- sources
-
-- sqlite_sequence
-
-- tag_definitions
-
-- tag_trigger_rules
-
-- testing
-
-- users
-
-
-
-## Row Counts (key tables)
-
-- sources: 31
-
-- seasons: 1
-
-- prospects: 4536
-
-- source_players: 9919
-
-- source_player_map: 9473
-
-- source_rankings: 42143
-
-- models: 1
-
-- model_outputs: 0
-
-
-
-## Migrations
-
-- 0001_schema_v1 @ 2026-03-10T22:13:56.612939+00:00
-
-- 0002_seed_2026 @ 2026-03-10T22:13:56.627775+00:00
-
-- 0002_board_snapshots @ 2026-03-10T22:17:38.518780+00:00
-
-- 0003_seed_v1_default_model @ 2026-03-10T22:17:38.524214+00:00
-
-- 0003_snapshot_metrics @ 2026-03-10T22:17:38.525800+00:00
-
-- 0004_fix_seed_2026_and_model @ 2026-03-10T22:17:38.525800+00:00
-
-- 0004_source_snapshot_metrics @ 2026-03-10T22:17:38.525800+00:00
-
-- 0005_prospect_snapshot_confidence @ 2026-03-10T22:17:38.525800+00:00
-
-- 0005_sources_active_cols @ 2026-03-10T22:19:24.968356+00:00
-
-- 0006_deprecate_nfldraftbuzz_old @ 2026-03-10T22:19:24.984046+00:00
-
-- 0008_consensus_board_table @ 2026-03-10T22:19:24.984046+00:00
-
-- 0008_source_canonical_map @ 2026-03-10T22:19:24.984046+00:00
-
-- 0008_source_canonicalization @ 2026-03-10T22:19:24.984046+00:00
-
-- 0009_consensus_tier_reason_chips @ 2026-03-10T22:19:24.984046+00:00
-
-- 0009_prospect_board_snapshot_coverage @ 2026-03-10T22:19:24.984046+00:00
-
-- 0009_snapshot_coverage @ 2026-03-10T22:19:24.984046+00:00
-
-- 0010_model_outputs_table @ 2026-03-10T22:19:24.984046+00:00
-
-- 0011_name_normalization @ 2026-03-10T22:19:24.984046+00:00
-
-- 0012_source_players_pos_hint @ 2026-03-10T22:19:24.984046+00:00
-
-- 0013_source_player_review_queue @ 2026-03-10T22:19:24.999862+00:00
-
-- 0014_prospect_canonical_map @ 2026-03-10T22:19:24.999862+00:00
-
-- 0015_source_player_review_queue @ 2026-03-10T22:19:24.999862+00:00
-
-- 0024_consensus_dispersion_cols @ 2026-03-10T22:19:24.999862+00:00
-
-- 0025_consensus_weighted_base @ 2026-03-10T22:19:24.999862+00:00
-
-- 0026_confidence_dispersion_cap @ 2026-03-10T22:19:24.999862+00:00
-
-- 0027_ras_season_cols @ 2026-03-10T22:19:24.999862+00:00
-
-- 0028_ras_staging @ 2026-03-10T22:19:24.999862+00:00
-
-- 0029_seed_jfosterfilm_2026 @ 2026-03-10T22:19:24.999862+00:00
-
-- 0030_prospect_tags_value @ 2026-03-10T22:19:24.999862+00:00
-
-- 0031_apex_divergence @ 2026-03-10T22:19:25.015525+00:00
-
-- 0032_apex_calibration_artifact @ 2026-03-10T22:19:25.015525+00:00
-
-- 0033_prospect_is_active @ 2026-03-10T22:19:25.015525+00:00
-
-- 0034_apex_tier_rename @ 2026-03-10T22:19:25.015525+00:00
-
-- 0035_divergence_rank_delta @ 2026-03-10T22:19:25.015525+00:00
-
-- 0036_tag_calibration_artifacts @ 2026-03-11T02:33:22.525415+00:00
-
-- 0037_seed_bleacherreport_2026 @ 2026-03-11T02:59:55.767870+00:00
-
-- 0038_source_rankings_analyst_grade @ 2026-03-11T02:59:55.773017+00:00
-
-- 0039_combine_measurables @ 2026-03-12T07:35:36.180978+00:00
-
-- 0040_apex_v23_mechanism_fields @ 2026-03-13T22:04:51.261321+00:00
-
-- 0041_apex_bust_warning @ 2026-03-14T05:15:05.026341+00:00
-
-
-
-## Active Season
-
-no is_active column
-
-
-
-## Script Inventory
-
-- app\app.py
-
-- draftos\apex\__init__.py
-
-- draftos\apex\engine.py
-
-- draftos\apex\prompts.py
-
-- draftos\apex\writer.py
-
-- draftos\config.py
-
-- draftos\db\connect.py
-
-- draftos\db\migrate.py
-
-- draftos\ingest\rankings\loader.py
-
-- draftos\ingest\rankings\writer.py
-
-- draftos\normalize\names.py
-
-- draftos\normalize\positions.py
-
-- draftos\normalize\schools.py
-
-- draftos\queries\__init__.py
-
-- draftos\queries\active.py
-
-- draftos\queries\apex.py
-
-- draftos\queries\consensus.py
-
-- draftos\queries\model_outputs.py
-
-- draftos\tags\__init__.py
-
-- draftos\tags\evaluator.py
-
-- draftos\ui\__init__.py
-
-- draftos\ui\profile_dimensions.py
-
-- scripts\_diag_school_aliases.py
-
-- scripts\accept_tag_recommendations_2026.py
-
-- scripts\accept_tag_recs_2026.py
-
-- scripts\apply_prospect_universe_2026.py
-
-- scripts\apply_review_queue_mappings_2026.py
-
-- scripts\audit_position_mismatches_2026.py
-
-- scripts\autoresolve_mapping_review_queue_2026.py
-
-- scripts\bootstrap_prospects_from_sources_2026.py
-
-- scripts\build_consensus_2026.py
-
-- scripts\build_mapping_review_queue_2026.py
-
-- scripts\build_model_outputs_v1_default_2026.py
-
-- scripts\build_prospect_universe_2026.py
-
-- scripts\build_snapshot_packet.py
-
-- scripts\compute_snapshot_confidence.py
-
-- scripts\compute_snapshot_coverage.py
-
-- scripts\compute_snapshot_metrics.py
-
-- scripts\compute_source_snapshot_metrics.py
-
-- scripts\dedup_prospects_2026.py
-
-- scripts\delete_orphan_snapshots.py
-
-- scripts\doctor.py
-
-- scripts\doctor_snapshot.py
-
-- scripts\end_session.py
-
-- scripts\evaluate_tag_triggers_2026.py
-
-- scripts\expand_school_aliases_2026.py
-
-- scripts\export_board_csv.py
-
-- scripts\export_confidence_summary_csv.py
-
-- scripts\export_mapping_review_queue_csv.py
-
-- scripts\export_movers_csv.py
-
-- scripts\export_reports_html.py
-
-- scripts\export_source_health_csv.py
-
-- scripts\fix_calibration_divergence_2026.py
-
-- scripts\import_apex_batch_json.py
-
-- scripts\ingest_combine_2026.py
-
-- scripts\ingest_nflcom_2026.py
-
-- scripts\ingest_ngs_2026.py
-
-- scripts\ingest_rankings_staged.py
-
-- scripts\ingest_ras_2026.py
-
-- scripts\learn_school_aliases_from_mapped_2026.py
-
-- scripts\log_draft_pick_2026.py
-
-- scripts\patch_0005_0006_soft_deprecate_nfldraftbuzz.py
-
-- scripts\patch_0007_bootstrap_prospects_2026.py
-
-- scripts\patch_apex_archetypes_local_2026.py
-
-- scripts\patch_name_normalization_2026.py
-
-- scripts\patch_prospect_canonicalization_2026.py
-
-- scripts\patch_school_canonicalization_2026.py
-
-- scripts\patch_school_from_universe_2026.py
-
-- scripts\patch_source_canonicalization_2026.py
-
-- scripts\publish_latest_packet.py
-
-- scripts\reingest_source_2026.py
-
-- scripts\repair_school_aliases_2026.py
-
-- scripts\repair_snapshot_orphans.py
-
-- scripts\run_apex_scoring_2026.backup_20260313_205410.py
-
-- scripts\run_apex_scoring_2026.py
-
-- scripts\run_tag_trigger_engine_2026.py
-
-- scripts\run_tag_triggers_2026.py
-
-- scripts\run_weekly_update.py
-
-- scripts\scrape_nfldraftbuzz_2026.py
-
-- scripts\scrape_nfldraftbuzz_2026_playwright.py
-
-- scripts\snapshot_board.py
-
-- scripts\stage_rankings_csv.py
-
-- scripts\tag_calibration_artifacts_2026.py
-
-- scripts\take_predraft_snapshot_2026.py
-
-- scripts\verify_packet_manifest.py
-
-- scripts\verify_snapshot_integrity.py
-
-- tests\__init__.py
-
-- tests\test_profile_dimensions.py
-
-
-
-## Stub / Deferred Detection
-
-- draftos\apex\__init__.py
-
-- draftos\tags\__init__.py
-
-- draftos\ui\__init__.py
-
-- scripts\doctor_snapshot.py (DEFERRED)
-
-- tests\__init__.py
-
-
-
-=== END SNAPSHOT ===
+=== DRAFTOS SYSTEM SNAPSHOT ===
+generated_utc: 2026-03-14T23:17:05.114709+00:00
+
+## Git
+branch: main
+commit: 85c0666c215881f62422436f6827e98588d47962
+status: clean
+
+## Tables
+- apex_scores
+- board_snapshots
+- consensus_rankings
+- divergence_flags
+- draft_results
+- measurables
+- meta_migrations
+- model_outputs
+- models
+- name_aliases
+- notes
+- override_log
+- production
+- prospect_board_snapshot_confidence
+- prospect_board_snapshot_coverage
+- prospect_board_snapshot_metrics
+- prospect_board_snapshot_rows
+- prospect_board_snapshots
+- prospect_canonical_map
+- prospect_consensus_rankings
+- prospect_model_outputs
+- prospect_tag_history
+- prospect_tag_recommendations
+- prospect_tags
+- prospects
+- ras
+- ras_staging
+- school_aliases
+- seasons
+- source_board_snapshot_metrics
+- source_canonical_map
+- source_player_map
+- source_player_review_queue
+- source_players
+- source_rankings
+- sources
+- sqlite_sequence
+- tag_definitions
+- tag_trigger_rules
+- testing
+- users
+
+## Row Counts (key tables)
+- sources: 31
+- seasons: 1
+- prospects: 4555
+- source_players: 9919
+- source_player_map: 9621
+- source_rankings: 42143
+- models: 1
+- model_outputs: 0
+
+## Migrations
+- 0001_schema_v1 @ 2026-03-10T22:13:56.612939+00:00
+- 0002_seed_2026 @ 2026-03-10T22:13:56.627775+00:00
+- 0002_board_snapshots @ 2026-03-10T22:17:38.518780+00:00
+- 0003_seed_v1_default_model @ 2026-03-10T22:17:38.524214+00:00
+- 0003_snapshot_metrics @ 2026-03-10T22:17:38.525800+00:00
+- 0004_fix_seed_2026_and_model @ 2026-03-10T22:17:38.525800+00:00
+- 0004_source_snapshot_metrics @ 2026-03-10T22:17:38.525800+00:00
+- 0005_prospect_snapshot_confidence @ 2026-03-10T22:17:38.525800+00:00
+- 0005_sources_active_cols @ 2026-03-10T22:19:24.968356+00:00
+- 0006_deprecate_nfldraftbuzz_old @ 2026-03-10T22:19:24.984046+00:00
+- 0008_consensus_board_table @ 2026-03-10T22:19:24.984046+00:00
+- 0008_source_canonical_map @ 2026-03-10T22:19:24.984046+00:00
+- 0008_source_canonicalization @ 2026-03-10T22:19:24.984046+00:00
+- 0009_consensus_tier_reason_chips @ 2026-03-10T22:19:24.984046+00:00
+- 0009_prospect_board_snapshot_coverage @ 2026-03-10T22:19:24.984046+00:00
+- 0009_snapshot_coverage @ 2026-03-10T22:19:24.984046+00:00
+- 0010_model_outputs_table @ 2026-03-10T22:19:24.984046+00:00
+- 0011_name_normalization @ 2026-03-10T22:19:24.984046+00:00
+- 0012_source_players_pos_hint @ 2026-03-10T22:19:24.984046+00:00
+- 0013_source_player_review_queue @ 2026-03-10T22:19:24.999862+00:00
+- 0014_prospect_canonical_map @ 2026-03-10T22:19:24.999862+00:00
+- 0015_source_player_review_queue @ 2026-03-10T22:19:24.999862+00:00
+- 0024_consensus_dispersion_cols @ 2026-03-10T22:19:24.999862+00:00
+- 0025_consensus_weighted_base @ 2026-03-10T22:19:24.999862+00:00
+- 0026_confidence_dispersion_cap @ 2026-03-10T22:19:24.999862+00:00
+- 0027_ras_season_cols @ 2026-03-10T22:19:24.999862+00:00
+- 0028_ras_staging @ 2026-03-10T22:19:24.999862+00:00
+- 0029_seed_jfosterfilm_2026 @ 2026-03-10T22:19:24.999862+00:00
+- 0030_prospect_tags_value @ 2026-03-10T22:19:24.999862+00:00
+- 0031_apex_divergence @ 2026-03-10T22:19:25.015525+00:00
+- 0032_apex_calibration_artifact @ 2026-03-10T22:19:25.015525+00:00
+- 0033_prospect_is_active @ 2026-03-10T22:19:25.015525+00:00
+- 0034_apex_tier_rename @ 2026-03-10T22:19:25.015525+00:00
+- 0035_divergence_rank_delta @ 2026-03-10T22:19:25.015525+00:00
+- 0036_tag_calibration_artifacts @ 2026-03-11T02:33:22.525415+00:00
+- 0037_seed_bleacherreport_2026 @ 2026-03-11T02:59:55.767870+00:00
+- 0038_source_rankings_analyst_grade @ 2026-03-11T02:59:55.773017+00:00
+- 0039_combine_measurables @ 2026-03-12T07:35:36.180978+00:00
+- 0040_apex_v23_mechanism_fields @ 2026-03-13T22:04:51.261321+00:00
+- 0041_apex_bust_warning @ 2026-03-14T05:15:05.026341+00:00
+
+## Active Season
+no is_active column
+
+## Script Inventory
+- app\app.py
+- draftos\apex\__init__.py
+- draftos\apex\engine.py
+- draftos\apex\prompts.py
+- draftos\apex\writer.py
+- draftos\config.py
+- draftos\db\connect.py
+- draftos\db\migrate.py
+- draftos\ingest\rankings\loader.py
+- draftos\ingest\rankings\writer.py
+- draftos\normalize\names.py
+- draftos\normalize\positions.py
+- draftos\normalize\schools.py
+- draftos\queries\__init__.py
+- draftos\queries\active.py
+- draftos\queries\apex.py
+- draftos\queries\consensus.py
+- draftos\queries\model_outputs.py
+- draftos\tags\__init__.py
+- draftos\tags\evaluator.py
+- draftos\ui\__init__.py
+- draftos\ui\profile_dimensions.py
+- scripts\_diag_school_aliases.py
+- scripts\accept_tag_recommendations_2026.py
+- scripts\accept_tag_recs_2026.py
+- scripts\apply_prospect_universe_2026.py
+- scripts\apply_review_queue_mappings_2026.py
+- scripts\audit_position_mismatches_2026.py
+- scripts\autoresolve_mapping_review_queue_2026.py
+- scripts\bootstrap_prospects_from_sources_2026.py
+- scripts\build_consensus_2026.py
+- scripts\build_mapping_review_queue_2026.py
+- scripts\build_model_outputs_v1_default_2026.py
+- scripts\build_prospect_universe_2026.py
+- scripts\build_snapshot_packet.py
+- scripts\compute_snapshot_confidence.py
+- scripts\compute_snapshot_coverage.py
+- scripts\compute_snapshot_metrics.py
+- scripts\compute_source_snapshot_metrics.py
+- scripts\dedup_prospects_2026.py
+- scripts\delete_orphan_snapshots.py
+- scripts\doctor.py
+- scripts\doctor_snapshot.py
+- scripts\end_session.py
+- scripts\evaluate_tag_triggers_2026.py
+- scripts\expand_school_aliases_2026.py
+- scripts\export_board_csv.py
+- scripts\export_confidence_summary_csv.py
+- scripts\export_mapping_review_queue_csv.py
+- scripts\export_movers_csv.py
+- scripts\export_reports_html.py
+- scripts\export_source_health_csv.py
+- scripts\fix_calibration_divergence_2026.py
+- scripts\import_apex_batch_json.py
+- scripts\ingest_combine_2026.py
+- scripts\ingest_nflcom_2026.py
+- scripts\ingest_ngs_2026.py
+- scripts\ingest_rankings_staged.py
+- scripts\ingest_ras_2026.py
+- scripts\learn_school_aliases_from_mapped_2026.py
+- scripts\log_draft_pick_2026.py
+- scripts\patch_0005_0006_soft_deprecate_nfldraftbuzz.py
+- scripts\patch_0007_bootstrap_prospects_2026.py
+- scripts\patch_apex_archetypes_local_2026.py
+- scripts\patch_name_normalization_2026.py
+- scripts\patch_prospect_canonicalization_2026.py
+- scripts\patch_school_canonicalization_2026.py
+- scripts\patch_school_from_universe_2026.py
+- scripts\patch_source_canonicalization_2026.py
+- scripts\publish_latest_packet.py
+- scripts\reingest_source_2026.py
+- scripts\repair_school_aliases_2026.py
+- scripts\repair_snapshot_orphans.py
+- scripts\run_apex_scoring_2026.backup_20260313_205410.py
+- scripts\run_apex_scoring_2026.py
+- scripts\run_tag_trigger_engine_2026.py
+- scripts\run_tag_triggers_2026.py
+- scripts\run_weekly_update.py
+- scripts\scrape_nfldraftbuzz_2026.py
+- scripts\scrape_nfldraftbuzz_2026_playwright.py
+- scripts\snapshot_board.py
+- scripts\stage_rankings_csv.py
+- scripts\tag_calibration_artifacts_2026.py
+- scripts\take_predraft_snapshot_2026.py
+- scripts\triage_pending_tags_2026.py
+- scripts\verify_packet_manifest.py
+- scripts\verify_snapshot_integrity.py
+- tests\__init__.py
+- tests\test_profile_dimensions.py
+
+## Stub / Deferred Detection
+- draftos\apex\__init__.py
+- draftos\tags\__init__.py
+- draftos\ui\__init__.py
+- scripts\doctor_snapshot.py (DEFERRED)
+- tests\__init__.py
+
+=== END SNAPSHOT ===
 
 
 Instructions:
