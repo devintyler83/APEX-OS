@@ -1190,19 +1190,22 @@ This reflects draft economics, not player talent.
     st.markdown("---")
     st.markdown("### 🔍 Prospect Detail")
     _all_sorted_names = sorted(df["display_name"].dropna().unique().tolist())
+    # Reset counter forces selectbox recreation (returns to index 0) on Clear
+    if "detail_reset_n" not in st.session_state:
+        st.session_state["detail_reset_n"] = 0
     _det_col_sel, _det_col_clr = st.columns([3, 1])
     with _det_col_sel:
         _detail_dropdown = st.selectbox(
             "Select prospect",
             options=["— select —"] + _all_sorted_names,
-            key="detail_select",
+            key=f"detail_select_{st.session_state['detail_reset_n']}",
             label_visibility="collapsed",
         )
     with _det_col_clr:
         st.write("")  # vertical alignment spacer
         if st.button("Clear", key="detail_clear", use_container_width=True):
             st.session_state["selected_pid"] = None
-            st.session_state["detail_select"] = "— select —"
+            st.session_state["detail_reset_n"] += 1
             st.rerun()
     if _detail_dropdown == "— select —":
         st.session_state["selected_pid"] = None
