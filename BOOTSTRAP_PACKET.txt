@@ -10,14 +10,14 @@ Non-negotiables:
 - Provide run order + verification commands
 
 Goal for this chat:
-Session 40: Score ranks 151-250 (same pattern — build target PID list, dry run, live score).
+Session 43: Re-score ~10 prospects with correct position libraries (lost invalid LB scores):
 
 Authoritative State:
 
 1) STATE_SNAPSHOT.md
 # DraftOS State Snapshot
 
-Last Updated (UTC): 2026-03-14T07:58:38.308831+00:00
+Last Updated (UTC): 2026-03-14T07:59:56.674606+00:00
 
 ---
 
@@ -27,7 +27,32 @@ Last Updated (UTC): 2026-03-14T07:58:38.308831+00:00
 
 ## Last Completed Milestone
 
-Session 39 — APEX scoring expansion (ranks 51-150) + housekeeping + Igbinosun PAA re-score.
+Session 42 — Position audit + UX polish (Fix 3.2, Sessions 5.3/5.4/41).
+
+Session 42:
+- Position audit: scripts/audit_position_mismatches_2026.py (new).
+  RAS CSV is ground truth for position_group. Bootstrap uses LB fallback — caused ~427 wrong positions.
+  Pre-processes OC→C and ED→DE to fix normalize_position() bugs. Strips pipe prefix from RAS codes.
+  FIXED 238 prospect position_group values. DEACTIVATED 265 duplicate rows (correct-position row existed).
+  Scored PIDs with invalid ILB-library scores deactivated — correct-position canonical PIDs
+  (Ty Simpson QB pid=3531, R Mason Thomas EDGE pid=3538, Lee Hunter DT pid=3527,
+   Gabe Jacas EDGE pid=3542, Treydan Stukes CB pid=160) already had valid apex_scores.
+  ~10 prospects (Bud Clark S, Drew Shelton OL, Eli Stowers TE, Jack Endries TE, Jake Slaughter OL,
+   Joe Royer TE, Josh Cameron WR, Max Iheanachor OL, Sam Hecht OL, Zion Young EDGE, Ted Hurst WR)
+  lost invalid LB-library scores — need re-score with correct position libraries.
+  Consensus rebuilt: 849 rows. Snapshot_id=5. Full metrics pipeline. Doctor: PASSED.
+- UX polish (app/app.py):
+  Fix 3.2: FM mechanism text rendered outside card border (caption below HR).
+  Session 5.3: Click-to-expand detail card, stacking AND-logic tag filter (multiselect),
+    side-by-side prospect compare panel (_render_compare_panel).
+  Session 5.4: Deterministic one-sentence divergence narrative in detail card.
+    build_divergence_narrative() — delta threshold ≥5, PVC-structural fallback.
+  Session 41: Clear button (reset-counter pattern), suppress detail during compare,
+    FM text outside card border. StreamlitAPIException fix: key=f"detail_select_{reset_n}".
+- Migration 0041: apex_scores.bust_warning TEXT column added.
+  apex.py get_apex_detail() updated to include bust_warning (parity fix).
+
+Prior: Session 39 — APEX scoring expansion (ranks 51-150) + housekeeping + Igbinosun PAA re-score.
 
 Session 39:
 - APEX v2.3 scoring expansion: 99 prospects ranked 51-150 scored. Total v2.3 non-cal: 149.
@@ -193,12 +218,15 @@ Prior sessions on record: 12 (DB rebuild), 13 (weekly pipeline), 13b (school/arc
 
 ## Next Milestone (Single Target)
 
-- Session 40: Score ranks 151-250 (same pattern — build target PID list, dry run, live score).
-  Then: tag trigger re-run against all 149 v2.3 scores (new scores may fire new recs).
-  Then: triage any new pending recs. Neal MONITOR tag — hold until combine 3-cone data.
-  Commands:
-    python -m scripts.evaluate_tag_triggers_2026 --apply 1
-    python -m scripts.accept_tag_recs_2026 --list
+- Session 43: Re-score ~10 prospects with correct position libraries (lost invalid LB scores):
+    Bud Clark S (pid=3590), Drew Shelton OL (pid=3706), Eli Stowers TE (pid=3637),
+    Jack Endries TE (pid=3683), Jake Slaughter OL (pid=3687), Joe Royer TE (pid=3664),
+    Josh Cameron WR (pid=3616), Max Iheanachor OL (pid=3532), Sam Hecht OL (pid=3564),
+    Zion Young EDGE (pid=3551), Ted Hurst WR (pid=3536).
+    Use canonical active PIDs (correct positions). Add to TOP50_POSITION_OVERRIDES as needed.
+  Then: Score ranks 151-250 (build target PID list, dry run, live score).
+  Then: tag trigger re-run + triage new recs.
+  Neal MONITOR tag — hold until combine 3-cone data.
 
 ---
 
@@ -230,13 +258,14 @@ CONSENSUS: Operational. 995 rows (14 active sources, Session 25 rebuild).
 
 MODEL OUTPUTS: Operational. 999 rows (Session 25 rebuild — grew from 615 with 14 active sources).
 
-SNAPSHOTS: Operational. Latest: snapshot_id=3 (2026-03-12). rows=995, coverage=995,
-  confidence=995 — PASSED (Session 25 rebuild).
+SNAPSHOTS: Operational. Latest: snapshot_id=5 (2026-03-14). rows=999, coverage=999,
+  confidence=999 — PASSED (Session 42 rebuild after position fix).
   Full pipeline: build_consensus → snapshot_board → compute_snapshot_metrics →
   compute_source_snapshot_metrics → compute_snapshot_coverage →
   compute_snapshot_confidence → verify_snapshot_integrity
 
-APEX: Operational. 149 active 2026 scored prospects (non-cal, v2.3) + 12 calibration artifacts.
+APEX: Operational. ~138 active 2026 scored prospects (non-cal, v2.3, post-position-fix) + 12 calibration artifacts.
+  ~10 prospects need re-score with correct position libraries (Session 43 target — see Next Milestone).
   Scored coverage: ranks 1-150 (with some gaps — targeted PID list method).
   Tiers (v2.3 active non-cal): ELITE=3, DAY1=28, DAY2=73, DAY3=40, UDFA-P=5 (Session 39).
   Divergence (149 prospects, Session 39): ALIGNED=25, APEX_HIGH=67, APEX_LOW=3,
@@ -306,7 +335,8 @@ EXPORTS: board_2026_v1_default.csv last produced Session 21. Current for that sn
 32. ~~Session 37: APEX top-50 re-score — real trait vectors, UI tag/detail card overhaul~~ COMPLETE
 33. ~~Session 38: Minimal maintenance — Top 5 NextGen tag description fix + gitignore cleanup~~ COMPLETE
 34. ~~Session 39: APEX ranks 51-150 scoring expansion (99 prospects) + Igbinosun PAA re-score~~ COMPLETE
-35. **Session 40: Score ranks 151-250 + tag trigger re-run against all 149 v2.3 scores** ← NEXT
+35. ~~Session 40-42: UX polish (FM text, compare panel, divergence narrative, tag filter) + position audit~~ COMPLETE
+36. **Session 43: Re-score ~10 position-fixed prospects + ranks 151-250 + tag trigger re-run** ← NEXT
 36. Post-draft audit framework activation (after April 2026 draft)
 
 ---
@@ -400,11 +430,11 @@ Inactive (data preserved): ngs_2026 (source_id=29, is_active=0) — model score,
 
 2) System Snapshot Output
 === DRAFTOS SYSTEM SNAPSHOT ===
-generated_utc: 2026-03-14T07:58:37.640623+00:00
+generated_utc: 2026-03-14T07:59:56.020015+00:00
 
 ## Git
 branch: main
-commit: 796a03ec187c5d5d0d9aeb42a9fef93ab6d68538
+commit: a2c7b7c7f3495bfc465a78670f2001873ff99fd9
 status: clean
 
 ## Tables
