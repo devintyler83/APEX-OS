@@ -28,6 +28,10 @@ exports/reports/
 
 # SQLite backups
 data/edge/backups/
+data/edge/draftos.backup.*
+data/edge/draftos_*.sqlite
+data/edge/*.backup.*
+data/edge/*.sqlite.backup.*
 
 # Local DB
 data/edge/*.sqlite
@@ -58,3 +62,6 @@ scripts/handoff_export.ps1
 Position_Libraries/
 Universal_Rules/
 ProjectMemory.docx
+*.docx
+data/*.json
+data/edge/
