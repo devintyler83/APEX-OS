@@ -1,5 +1,5 @@
 """
-APEX v2.2 DB write layer.
+APEX v2.3 DB write layer.
 Idempotent — all writes use INSERT OR REPLACE via UNIQUE(prospect_id, season_id, model_version).
 Backs up the DB before first write per run.
 """
@@ -66,7 +66,9 @@ def upsert_apex_score(
             capital_base, capital_adjusted, eval_confidence,
             tags, strengths, red_flags,
             schwesinger_full, schwesinger_half, smith_rule,
-            ras_score
+            ras_score,
+            failure_mode_primary, failure_mode_secondary,
+            signature_play, translation_risk
         ) VALUES (
             ?, ?, ?, ?,
             ?, ?, ?, ?,
@@ -77,38 +79,44 @@ def upsert_apex_score(
             ?, ?, ?,
             ?, ?, ?,
             ?, ?, ?,
-            ?
+            ?,
+            ?, ?,
+            ?, ?
         )
         ON CONFLICT(prospect_id, season_id, model_version) DO UPDATE SET
-            scored_at         = excluded.scored_at,
-            v_processing      = excluded.v_processing,
-            v_athleticism     = excluded.v_athleticism,
-            v_scheme_vers     = excluded.v_scheme_vers,
-            v_comp_tough      = excluded.v_comp_tough,
-            v_character       = excluded.v_character,
-            v_dev_traj        = excluded.v_dev_traj,
-            v_production      = excluded.v_production,
-            v_injury          = excluded.v_injury,
-            c1_public_record  = excluded.c1_public_record,
-            c2_motivation     = excluded.c2_motivation,
-            c3_psych_profile  = excluded.c3_psych_profile,
-            matched_archetype = excluded.matched_archetype,
-            archetype_gap     = excluded.archetype_gap,
-            gap_label         = excluded.gap_label,
-            raw_score         = excluded.raw_score,
-            pvc               = excluded.pvc,
-            apex_composite    = excluded.apex_composite,
-            apex_tier         = excluded.apex_tier,
-            capital_base      = excluded.capital_base,
-            capital_adjusted  = excluded.capital_adjusted,
-            eval_confidence   = excluded.eval_confidence,
-            tags              = excluded.tags,
-            strengths         = excluded.strengths,
-            red_flags         = excluded.red_flags,
-            schwesinger_full  = excluded.schwesinger_full,
-            schwesinger_half  = excluded.schwesinger_half,
-            smith_rule        = excluded.smith_rule,
-            ras_score         = excluded.ras_score
+            scored_at              = excluded.scored_at,
+            v_processing           = excluded.v_processing,
+            v_athleticism          = excluded.v_athleticism,
+            v_scheme_vers          = excluded.v_scheme_vers,
+            v_comp_tough           = excluded.v_comp_tough,
+            v_character            = excluded.v_character,
+            v_dev_traj             = excluded.v_dev_traj,
+            v_production           = excluded.v_production,
+            v_injury               = excluded.v_injury,
+            c1_public_record       = excluded.c1_public_record,
+            c2_motivation          = excluded.c2_motivation,
+            c3_psych_profile       = excluded.c3_psych_profile,
+            matched_archetype      = excluded.matched_archetype,
+            archetype_gap          = excluded.archetype_gap,
+            gap_label              = excluded.gap_label,
+            raw_score              = excluded.raw_score,
+            pvc                    = excluded.pvc,
+            apex_composite         = excluded.apex_composite,
+            apex_tier              = excluded.apex_tier,
+            capital_base           = excluded.capital_base,
+            capital_adjusted       = excluded.capital_adjusted,
+            eval_confidence        = excluded.eval_confidence,
+            tags                   = excluded.tags,
+            strengths              = excluded.strengths,
+            red_flags              = excluded.red_flags,
+            schwesinger_full       = excluded.schwesinger_full,
+            schwesinger_half       = excluded.schwesinger_half,
+            smith_rule             = excluded.smith_rule,
+            ras_score              = excluded.ras_score,
+            failure_mode_primary   = excluded.failure_mode_primary,
+            failure_mode_secondary = excluded.failure_mode_secondary,
+            signature_play         = excluded.signature_play,
+            translation_risk       = excluded.translation_risk
         """,
         (
             prospect_id, season_id, model_version, now,
@@ -140,6 +148,10 @@ def upsert_apex_score(
             int(apex_data.get("schwesinger_half", 0)),
             int(apex_data.get("smith_rule", 0)),
             ras_score,
+            apex_data.get("failure_mode_primary"),
+            apex_data.get("failure_mode_secondary"),
+            apex_data.get("signature_play"),
+            apex_data.get("translation_risk"),
         ),
     )
     conn.commit()

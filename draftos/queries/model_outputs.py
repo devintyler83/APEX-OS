@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional
 from draftos.db.connect import connect
 from draftos.queries.apex import get_apex_ranks
 
-_APEX_MODEL_VERSION = "apex_v2.2"
+_APEX_MODEL_VERSION = "apex_v2.3"
 
 # Tier/weight lookup — sources table has no tier/weight columns; inferred from CLAUDE.md canonical list
 _SOURCE_TIER_WEIGHT: dict[str, tuple[str, float]] = {
@@ -272,6 +272,12 @@ def get_big_board(
           aps.matched_archetype  AS apex_archetype,
           aps.gap_label,
           aps.eval_confidence,
+          aps.raw_score,
+          aps.pvc,
+          aps.failure_mode_primary,
+          aps.failure_mode_secondary,
+          aps.signature_play,
+          aps.translation_risk,
           (
               SELECT GROUP_CONCAT(td2.tag_name, ', ')
               FROM prospect_tags pt2
@@ -411,7 +417,7 @@ def get_prospect_detail(
     *,
     prospect_id: int,
     season_id: int = 1,
-    model_version: str = "apex_v2.2",
+    model_version: str = "apex_v2.3",
 ) -> dict | None:
     """
     Return a full detail dict for a single prospect, joining all drawer-relevant tables.
@@ -482,6 +488,10 @@ def get_prospect_detail(
           COALESCE(aps.schwesinger_half, 0)  AS schwesinger_half,
           COALESCE(aps.smith_rule, 0)         AS smith_rule,
           aps.tags           AS apex_tags,
+          aps.failure_mode_primary,
+          aps.failure_mode_secondary,
+          aps.signature_play,
+          aps.translation_risk,
           aps.override_arch,
           aps.override_delta,
           aps.override_rationale,

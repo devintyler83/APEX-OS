@@ -200,12 +200,20 @@ def process_rows(
         matched_prospect_id: Optional[int] = None
         match_method = "unmatched"
 
-        # 1. EXACT: name_key + college_canonical
+        # 1. EXACT: name_key + college_canonical (via school_alias_map)
         if name_key and college_canonical:
             pid = by_name_school.get((name_key, college_canonical))
             if pid is not None:
                 matched_prospect_id = pid
                 match_method = "exact_name_college"
+
+        # 1b. EXACT RAW: name_key + college_raw as-is (fallback when alias map is empty
+        #     or school name in CSV matches school_canonical directly)
+        if matched_prospect_id is None and name_key and college_raw:
+            pid = by_name_school.get((name_key, college_raw.strip()))
+            if pid is not None:
+                matched_prospect_id = pid
+                match_method = "exact_name_college_raw"
 
         # 2. ALIAS: look up via name_aliases → new name_key → match with college
         if matched_prospect_id is None and name_alias_token_map and name_key:

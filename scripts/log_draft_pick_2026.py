@@ -19,7 +19,7 @@ Usage:
     python -m scripts.log_draft_pick_2026 tracker
 
 Constraints:
-  - season_id = 1, model_version = 'apex_v2.2'
+  - season_id = 1, model_version = 'apex_v2.3'
   - No writes to apex_scores, consensus_rankings, divergence_flags, or tag tables
   - DB backup on first pick of each script run (not every call)
   - UNIQUE constraint on (season_id, pick_overall) and (prospect_id, season_id)
@@ -37,7 +37,7 @@ from pathlib import Path
 from draftos.config import PATHS
 
 SEASON_ID     = 1
-MODEL_VERSION = "apex_v2.2"
+MODEL_VERSION = "apex_v2.3"
 
 # ---------------------------------------------------------------------------
 # DB helpers

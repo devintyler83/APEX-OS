@@ -22,7 +22,7 @@ from draftos.db.connect import connect
 from draftos.apex.engine import get_pvc, compute_apex_composite, compute_apex_tier, compute_divergence
 from draftos.apex.writer import backup_once, upsert_apex_score, upsert_divergence_flag
 
-MODEL_VERSION = "apex_v2.2"
+MODEL_VERSION = "apex_v2.3"
 SEASON_ID     = 1
 
 

@@ -35,7 +35,7 @@ from draftos.config import PATHS
 from draftos.db.connect import connect
 
 SEASON_ID      = 1
-MODEL_VERSION  = "apex_v2.2"
+MODEL_VERSION  = "apex_v2.3"
 SNAPSHOT_LABEL = "Pre-Draft 2026"
 
 

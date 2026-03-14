@@ -56,7 +56,7 @@ from typing import Any
 from draftos.db.connect import connect
 
 SEASON_ID = 1
-MODEL_VER  = "apex_v2.2"
+MODEL_VER  = "apex_v2.3"
 
 # ---------------------------------------------------------------------------
 # Premium positions — only actionable divergence signals

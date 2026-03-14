@@ -1,6 +1,6 @@
 """
 DraftOS Big Board — Session 37
-Read-only Streamlit UI with divergence flags, APEX rank input, APEX v2.2 scores,
+Read-only Streamlit UI with divergence flags, APEX rank input, APEX scores,
 tag display, and prospect detail drawer.
 No DB writes except through save_apex_rank() and clear_apex_rank(). No business logic.
 """
@@ -59,7 +59,7 @@ _TAGS_DISPLAY_MAP: dict[str, str] = {
     "Value Zone":         "💰 Value Zone",
     # Legacy engine tags
     "Smith Rule":         "⚠️ Char. Cap",
-    "CRUSH":              "💎 Priority",
+    "CRUSH":              "💎 Crush",
     "Walk-On Flag":       "🏃 Walk-On",
     "Two-Way Premium":    "🔄 Two-Way",
     "Schwesinger Rule":   "🚀 Elite Char.",
@@ -140,6 +140,23 @@ _GAP_LABEL_DISPLAY_MAP: dict[str, str] = {
     "TWEENER":     "⚠️ Tweener",
     "COMPRESSION": "🔵 Elite Tweener",
     "NO_FIT":      "🔴 No Dominant Fit",
+}
+
+_GAP_LABEL_EXPLANATIONS: dict[str, str] = {
+    "CLEAN":       "Dominant single-archetype match. High translation confidence — this player's NFL role is clear.",
+    "SOLID":       "Clear primary archetype fit. Good translation confidence with a defined NFL projection.",
+    "TWEENER":     "Split identity between archetypes. Landing spot determines which version you get.",
+    "COMPRESSION": "Elite traits compress multiple archetypes. Positive signal — versatile deployment ceiling.",
+    "NO_FIT":      "No dominant archetype. Significant role clarity risk — deployment context unclear.",
+}
+
+_FM_COLORS: dict[str, str] = {
+    "FM-1": "#F56565",   # red — Athleticism Mirage
+    "FM-2": "#ED8936",   # orange — Scheme Ghost
+    "FM-3": "#ECC94B",   # yellow — Processing Wall
+    "FM-4": "#F6AD55",   # amber — Body Breakdown
+    "FM-5": "#FC8181",   # light red — Motivation Cliff
+    "FM-6": "#9F7AEA",   # purple — Role Mismatch
 }
 
 _INTERNAL_TAG_NAMES: frozenset[str] = frozenset({
@@ -288,156 +305,6 @@ def _trait_bar_html(label: str, val: float | None) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Dynamic bullet generator
-# ---------------------------------------------------------------------------
-
-def _generate_bullets(d: dict) -> tuple[list[str], list[str]]:
-    """
-    Generate strength and flag bullets from trait scores.
-    Returns (strengths, flags) — each a list of bullet strings.
-    """
-    strengths: list[str] = []
-    flags:     list[str] = []
-
-    v_ath  = d.get("v_athleticism")
-    v_proc = d.get("v_processing")
-    v_prod = d.get("v_production")
-    v_dev  = d.get("v_dev_traj")
-    v_comp = d.get("v_comp_tough")
-    v_vers = d.get("v_scheme_vers")
-    v_inj  = d.get("v_injury")
-    c2     = d.get("c2_motivation")
-    c3     = d.get("c3_psych_profile")
-    ras    = d.get("ras_score") or d.get("ras_total")
-    gap    = (d.get("gap_label") or "").strip().upper()
-    fit_sc = d.get("archetype_gap")
-    e_conf = d.get("eval_confidence") or ""
-    schwes = bool(d.get("schwesinger_full")) or bool(d.get("schwesinger_half"))
-
-    # ── Strengths ──────────────────────────────────────────────────────────
-    if v_ath is not None:
-        ras_str = f"{float(ras):.2f}" if ras is not None else "N/A"
-        if v_ath >= 9.5:
-            strengths.append(
-                f"Elite athletic profile — {v_ath:.1f}/10 athleticism with {ras_str} RAS"
-            )
-        elif v_ath >= 8.5:
-            strengths.append(
-                f"Above-average athlete — {v_ath:.1f}/10, moves well for the position"
-            )
-
-    if v_proc is not None:
-        if v_proc >= 9.0:
-            strengths.append(
-                f"Elite pre-snap processor — {v_proc:.1f}/10, anticipates before the snap"
-            )
-        elif v_proc >= 8.0:
-            strengths.append(
-                f"Advanced diagnostic ability — {v_proc:.1f}/10, quick read-to-react"
-            )
-
-    if v_prod is not None and v_prod >= 9.0:
-        strengths.append(f"Elite production baseline — {v_prod:.1f}/10 in a proven role")
-
-    if v_dev is not None and v_dev >= 9.0:
-        strengths.append(
-            f"Exceptional development trajectory — {v_dev:.1f}/10, improving fast"
-        )
-
-    if c2 is not None and c2 >= 8.0:
-        strengths.append(
-            f"Motor and drive rated {c2:.1f}/10 — coaches consistently note elite work ethic"
-        )
-
-    if v_comp is not None and v_comp >= 9.0:
-        strengths.append(f"Rises in big games — {v_comp:.1f}/10 competitive toughness")
-
-    if v_vers is not None and v_vers >= 9.0:
-        strengths.append(
-            f"Scheme-transcendent — {v_vers:.1f}/10, deploys across multiple systems"
-        )
-
-    if v_inj is not None and v_inj >= 9.0:
-        strengths.append(
-            f"Elite durability profile — {v_inj:.1f}/10, consistently available"
-        )
-
-    if schwes:
-        strengths.append(
-            "Character multiplier active — C2+C3 combo boosts Dev Trajectory"
-        )
-
-    if gap == "CLEAN" and fit_sc is not None:
-        strengths.append(
-            f"Clean archetype match — {fit_sc:.1f} fit score, clear translation path"
-        )
-
-    # ── Flags ──────────────────────────────────────────────────────────────
-    if v_ath is not None and v_ath < 6.0:
-        flags.append(
-            f"Athleticism concern — {v_ath:.1f}/10 raises FM-1 risk at NFL speed"
-        )
-
-    if v_proc is not None and v_proc < 6.0:
-        flags.append(
-            f"Processing ceiling flagged — {v_proc:.1f}/10, FM-3 risk in NFL complexity"
-        )
-
-    if v_vers is not None and v_vers < 5.0:
-        flags.append(
-            f"Scheme-dependent — {v_vers:.1f}/10, FM-2/FM-6 risk without right fit"
-        )
-
-    if v_inj is not None and v_inj < 6.0:
-        flags.append(
-            f"Injury/durability concern — {v_inj:.1f}/10, FM-4 risk over full season"
-        )
-
-    if c2 is not None and c2 < 5.0:
-        flags.append(f"Motor/drive below threshold — {c2:.1f}/10, FM-5 watch list")
-
-    if c3 is not None and c3 < 3.0:
-        flags.append("Smith Rule active — C3 score caps character ceiling")
-
-    if v_dev is not None and v_dev < 5.0:
-        flags.append(
-            f"Limited development runway — {v_dev:.1f}/10, near finished product"
-        )
-
-    if v_prod is not None and v_prod < 6.0:
-        flags.append(
-            f"Production questions — {v_prod:.1f}/10, limited sample or scheme-aided"
-        )
-
-    if gap == "TWEENER":
-        flags.append("Tweener archetype fit — falls between profiles, deployment TBD")
-    elif gap == "NO_FIT" and fit_sc is not None:
-        flags.append(
-            f"Archetype miss — {fit_sc:.1f} fit score, translation confidence low"
-        )
-
-    if ras is None:
-        flags.append("Combine data not yet available")
-
-    if "C" in e_conf:
-        flags.append(
-            "Eval Confidence Tier C — heavy projection required, Tier C discount applied"
-        )
-
-    # Defaults
-    if not strengths:
-        strengths = [
-            "Sufficient tape evidence exists; no standout strength vectors above threshold."
-        ]
-    if not flags:
-        flags = [
-            "No significant flags identified at current eval confidence level."
-        ]
-
-    return strengths, flags
-
-
-# ---------------------------------------------------------------------------
 # Detail card renderers
 # ---------------------------------------------------------------------------
 
@@ -448,36 +315,80 @@ def _render_apex_detail(d: dict) -> None:
     pos    = d.get("position_group") or "?"
     name   = d.get("display_name") or "Unknown"
     school = d.get("school_canonical") or "—"
-    score  = d.get("apex_composite")
     tier   = (d.get("apex_tier") or "").strip().upper()
     crank  = d.get("consensus_rank")
     conf   = d.get("confidence_band") or "—"
     ras    = d.get("ras_score") or d.get("ras_total")
 
-    pos_color   = _POS_BADGE_COLORS.get(pos, "#555555")
-    tier_bg, tier_text = _APEX_TIER_BADGE.get(tier, ("#555555", "#ffffff"))
-    score_color = _APEX_SCORE_COLORS.get(tier, "#e0e0e0")
-    score_str   = f"{score:.1f}" if score is not None else "—"
-    rank_str    = f"#{int(crank)}" if crank is not None and pd.notna(crank) else "—"
-    ras_str     = f"{float(ras):.2f}" if ras is not None and pd.notna(ras) else "—"
+    pos_color = _POS_BADGE_COLORS.get(pos, "#555555")
+    rank_str  = f"#{int(crank)}" if crank is not None and pd.notna(crank) else "—"
+    ras_str   = f"{float(ras):.2f}" if ras is not None and pd.notna(ras) else "—"
 
-    header_html = f"""
-<div style="display:flex;align-items:center;gap:10px;padding:14px 0 10px 0;flex-wrap:wrap;
-            border-bottom:1px solid #333">
-  <span style="background:{pos_color};color:white;padding:5px 12px;border-radius:6px;
-               font-size:13px;font-weight:800;letter-spacing:0.5px">{pos}</span>
-  <span style="font-size:22px;font-weight:800;color:#f0f0f0">{name}</span>
-  <div style="flex:1"></div>
-  <span style="font-size:30px;font-weight:900;color:{score_color}">{score_str}</span>
-  <span style="background:{tier_bg};color:{tier_text};padding:5px 14px;border-radius:6px;
-               font-size:15px;font-weight:800">{tier or "—"}</span>
-</div>
-<div style="font-size:13px;color:#888;padding:8px 0 12px 0">
-  {school} &nbsp;·&nbsp; Consensus {rank_str} &nbsp;·&nbsp; Confidence: {conf}
-  &nbsp;·&nbsp; RAS: {ras_str}
-</div>
-"""
-    st.markdown(header_html, unsafe_allow_html=True)
+    raw       = d.get("raw_score")
+    composite = d.get("apex_composite")
+    pvc       = d.get("pvc")
+
+    def _safe_float_str(v, fmt):
+        if v is None:
+            return "—"
+        try:
+            f = float(v)
+            import math
+            if math.isnan(f):
+                return "—"
+            return format(f, fmt)
+        except (TypeError, ValueError):
+            return "—"
+
+    raw_str  = _safe_float_str(raw, ".1f")
+    comp_str = _safe_float_str(composite, ".1f")
+    pvc_str  = _safe_float_str(pvc, ".2f")
+
+    _tier_colors_header = {
+        "ELITE": "#48BB78", "DAY1": "#4299E1", "DAY2": "#ECC94B",
+        "DAY3": "#ED8936", "UDFA-P": "#FC8181", "UDFA": "#FC8181",
+    }
+    tier_badge_bg = _tier_colors_header.get(tier, "#718096")
+
+    header_left, header_right = st.columns([3, 2])
+
+    with header_left:
+        st.markdown(
+            f'<span style="background:{pos_color};color:white;padding:4px 10px;'
+            f'border-radius:6px;font-size:14px;font-weight:700;'
+            f'margin-right:8px">{pos}</span>'
+            f'<span style="font-size:24px;font-weight:700;color:#E2E8F0">{name}</span>',
+            unsafe_allow_html=True,
+        )
+        st.caption(f"{school} · Consensus {rank_str} · Confidence: {conf} · RAS: {ras_str}")
+
+    with header_right:
+        st.markdown(
+            f"""
+            <div style="text-align:right">
+                <div style="display:flex;justify-content:flex-end;align-items:baseline;gap:24px">
+                    <div style="text-align:center">
+                        <div style="font-size:36px;font-weight:800;color:#63B3ED">{raw_str}</div>
+                        <div style="font-size:11px;color:#A0AEC0;text-transform:uppercase;letter-spacing:1px">Player Grade</div>
+                    </div>
+                    <div style="text-align:center">
+                        <div style="font-size:36px;font-weight:800;color:#48BB78">{comp_str}</div>
+                        <div style="font-size:11px;color:#A0AEC0;text-transform:uppercase;letter-spacing:1px">Draft Value</div>
+                    </div>
+                    <div style="text-align:center">
+                        <span style="background:{tier_badge_bg};color:white;padding:6px 14px;
+                        border-radius:6px;font-size:14px;font-weight:700">{tier or "—"}</span>
+                    </div>
+                </div>
+                <div style="font-size:12px;color:#718096;margin-top:6px;text-align:right">
+                    RPG {raw_str} × {pvc_str} ({pos}) = APEX {comp_str}
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    st.markdown("<hr style='border-color:#333;margin:8px 0 12px 0'>", unsafe_allow_html=True)
 
     # ── Trait Vector Bars ─────────────────────────────────────────────────────
     st.markdown(
@@ -557,12 +468,57 @@ def _render_apex_detail(d: dict) -> None:
 """
     st.markdown(arch_html, unsafe_allow_html=True)
 
+    # Gap label explanation (Step 3 — translation confidence)
+    gap_explanation = _GAP_LABEL_EXPLANATIONS.get(gap_label, "")
+    if gap_explanation:
+        st.caption(gap_explanation)
+
     if d.get("override_arch"):
         od = d.get("override_delta") or 0
         st.warning(
             f"🔧 **OVERRIDE:** {d['override_arch']} "
             f"(Δ{od:+.1f}) — "
             f"{d.get('override_rationale') or 'No rationale recorded.'}"
+        )
+
+    # ── Failure Mode Section ───────────────────────────────────────────────────
+    fm_primary   = d.get("failure_mode_primary")
+    fm_secondary = d.get("failure_mode_secondary")
+
+    def _fm_is_present(v) -> bool:
+        if v is None:
+            return False
+        if isinstance(v, float):
+            import math
+            return not math.isnan(v)
+        return str(v).strip().upper() not in ("", "NONE", "N/A")
+
+    if _fm_is_present(fm_primary):
+        fm_code    = str(fm_primary)[:4]
+        fm_color   = _FM_COLORS.get(fm_code, "#718096")
+
+        fm_secondary_html = ""
+        if _fm_is_present(fm_secondary):
+            fm_sec_code  = str(fm_secondary)[:4]
+            fm_sec_color = _FM_COLORS.get(fm_sec_code, "#718096")
+            fm_secondary_html = (
+                f'<span style="background:{fm_sec_color};color:white;padding:4px 10px;'
+                f'border-radius:6px;font-size:12px;font-weight:600;margin-left:8px">'
+                f'{fm_secondary}</span>'
+            )
+
+        st.markdown(
+            f"""
+            <div style="background:#1A202C;border:1px solid #2D3748;border-radius:12px;
+                        padding:16px;margin:8px 0">
+                <div style="font-size:11px;color:#718096;text-transform:uppercase;
+                            letter-spacing:1px;margin-bottom:8px">Failure Mode Risk</div>
+                <span style="background:{fm_color};color:white;padding:6px 14px;
+                border-radius:6px;font-size:13px;font-weight:700">{fm_primary}</span>
+                {fm_secondary_html}
+            </div>
+            """,
+            unsafe_allow_html=True,
         )
 
     # ── Draft Capital ─────────────────────────────────────────────────────────
@@ -589,34 +545,70 @@ def _render_apex_detail(d: dict) -> None:
 
     st.divider()
 
-    # ── Strengths / Red Flags — Summary vs Bullet Points ─────────────────────
-    _view_mode = st.radio(
-        "View mode",
-        options=["Summary", "Bullet Points"],
-        index=0,
-        horizontal=True,
-        key=f"detail_view_mode_{d.get('prospect_id', 0)}",
-    )
+    # ── Mechanism Section ─────────────────────────────────────────────────────
+    sig_play  = d.get("signature_play")
+    strengths = d.get("strengths")
+    red_flags = d.get("red_flags")
+    trans_risk = d.get("translation_risk")
 
-    s_col, r_col = st.columns(2)
+    def _v23_present(v) -> bool:
+        """True when a v2.3 text field contains usable content."""
+        if v is None:
+            return False
+        if isinstance(v, float):
+            import math
+            return not math.isnan(v)
+        return bool(str(v).strip())
 
-    if _view_mode == "Bullet Points":
-        str_bullets, flg_bullets = _generate_bullets(d)
-        with s_col:
-            st.markdown("**✅ Strengths**")
-            for b in str_bullets:
-                st.markdown(f"• {b}")
-        with r_col:
-            st.markdown("**🚨 Red Flags**")
-            for b in flg_bullets:
-                st.markdown(f"• {b}")
-    else:
-        with s_col:
-            st.markdown("**✅ Strengths**")
-            st.markdown(d.get("strengths") or "*No strengths recorded.*")
-        with r_col:
-            st.markdown("**🚨 Red Flags**")
-            st.markdown(d.get("red_flags") or "*No red flags recorded.*")
+    # Signature Play
+    if _v23_present(sig_play):
+        st.markdown(
+            f"""
+            <div style="background:#1A202C;border-left:3px solid #4299E1;
+                        padding:12px 16px;border-radius:0 8px 8px 0;margin:12px 0">
+                <div style="font-size:11px;color:#4299E1;text-transform:uppercase;
+                            letter-spacing:1px;margin-bottom:4px">Signature Play</div>
+                <div style="color:#E2E8F0;font-size:14px">{sig_play}</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    # Strengths + Red Flags side by side
+    str_col, rf_col = st.columns(2)
+    with str_col:
+        st.markdown("✅ **Strengths**")
+        if _v23_present(strengths):
+            st.markdown(
+                f'<div style="color:#E2E8F0;font-size:13px;line-height:1.6">{strengths}</div>',
+                unsafe_allow_html=True,
+            )
+        else:
+            st.caption("Not yet scored with v2.3 prompt.")
+
+    with rf_col:
+        st.markdown("🚩 **Red Flags**")
+        if _v23_present(red_flags):
+            st.markdown(
+                f'<div style="color:#E2E8F0;font-size:13px;line-height:1.6">{red_flags}</div>',
+                unsafe_allow_html=True,
+            )
+        else:
+            st.caption("Not yet scored with v2.3 prompt.")
+
+    # Translation Risk
+    if _v23_present(trans_risk):
+        st.markdown(
+            f"""
+            <div style="background:#1A202C;border-left:3px solid #F6AD55;
+                        padding:12px 16px;border-radius:0 8px 8px 0;margin:12px 0">
+                <div style="font-size:11px;color:#F6AD55;text-transform:uppercase;
+                            letter-spacing:1px;margin-bottom:4px">Translation Risk</div>
+                <div style="color:#E2E8F0;font-size:14px">{trans_risk}</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
     # ── Eval Confidence ───────────────────────────────────────────────────────
     st.divider()
@@ -679,6 +671,29 @@ def _load_detail(prospect_id: int) -> dict | None:
         return None
 
 
+@st.cache_data(ttl=300)
+def _load_active_tag_defs() -> list[dict]:
+    """
+    Return tag definitions for all tags that have at least one active prospect_tag,
+    ordered by display_order. Excludes internal tags (apex_rank_2026).
+    """
+    try:
+        with connect() as conn:
+            rows = conn.execute("""
+                SELECT DISTINCT td.tag_name, td.description, td.tag_category,
+                                td.display_order
+                FROM prospect_tags pt
+                JOIN tag_definitions td ON td.tag_def_id = pt.tag_def_id
+                WHERE pt.is_active = 1
+                  AND td.is_active = 1
+                  AND td.tag_name NOT IN ('apex_rank_2026')
+                ORDER BY td.display_order, td.tag_name
+            """).fetchall()
+            return [dict(r) for r in rows]
+    except Exception:
+        return []
+
+
 raw = _load_board()
 
 if raw is None:
@@ -714,7 +729,7 @@ st.title("DraftOS — 2026 Big Board")
 st.caption(
     f"Snapshot: {snapshot_date}   |   "
     f"Total prospects: {total_prospects}   |   "
-    f"APEX v2.2 scored: {apex_scored}"
+    f"APEX v2.3 scored: {apex_scored}"
 )
 
 # ---------------------------------------------------------------------------
@@ -729,7 +744,7 @@ with st.sidebar:
 
     show_apex_only = st.checkbox("Show APEX scored only (auto-rank)", value=False)
 
-    show_apex_scored_only = st.checkbox("Show APEX v2.2 scored only", value=False)
+    show_apex_scored_only = st.checkbox("Show APEX scored only", value=False)
 
     all_positions = sorted(df["position_group"].dropna().unique().tolist())
     selected_positions = st.multiselect(
@@ -746,10 +761,10 @@ with st.sidebar:
         default=present_tiers,
     )
 
-    # APEX v2.2 tier filter — draft-capital vocabulary, all 6 tiers
+    # APEX tier filter — draft-capital vocabulary, all 6 tiers
     if apex_scored > 0 and "apex_tier" in df.columns:
         apex_tier_options = ["(all)", "ELITE", "DAY1", "DAY2", "DAY3", "UDFA-P", "UDFA"]
-        selected_apex_tier = st.selectbox("APEX v2.2 tier", options=apex_tier_options, index=0)
+        selected_apex_tier = st.selectbox("APEX tier", options=apex_tier_options, index=0)
     else:
         selected_apex_tier = "(all)"
 
@@ -777,32 +792,41 @@ with st.sidebar:
         step=10,
     )
 
-    # --- Tag filter ---
+    # --- Tag filter — dynamic: shows all tags currently in use ---
     st.markdown("### Tags")
     selected_tags: list[str] = []
-    for tag_name in _SIDEBAR_TAGS:
-        if st.checkbox(_TAG_LABEL_MAP.get(tag_name, tag_name), key=f"tag_{tag_name}"):
+    _active_tag_defs = _load_active_tag_defs()
+    for _tdef in _active_tag_defs:
+        tag_name = _tdef["tag_name"]
+        display_label = _TAGS_DISPLAY_MAP.get(tag_name, tag_name)
+        if st.checkbox(display_label, key=f"tag_{tag_name}"):
             selected_tags.append(tag_name)
 
-    # --- Tag legend ---
+    # --- Tag legend — dynamic: mirrors active tag defs ---
     with st.expander("📖 Tag Legend", expanded=False):
+        for _tdef in _active_tag_defs:
+            _lbl  = _TAGS_DISPLAY_MAP.get(_tdef["tag_name"], _tdef["tag_name"])
+            _desc = (_tdef.get("description") or "").strip()
+            st.markdown(f"**{_lbl}** — {_desc}" if _desc else f"**{_lbl}**")
+
+    with st.expander("📊 Positional Value (PVC)", expanded=False):
         st.markdown("""
-**⚡ Divergence Alert** — APEX score diverges significantly from consensus
-rank. Premium positions only (QB/CB/EDGE/OT/S). Review recommended.
+**How position affects draft value:**
 
-**📈 Dev Bet** — Consensus rank exceeds APEX projection. Market may be
-underrating developmental upside. Usually round 3+.
+| Position | PVC | Impact |
+|----------|-----|--------|
+| QB, CB, EDGE | 1.00x | Premium — no discount |
+| WR, OT, S, IDL | 0.90x | Tier 2 — slight discount |
+| ILB, OLB | 0.85x | Tier 3 — moderate discount |
+| OG, TE, C | 0.80x | Tier 4 — significant discount |
+| RB | 0.70x | Tier 5 — maximum discount |
 
-**⚖ Compression** — Multiple archetypes score within range. True positional
-identity unclear. Scheme-fit dependent.
+RPG × PVC = APEX Score
 
-**🔥 Elite RAS** — Relative Athletic Score ≥ 9.5. Top-tier measurables.
-
-**✓ Great RAS** — RAS 8.0–9.4. Above-average athletic profile.
-
-**⚠ Poor RAS** — RAS < 5.0. Athletic concern for position demands.
-
-**🩹 Injury** — Significant injury history. Durability risk flagged.
+An elite RB (RPG 84) has a lower APEX Score (59) than
+a good CB (RPG 74, APEX 74) because the NFL pays, drafts,
+and replaces running backs differently than cornerbacks.
+This reflects draft economics, not player talent.
 """)
 
 # ---------------------------------------------------------------------------
@@ -910,7 +934,13 @@ display["⚡ Div"]    = filtered.apply(_fmt_div, axis=1)
 display["APEX"]       = filtered["auto_apex_rank"].astype("Int64")
 display["\u0394 APEX"] = filtered["auto_apex_delta"].apply(_fmt_apex_delta)
 
-# APEX v2.2 engine columns — NULL-safe
+# RPG — raw score before PVC discount
+if "raw_score" in filtered.columns:
+    display["RPG"] = filtered["raw_score"].apply(_fmt_apex_composite)
+else:
+    display["RPG"] = "-"
+
+# APEX engine columns — NULL-safe
 if "apex_composite" in filtered.columns:
     display["APEX Score"] = filtered["apex_composite"].apply(
         lambda x: round(float(x), 1) if pd.notna(x) else None
@@ -995,7 +1025,7 @@ def _style_apex_tier(val: str) -> str:
 
 _NUM_COLS = ["Rank", "Score", "Sources", "Coverage", "RAS", "APEX Score"]
 _STR_COLS = ["Player", "School", "Pos", "Consensus", "Confidence", "APEX Tier",
-             "Archetype", "Tags", "Snapshot", "⚡ Div", "\u0394 APEX"]
+             "Archetype", "Tags", "Snapshot", "⚡ Div", "\u0394 APEX", "RPG"]
 
 styled = (
     display.style
@@ -1027,11 +1057,38 @@ with st.expander("📋 Column Guide", expanded=False):
 | ⚡ Div | Divergence flag — APEX vs consensus rank signal (premium positions only) |
 | APEX | Auto-derived APEX rank from apex_composite sort order (manual override takes precedence) |
 | Δ APEX | consensus_rank − APEX rank (positive = APEX values prospect higher than market) |
-| APEX Score | APEX v2.2 composite score (0–100) |
+| RPG | Raw Player Grade — talent evaluation independent of position. How good is this player as a football player? |
+| APEX Score | APEX composite — RPG adjusted by positional value (PVC). How valuable is this player as a draft asset? |
 | APEX Tier | **ELITE** ≥85 · **DAY1** ≥70 · **DAY2** ≥55 · **DAY3** ≥40 · **UDFA-P** ≥28 · **UDFA** <28 |
-| Archetype | How this prospect wins — matched from APEX v2.2 positional library |
+| Archetype | How this prospect wins — matched from APEX positional library |
 | Archetype Fit | **Clean Fit** >15 pts · **Solid Fit** 8–15 pts · **Tweener** <8 pts · **No Fit** = concern |
 | Tags | System-generated signals. See Tag Legend in sidebar. |
+""")
+    st.markdown("---")
+    st.markdown("""
+**How RPG and APEX Score Work Together**
+
+DraftOS uses two scores to separate player talent from draft value:
+
+- **RPG (Raw Player Grade)** measures how good a player is at football — independent
+  of what position they play. An elite running back and an elite cornerback with
+  identical trait vectors will have identical RPGs.
+
+- **APEX Score** measures how valuable a player is as a draft pick. It takes the RPG
+  and adjusts it by a Positional Value Coefficient (PVC) that reflects how the NFL
+  actually values each position in the draft economy.
+
+**The PVC multipliers:**
+QB, CB, EDGE = 1.00x (premium) · WR, OT, S, IDL = 0.90x · ILB, OLB = 0.85x · OG, TE, C = 0.80x · RB = 0.70x
+
+**Example:** Jeremiyah Love has elite trait vectors → RPG ~84. But as a running back
+(PVC = 0.70), his APEX Score = ~59. This doesn't mean DraftOS thinks Love is a bad
+player. It means the NFL structurally devalues the RB position, and draft capital
+should reflect that reality.
+
+**When to use which score:**
+- Sorting by **RPG** answers: *"Who are the best football players in this class?"*
+- Sorting by **APEX Score** answers: *"Who are the best draft values in this class?"*
 """)
 
 # ---------------------------------------------------------------------------
@@ -1072,11 +1129,18 @@ with tab_bb:
     tagged_filtered = filtered[filtered["tag_names"] != ""].copy()
     if not tagged_filtered.empty:
         with st.expander(f"Tagged prospects on this board ({len(tagged_filtered)})", expanded=False):
-            # Legend: tags present on current filtered board
-            active_legend_tags = [
-                t for t in _SIDEBAR_TAGS
-                if any(t in _parse_tags(row) for row in tagged_filtered["tag_names"])
-            ]
+            # Legend: tags actually present on the current filtered board
+            _board_tag_set: set[str] = set()
+            for _ts in tagged_filtered["tag_names"]:
+                for _t in _parse_tags(_ts):
+                    if _t not in _INTERNAL_TAG_NAMES:
+                        _board_tag_set.add(_t)
+            # Order by display_order from active tag defs, then alphabetically
+            _def_order = {d["tag_name"]: d["display_order"] for d in _active_tag_defs}
+            active_legend_tags = sorted(
+                _board_tag_set,
+                key=lambda t: (_def_order.get(t, 999), t),
+            )
             if active_legend_tags:
                 st.markdown(
                     "Tags on this board: "
@@ -1118,6 +1182,7 @@ with tab_apex:
         ab["Player"]     = apex_df["display_name"]
         ab["Pos"]        = apex_df["position_group"]
         ab["School"]     = apex_df["school_canonical"]
+        ab["RPG"]        = apex_df["raw_score"].apply(_fmt_apex_composite) if "raw_score" in apex_df.columns else "-"
         ab["APEX Score"] = apex_df["apex_composite"].apply(_fmt_apex_composite)
         ab["APEX Tier"]  = apex_df["apex_tier"].fillna("")
         ab["Archetype"]  = apex_df["apex_archetype"].fillna("-")
@@ -1149,7 +1214,7 @@ with tab_apex:
         ab = ab.reset_index(drop=True)
 
         _right_cols_apex = ["APEX Rank", "APEX Score", "Consensus", "\u0394 APEX"]
-        _left_cols_apex  = ["Player", "Pos", "School", "APEX Tier", "Archetype",
+        _left_cols_apex  = ["Player", "Pos", "School", "RPG", "APEX Tier", "Archetype",
                             "Fit", "Eval Conf", "Tags"]
 
         apex_styled = (
@@ -1256,7 +1321,7 @@ else:
                     _detail["consensus_rank"] = _pr.get("consensus_rank")
                 if not _detail.get("confidence_band"):
                     _detail["confidence_band"] = _pr.get("confidence_band")
-                # Expose board-side RAS for _generate_bullets (ras_total from ras table)
+                # Expose board-side RAS for detail card (ras_total from ras table)
                 _detail["ras_score"] = _pr.get("ras_score")
                 _render_apex_detail(_detail)
             else:

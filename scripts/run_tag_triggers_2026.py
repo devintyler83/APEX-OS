@@ -64,7 +64,7 @@ from draftos.config import PATHS
 from draftos.db.connect import connect
 from draftos.tags.evaluator import evaluate_rule
 
-MODEL_VER = "apex_v2.2"
+MODEL_VER = "apex_v2.3"
 
 # ---------------------------------------------------------------------------
 # Premium positions — only actionable divergence signals.

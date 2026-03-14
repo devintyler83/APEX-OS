@@ -1,5 +1,5 @@
 """
-APEX v2.2 Scoring Engine — 2026 NFL Draft
+APEX v2.3 Scoring Engine — 2026 NFL Draft
 
 Calls the Claude API to evaluate prospects across 8 trait vectors, assigns archetypes,
 computes APEX composite scores, and writes results to apex_scores + divergence_flags.
@@ -79,7 +79,7 @@ from draftos.apex.writer import backup_once, upsert_apex_score, upsert_divergenc
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
-MODEL_VERSION  = "apex_v2.2"
+MODEL_VERSION  = "apex_v2.3"
 CLAUDE_MODEL   = "claude-sonnet-4-20250514"
 MAX_TOKENS     = 1000
 SEASON_ID      = 1
@@ -855,6 +855,10 @@ _REQUIRED_FIELDS: set[str] = {
     "raw_score", "schwesinger_full", "schwesinger_half", "smith_rule",
     "tags", "strengths", "red_flags",
     "capital_base", "capital_adjusted", "two_way_premium",
+    "failure_mode_primary",
+    "failure_mode_secondary",
+    "signature_play",
+    "translation_risk",
 }
 
 
@@ -1618,7 +1622,7 @@ def _run_divergence_batch(conn, season_id: int, model_version: str, apply: bool)
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="APEX v2.2 Scoring Engine — 2026 NFL Draft"
+        description="APEX v2.3 Scoring Engine — 2026 NFL Draft"
     )
     parser.add_argument(
         "--batch",

@@ -41,7 +41,7 @@ from draftos.db.connect import connect
 from draftos.apex.engine import compute_divergence
 from draftos.apex.writer import backup_once, upsert_divergence_flag
 
-MODEL_VERSION = "apex_v2.2"
+MODEL_VERSION = "apex_v2.3"
 SEASON_ID     = 1
 
 

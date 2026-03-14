@@ -32,7 +32,7 @@ Field mapping (rule_expression field -> DB column):
                                fallback: MAX(ras.ras_total) WHERE NOT NULL
     apex_archetype_gap       -> apex_scores.archetype_gap
     apex_consensus_divergence -> divergence_flags.divergence_rank_delta
-                               (model_version=apex_v2.2, season_id=1)
+                               (model_version=apex_v2.3, season_id=1)
     trait_injury_durability  -> apex_scores.v_injury
     trait_character_composite -> apex_scores.v_character
     trait_scheme_versatility -> apex_scores.v_scheme_vers
@@ -66,7 +66,7 @@ from draftos.config import PATHS
 from draftos.db.connect import connect
 
 SEASON_ID     = 1
-MODEL_VERSION = "apex_v2.2"
+MODEL_VERSION = "apex_v2.3"
 
 # ---------------------------------------------------------------------------
 # Premium positions -- divergence alerts actionable here only
