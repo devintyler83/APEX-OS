@@ -10,7 +10,18 @@ Last Updated (UTC): 2026-03-14T01:00:34.054367+00:00
 
 ## Last Completed Milestone
 
-Session 37 — APEX top-50 re-score with positional archetype libraries + UI tag/detail card overhaul.
+Session 38 — Tag description fix + gitignore cleanup.
+
+Session 38: Minimal maintenance session.
+- tag_definitions: Updated 'Top 5 NextGen' description to accurate NGS composite explanation.
+  Tag Legend in app pulls description dynamically — no app.py change needed.
+- .gitignore: Added patterns to cover DB backup files (draftos.backup.*, *.sqlite.backup.*),
+  data/*.json session exports, data/edge/ directory, and *.docx files.
+  This unblocked end_session.py which requires a clean working directory.
+- No DB schema changes. No migrations. No script changes.
+- Doctor: PASSED. No pipeline changes.
+
+Prior: Session 37 — APEX top-50 re-score with positional archetype libraries + UI tag/detail card overhaul.
 
 Session 37: APEX top-50 re-score (50 prospects) + UI fixes.
 - app/app.py: Unified tag rendering. Board Tags column and Tagged expander pills now use same
@@ -142,10 +153,10 @@ Prior sessions on record: 12 (DB rebuild), 13 (weekly pipeline), 13b (school/arc
 
 ## Next Milestone (Single Target)
 
-- Session 38: Tag trigger re-run (new scores may fire new recs) + triage any new pending recs.
+- Session 39: Tag trigger re-run (new scores may fire new recs) + triage any new pending recs.
   Also: evaluate Kilgore Divergence Alert (held pending combine man-coverage confirmation).
   Optional: divergence flag naming cleanup (legacy "APEX HIGH" with space vs "APEX_HIGH" underscore).
-  Command for tag re-run: python -m scripts.run_weekly_update --fast (or evaluate_tag_triggers step only).
+  Command for tag re-run: python -m scripts.evaluate_tag_triggers_2026 --apply 1
 
 ---
 
@@ -247,8 +258,9 @@ EXPORTS: board_2026_v1_default.csv last produced Session 21. Current for that sn
 30. ~~Session 35: Unified detail panel, clickable board rows, on_select API~~ COMPLETE
 31. ~~Session 36: Tabbed boards, tag overhaul, detail card polish, color disambiguation~~ COMPLETE
 32. ~~Session 37: APEX top-50 re-score — real trait vectors, UI tag/detail card overhaul~~ COMPLETE
-33. **Session 38: Tag trigger re-run + triage new pending recs** ← NEXT
-34. Post-draft audit framework activation (after April 2026 draft)
+33. ~~Session 38: Minimal maintenance — Top 5 NextGen tag description fix + gitignore cleanup~~ COMPLETE
+34. **Session 39: Tag trigger re-run + triage new pending recs** ← NEXT
+35. Post-draft audit framework activation (after April 2026 draft)
 
 ---
 
