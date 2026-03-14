@@ -2,12 +2,19 @@ from __future__ import annotations
 
 import re
 import subprocess
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 STATE_FILE = ROOT / "STATE_SNAPSHOT.md"
 BOOTSTRAP_FILE = ROOT / "BOOTSTRAP_PACKET.txt"
+
+# -- UPDATE THIS EVERY SESSION -----------------------------------------------
+# Set to the session number you are currently closing.
+# The validation gate uses this to detect stale milestone content.
+CURRENT_SESSION = 43   # <-- change this before running end_session.py
+# ----------------------------------------------------------------------------
 
 
 def run(cmd: list[str]) -> str:
@@ -18,6 +25,44 @@ def run(cmd: list[str]) -> str:
         print("ERROR running:", " ".join(cmd))
         print(e.output.decode("utf-8", errors="replace"))
         raise SystemExit(1)
+
+
+def print_pre_run_checklist() -> None:
+    """
+    Print a pre-close checklist and pause 5 seconds to give the developer
+    a chance to abort (Ctrl+C) if STATE_SNAPSHOT.md has not been updated.
+    """
+    border = "+" + "=" * 62 + "+"
+    mid    = "+" + "-" * 62 + "+"
+
+    def row(text: str = "") -> str:
+        return f"|  {text:<58}  |"
+
+    lines = [
+        border,
+        row("DraftOS SESSION CLOSE -- PRE-RUN CHECKLIST".center(58)),
+        mid,
+        row("Before this script will pass, STATE_SNAPSHOT.md MUST have:"),
+        row(),
+        row(f"1. ## Last Completed Milestone"),
+        row(f"   Updated to describe Session {CURRENT_SESSION} work"),
+        row(f"   (not a prior session)"),
+        row(),
+        row("2. ## Next Milestone (Single Target)"),
+        row("   Updated to the NEXT actionable milestone"),
+        row("   (not a stale placeholder)"),
+        row(),
+        row("3. All Layer Status counts reflect current DB state"),
+        row(),
+        row("If you haven't done this yet -- stop now and update the"),
+        row("file before re-running end_session.py."),
+        border,
+    ]
+    print()
+    print("\n".join(lines))
+    print()
+    print("Continuing in 5 seconds... (Ctrl+C to abort)")
+    time.sleep(5)
 
 
 def ensure_clean_git() -> None:
@@ -38,6 +83,8 @@ def validate_state_snapshot_content() -> None:
     2. ## Next Milestone (Single Target) section exists and is not the
        generic placeholder text ("Additional source ingest..." or "UNKNOWN")
     3. The file is more than 500 characters (not a stub)
+    4. ## Last Completed Milestone does not reference a session number
+       older than CURRENT_SESSION (stale content guard)
 
     If any check fails: print a descriptive error and raise SystemExit(1).
     The analyst must update STATE_SNAPSHOT.md before session close will
@@ -82,6 +129,30 @@ def validate_state_snapshot_content() -> None:
             print(f"  Found: {block[:80]}")
             print("Update STATE_SNAPSHOT.md with this session's actual next milestone.")
             raise SystemExit(1)
+
+    # Check that Last Completed Milestone references current session
+    last_m = re.search(
+        r"^##\s*Last Completed Milestone\s*$",
+        content, flags=re.MULTILINE
+    )
+    if last_m:
+        after_last = content[last_m.end():]
+        stop_last = re.search(r"^\s*##\s+", after_last, re.MULTILINE)
+        last_block = (after_last[:stop_last.start()] if stop_last else after_last).strip()
+        # If the block starts with "Session N" where N < CURRENT_SESSION, flag as stale.
+        session_match = re.match(r"Session\s+(\d+)", last_block)
+        if session_match:
+            found_session = int(session_match.group(1))
+            if found_session < CURRENT_SESSION:
+                print(
+                    f"FAIL: Last Completed Milestone still describes Session "
+                    f"{found_session}, but CURRENT_SESSION={CURRENT_SESSION}."
+                )
+                print(
+                    "  Update STATE_SNAPSHOT.md '## Last Completed Milestone' "
+                    "to reflect this session's work."
+                )
+                raise SystemExit(1)
 
     print("OK: STATE_SNAPSHOT.md content validated.")
 
@@ -150,7 +221,7 @@ def commit_session_artifacts() -> None:
     """
     Stage STATE_SNAPSHOT.md and BOOTSTRAP_PACKET.txt, commit, and push.
     Called after both files are written. This is the ONLY git write
-    in the script — all work-in-progress must be committed before
+    in the script -- all work-in-progress must be committed before
     end_session.py is invoked.
     """
     run(["git", "add", "STATE_SNAPSHOT.md", "BOOTSTRAP_PACKET.txt"])
@@ -161,6 +232,8 @@ def commit_session_artifacts() -> None:
 
 def main() -> None:
     print("=== END SESSION ORCHESTRATOR ===")
+
+    print_pre_run_checklist()
 
     ensure_clean_git()
 
@@ -200,7 +273,6 @@ Authoritative State:
 
 1) STATE_SNAPSHOT.md
 {state_content}
-
 2) System Snapshot Output
 {snapshot_output}
 
@@ -217,8 +289,23 @@ Include verification commands.
 
     print("BOOTSTRAP_PACKET.txt ready.")
 
+    print("\n" + "=" * 60)
+    print("BOOTSTRAP_PACKET.txt -- Next Milestone written as:")
+    print(f"  {next_milestone}")
+    print("=" * 60)
+    print("Verify this is correct before the commit lands.")
+    print("Ctrl+C now to abort if the Next Milestone is wrong.")
+    time.sleep(3)
+
     commit_session_artifacts()
 
+    # -- REMINDER FOR NEXT SESSION -------------------------------------------
+    # Before running end_session.py next time:
+    #   1. Increment CURRENT_SESSION at the top of this file.
+    #   2. Update STATE_SNAPSHOT.md ## Last Completed Milestone.
+    #   3. Update STATE_SNAPSHOT.md ## Next Milestone (Single Target).
+    #   4. Then run: python scripts/end_session.py
+    # ------------------------------------------------------------------------
     print("=== SESSION CLOSED CLEANLY ===")
 
 
