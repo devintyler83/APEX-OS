@@ -10,7 +10,17 @@ Last Updated (UTC): 2026-03-15T06:57:52.274913+00:00
 
 ## Last Completed Milestone
 
-Session 45 (full 144-prospect re-score against corrected v2.3 archetype library) — All 99 non-top-50 stale prospects re-scored. 0 GEN- labels remain. All 144 active non-cal prospects now carry canonical v2.3 archetype names.
+Session 46 (historical comp layer + PDF generator rebuild) — Migration 0044 applied. 80 historical comp records seeded (QB/CB/EDGE/WR). PDF generator rebuilt from ReportLab → Playwright HTML→PDF. Streamlit asyncio/NotImplementedError fixed via threading + WindowsProactorEventLoopPolicy.
+
+Session 46:
+- Migration 0044: historical_comps table created (UNIQUE idx on player_name+archetype_code, 4 additional indexes).
+- seed_historical_comps.py: 80 records seeded (18 QB, 20 CB, 18 EDGE, 24 WR). INSERT OR IGNORE idempotent.
+- draftos/queries/historical_comps.py: get_historical_comps(), get_archetype_translation_rate(), _extract_archetype_code() regex helper.
+- app.py: Historical Comps section added to _render_apex_detail() — translation rate badge + comp pills with HIT/PARTIAL/MISS icons + expandable comp details.
+- generate_prospect_pdf_2026.py: full rebuild abandoning ReportLab Platypus. New: HTML→PDF via Playwright (Chromium), dark theme, landscape 11"×8.5", two-panel CSS grid. Comp block integrated.
+- PDF Streamlit fix: replaced subprocess.run (NotImplementedError on Windows SelectorEventLoop) with threading.Thread + asyncio.WindowsProactorEventLoopPolicy inside thread. Doctor: PASSED.
+
+Prior: Session 45 (full 144-prospect re-score against corrected v2.3 archetype library) — All 99 non-top-50 stale prospects re-scored. 0 GEN- labels remain. All 144 active non-cal prospects now carry canonical v2.3 archetype names.
 
 Session 45:
 - Re-scored 99 non-top-50 prospects (stale pre-Session-44 archetype names: DT-3 Scheme Fit,
