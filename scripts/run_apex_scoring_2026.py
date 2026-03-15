@@ -170,7 +170,7 @@ TOP50_POSITION_OVERRIDES: dict[int, str] = {
     79:   "IDL",   # Peter Woods       (Clemson)
     # LB -> ILB for known interior/hybrid linebacker prospects
     1:    "ILB",   # Anthony Hill      (Texas)
-    3:    "ILB",   # Kc Concepcion     (Texas A&M)
+    # 3: removed — KC Concepcion (Texas A&M) is WR, not ILB. Remediated 2026-03-15.
     4:    "ILB",   # Lee Hunter        (Texas Tech)
     5:    "ILB",   # Max Iheanachor    (Arizona State)
     6:    "TE",    # Max Klare         (Ohio State — projects as TE, not LB)

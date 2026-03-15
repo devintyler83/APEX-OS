@@ -5,6 +5,7 @@ Playwright (Chromium) HTML → PDF. Premium dark scouting card.
 from __future__ import annotations
 
 import argparse
+import math
 import re
 import sqlite3
 import tempfile
@@ -17,6 +18,25 @@ from draftos.config import PATHS
 from draftos.queries.historical_comps import get_archetype_translation_rate
 
 SEASON_ID = 1
+
+POSITION_SCARCITY_NOTES: dict[str, str] = {
+    "QB":   "Franchise QBs are the scarcest asset in pro football — 8-10 true starters exist at any time.",
+    "RB":   "RB capital is structurally depressed — elite backs drafted R1 return value; volume backs do not.",
+    "WR":   "WR-1 caliber separators number 12-15 NFL-wide — positional premium compresses at WR-2 and below.",
+    "TE":   "Receiving TE-1s are the rarest skill position in the NFL — fewer than 8 true Y-receivers active at peak.",
+    "OT":   "Blindside OTs with pass-pro ceiling drafted top-15 at 2x the rate of any other non-QB position.",
+    "OG":   "Interior OL value is scheme-sensitive — elite guards in zone systems command R1 capital, power systems R2.",
+    "C":    "Green Dot Centers are rarer than the position suggests — fewer than 10 play-callers trusted at the line NFL-wide.",
+    "EDGE": "Franchise EDGE rushers drafted top-10 at 3x the rate of any other position — scarcity drives capital floor.",
+    "IDL":  "3-tech disruptors command R1 capital in modern NFL — 1-tech anchors are valued R2-R3 regardless of profile.",
+    "ILB":  "Coverage-capable ILBs are the fastest-rising positional premium — Green Dot players justify R1 capital.",
+    "OLB":  "OLB value bifurcates sharply — pass-rush capable OLBs command R1-R2, pure run-stoppers fall to R3-UDFA.",
+    "CB":   "CB-1 caliber man-cover corners number 8-10 NFL-wide — the position's scarcity justifies top-15 capital.",
+    "S":    "Rangy single-high safeties are rarer than the position label implies — box safeties draft R3-UDFA regardless of athleticism.",
+    "LB":   "Coverage-capable linebackers are the fastest-rising positional premium — scheme fit determines capital.",
+    "DL":   "Positional value depends entirely on alignment — 3-tech capital diverges sharply from 1-tech at draft.",
+    "OL":   "Interior OL value is scheme-sensitive — elite linemen in zone systems command R1 capital.",
+}
 
 
 def _slugify(t: str) -> str:
@@ -52,8 +72,23 @@ def _trunc(text: str, n: int) -> str:
 
 def _bullets(text: str, max_n: int=2, max_c: int=170) -> list[str]:
     if not text: return []
-    lines = [l.strip().lstrip("•·▸-– ").strip() for l in text.split("\n") if l.strip()]
+    if "\n" in text:
+        lines = [l.strip().lstrip("•·▸-– ").strip() for l in text.split("\n") if l.strip()]
+    else:
+        # LLM stores bullets as a prose paragraph — split on sentence boundaries
+        lines = [s.strip().lstrip("•·▸-– ").strip()
+                 for s in re.split(r'(?<=[.!?])\s+(?=[A-Z])', text.strip()) if s.strip()]
     return [_trunc(l, max_c) for l in lines if l][:max_n]
+
+def _capital_context_html(position: str) -> str:
+    """Returns a styled one-line scarcity note for the position, or empty string."""
+    note = POSITION_SCARCITY_NOTES.get((position or "").upper(), "")
+    if not note:
+        return ""
+    return (
+        f'<div style="font-size:6.5px;color:#999;line-height:1.4;'
+        f'margin-top:4px;font-style:italic;">{note}</div>'
+    )
 
 
 # ── Fetch ─────────────────────────────────────────────────────────────────────
@@ -79,16 +114,17 @@ def _fetch_prospect_data(conn, prospect_id: int, season_id: int) -> dict:
     a = conn.execute(
         "SELECT matched_archetype,archetype_gap,gap_label,raw_score,pvc,apex_composite,apex_tier,"
         "capital_base,capital_adjusted,eval_confidence,strengths,red_flags,failure_mode_primary,"
-        "signature_play,translation_risk,v_processing,v_athleticism,v_scheme_vers,v_comp_tough,"
-        "v_character,v_dev_traj,v_production,v_injury,model_version,smith_rule,schwesinger_full,tags "
+        "failure_mode_secondary,signature_play,translation_risk,v_processing,v_athleticism,"
+        "v_scheme_vers,v_comp_tough,v_character,v_dev_traj,v_production,v_injury,"
+        "model_version,smith_rule,schwesinger_full,tags "
         "FROM apex_scores WHERE prospect_id=? AND season_id=? "
         "ORDER BY CASE model_version WHEN 'apex_v2.3' THEN 1 WHEN 'apex_v2.2' THEN 2 ELSE 3 END LIMIT 1",
         (prospect_id, season_id)).fetchone()
     for k in ["matched_archetype","archetype_gap","gap_label","raw_score","pvc","apex_composite",
               "apex_tier","capital_base","capital_adjusted","eval_confidence","strengths","red_flags",
-              "failure_mode_primary","signature_play","translation_risk","v_processing","v_athleticism",
-              "v_scheme_vers","v_comp_tough","v_character","v_dev_traj","v_production","v_injury",
-              "model_version","smith_rule","schwesinger_full","tags"]:
+              "failure_mode_primary","failure_mode_secondary","signature_play","translation_risk",
+              "v_processing","v_athleticism","v_scheme_vers","v_comp_tough","v_character",
+              "v_dev_traj","v_production","v_injury","model_version","smith_rule","schwesinger_full","tags"]:
         data[k] = a[k] if a else None
 
     tags = conn.execute(
@@ -99,11 +135,15 @@ def _fetch_prospect_data(conn, prospect_id: int, season_id: int) -> dict:
     data["tag_list"] = [(r["tag_name"],r["tag_color"]) for r in tags]
 
     d = conn.execute(
-        "SELECT divergence_flag,divergence_rank_delta FROM divergence_flags "
+        "SELECT divergence_flag,divergence_rank_delta,divergence_score,rounds_diff,apex_favors "
+        "FROM divergence_flags "
         "WHERE prospect_id=? AND season_id=? ORDER BY div_id DESC LIMIT 1",
         (prospect_id, season_id)).fetchone()
     data["divergence_flag"]       = d["divergence_flag"]       if d else None
     data["divergence_rank_delta"] = d["divergence_rank_delta"] if d else None
+    data["divergence_score"]      = d["divergence_score"]      if d else None
+    data["rounds_diff"]           = d["rounds_diff"]           if d else None
+    data["apex_favors"]           = d["apex_favors"]           if d else None
 
     pr = conn.execute(
         "SELECT COUNT(*)+1 AS pr FROM prospect_consensus_rankings pcr "
@@ -199,7 +239,7 @@ def _trait_table(data: dict, tier_col: str) -> str:
         if val is None:
             return (f'<tr><td class="tl">{label}</td>'
                     f'<td class="tbg"><div class="tbf" style="width:0;background:#1e2235;"></div></td>'
-                    f'<td class="tv" style="color:#3a3f55;">—</td></tr>')
+                    f'<td class="tv" style="color:#6b7280;">—</td></tr>')
         pct  = float(val) * 10
         col  = ("#00d4aa" if val>=9.0 else   # teal — elite
                 "#34d399" if val>=8.0 else   # green — above average
@@ -227,6 +267,229 @@ def _trait_table(data: dict, tier_col: str) -> str:
     </table>"""
 
 
+# ── Radar chart ────────────────────────────────────────────────────────────────
+
+def _radar_chart_svg(data: dict) -> str:
+    """
+    Renders an 8-axis radar/spider chart as inline SVG.
+    Axes: Processing, Athleticism, Scheme, Comp/Tough,
+          Character, Dev Traj, Production, Durability.
+    Each trait is 0-10. Chart scales to 10 = outer ring.
+    Uses actual v_* DB key names from apex_scores.
+    """
+    traits = [
+        ("Process",    float(data.get("v_processing")  or 0)),
+        ("Athletic",   float(data.get("v_athleticism") or 0)),
+        ("Scheme",     float(data.get("v_scheme_vers") or 0)),
+        ("Comp/Tough", float(data.get("v_comp_tough")  or 0)),
+        ("Character",  float(data.get("v_character")   or 0)),
+        ("Dev Traj",   float(data.get("v_dev_traj")    or 0)),
+        ("Production", float(data.get("v_production")  or 0)),
+        ("Durability", float(data.get("v_injury")      or 0)),
+    ]
+
+    n = len(traits)
+    cx, cy, r = 72, 72, 54  # center x, center y, max radius
+
+    def point(angle_deg: float, value: float, max_val: float = 10.0):
+        angle_rad = math.radians(angle_deg - 90)
+        dist = r * (value / max_val)
+        x = cx + dist * math.cos(angle_rad)
+        y = cy + dist * math.sin(angle_rad)
+        return x, y
+
+    angles = [i * 360 / n for i in range(n)]
+
+    # Grid rings at 25%, 50%, 75%, 100%
+    grid_lines = ""
+    for pct in [0.25, 0.5, 0.75, 1.0]:
+        pts = " ".join(
+            f"{cx + r * pct * math.cos(math.radians(a - 90)):.1f},"
+            f"{cy + r * pct * math.sin(math.radians(a - 90)):.1f}"
+            for a in angles
+        )
+        opacity = "0.8" if pct == 1.0 else "0.4"
+        grid_lines += (f'<polygon points="{pts}" fill="none" '
+                       f'stroke="#2a2f45" stroke-width="0.6" opacity="{opacity}"/>\n')
+
+    # Axis spokes
+    spokes = ""
+    for a in angles:
+        ex = cx + r * math.cos(math.radians(a - 90))
+        ey = cy + r * math.sin(math.radians(a - 90))
+        spokes += f'<line x1="{cx}" y1="{cy}" x2="{ex:.1f}" y2="{ey:.1f}" stroke="#2a2f45" stroke-width="0.6"/>\n'
+
+    # Data polygon
+    data_pts = [point(angles[i], traits[i][1]) for i in range(n)]
+    poly_pts  = " ".join(f"{x:.1f},{y:.1f}" for x, y in data_pts)
+    data_polygon = (f'<polygon points="{poly_pts}" '
+                    f'fill="#1a7a1a33" stroke="#34d399" stroke-width="1.2"/>\n')
+
+    # Dot at each vertex
+    dots = ""
+    for x, y in data_pts:
+        dots += f'<circle cx="{x:.1f}" cy="{y:.1f}" r="1.8" fill="#34d399"/>\n'
+
+    # Axis labels — pushed outward with extra offset
+    labels = ""
+    for i, (label, _) in enumerate(traits):
+        lx = cx + (r + 14) * math.cos(math.radians(angles[i] - 90))
+        ly = cy + (r + 14) * math.sin(math.radians(angles[i] - 90))
+        labels += (
+            f'<text x="{lx:.1f}" y="{ly:.1f}" '
+            f'text-anchor="middle" dominant-baseline="middle" '
+            f'font-size="5.5" fill="#aaa">{label}</text>\n'
+        )
+
+    svg = (
+        f'<svg width="100%" height="100%" viewBox="0 0 144 144" '
+        f'xmlns="http://www.w3.org/2000/svg" style="display:block;">\n'
+        f'  {grid_lines}'
+        f'  {spokes}'
+        f'  {data_polygon}'
+        f'  {dots}'
+        f'  {labels}'
+        f'</svg>'
+    )
+    return svg
+
+
+# ── FM risk bar ────────────────────────────────────────────────────────────────
+
+def _fm_risk_bar_html(fm_primary: str, fm_secondary: str = None) -> str:
+    """
+    6-segment horizontal bar representing FM-1 through FM-6 severity.
+    Active FM(s) highlighted. Extracts FM code from full string
+    (e.g. "FM-1 Athleticism Mirage" -> "FM-1").
+    """
+    FM_COLORS = {
+        "FM-1": "#cc5500",   # orange — athleticism mirage
+        "FM-2": "#b8860b",   # gold — scheme dependent
+        "FM-3": "#005090",   # blue — processing wall
+        "FM-4": "#8b0000",   # dark red — medical
+        "FM-5": "#6a1a8a",   # purple — character
+        "FM-6": "#1a7a1a",   # green — positional mismatch
+    }
+    FM_LABELS = ["FM-1", "FM-2", "FM-3", "FM-4", "FM-5", "FM-6"]
+
+    # Extract bare code from full strings like "FM-1 Athleticism Mirage"
+    def _extract_code(s: str) -> str:
+        m = re.search(r"FM-\d+", s or "")
+        return m.group(0) if m else ""
+
+    primary_code   = _extract_code(fm_primary or "")
+    secondary_code = _extract_code(fm_secondary or "")
+
+    segments = ""
+    for fm in FM_LABELS:
+        is_primary   = (fm == primary_code)
+        is_secondary = (fm == secondary_code)
+        col = FM_COLORS.get(fm, "#555")
+
+        if is_primary:
+            bg          = col
+            border      = f"2px solid {col}"
+            opacity     = "1.0"
+            label_color = "#fff"
+        elif is_secondary:
+            bg          = col + "55"
+            border      = f"1px solid {col}"
+            opacity     = "0.85"
+            label_color = "#ccc"
+        else:
+            bg          = "#111318"
+            border      = "1px solid #1c2035"
+            opacity     = "1.0"
+            label_color = "#888"
+
+        segments += (
+            f'<div style="flex:1;background:{bg};border:{border};opacity:{opacity};'
+            f'border-radius:2px;display:flex;align-items:center;justify-content:center;">'
+            f'<span style="font-size:5.5px;font-weight:700;color:{label_color};'
+            f'letter-spacing:0.04em;font-family:monospace;">{fm}</span>'
+            f'</div>'
+        )
+
+    return (
+        f'<div style="margin:0 0 8px 0;flex-shrink:0;">'
+        f'<div style="font-family:monospace;font-size:5.5pt;letter-spacing:1px;'
+        f'color:#aaa;text-transform:uppercase;margin-bottom:4px;">Failure Mode Risk</div>'
+        f'<div style="display:flex;gap:2px;height:18px;">{segments}</div>'
+        f'</div>'
+    )
+
+
+# ── Divergence narrative ───────────────────────────────────────────────────────
+
+def _build_divergence_narrative(data: dict) -> str | None:
+    """
+    Returns a one-sentence divergence narrative, or None if ALIGNED.
+
+    Pulls from: divergence_flag, divergence_score, rounds_diff,
+                apex_favors, matched_archetype, apex_composite.
+    Note: apex_favors in DB is an INTEGER (0/1 boolean), not text —
+    falls back to "mechanism traits" when not a human-readable string.
+    Migration needed: convert apex_favors to TEXT in divergence_flags
+    and populate from scoring pipeline.
+    """
+    flag = (data.get("divergence_flag") or "").strip()
+    if flag == "ALIGNED" or not flag:
+        return None
+
+    name   = data.get("display_name") or data.get("full_name") or "This prospect"
+    rounds = data.get("rounds_diff")
+
+    # apex_favors in DB is INTEGER — only use if it's a non-empty string
+    apex_favors_raw = data.get("apex_favors")
+    apex_favors = (apex_favors_raw if isinstance(apex_favors_raw, str)
+                   and apex_favors_raw.strip() else "")
+
+    # Direction
+    if flag == "APEX_HIGH":
+        direction    = "above"
+        market_verb  = "undervaluing"
+        signal_end   = "upside"
+    else:  # APEX_LOW or APEX_LOW_PVC_STRUCTURAL
+        direction    = "below"
+        market_verb  = "pricing in"
+        signal_end   = "risk"
+
+    # Rounds diff phrasing
+    if rounds and abs(rounds) >= 1:
+        rank_phrase = f"{abs(rounds):.0f} round{'s' if abs(rounds) != 1 else ''}"
+    else:
+        rank_phrase = "meaningfully"
+
+    trait_phrase = apex_favors if apex_favors else "mechanism traits"
+
+    sentence = (
+        f"APEX rates {name} {rank_phrase} {direction} consensus because the model weights "
+        f"{trait_phrase} higher than the market, which is {market_verb} the {signal_end}."
+    )
+    return sentence
+
+
+def _divergence_callout_html(narrative: str, flag: str) -> str:
+    """Renders the divergence narrative as a styled HTML callout block."""
+    if flag == "APEX_HIGH":
+        border_color = "#1a7a1a"
+        label        = "APEX DIVERGENCE · ABOVE CONSENSUS"
+        label_color  = "#1a7a1a"
+    else:
+        border_color = "#cc5500"
+        label        = "APEX DIVERGENCE · BELOW CONSENSUS"
+        label_color  = "#cc5500"
+
+    return (
+        f'<div style="border-left:3px solid {border_color};background:rgba(255,255,255,0.04);'
+        f'padding:6px 10px;margin:6px 0;border-radius:0 4px 4px 0;flex-shrink:0;">'
+        f'<div style="font-size:7px;font-weight:700;letter-spacing:0.08em;'
+        f'color:{label_color};margin-bottom:3px;">{label}</div>'
+        f'<div style="font-size:8.5px;color:#d0d0d0;line-height:1.4;">{narrative}</div>'
+        f'</div>'
+    )
+
+
 # ── HTML builder ───────────────────────────────────────────────────────────────
 
 def _build_html(data: dict, comps: dict) -> str:
@@ -242,6 +505,7 @@ def _build_html(data: dict, comps: dict) -> str:
     pvc       = data.get("pvc") or 1.0
     archetype = data.get("matched_archetype") or ""
     fm_pri    = data.get("failure_mode_primary") or ""
+    fm_sec    = data.get("failure_mode_secondary") or ""
     cap_adj   = data.get("capital_adjusted") or data.get("capital_base")
     eval_conf = data.get("eval_confidence") or ""
     sig_play  = data.get("signature_play") or ""
@@ -280,23 +544,14 @@ def _build_html(data: dict, comps: dict) -> str:
     else:
         cap_clean = "—"
 
-    rank_s     = f"#{rank}" if rank else "NR"
-    pos_badge  = f"{position} {rank_s}"
-    pos_rank_s = f"#{pos_rank} at {position}" if pos_rank else ""
-    ras_s      = f"RAS {ras:.2f}" if ras else ""
+    rank_s    = f"#{rank}" if rank else "NR"
+    pos_badge = f"{position} {rank_s}"
 
-    # FM pills
-    fm_pills = ""
-    for fm in re.split(r",\s*|\s+and\s+", fm_pri) if fm_pri else []:
-        if "FM-" not in fm: continue
-        bg, border = _fm_bg_border(fm)
-        code = (re.search(r"FM-\d+",fm) or type("",(),{"group":lambda s,n:""})()).group(0)
-        sfx  = fm.replace(code,"").strip(" —-")
-        lbl  = f"{code} {sfx}".strip() if sfx else code
-        fm_pills += (f'<span style="display:inline-block;background:{bg};border:1px solid {border};'
-                     f'color:{border};font-size:7.5pt;font-weight:600;font-family:monospace;'
-                     f'padding:3px 9px;border-radius:4px;white-space:nowrap;margin-right:5px;">'
-                     f'{lbl}</span>')
+    # Positional rank badge: only informative when it differs from overall consensus rank.
+    # Suppressed when pos_rank == rank (e.g. #1 overall who is also #1 at their position).
+    pos_rank_s = f"#{pos_rank} at {position}" if (pos_rank and pos_rank != rank) else ""
+
+    ras_s     = f"RAS {ras:.2f}" if ras else ""
 
     sig_clean = _trunc(sig_play, 280)
 
@@ -305,7 +560,7 @@ def _build_html(data: dict, comps: dict) -> str:
 
     def bullet_rows(lines, dot_col):
         if not lines:
-            return '<tr><td style="color:#3a3f55;font-style:italic;font-size:7pt;">Pending evaluation.</td></tr>'
+            return '<tr><td style="color:#999;font-style:italic;font-size:7pt;">Pending evaluation.</td></tr>'
         rows = ""
         for l in lines:
             rows += (f'<tr><td style="vertical-align:top;padding-right:6px;">'
@@ -320,7 +575,7 @@ def _build_html(data: dict, comps: dict) -> str:
         sign = "+" if (div_delta or 0) > 0 else ""
         dc   = "#00d4aa" if (div_delta or 0)>0 else "#ef4444" if (div_delta or 0)<-5 else "#f5c518"
         delta_str = f" ({sign}{div_delta})" if div_delta is not None else ""
-        div_html = (f'<div style="font-size:6.5pt;font-family:monospace;color:#555a6e;">'
+        div_html = (f'<div style="font-size:6.5pt;font-family:monospace;color:#aaa;">'
                     f'Divergence <span style="color:{dc};font-weight:700;">{div_flag}{delta_str}</span></div>')
 
     tag_map = {"green":"#00d4aa","red":"#ef4444","blue":"#3b82f6","gold":"#f5c518"}
@@ -333,8 +588,8 @@ def _build_html(data: dict, comps: dict) -> str:
                       f'border:1px solid {c2}22;background:{c2}11;color:{c2};margin-right:4px;">{tn}</span>')
         tags_html = f'<div style="margin-bottom:6px;flex-wrap:wrap;display:flex;gap:3px;">{pills}</div>'
 
-    conf_html = (f'<div style="font-size:6.5pt;font-family:monospace;color:#555a6e;margin-bottom:3px;">'
-                 f'Eval Confidence <span style="color:#8892a4;">{eval_conf}</span></div>') if eval_conf else ""
+    conf_html = (f'<div style="font-family:monospace;font-size:6.5pt;color:#aaa;margin-bottom:3px;">'
+                 f'Eval Confidence <span style="color:#aaa;">{eval_conf}</span></div>') if eval_conf else ""
 
     def comp_block(comp, role_label, role_color, icon, active_fm):
         if not comp: return ""
@@ -343,7 +598,7 @@ def _build_html(data: dict, comps: dict) -> str:
 
         fm_tag = ""
         for code in re.findall(r"FM-\d+", comp.get("fm_code") or ""):
-            col = "#ef4444" if code in active_fm else "#6b7280"
+            col = "#ef4444" if code in active_fm else "#aaa"
             fm_tag += f' <span style="color:{col};font-size:6pt;font-weight:700;">{code}</span>'
 
         summary = _trunc(comp.get("outcome_summary") or "", 210)
@@ -362,11 +617,11 @@ def _build_html(data: dict, comps: dict) -> str:
                          color:{oc};white-space:nowrap;flex-shrink:0;">{comp['player_name']}</span>
             <span style="font-family:monospace;font-size:6.5pt;color:{oc};
                          white-space:nowrap;flex-shrink:0;">{out}{fm_tag}</span>
-            <span style="font-family:monospace;font-size:6pt;color:#3a3f55;
+            <span style="font-family:monospace;font-size:6pt;color:#aaa;
                          white-space:nowrap;margin-left:auto;flex-shrink:0;">{era}</span>
           </div>
-          <div style="font-size:7.5pt;color:#8892a4;line-height:1.5;">{summary}</div>
-          {'<div style="font-size:6.5pt;color:#3a3f55;line-height:1.4;margin-top:3px;font-style:italic;">'+mech+'</div>' if mech else ''}
+          <div style="font-size:7.5pt;color:#bbb;line-height:1.5;">{summary}</div>
+          {'<div style="font-size:6.5pt;color:#999;line-height:1.4;margin-top:3px;font-style:italic;">'+mech+'</div>' if mech else ''}
         </div>"""
 
     active_fm_set = set(re.findall(r"FM-\d+", fm_pri or ""))
@@ -383,14 +638,23 @@ def _build_html(data: dict, comps: dict) -> str:
         comps_html = f"""
         <div style="margin-top:auto;padding-top:8px;">
           <div style="font-family:monospace;font-size:5.5pt;letter-spacing:1.5px;
-                      color:#3a3f55;text-transform:uppercase;margin-bottom:6px;">Historical Comps</div>
+                      color:#aaa;text-transform:uppercase;margin-bottom:6px;">Historical Comps</div>
           {ceiling_html}{fmrisk_html}
         </div>"""
 
     trait_table_html = _trait_table(data, tc)
+    radar_svg        = _radar_chart_svg(data)
+    fm_bar           = _fm_risk_bar_html(fm_pri, fm_sec)
+    capital_context  = _capital_context_html(position)
 
-    pvc_note = (f'<div style="font-family:monospace;font-size:5.5pt;color:#3a3f55;text-align:center;margin-top:4px;">'
+    pvc_note = (f'<div style="font-family:monospace;font-size:5.5pt;color:#999;text-align:center;margin-top:4px;">'
                 f'RPG {rpg_s} × PVC {pvc:.2f} = APEX {apex_s}</div>') if rpg and apex else ""
+
+    # Divergence callout — rendered inside comps-region above historical comps
+    narrative = _build_divergence_narrative(data)
+    divergence_callout_html = ""
+    if narrative:
+        divergence_callout_html = _divergence_callout_html(narrative, div_flag)
 
     return f"""<!DOCTYPE html>
 <html>
@@ -430,7 +694,7 @@ html, body {{
   background: #0b0e18;
   border-right: 1px solid #1c2035;
   border-top: 3px solid {tc};
-  padding: 0.24in 0.2in 0.18in;
+  padding: 0.18in 0.18in 0.14in;
   display: flex;
   flex-direction: column;
   height: 8.5in;
@@ -439,57 +703,57 @@ html, body {{
 
 .player-name {{
   font-family: 'Bebas Neue', sans-serif;
-  font-size: 36pt;
+  font-size: 34pt;
   line-height: 0.92;
   color: #ffffff;
   letter-spacing: 1px;
   word-break: break-word;
-  margin-bottom: 8px;
+  margin-bottom: 7px;
 }}
 
 .badges {{
-  display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 12px;
+  display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 10px;
 }}
 
 .badge {{
   font-family: 'DM Mono', monospace;
   font-size: 6.5pt; font-weight: 500;
   padding: 2px 7px; border-radius: 3px;
-  border: 1px solid #1c2035; color: #8892a4;
+  border: 1px solid #1c2035; color: #bbb;
 }}
 
 .badge.pos {{ border-color: {tc}; color: {tc}; font-weight: 700; }}
-.badge.hi  {{ border-color: #3a3f55; color: #e8eaf0; }}
+.badge.hi  {{ border-color: #6b7280; color: #e8eaf0; }}
 
 .score-box {{
   border: 1px solid #1c2035;
   border-radius: 6px;
-  padding: 10px 10px 6px;
-  margin-bottom: 12px;
+  padding: 8px 10px 5px;
+  margin-bottom: 10px;
   background: linear-gradient(135deg, {atm} 0%, #060810 60%);
 }}
 
 .score-row {{
-  display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-bottom: 6px;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-bottom: 5px;
 }}
 
 .snum {{
   font-family: 'Bebas Neue', sans-serif;
-  font-size: 30pt; line-height: 1; display: block; text-align: center;
+  font-size: 28pt; line-height: 1; display: block; text-align: center;
 }}
 
 .slbl {{
   font-family: 'DM Mono', monospace;
-  font-size: 5.5pt; color: #3a3f55; letter-spacing: 1px;
+  font-size: 5.5pt; color: #aaa; letter-spacing: 1px;
   text-transform: uppercase; display: block; text-align: center; margin-top: 1px;
 }}
 
 .tier-badge {{
   display: block; text-align: center;
   font-family: 'Bebas Neue', sans-serif;
-  font-size: 13pt; letter-spacing: 3px; color: {tc};
+  font-size: 12pt; letter-spacing: 3px; color: {tc};
   background: {badge_bg}; border: 1px solid {tc}88;
-  border-radius: 4px; padding: 3px 0; margin-bottom: 4px;
+  border-radius: 4px; padding: 2px 0; margin-bottom: 3px;
 }}
 
 /* Traits via table — zero UA bullet risk */
@@ -501,28 +765,36 @@ html, body {{
 .inner-trait {{ width: 100%; border-collapse: collapse; }}
 .inner-trait tr {{ height: auto; }}
 .tl {{
-  font-size: 6.5pt; color: #8892a4; font-weight: 500;
-  white-space: nowrap; padding-right: 5px; width: 54px;
+  font-size: 6pt; color: #bbb; font-weight: 500;
+  white-space: nowrap; padding-right: 5px; width: 52px;
   font-family: 'DM Sans', sans-serif; vertical-align: middle;
-  padding-bottom: 5px;
+  padding-bottom: 4px;
 }}
 .tbg {{
-  padding-bottom: 5px; vertical-align: middle;
+  padding-bottom: 4px; vertical-align: middle;
 }}
 .tbf {{
   height: 4px; border-radius: 2px; display: block; min-width: 1px;
 }}
 .tv {{
   font-family: 'DM Mono', monospace;
-  font-size: 7pt; font-weight: 500; text-align: right;
-  width: 24px; padding-left: 4px; vertical-align: middle;
-  padding-bottom: 5px; white-space: nowrap;
+  font-size: 6.5pt; font-weight: 500; text-align: right;
+  width: 22px; padding-left: 4px; vertical-align: middle;
+  padding-bottom: 4px; white-space: nowrap;
+}}
+
+.radar-wrap {{
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 120px;
 }}
 
 .lp-footer {{
   margin-top: auto;
   border-top: 1px solid #1c2035;
-  padding-top: 10px;
+  padding-top: 8px;
 }}
 
 /* RIGHT PANEL */
@@ -538,13 +810,13 @@ html, body {{
 
 .arch-row {{
   display: flex; align-items: flex-start;
-  gap: 10px; padding-bottom: 10px;
+  gap: 10px; padding-bottom: 8px;
   border-bottom: 1px solid #1c2035;
-  margin-bottom: 10px; flex-shrink: 0;
+  margin-bottom: 8px; flex-shrink: 0;
 }}
 
 .arch-code {{
-  font-family: 'DM Mono', monospace; font-size: 7pt; color: #3a3f55;
+  font-family: 'DM Mono', monospace; font-size: 7pt; color: #aaa;
   background: #060810; border: 1px solid #1c2035;
   border-radius: 3px; padding: 2px 7px; margin-top: 3px;
   flex-shrink: 0; white-space: nowrap;
@@ -556,50 +828,50 @@ html, body {{
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }}
 
-.fm-wrap {{
-  margin-left: auto; display: flex; flex-wrap: wrap;
-  gap: 5px; align-self: center; flex-shrink: 0;
-}}
-
 .sig-block {{
   background: #060d1a; border-left: 3px solid #1e4080;
-  border-radius: 0 4px 4px 0; padding: 8px 12px;
-  margin-bottom: 9px; flex-shrink: 0;
+  border-radius: 0 4px 4px 0; padding: 7px 12px;
+  margin-bottom: 8px; flex-shrink: 0;
 }}
 
 .sf-grid {{
   display: grid; grid-template-columns: 1fr 1fr;
-  gap: 9px; margin-bottom: 9px; flex-shrink: 0;
+  gap: 9px; margin-bottom: 8px; flex-shrink: 0;
 }}
 
 .sf-box {{
   background: #07090f; border: 1px solid #1c2035;
-  border-radius: 4px; padding: 7px 9px; overflow: hidden;
+  border-radius: 4px; padding: 7px 9px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 0;
 }}
 
 .sf-title {{
   font-family: 'DM Mono', monospace;
   font-size: 5.5pt; letter-spacing: 1.2px;
-  text-transform: uppercase; margin-bottom: 5px; font-weight: 600;
+  text-transform: uppercase; margin-bottom: 4px; font-weight: 600;
 }}
 
 .trans-block {{
   background: #110e00; border: 1px solid #f5c51825;
   border-left: 3px solid #f5c518;
   border-radius: 0 4px 4px 0;
-  padding: 7px 12px; margin-bottom: 9px; flex-shrink: 0;
+  padding: 7px 12px; margin-bottom: 8px; flex-shrink: 0;
   display: flex; gap: 10px; align-items: flex-start;
 }}
 
 .comps-region {{
   flex: 1; display: flex; flex-direction: column;
-  justify-content: flex-end; min-height: 0;
+  min-height: 0;
 }}
 
 .rp-footer {{
   border-top: 1px solid #1c2035; padding-top: 7px;
   display: flex; align-items: center; justify-content: space-between;
-  flex-shrink: 0; margin-top: 8px;
+  flex-shrink: 0;
 }}
 </style>
 </head>
@@ -633,15 +905,17 @@ html, body {{
   </div>
 
   <div style="font-family:'DM Mono',monospace;font-size:5.5pt;letter-spacing:1.5px;
-              color:#3a3f55;text-transform:uppercase;margin-bottom:7px;">Player Profile</div>
+              color:#aaa;text-transform:uppercase;margin-bottom:6px;">Player Profile</div>
   {trait_table_html}
+  <div class="radar-wrap">{radar_svg}</div>
 
   <div class="lp-footer">
-    <div style="margin-bottom:6px;">
+    <div style="margin-bottom:5px;">
       <div style="font-family:'DM Mono',monospace;font-size:5.5pt;letter-spacing:1px;
-                  color:#3a3f55;text-transform:uppercase;margin-bottom:2px;">Draft Capital</div>
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:14pt;
+                  color:#aaa;text-transform:uppercase;margin-bottom:2px;">Draft Capital</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:13pt;
                   color:#ffffff;letter-spacing:0.5px;line-height:1;">{cap_clean}</div>
+      {capital_context}
     </div>
     {tags_html}
     {conf_html}
@@ -653,13 +927,14 @@ html, body {{
 <div class="rp">
 
   <div class="arch-row">
-    <div>
+    <div style="min-width:0;">
       {'<div class="arch-code">'+arch_code+'</div>' if arch_code else ''}
       {'<div class="arch-name">'+arch_label+'</div>' if arch_label
-       else '<div style="font-family:Bebas Neue,sans-serif;font-size:14pt;color:#3a3f55;">Archetype Pending</div>'}
+       else '<div style="font-family:Bebas Neue,sans-serif;font-size:14pt;color:#aaa;">Archetype Pending</div>'}
     </div>
-    <div class="fm-wrap">{fm_pills}</div>
   </div>
+
+  {fm_bar}
 
   <div class="sig-block">
     <div style="font-family:'DM Mono',monospace;font-size:5.5pt;letter-spacing:1.5px;
@@ -669,26 +944,27 @@ html, body {{
 
   <div class="sf-grid">
     <div class="sf-box">
-      <div class="sf-title" style="color:#34d399;">✓ Strengths</div>
+      <div class="sf-title" style="color:#34d399;">&#10003; Strengths</div>
       <table style="border-collapse:collapse;width:100%;">{bullet_rows(str_lines,"#34d399")}</table>
     </div>
     <div class="sf-box">
-      <div class="sf-title" style="color:#ef4444;">⚑ Red Flags</div>
+      <div class="sf-title" style="color:#ef4444;">&#9873; Red Flags</div>
       <table style="border-collapse:collapse;width:100%;">{bullet_rows(rf_lines,"#ef4444")}</table>
     </div>
   </div>
 
-  {'<div class="trans-block"><span style="color:#f5c518;font-size:8pt;flex-shrink:0;margin-top:1px;">⚠</span><span style="font-size:7.5pt;color:#d4b84a;line-height:1.45;">'+trans_clean+'</span></div>' if trans_clean else ''}
+  {'<div class="trans-block"><span style="color:#f5c518;font-size:8pt;flex-shrink:0;margin-top:1px;">&#9888;</span><span style="font-size:7.5pt;color:#d4b84a;line-height:1.45;">'+trans_clean+'</span></div>' if trans_clean else ''}
 
   <div class="comps-region">
+    {divergence_callout_html}
     {comps_html}
   </div>
 
   <div class="rp-footer">
     <div style="font-family:'Bebas Neue',sans-serif;font-size:9pt;
-                letter-spacing:3px;color:#3a3f55;">DraftOS 2026</div>
+                letter-spacing:3px;color:#aaa;">DraftOS 2026</div>
     <div style="font-family:'DM Mono',monospace;font-size:6pt;
-                color:#3a3f55;text-align:right;line-height:1.6;">
+                color:#aaa;text-align:right;line-height:1.6;">
       Generated {date_str}<br>{rank_s} · {position} · {school}
     </div>
   </div>
@@ -754,7 +1030,7 @@ def generate_pdf(prospect_id: int, season_id: int = SEASON_ID) -> Path:
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--prospect-id", type=int, required=True)
+    ap.add_argument("--prospect-id", "--pid", dest="prospect_id", type=int, required=True)
     ap.add_argument("--season", type=int, default=2026)
     args = ap.parse_args()
     print(f"OK: {generate_pdf(prospect_id=args.prospect_id, season_id=1)}")
