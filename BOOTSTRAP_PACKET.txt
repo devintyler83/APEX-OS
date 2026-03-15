@@ -17,7 +17,7 @@ Authoritative State:
 1) STATE_SNAPSHOT.md
 # DraftOS State Snapshot
 
-Last Updated (UTC): 2026-03-15T05:45:55.366040+00:00
+Last Updated (UTC): 2026-03-15T06:57:52.274913+00:00
 
 ---
 
@@ -476,11 +476,11 @@ Inactive (data preserved): ngs_2026 (source_id=29, is_active=0) — model score,
 
 2) System Snapshot Output
 === DRAFTOS SYSTEM SNAPSHOT ===
-generated_utc: 2026-03-15T05:45:54.687774+00:00
+generated_utc: 2026-03-15T06:57:51.609016+00:00
 
 ## Git
 branch: main
-commit: c690bf4152a72391e55a6858010bef6779356ffe
+commit: 0c38fbe01ee2c06c19a746ea3400cb5a1992d1b4
 status: clean
 
 ## Tables
@@ -489,6 +489,7 @@ status: clean
 - consensus_rankings
 - divergence_flags
 - draft_results
+- historical_comps
 - measurables
 - meta_migrations
 - model_outputs
@@ -579,6 +580,7 @@ status: clean
 - 0041_apex_bust_warning @ 2026-03-14T05:15:05.026341+00:00
 - 0042_views_bump_to_v23 @ 2026-03-15T02:45:16.480107+00:00
 - 0043_views_fix_consensus_table @ 2026-03-15T02:46:41.919123+00:00
+- 0044_historical_comps @ 2026-03-15T06:07:31.484180+00:00
 
 ## Active Season
 no is_active column
@@ -601,6 +603,7 @@ no is_active column
 - draftos\queries\active.py
 - draftos\queries\apex.py
 - draftos\queries\consensus.py
+- draftos\queries\historical_comps.py
 - draftos\queries\model_outputs.py
 - draftos\tags\__init__.py
 - draftos\tags\evaluator.py
@@ -667,6 +670,7 @@ no is_active column
 - scripts\run_weekly_update.py
 - scripts\scrape_nfldraftbuzz_2026.py
 - scripts\scrape_nfldraftbuzz_2026_playwright.py
+- scripts\seed_historical_comps.py
 - scripts\snapshot_board.py
 - scripts\stage_rankings_csv.py
 - scripts\tag_calibration_artifacts_2026.py
