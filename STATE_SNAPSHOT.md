@@ -10,7 +10,34 @@ Last Updated (UTC): 2026-03-14T23:17:06.069048+00:00
 
 ## Last Completed Milestone
 
-Session 43 — Weekly pipeline first clean run + tag triage + end_session.py hardening.
+Session 29 (archetype library rebuild + top-50 re-score) — prompts.py Section B rebuilt from canonical .docx library files. Top-50 re-scored against corrected v2.3 archetype library.
+
+Session 29:
+- prompts.py Section B fully rebuilt from 14 canonical .docx library files (Session 28).
+  All 14 positions have their own section (C and OLB restored as separate sections).
+  Archetype names corrected: EDGE-2 Speed-Bend Specialist, EDGE-3 Power-Counter Technician,
+  EDGE-4 Athletic Dominator, CB-1 Anticipatory Lockdown, CB-2 Zone Architect,
+  CB-3 Press Man Corner, S-3 Multiplier Safety, S-4 Coverage Safety (new), S-5 Raw Projection,
+  ILB-3 Run-First Enforcer, ILB-4 Hybrid Chess Piece, ILB-5 Raw Projection (new),
+  WR-6 Complete Outside Weapon (new archetype).
+- POSITION_PAA_GATES aligned to canonical names. OLB and C gates added.
+  _normalize_position_for_gate: OLB→OLB, C→C routing corrected.
+- ARCHETYPE_OVERRIDES stale labels fixed (pid=72/71 CB-3, pid=38 CB-1, pid=35 CB-2, pid=3236).
+- archetype_canonical_reference.json created at draftos/docs/apex/archetype_canonical_reference.json.
+- Weight table audit (Session 28B): 5 base table errors confirmed (RB/OT/ILB/OLB/CB Injury
+  arithmetic typos). All corrected in prompts.py. WR-3 Character=4% and WR-5 Injury=2% added.
+- MODEL_VERSION bumped to apex_v2.3 in run_apex_scoring_2026.py.
+- Migrations 0042+0043: Board views (v_board, v_divergence_board, v_position_board) updated
+  from apex_v2.2 → apex_v2.3 AND from stale consensus_rankings (0 rows) →
+  prospect_consensus_rankings (1007 rows). All three views now return live data.
+- Top-50 re-score: 50/50 scored, 0 failed, 0 GEN- labels.
+  Tier distribution (fresh 50): ELITE=3, DAY1=26, DAY2=20, DAY3=1.
+  All 50 assigned canonical v2.3 archetype names. Section E compliance confirmed (3 spot-checks).
+- Divergence recomputed (149 prospects): ALIGNED=29, APEX_HIGH=65, APEX_LOW=3,
+  APEX_LOW_PVC_STRUCTURAL=52.
+- Doctor: PASSED. Snapshot integrity: 1007==1007==1007.
+
+Prior: Session 43 — Weekly pipeline first clean run + tag triage + end_session.py hardening.
 
 Session 43:
 - triage_pending_tags_2026.py (new): auto-accept/dismiss all 147 pending system tag recs.
@@ -199,14 +226,10 @@ Prior sessions on record: 12 (DB rebuild), 13 (weekly pipeline), 13b (school/arc
 
 ## Next Milestone (Single Target)
 
-- Session 44: Two-part target:
-  1. Re-score ~10 position-fixed prospects (lost invalid LB scores in Session 42):
-    Bud Clark S (pid=3590), Drew Shelton OL (pid=3706), Eli Stowers TE (pid=3637),
-    Jack Endries TE (pid=3683), Jake Slaughter OL (pid=3687), Joe Royer TE (pid=3664),
-    Josh Cameron WR (pid=3616), Max Iheanachor OL (pid=3532), Sam Hecht OL (pid=3564),
-    Zion Young EDGE (pid=3551), Ted Hurst WR (pid=3536).
-    Use canonical active PIDs (correct positions). Add to TOP50_POSITION_OVERRIDES as needed.
-  2. Score ranks 151-250 (build target PID list from consensus, dry run, live score).
+- Session 30: Full 149-prospect APEX re-score against corrected v2.3 archetype library.
+  The 99 non-top-50 prospects still carry pre-Session-28 stale archetype names (DT-3 Scheme Fit,
+  ILB-4 Raw Projection, OG-4 Chess Piece, S-3 Versatile Weapon, etc.). Re-score all 99 with
+  --batch all --force (or targeted --prospect-ids list for non-top-50).
   Neal MONITOR tag — hold until combine 3-cone data.
 
 ---
@@ -263,10 +286,14 @@ APEX: Operational. 131 v2.3 active non-cal + 55 v2.2 active non-cal = 186 total 
   Keylan Rutledge (pid=136): TOP50_POSITION_OVERRIDES OG added Session 37 (position_raw='G' fix).
   Igbinosun (pid=36): ARCHETYPE_OVERRIDES[36] added Session 39 with PAA gate findings.
   Ghost cleanup (Session 39): pid=3559, 4369 (Klare dups) is_active=0. pid=4347 (Ponds LB) is_active=0.
-  Migrations applied: 0001–0041. Next migration: 0042.
+  Migrations applied: 0001–0043. Next migration: 0044.
     Migration 0040 (apex_v23_mechanism_fields): failure_mode_primary, failure_mode_secondary,
       signature_play, translation_risk columns added to apex_scores — APPLIED. All 149 v2.3 rows populated.
     Migration 0041 (apex_bust_warning): bust_warning column added — APPLIED.
+    Migration 0042 (views_bump_to_v23): v_board, v_divergence_board, v_position_board updated
+      model_version filter apex_v2.2 → apex_v2.3 — APPLIED.
+    Migration 0043 (views_fix_consensus_table): Views updated to JOIN prospect_consensus_rankings
+      (1007 rows) instead of stale consensus_rankings (0 rows). Column aliases corrected — APPLIED.
   Tag trigger re-run executed post-Session 42 — 147 pending recs generated (see TAGS).
 
 TAGS: Operational. Session 24 trigger engine built and active.
@@ -323,22 +350,24 @@ EXPORTS: board_2026_v1_default.csv last produced Session 21. Current for that sn
 34. ~~Session 39: APEX ranks 51-150 scoring expansion (99 prospects) + Igbinosun PAA re-score~~ COMPLETE
 35. ~~Session 40-42: UX polish (FM text, compare panel, divergence narrative, tag filter) + position audit~~ COMPLETE
 36. ~~Session 43: Tag triage (147 recs → 204 accepted) + weekly pipeline clean run (rows=1007) + end_session.py hardening~~ COMPLETE
-37. **Session 44: Re-score ~10 position-fixed prospects + ranks 151-250** ← NEXT
+37. ~~Session 29 (archetype rebuild): prompts.py Section B rebuild, PAA gates, override fix, top-50 re-score, migrations 0042+0043~~ COMPLETE
+38. **Session 30: Full 149-prospect APEX re-score against corrected v2.3 archetype library** ← NEXT
 38. Post-draft audit framework activation (after April 2026 draft)
 
 ---
 
 ## APEX Status
 
-- Version: v2.2 (scorer engine) / v2.3 (model_version written to DB)
+- Version: v2.3 (scorer engine + model_version written to DB — aligned Session 29)
 - v2.3 mechanism fields applied (migration 0040): failure_mode_primary, failure_mode_secondary,
   signature_play, translation_risk. bust_warning added (migration 0041). All 149 v2.3 rows populated.
-- Active 2026 scored: 131 v2.3 + 55 v2.2 = 186 total (is_active=1, is_calibration_artifact=0)
+- Active 2026 scored: 149 v2.3 (is_active=1, is_calibration_artifact=0)
 - Calibration artifacts: 12 (PIDs: 230,304,313,455,504,880,1050,1278,1371,1391,1729,1925)
   All re-scored Session 26 with correct PIDs and positions.
-- Tier dist (v2.3 active non-cal, post Session 42): ELITE=3, DAY1=27, DAY2=67, DAY3=29, UDFA-P=~5
-- Divergence (current, post Session 42): ALIGNED=45, APEX_HIGH=92, APEX_LOW=3,
-  APEX_LOW_PVC_STRUCTURAL=70
+- Tier dist (v2.3, top-50 fresh Session 29): ELITE=3, DAY1=26, DAY2=20, DAY3=1
+  (99 non-top-50 have stale archetype names — re-score target Session 30)
+- Divergence (current, post Session 29): ALIGNED=29, APEX_HIGH=65, APEX_LOW=3,
+  APEX_LOW_PVC_STRUCTURAL=52
 - Notable Session 39 additions:
     Davison Igbinosun CB: PAA-corrected 68.4 DAY2 CB-3, Tier B, FM-2 CONDITIONAL, +23 MODERATE
     Julian Neal CB: MONITOR tag active — 3-cone gate pending (sub-6.9s = R2, above = R3)
