@@ -5,11 +5,14 @@ tag display, prospect detail drawer, stacking filters, and side-by-side comparis
 No DB writes except through save_apex_rank() and clear_apex_rank(). No business logic.
 """
 
+import math
+
 import pandas as pd
 import streamlit as st
 
 from draftos.db.connect import connect
 from draftos.queries.apex import save_apex_rank, clear_apex_rank, get_apex_detail
+from draftos.queries.historical_comps import get_historical_comps, get_archetype_translation_rate
 from draftos.queries.model_outputs import get_big_board, get_prospect_detail, get_prospect_tags_map
 from draftos.ui.profile_dimensions import get_profile_dimensions
 from scripts.generate_prospect_pdf_2026 import generate_pdf
@@ -485,7 +488,6 @@ def _render_apex_detail(d: dict) -> None:
             return "—"
         try:
             f = float(v)
-            import math
             if math.isnan(f):
                 return "—"
             return format(f, fmt)
@@ -707,7 +709,6 @@ def _render_apex_detail(d: dict) -> None:
         if v is None:
             return False
         if isinstance(v, float):
-            import math
             return not math.isnan(v)
         return str(v).strip().upper() not in ("", "NONE", "N/A")
 
@@ -781,7 +782,6 @@ def _render_apex_detail(d: dict) -> None:
         if v is None:
             return False
         if isinstance(v, float):
-            import math
             return not math.isnan(v)
         return bool(str(v).strip())
 
@@ -834,6 +834,49 @@ def _render_apex_detail(d: dict) -> None:
             """,
             unsafe_allow_html=True,
         )
+
+    # ── Historical Comps ──────────────────────────────────────────────────────
+    _arch_code = d.get("matched_archetype")
+    if _arch_code:
+        with connect() as _hconn:
+            _comps = get_historical_comps(_hconn, _arch_code, limit=3)
+            _rate  = get_archetype_translation_rate(_hconn, _arch_code)
+
+        if _comps:
+            st.markdown("<hr style='border-color:#333;margin:8px 0 12px 0'>", unsafe_allow_html=True)
+            st.markdown(
+                '<div style="font-size:11px;font-weight:700;color:#999;letter-spacing:1px;'
+                'margin-bottom:6px">HISTORICAL COMPS</div>',
+                unsafe_allow_html=True,
+            )
+
+            _hit_pct  = _rate["hit_rate_pct"]
+            _hit_cnt  = _rate["hit_count"]
+            _total    = _rate["total"]
+            _rate_color = "#48BB78" if _hit_pct >= 67 else "#ECC94B" if _hit_pct >= 40 else "#FC8181"
+            st.markdown(
+                f'<span style="font-size:12px;color:#A0AEC0">{_arch_code} translation rate: '
+                f'<strong style="color:{_rate_color}">{_hit_pct}% HIT</strong> '
+                f'({_hit_cnt} of {_total})</span>',
+                unsafe_allow_html=True,
+            )
+
+            _comp_parts = []
+            for _c in _comps:
+                _icon = {"HIT": "✓", "PARTIAL": "~", "MISS": "✗"}.get(_c["translation_outcome"], "")
+                _fm   = f" — {_c['fm_code']}" if _c.get("fm_code") else ""
+                _comp_parts.append(f"{_c['player_name']} ({_icon}{_c['translation_outcome']}{_fm})")
+            st.caption("Mechanism comps: " + " · ".join(_comp_parts))
+
+            with st.expander("Comp details"):
+                for _c in _comps:
+                    _oc = _c["translation_outcome"]
+                    _oc_color = {"HIT": "green", "PARTIAL": "orange", "MISS": "red"}.get(_oc, "gray")
+                    st.markdown(
+                        f"**:{_oc_color}[{_c['player_name']}]** "
+                        f"({_c['era_bracket']}) — {_c['outcome_summary']}",
+                        unsafe_allow_html=False,
+                    )
 
     # ── Eval Confidence ───────────────────────────────────────────────────────
     st.divider()
