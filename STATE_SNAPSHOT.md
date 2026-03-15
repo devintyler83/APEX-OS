@@ -10,7 +10,21 @@ Last Updated (UTC): 2026-03-15T03:17:46.115088+00:00
 
 ## Last Completed Milestone
 
-Session 44 (archetype library rebuild + top-50 re-score) — prompts.py Section B rebuilt from canonical .docx library files. Top-50 re-scored against corrected v2.3 archetype library.
+Session 45 (full 144-prospect re-score against corrected v2.3 archetype library) — All 99 non-top-50 stale prospects re-scored. 0 GEN- labels remain. All 144 active non-cal prospects now carry canonical v2.3 archetype names.
+
+Session 45:
+- Re-scored 99 non-top-50 prospects (stale pre-Session-44 archetype names: DT-3 Scheme Fit,
+  ILB-4 Raw Projection, OG-4 Chess Piece, S-3 Versatile Weapon, S-4 Raw Projection,
+  EDGE-2 Speed Rusher, EDGE-4 Toolbox, TE-4 Chess Piece, OT-4 Developmental Athletic, etc.).
+  All replaced with canonical v2.3 names.
+- Two-pass run: 76/99 first pass (23 rate-limited), then 23/23 retry run — all 99 complete.
+- 0 GEN- archetypes remaining across all 144 active non-cal v2.3 rows.
+- Divergence recomputed (144 prospects): ALIGNED=30, APEX_HIGH=59, APEX_LOW=4,
+  APEX_LOW_PVC_STRUCTURAL=51.
+- Tier dist (all 144 v2.3 active non-cal): ELITE=3, DAY1=30, DAY2=74, DAY3=34, UDFA-P=3.
+- Doctor: PASSED.
+
+Prior: Session 44 (archetype library rebuild + top-50 re-score):
 
 Session 44:
 - prompts.py Section B fully rebuilt from 14 canonical .docx library files (Session 28).
@@ -226,10 +240,9 @@ Prior sessions on record: 12 (DB rebuild), 13 (weekly pipeline), 13b (school/arc
 
 ## Next Milestone (Single Target)
 
-- Session 45: Full 149-prospect APEX re-score against corrected v2.3 archetype library.
-  The 99 non-top-50 prospects still carry pre-Session-44 stale archetype names (DT-3 Scheme Fit,
-  ILB-4 Raw Projection, OG-4 Chess Piece, S-3 Versatile Weapon, etc.). Re-score all 99 with
-  --batch all --force (or targeted --prospect-ids list for non-top-50).
+- Session 46: Additional source ingest (2–3 high-quality sources) — unblocked. Targets:
+  DraftKings, Walter Football, or other T2-quality big boards not yet in source registry.
+  Also: tag trigger re-run post-Session-45 re-score to generate fresh recs against corrected archetypes.
   Neal MONITOR tag — hold until combine 3-cone data.
 
 ---
@@ -268,13 +281,11 @@ SNAPSHOTS: Operational. Latest: snapshot_id=5 (2026-03-14). rows=1007, coverage=
   compute_source_snapshot_metrics → compute_snapshot_coverage →
   compute_snapshot_confidence → verify_snapshot_integrity
 
-APEX: Operational. 131 v2.3 active non-cal + 55 v2.2 active non-cal = 186 total active scored (non-cal)
-  + 12 calibration artifacts. ~10 prospects need re-score with correct position libraries
-  (Session 43 target — see Next Milestone).
-  Scored coverage: ranks 1-150 (with some gaps — targeted PID list method). Ranks 151+ use v2.2 scores.
-  Tiers (v2.3 active non-cal, post Session 42): ELITE=3, DAY1=27, DAY2=67, DAY3=29, UDFA-P=~5.
-  Divergence (current, post Session 42): ALIGNED=45, APEX_HIGH=92, APEX_LOW=3,
-    APEX_LOW_PVC_STRUCTURAL=70.
+APEX: Operational. 144 v2.3 active non-cal scored + 12 calibration artifacts. 0 GEN- archetypes.
+  All 144 carry canonical v2.3 archetype names (Session 45 full re-score complete).
+  Tiers (v2.3 active non-cal, post Session 45): ELITE=3, DAY1=30, DAY2=74, DAY3=34, UDFA-P=3.
+  Divergence (current, post Session 45): ALIGNED=30, APEX_HIGH=59, APEX_LOW=4,
+    APEX_LOW_PVC_STRUCTURAL=51.
   Latest backup: data/apex_51_150_session5_scored.json (563KB).
   Igbinosun (pid=36): CB-3 Press Man Corner 68.4 DAY2, Tier B, FM-2 CONDITIONAL, R2 early–R3 top.
     PAA gate injection applied Session 39. Prior score (CB-2 76.4) corrected. Delta: +23 MODERATE.
@@ -351,23 +362,23 @@ EXPORTS: board_2026_v1_default.csv last produced Session 21. Current for that sn
 35. ~~Session 40-42: UX polish (FM text, compare panel, divergence narrative, tag filter) + position audit~~ COMPLETE
 36. ~~Session 43: Tag triage (147 recs → 204 accepted) + weekly pipeline clean run (rows=1007) + end_session.py hardening~~ COMPLETE
 37. ~~Session 44 (archetype rebuild): prompts.py Section B rebuild, PAA gates, override fix, top-50 re-score, migrations 0042+0043~~ COMPLETE
-38. **Session 45: Full 149-prospect APEX re-score against corrected v2.3 archetype library** ← NEXT
-38. Post-draft audit framework activation (after April 2026 draft)
+38. ~~Session 45: Full 144-prospect APEX re-score — 99 non-top-50 stale archetypes corrected, 0 GEN- remaining~~ COMPLETE
+39. **Session 46: Additional source ingest (2–3 sources) + tag trigger re-run** ← NEXT
+40. Post-draft audit framework activation (after April 2026 draft)
 
 ---
 
 ## APEX Status
 
-- Version: v2.3 (scorer engine + model_version written to DB — aligned Session 29)
+- Version: v2.3 (scorer engine + model_version written to DB — aligned Session 44)
 - v2.3 mechanism fields applied (migration 0040): failure_mode_primary, failure_mode_secondary,
-  signature_play, translation_risk. bust_warning added (migration 0041). All 149 v2.3 rows populated.
-- Active 2026 scored: 149 v2.3 (is_active=1, is_calibration_artifact=0)
+  signature_play, translation_risk. bust_warning added (migration 0041). All 144 v2.3 rows populated.
+- Active 2026 scored: 144 v2.3 (is_active=1, is_calibration_artifact=0). 0 GEN- archetypes.
 - Calibration artifacts: 12 (PIDs: 230,304,313,455,504,880,1050,1278,1371,1391,1729,1925)
   All re-scored Session 26 with correct PIDs and positions.
-- Tier dist (v2.3, top-50 fresh Session 29): ELITE=3, DAY1=26, DAY2=20, DAY3=1
-  (99 non-top-50 have stale archetype names — re-score target Session 30)
-- Divergence (current, post Session 29): ALIGNED=29, APEX_HIGH=65, APEX_LOW=3,
-  APEX_LOW_PVC_STRUCTURAL=52
+- Tier dist (v2.3 all 144, post Session 45): ELITE=3, DAY1=30, DAY2=74, DAY3=34, UDFA-P=3
+- Divergence (current, post Session 45): ALIGNED=30, APEX_HIGH=59, APEX_LOW=4,
+  APEX_LOW_PVC_STRUCTURAL=51
 - Notable Session 39 additions:
     Davison Igbinosun CB: PAA-corrected 68.4 DAY2 CB-3, Tier B, FM-2 CONDITIONAL, +23 MODERATE
     Julian Neal CB: MONITOR tag active — 3-cone gate pending (sub-6.9s = R2, above = R3)
@@ -391,8 +402,8 @@ EXPORTS: board_2026_v1_default.csv last produced Session 21. Current for that sn
 
 ## Divergence Status
 
-Current recompute: post-Session 42 (186 active scored prospects). Total APEX_HIGH=92, APEX_LOW=3.
-(Note: divergence_flags table also contains 12 stale rows in old space-format "APEX HIGH"/"APEX LOW" — ignore those.)
+Current recompute: post-Session 45 (144 active scored prospects). Total APEX_HIGH=59, APEX_LOW=4.
+(Note: divergence_flags table also contains stale rows in old space-format "APEX HIGH"/"APEX LOW" — ignore those.)
 
 Premium actionable signals (confirmed, non-artifact):
 - DOMANI JACKSON CB (pid=108): APEX_HIGH MAJOR +88 — rank #150. New signal from 51-150 batch.
