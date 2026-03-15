@@ -12,6 +12,7 @@ from draftos.db.connect import connect
 from draftos.queries.apex import save_apex_rank, clear_apex_rank, get_apex_detail
 from draftos.queries.model_outputs import get_big_board, get_prospect_detail, get_prospect_tags_map
 from draftos.ui.profile_dimensions import get_profile_dimensions
+from scripts.generate_prospect_pdf_2026 import generate_pdf
 
 # Streamlit ≥ 1.35 supports on_select / selection_mode on st.dataframe
 _ON_SELECT_AVAILABLE = tuple(
@@ -1756,3 +1757,19 @@ else:
                 st.warning("APEX detail record not found despite apex_composite being set.")
         else:
             _render_consensus_card(_pr)
+
+        # PDF export button — available for all prospects regardless of APEX coverage
+        if st.button("📄 Generate Report", key=f"pdf_{_selected_pid}"):
+            with st.spinner("Generating PDF..."):
+                try:
+                    pdf_path = generate_pdf(prospect_id=_selected_pid, season_id=1)
+                    with open(pdf_path, "rb") as _f:
+                        st.download_button(
+                            label="⬇️ Download One-Pager",
+                            data=_f.read(),
+                            file_name=pdf_path.name,
+                            mime="application/pdf",
+                            key=f"dl_{_selected_pid}",
+                        )
+                except Exception as _e:
+                    st.error(f"PDF generation failed: {_e}")

@@ -8,6 +8,18 @@ Changes from v2.2:
   - Red flags required on ALL prospects regardless of score
   - Analytical quality mandate in system prompt Section E
 
+Session 28 rebuild:
+  - Section B fully rebuilt from canonical archetype library .docx files
+  - All archetype names, weight tables, and bumps synchronized to library
+  - C section restored as separate position (was collapsed into OG)
+  - OLB section restored as separate position (was collapsed into ILB)
+  - ILB expanded from 4 to 5 archetypes
+  - S expanded from 4 to 5 archetypes
+  - WR expanded from 5 to 6 archetypes
+  - All stale archetype names corrected
+  - POSITION_PAA_GATES updated to match canonical names
+  - Canonical reference: draftos/docs/apex/archetype_canonical_reference.json
+
 Contains:
   build_system_prompt() -> str   — Full APEX v2.3 framework as system prompt
   build_user_prompt(prospect_data: dict) -> str  — Per-prospect user prompt
@@ -38,18 +50,19 @@ POSITION_PAA_GATES: dict[str, str] = {
 MANDATORY EDGE ARCHETYPE GATE — complete before assigning any archetype:
 
 Q1: How does this player win pass rush reps?
-  → Hand technique + leverage + counter sequencing = EDGE-3
-  → Converting linear speed into corner pressure via bend/dip = EDGE-2
-  → Physical tool dominance without confirmed counter package = EDGE-4
-  → Full-diet pass rush AND run stop on same drives = EDGE-1
+  → Hand technique + leverage + counter sequencing = EDGE-3 Power-Counter Technician
+  → Converting linear speed into corner pressure via bend/dip = EDGE-2 Speed-Bend Specialist
+  → Physical tool dominance without confirmed counter package = EDGE-4 Athletic Dominator
+  → Full-diet pass rush AND run stop on same drives = EDGE-1 Every-Down Disruptor
+  → Scheme-specific deployment only; too light for every-down, insufficient arc speed = EDGE-5 Hybrid Tweener Rusher
 
 Q2: Is there a confirmed counter package off the initial move?
-  → YES and technique-led → EDGE-3
-  → YES and speed-led → EDGE-2
-  → NO → EDGE-4 or EDGE-5
+  → YES and technique-led → EDGE-3 Power-Counter Technician
+  → YES and speed-led → EDGE-2 Speed-Bend Specialist
+  → NO → EDGE-4 Athletic Dominator or EDGE-5 Hybrid Tweener Rusher
 
 Q3: Does the player set the edge against the run on the same drives he generates pass rush?
-  → YES → EDGE-1 candidate
+  → YES → EDGE-1 Every-Down Disruptor candidate
   → NO → do not assign EDGE-1
 
 CRITICAL: EDGE-2 and EDGE-3 are mechanistically opposite.
@@ -61,12 +74,12 @@ Do NOT assign EDGE-3 if the player converts athleticism rather than running hand
 MANDATORY CB ARCHETYPE GATE — complete before assigning any archetype:
 
 Q1: Primary win mechanism?
-  → Anticipatory processing — reads route before the break = CB-1
-  → Spatial QB-read — reads the quarterback's eyes, not the receiver = CB-2
-  → Physical superiority at the catch point / press dominance = CB-3
-  → Slot-specific hand fighting and short-area quickness = CB-4
+  → Anticipatory processing — reads route before the break = CB-1 Anticipatory Lockdown
+  → Spatial QB-read — reads the quarterback's eyes, not the receiver = CB-2 Zone Architect
+  → Physical superiority at the catch point / press dominance = CB-3 Press Man Corner
+  → Slot-specific hand fighting and short-area quickness = CB-4 Slot Specialist
 
-Q2 (MANDATORY FOR CB-2): Man coverage floor confirmed?
+Q2 (MANDATORY FOR CB-2 Zone Architect): Man coverage floor confirmed?
   A CB-2 with no confirmed man coverage floor is a Day 2 pick regardless of zone excellence.
   If man coverage is unconfirmed: capital maximum = Early R2.
 If gap < 3, flag as TWEENER.""",
@@ -75,10 +88,11 @@ If gap < 3, flag as TWEENER.""",
 MANDATORY QB ARCHETYPE GATE — complete before assigning any archetype:
 
 Q1: Processor type?
-  → Full-field processor with arm talent to sustain off-schedule plays = QB-1
-  → Game manager maximizing scheme = QB-4
-  → Athletic-arm hybrid with processing gaps = QB-2 or QB-3
-  → Physical tools only, processing unconfirmed = QB-5
+  → Full-field processor with arm talent to sustain off-schedule plays = QB-1 Field General
+  → Game manager maximizing scheme = QB-4 Game Manager Elevated
+  → Athletic-arm hybrid with processing gaps = QB-2 Dual-Threat Architect or QB-3 Gunslinger
+  → Physical tools only, processing unconfirmed = QB-5 Raw Projection
+  → Production dependent on optimal scheme fit, does not travel = QB-6 System-Elevated Starter
 
 Q2: Smith Rule check — C2 (motivation) weighted at 8% for QB but FM-5 Motivation Cliff
   is the most expensive bust mode at quarterback. Flag any concern explicitly.
@@ -90,35 +104,62 @@ Q3: Processing confirmed against top-25 competition minimum 4 games?
 MANDATORY OT ARCHETYPE GATE — complete before assigning any archetype:
 
 Q1: Speed rush vulnerability confirmed vs. future NFL edge rushers?
-  → Dominant anchor → OT-1 candidate. Functional → OT-2. Developing → OT-4/OT-5.
+  → Dominant anchor + mirror ability, scheme-transcendent = OT-1 Elite Athletic Anchor
+  → Technical precision, hand-work primary = OT-2 Technician
+  → Power/drive-block dominant, limited lateral range = OT-3 Power Mauler
+  → Positional versatility (LT/RT/G/C flex), processing primary = OT-4 Chess Piece
+  → Physical tools only, projection development required = OT-5 Raw Projection
 
 Q2: Zone vs. gap scheme — if single-scheme only, Scheme Versatility caps at 5/10.
 
 Q3: Zabel Rule check — if arm length is insufficient for tackle but processing and
-  versatility are elite, correct classification may be OG (Chess Piece), not a
-  discounted OT. The position move is an upgrade in translation confidence.""",
+  versatility are elite, correct classification may be OG-5 Chess Piece or OG-4 Technician
+  at interior, not a discounted OT. The position move is an upgrade in translation confidence.""",
 
     "OG": """\
 MANDATORY OG ARCHETYPE GATE — complete before assigning any archetype:
 
 Q1: Win mechanism?
-  → Complete pass + run blocking = OG-1
-  → Raw power / mauling = OG-2
-  → Athleticism in zone = OG-3
-  → Processing + versatility without elite physical tools = OG-4/OG-5
+  → Complete pass + run blocking, no exploitable weakness = OG-1 Complete Interior Anchor
+  → Raw power / gap-scheme mauling = OG-2 Mauler
+  → Athleticism in zone / pulling burst = OG-3 Athletic Zone Mauler
+  → Hand technique + pre-snap processing primary = OG-4 Technician
+  → Positional versatility (G/C flex), processing-led = OG-5 Versatile Chess Piece
 
 Q2: Scheme alignment — OG-2 Mauler in a confirmed zone-first landing spot drops to Day 3
   regardless of college production. Note scheme alignment explicitly.""",
+
+    "C": """\
+MANDATORY C ARCHETYPE GATE — complete before assigning any archetype:
+
+Q1: What is the primary win mechanism?
+  → Pre-snap mastery + protection call intelligence, physical tools adequate = C-1 Cerebral Anchor
+  → Elite athleticism + above-average processing = C-2 Complete Interior Presence
+  → Physical dominance in gap/power schemes = C-3 Power Anchor
+  → Zone movement + combination block execution, athleticism primary = C-4 Zone Technician
+  → Athletic tools, developmental processing = C-5 Projection Athlete
+  → Confirmed NFL-caliber player transitioning from guard = C-6 Guard Convert
+
+Q2: Protection call quality — can this center make the correct protection call against
+  complex fronts, zero blitz looks, and late movement packages?
+  → If not reliably confirmed → C-1 and C-2 are unavailable; consider C-4 or C-5.""",
 
     "DT": """\
 MANDATORY DT ARCHETYPE GATE — complete before assigning any archetype:
 
 Q1: What percentage of college pressures were individual 1-on-1 vs. scheme-assisted?
-  → Below 40% → FM-2 flag, DT-3 reclassification consideration.
+  → Below 40% → FM-2 flag, DT-3 Two-Gap Anchor reclassification consideration.
 
 Q2: Penetration / pass rush dominant → use TABLE A weights (Disruptor family).
   Occupation / run defense dominant → use TABLE B weights (Anchor family).
-  Confirm which table applies before scoring.""",
+  Confirm which table applies before scoring.
+
+Archetype summary:
+  DT-1 Interior Wrecker       (TABLE A) — penetrating, disruptive, interior pass rush
+  DT-2 Versatile Disruptor    (TABLE A) — two-way threat, disrupts both phases
+  DT-3 Two-Gap Anchor         (TABLE B) — occupies, controls, run-defense dominant
+  DT-4 Hybrid Penetrator-Anchor (A/B)   — effective in both families, scheme-adaptable
+  DT-5 Pass Rush Specialist   (TABLE A) — rotational pass rush, scheme-specific value""",
 
     "RB": """\
 MANDATORY RB NOTE:
@@ -131,10 +172,12 @@ Receiving backs with 3-down capability = Tier 2 value in the right system only."
 MANDATORY WR ARCHETYPE GATE — complete before assigning any archetype:
 
 Q1: Win mechanism?
-  → Route precision and separation creation = WR-1
-  → Vertical speed creating separation = WR-2
-  → YAC and open-field creation = WR-3
-  → Slot-specific processing = WR-4
+  → Route precision and separation creation = WR-1 Route Technician
+  → Vertical speed creating separation = WR-2 Vertical Separator
+  → YAC and open-field creation (player-generated) = WR-3 YAC Weapon
+  → Contested catch / catch-point specialist = WR-4 Contested Catch Specialist
+  → Slot-specific processing, condensed space = WR-5 Slot Architect
+  → Complete outside weapon — routes + contested catch + separation, all phases = WR-6 Complete Outside Weapon
 
 Q2 (WR-3 YAC gate): Confirm YAC is player-generated, not scheme-generated.
   Screens, jet sweeps, and manufactured touches inflate YAC totals.
@@ -144,13 +187,16 @@ Q2 (WR-3 YAC gate): Confirm YAC is player-generated, not scheme-generated.
 MANDATORY TE ARCHETYPE GATE — complete before assigning any archetype:
 
 Q1: Role profile?
-  → Complete weapon (route running + blocking + seam threat) = TE-1
-  → Mismatch creator / seam threat without blocking = TE-2
-  → Blocking specialist = TE-3
-  → Developmental = TE-4
+  → Wins through pre-snap read + route timing in intermediate zone = TE-1 Seam Anticipator
+  → Wins through size/athleticism mismatch coverage can't match = TE-2 Mismatch Creator
+  → Wins in both phases — receiving creation AND blocking — sustainably = TE-3 Dual-Threat Complete
+  → Wins through contested catch courage + YAC physicality = TE-4 After-Contact Weapon
+  → Wins on physical tools and developmental upside = TE-5 Raw Projection
 
-Q2: TE-2 vs TE-1 gate — does the player have blocking competency above replacement level?
-  → YES → TE-1 candidate. NO → TE-2 maximum.
+Q2: TE-3 vs TE-1/TE-2 gate — does the player win in BOTH phases at a sustained level?
+  → YES (both phases confirmed) → TE-3 Dual-Threat Complete candidate.
+  → Route + timing primary, blocking secondary → TE-1.
+  → Size/athleticism primary, blocking below average → TE-2.
 
 TE runs at 0.80x PVC. Large APEX_LOW_PVC_STRUCTURAL deltas on TE are expected and
 reflect market overvaluation of the position, not archetype errors.""",
@@ -159,10 +205,11 @@ reflect market overvaluation of the position, not archetype errors.""",
 MANDATORY S ARCHETYPE GATE — complete before assigning any archetype:
 
 Q1: Primary role?
-  → Single-high free safety with range and ball skills = S-1
-  → Strong safety / box defender with coverage ability = S-2
-  → Versatile deployment across safety + slot + box = S-3
-  → Developmental with athletic tools but role clarity gaps = S-4
+  → Single-high free safety with range and ball skills = S-1 Centerfielder
+  → Strong safety / box defender with coverage ability = S-2 Box Enforcer
+  → Versatile deployment across safety + slot + box, alignment multiplier = S-3 Multiplier Safety
+  → Man-coverage skill extending safety assignments into slot and boundary = S-4 Coverage Safety
+  → Developmental with athletic tools but role clarity gaps = S-5 Raw Projection
 
 Q2: SOS Gate — were the majority of contested coverage reps against top-50 competition?
   → If not, cap eval_confidence at Tier B maximum.""",
@@ -171,20 +218,39 @@ Q2: SOS Gate — were the majority of contested coverage reps against top-50 com
 MANDATORY ILB ARCHETYPE GATE — complete before assigning any archetype:
 
 Q1: Primary win mechanism?
-  → Processing + tackling + leadership = ILB-1 Green Dot Anchor
+  → Processing + tackling + leadership, defensive QB role = ILB-1 Green Dot Anchor
   → Sideline-to-sideline range + coverage = ILB-2 Coverage Eraser
-  → Blitz specialist / pass rush from LB = ILB-3 Pressure Converter
-  → Physical tools without processing confirmation = ILB-4 Raw Projection
+  → Block-shedding, gap discipline, physical second-level presence = ILB-3 Run-First Enforcer
+  → Multi-alignment versatility, pre-snap conflict creator = ILB-4 Hybrid Chess Piece
+  → Physical tools only, processing developmental = ILB-5 Raw Projection
 
 Q2: Processing confirmed against spread offenses with RPO complexity?
-  → If not → ILB-1 classification requires downgrade to ILB-4.""",
+  → If not → ILB-1 classification requires downgrade to ILB-5 Raw Projection.""",
+
+    "OLB": """\
+MANDATORY OLB ARCHETYPE GATE — complete before assigning any archetype:
+
+Q1: Primary pass rush mechanism?
+  → Elite corner speed + bend around tackle's outside shoulder = OLB-1 Speed-Bend Specialist
+  → Hand technique + leverage + counter sequencing = OLB-2 Hand Fighter / Counter Rusher
+  → Credible threat in both pass rush AND coverage = OLB-3 Hybrid Pass Rush / Coverage Dropper
+  → Physical dominance at point of attack, run-defense primary = OLB-4 Power Bull / Run Defender First
+  → Athletic tools, pass rush technique developmental = OLB-5 Raw Projection / Developmental Rusher
+
+Q2: Coverage floor?
+  → OLB-3 requires confirmed coverage execution at minimum competent level.
+  → Zero confirmed coverage reps → OLB-3 cannot be assigned.
+
+NOTE: OLB runs at 0.85x PVC. APEX_LOW_PVC_STRUCTURAL on OLB-4 is structural, not an error.""",
 }
 
 
 def _normalize_position_for_gate(position: str) -> str:
     """Map raw position string to a POSITION_PAA_GATES key."""
     pos = (position or "").upper().strip()
-    if pos in ("ILB", "OLB", "LB", "MLB"):
+    if pos == "OLB":
+        return "OLB"
+    if pos in ("ILB", "LB", "MLB"):
         return "ILB"
     if pos in ("DT", "IDL", "NT"):
         return "DT"
@@ -272,16 +338,21 @@ POSITION: QB (PVC=1.00)
 Use when position_group IN (QB)
 ----------------------------------------------------------------------
 BASE WEIGHT TABLE:
-  Processing 28% | Athleticism 10% | SchemeVers 18% | CompTough 14%
-  Character  8%  | DevTraj 12%     | Production 8%  | Injury 2%
+  Processing 28% | SchemeVers 18% | CompTough 14% | DevTraj 12%
+  Athleticism 10% | Character 8%  | Production 6% | Injury 4%
+
+ARCHETYPE-SPECIFIC BUMPS:
+  QB-1 Field General: Processing bumps to 32%
+  QB-5 Raw Projection: Character bumps to 25%
+  QB-6 System-Elevated Starter: SchemeVers bumps to 26%
 
 ARCHETYPES:
-  QB-1 Field General          — elite processor, commands the field pre-snap
-  QB-2 Dual-Threat Architect  — balance of arm and legs, scheme-creative
-  QB-3 Gunslinger             — arm talent, takes shots, inconsistent floor
-  QB-4 Game Manager           — system-dependent, low-error, limited ceiling
-  QB-5 Raw Projection         — traits exceed production, scheme familiarity gaps
-  QB-6 System-Elevated Starter — stat-driven but scheme/OL-inflated output
+  QB-1 Field General          — system-transcendent processor, pre-snap mastery, anticipatory thrower
+  QB-2 Dual-Threat Architect  — credible run threat + arm talent, forces defense to cover full field
+  QB-3 Gunslinger             — arm talent, improvisation, attacks any window, high-variance bimodal
+  QB-4 Game Manager Elevated  — wins through efficiency and mistake elimination, two populations
+  QB-5 Raw Projection         — physical tools + developmental trajectory, character-dependent ceiling
+  QB-6 System-Elevated Starter — wins through optimal scheme fit, production does not travel
 
 SAA GATE (MANDATORY before scoring Processing for any QB):
   Triggers if ANY: screen rate >15%, play-action dependency >40%,
@@ -294,42 +365,43 @@ POSITION: RB (PVC=0.70)
 Use when position_group IN (RB)
 ----------------------------------------------------------------------
 BASE WEIGHT TABLE:
-  Processing 15% | Athleticism 20% | SchemeVers 6%  | CompTough 15%
-  Character  10% | DevTraj 12%     | Production 15% | Injury 2%
+  Athleticism 20% | Processing 20% | Production 15% | SchemeVers 15%
+  CompTough 10%   | Character 8%   | Injury 7%      | DevTraj 5%
 
 ARCHETYPE-SPECIFIC BUMPS:
   RB-1 Elite Workhorse / RB-3 Explosive Playmaker: Athleticism bumps to 25%
-  RB-4 Chess Piece: Processing bumps to 25%
+  RB-4 Chess Piece: Processing bumps to 25%, SchemeVers bumps to 20%
 
 ARCHETYPES:
-  RB-1 Elite Workhorse       — 3-down back, pass pro, receiving, power/speed balance
-  RB-2 Receiving Specialist  — weapon in space, receiving back, limited between-tackles
-  RB-3 Explosive Playmaker   — elite burst and acceleration, home run threat
-  RB-4 Chess Piece           — elite processor, situational value, versatile deployment
-  RB-5 Raw Projection        — physical tools with gaps in consistency or role clarity
+  RB-1 Elite Workhorse       — volume carrier winning through contact balance at output
+  RB-2 Receiving Specialist  — third-down weapon, forces mismatch, receiving-back value
+  RB-3 Explosive Playmaker   — elite burst / top-end speed, home run threat in open space
+  RB-4 Chess Piece           — multi-role processor: runner + receiver + pass protector
+  RB-5 Raw Projection        — physical tools present, gaps in consistency or role clarity
 
 ----------------------------------------------------------------------
 POSITION: WR (PVC=0.90)
 Use when position_group IN (WR)
 ----------------------------------------------------------------------
 BASE WEIGHT TABLE:
-  Processing 22% | Athleticism 18% | SchemeVers 14% | CompTough 12%
-  Character  7%  | DevTraj 10%     | Production 16% | Injury 1%
+  Processing 22% | Athleticism 18% | Production 16% | SchemeVers 14%
+  CompTough 12%  | Character 8%    | DevTraj 6%     | Injury 4%
 
 ARCHETYPES:
-  WR-1 Route Technician      — precise route running, creates separation at all levels
-  WR-2 Vertical Separator    — elite speed, stretches defense, big-play ability
-  WR-3 YAC Creator           — after-catch ability, broken tackle, RAC specialist
-  WR-4 Jump Ball Specialist  — size-catch radius, contested catch above rim
-  WR-5 Raw Projection        — elite athleticism, route tree and consistency developing
+  WR-1 Route Technician           — precise route running, creates separation at all levels
+  WR-2 Vertical Separator         — elite speed, stretches defense, phase-1 and phase-2 threat
+  WR-3 YAC Weapon                 — player-generated after-catch ability, broken tackles, RAC specialist
+  WR-4 Contested Catch Specialist — catch-point mechanism, size/positioning over receivers
+  WR-5 Slot Architect             — slot-specific processing, condensed-space separation creator
+  WR-6 Complete Outside Weapon    — all-phases outside receiver: routes + contested catch + YAC
 
 ----------------------------------------------------------------------
 POSITION: TE (PVC=0.80)
 Use when position_group IN (TE)
 ----------------------------------------------------------------------
 BASE WEIGHT TABLE:
-  Processing 20% | Athleticism 15% | SchemeVers 15% | CompTough 14%
-  Character  8%  | DevTraj 12%     | Production 14% | Injury 2%
+  Processing 22% | Athleticism 18% | SchemeVers 16% | CompTough 13%
+  Production 11% | DevTraj 9%      | Character 7%   | Injury 4%
 
 PAA GATE (MANDATORY before scoring Production for any TE):
   Check: What percentage of targets came on designed TE-specific routes (seams,
@@ -339,10 +411,10 @@ PAA GATE (MANDATORY before scoring Production for any TE):
   Note "PAA Gate" in red_flags if triggered.
 
 ARCHETYPES:
-  TE-1 Seam Anticipator      — route + block + seam threat, complete weapon
-  TE-2 Mismatch Creator      — receiving threat, limited blocking, size/speed exploitation
-  TE-3 Blocking Specialist   — inline blocker, Y-TE, run game anchor
-  TE-4 Chess Piece           — deployment versatility, H-back/slot/inline flex
+  TE-1 Seam Anticipator      — pre-snap read + route timing in intermediate zone, seam threat
+  TE-2 Mismatch Creator      — size/athleticism mismatch coverage can't match personnel to
+  TE-3 Dual-Threat Complete  — wins in BOTH phases: receiving creation AND blocking, sustainably
+  TE-4 After-Contact Weapon  — contested catch courage + YAC physicality after the catch
   TE-5 Raw Projection        — physical tools present, role clarity developing
 
 ----------------------------------------------------------------------
@@ -350,30 +422,56 @@ POSITION: OT (PVC=0.90)
 Use when position_group IN (OT)
 ----------------------------------------------------------------------
 BASE WEIGHT TABLE:
-  Processing 22% | Athleticism 16% | SchemeVers 16% | CompTough 14%
-  Character  8%  | DevTraj 10%     | Production 12% | Injury 2%
+  Athleticism 25% | Processing 20% | CompTough 16% | SchemeVers 14%
+  Injury 12%      | DevTraj 8%     | Production 5% | Character Var.
+  (Character: 3 base — scales to 12 for OT-5 Raw Projection; not included in base sum)
+
+ARCHETYPE-SPECIFIC BUMPS:
+  OT-3 Power Mauler: Athleticism adjusts to 20%
+  OT-5 Raw Projection: DevTraj elevates to 15%, Character scales to 12%
 
 ARCHETYPES:
   OT-1 Elite Athletic Anchor — dominant anchor + mirror ability, scheme-transcendent
-  OT-2 Zone Technician       — lateral movement specialist, zone-scheme fit
-  OT-3 Power Road Grader     — gap-scheme mauler, limited lateral range
-  OT-4 Developmental Athletic — physical tools present, technique still developing
-  OT-5 Raw Projection        — size and measurables project, consistency unproven
+  OT-2 Technician            — elite hand technique + anticipatory processing, zone-primary
+  OT-3 Power Mauler          — gap-scheme power dominant, physical at point of attack
+  OT-4 Chess Piece           — multi-position versatility (LT/RT/G/C), processing-led
+  OT-5 Raw Projection        — physical tools project, consistency and technique developing
 
 ----------------------------------------------------------------------
 POSITION: OG (PVC=0.80)
-Use when position_group IN (OG, C, OL)
+Use when position_group IN (OG)
 ----------------------------------------------------------------------
 BASE WEIGHT TABLE:
-  Processing 22% | Athleticism 14% | SchemeVers 16% | CompTough 16%
-  Character  8%  | DevTraj 10%     | Production 12% | Injury 2%
+  CompTough 22% | Processing 20% | Athleticism 15% | SchemeVers 14%
+  Injury 12%    | DevTraj 9%     | Production 5%   | Character 3%
+
+ARCHETYPE-SPECIFIC BUMPS:
+  OG-1 Complete Interior Anchor: Processing bumps to 24%
+  OG-3 Athletic Zone Mauler: Athleticism bumps to 20%
+  OG-5 Versatile Chess Piece: DevTraj bumps to 15%
 
 ARCHETYPES:
-  OG-1 Complete Interior Anchor — pass + run, scheme-versatile, anchor strength
-  OG-2 Mauler                  — pure power, gap-scheme fit, limited mobility
-  OG-3 Zone Puller             — athletic, zone-scheme specialist, pull/reach ability
-  OG-4 Chess Piece             — positional versatility (G/C flex), smart deployment
-  OG-5 Raw Projection          — size/athleticism present, technique developing
+  OG-1 Complete Interior Anchor — elite hand technique + processing + physical will, no weakness
+  OG-2 Mauler                   — physical dominance in gap/power, drive-block force primary
+  OG-3 Athletic Zone Mauler     — zone-blocking specialist, pulling burst, athleticism primary
+  OG-4 Technician               — elite hand technique + pre-snap processing, leverage primary
+  OG-5 Versatile Chess Piece    — G/C flex versatility, processing-led, roster construction value
+
+----------------------------------------------------------------------
+POSITION: C (PVC=0.80)
+Use when position_group IN (C)
+----------------------------------------------------------------------
+BASE WEIGHT TABLE:
+  Processing 28% | Athleticism 18% | SchemeVers 14% | CompTough 12%
+  Character 10%  | DevTraj 8%      | Production 6%  | Injury 4%
+
+ARCHETYPES:
+  C-1 Cerebral Anchor            — pre-snap mastery + protection call intelligence, scheme-transcendent
+  C-2 Complete Interior Presence — elite athleticism compounded by above-average processing
+  C-3 Power Anchor               — physical dominance in gap/power, immovable against interior rushers
+  C-4 Zone Technician            — movement quality + combination block execution, athleticism primary
+  C-5 Projection Athlete         — elite athleticism, developmental processing, high ceiling/bust risk
+  C-6 Guard Convert              — confirmed NFL-caliber player transitioning from guard position
 
 ----------------------------------------------------------------------
 POSITION: IDL / DT (PVC=0.90)
@@ -382,89 +480,109 @@ Use when position_group IN (DT, IDL, NT)
 Two weight table families — select based on STEP 2 pre-assignment:
 
 TABLE A — Disruptor Family (penetration / pass-rush dominant):
-  Processing 18% | Athleticism 22% | SchemeVers 12% | CompTough 14%
-  Character  8%  | DevTraj 10%     | Production 14% | Injury 2%
+  Athleticism 22% | Processing 20% | CompTough 16% | Production 14%
+  SchemeVers 12%  | DevTraj 8%     | Injury 5%     | Character 3%
 
 TABLE B — Anchor Family (occupation / run-defense dominant):
-  Processing 22% | Athleticism 14% | SchemeVers 14% | CompTough 18%
-  Character  8%  | DevTraj 10%     | Production 12% | Injury 2%
+  CompTough 24% | Athleticism 18% | Processing 16% | SchemeVers 15%
+  Production 13% | Injury 8%      | DevTraj 4%     | Character 2%
 
 ARCHETYPES:
-  DT-1 Interior Wrecker  (TABLE A) — penetrating, disruptive, interior pass rush
-  DT-2 Two-Gap Anchor    (TABLE B) — occupies, controls, run-defense dominant
-  DT-3 Scheme Fit        (TABLE B) — role player, system-specific value
-  DT-4 Nose Tackle       (TABLE B) — traditional 0-tech, space-eater
-  DT-5 Raw Projection    (TABLE A) — athletic tools without confirmed technique
+  DT-1 Interior Wrecker        (TABLE A) — penetrating, disruptive, interior pass rush primary
+  DT-2 Versatile Disruptor     (TABLE A) — two-way interior threat, disrupts both phases
+  DT-3 Two-Gap Anchor          (TABLE B) — occupies, controls, run-defense dominant
+  DT-4 Hybrid Penetrator-Anchor (A/B)    — effective in both families, scheme-adaptable
+  DT-5 Pass Rush Specialist    (TABLE A) — rotational pass rusher, scheme-specific value
 
 ----------------------------------------------------------------------
 POSITION: EDGE (PVC=1.00)
 Use when position_group IN (EDGE, DE, OLB-EDGE)
 ----------------------------------------------------------------------
 BASE WEIGHT TABLE:
-  Processing 18% | Athleticism 22% | SchemeVers 14% | CompTough 14%
-  Character  7%  | DevTraj 10%     | Production 14% | Injury 1%
+  Processing 20% | Athleticism 18% | CompTough 14% | SchemeVers 13%
+  DevTraj 12%    | Production 11%  | Injury 7%     | Character 5%
 
 ARCHETYPE-SPECIFIC BUMPS:
-  EDGE-2 Speed Rusher / EDGE-4 Toolbox: Athleticism bumps to 28%
-  EDGE-3 Technician: Processing bumps to 24%
+  EDGE-1 Every-Down Disruptor: CompTough bumps to 16%
+  EDGE-2 Speed-Bend Specialist: Athleticism bumps to 22%
+  EDGE-3 Power-Counter Technician: DevTraj bumps to 15%
+  EDGE-4 Athletic Dominator: Processing adjusts to 16%
+  EDGE-5 Hybrid Tweener Rusher: SchemeVers bumps to 18%
 
 ARCHETYPES:
-  EDGE-1 Every-Down Disruptor — complete: pass rush + run defense + counter package
-  EDGE-2 Speed Rusher         — converts linear speed to pressure via bend/dip
-  EDGE-3 Technician           — hand technique + leverage + counter sequencing
-  EDGE-4 Toolbox              — physical dominance without confirmed counter package
-  EDGE-5 Raw Projection       — measurables project, technique still developing
+  EDGE-1 Every-Down Disruptor     — complete: pass rush + run defense + counter package
+  EDGE-2 Speed-Bend Specialist    — converts linear speed into corner pressure via dip/flatten
+  EDGE-3 Power-Counter Technician — hand technique + leverage + counter sequencing off base power
+  EDGE-4 Athletic Dominator       — wins through superior physical tools; counter development incomplete
+  EDGE-5 Hybrid Tweener Rusher    — scheme-specific deployment; insufficient arc speed or every-down body
 
 ----------------------------------------------------------------------
 POSITION: ILB / LB (PVC=0.85)
-Use when position_group IN (ILB, LB, OLB, MLB)
+Use when position_group IN (ILB, LB, MLB)
 ----------------------------------------------------------------------
 BASE WEIGHT TABLE:
   Processing 25% | Athleticism 15% | SchemeVers 15% | CompTough 13%
-  Character  12% | DevTraj 10%     | Production 8%  | Injury 2%
+  Character 12%  | DevTraj 10%     | Production 8%  | Injury 2%
 
 ARCHETYPES:
-  ILB-1 Green Dot Anchor    — processing + leadership + tackling, defensive QB
-  ILB-2 Coverage Eraser     — sideline-to-sideline range, coverage ability
-  ILB-3 Pressure Converter  — blitz specialist, pass rush from LB alignment
-  ILB-4 Raw Projection      — athletic tools present, processing unconfirmed
+  ILB-1 Green Dot Anchor    — processing + leadership + tackling, defensive QB, pre-snap mastery
+  ILB-2 Coverage Eraser     — sideline-to-sideline range + coverage, eliminates middle of field
+  ILB-3 Run-First Enforcer  — block-shedding, gap discipline, physical second-level presence
+  ILB-4 Hybrid Chess Piece  — multi-alignment versatility, pre-snap conflict creator
+  ILB-5 Raw Projection      — physical tools present, processing developmental
+
+----------------------------------------------------------------------
+POSITION: OLB (PVC=0.85)
+Use when position_group IN (OLB)
+----------------------------------------------------------------------
+BASE WEIGHT TABLE:
+  Athleticism 22% | Processing 20% | SchemeVers 18% | CompTough 13%
+  Production 12%  | Character 8%   | DevTraj 5%     | Injury 2%
+
+ARCHETYPES:
+  OLB-1 Speed-Bend Specialist             — elite corner speed + bend, athleticism is primary weapon
+  OLB-2 Hand Fighter / Counter Rusher     — hand technique + counter sequencing, processing enables counters
+  OLB-3 Hybrid Pass Rush / Coverage Dropper — legitimate threat in both phases, pre-snap conflict
+  OLB-4 Power Bull / Run Defender First   — point-of-attack dominance, edge-setting, gap control
+  OLB-5 Raw Projection / Developmental Rusher — physical upside only, technique developmental
 
 ----------------------------------------------------------------------
 POSITION: CB (PVC=1.00)
 Use when position_group IN (CB)
 ----------------------------------------------------------------------
 BASE WEIGHT TABLE:
-  Processing 24% | Athleticism 20% | SchemeVers 14% | CompTough 14%
-  Character  6%  | DevTraj 10%     | Production 10% | Injury 2%
+  Processing 22% | Athleticism 20% | SchemeVers 16% | CompTough 14%
+  DevTraj 10%    | Character 8%    | Production 7%  | Injury 3%
 
 ARCHETYPE-SPECIFIC BUMPS:
-  CB-3 Press Man Corner: Athleticism bumps to 26%
   CB-1 Anticipatory Lockdown: Processing bumps to 28%
+  CB-3 Press Man Corner: Athleticism bumps to 26%
 
 ARCHETYPES:
-  CB-1 Anticipatory Lockdown  — reads route before break, top-tier processor
-  CB-2 Zone Architect         — spatial awareness, QB-eyes coverage, zone specialist
-  CB-3 Press Man Corner       — physical, press dominance, catch-point contests
-  CB-4 Slot Specialist        — short-area quickness, hand fighting, nickel role
-  CB-5 Raw Projection         — athletic tools present, technique developing
+  CB-1 Anticipatory Lockdown  — reads route before break, top-tier anticipatory processor
+  CB-2 Zone Architect         — spatial QB-read, pattern recognition, zone specialist
+  CB-3 Press Man Corner       — physical superiority, press dominance, catch-point contests
+  CB-4 Slot Specialist        — short-area quickness, hand fighting, condensed space
+  CB-5 Raw Projection         — athletic tools present, technique and processing developing
 
 ----------------------------------------------------------------------
 POSITION: S (PVC=0.90)
 Use when position_group IN (S, FS, SS)
 ----------------------------------------------------------------------
 BASE WEIGHT TABLE:
-  Processing 24% | Athleticism 18% | SchemeVers 14% | CompTough 14%
-  Character  8%  | DevTraj 10%     | Production 10% | Injury 2%
+  Processing 25% | Athleticism 18% | SchemeVers 15% | CompTough 13%
+  Character 10%  | DevTraj 9%      | Production 6%  | Injury 4%
 
 SOS GATE (Strength of Schedule for Safety):
   If majority of contested coverage reps were NOT against top-50 opponents:
   Cap eval_confidence at Tier B. Note in red_flags.
 
 ARCHETYPES:
-  S-1 Centerfielder        — single-high range, ball hawk, deep-third coverage
-  S-2 Box Enforcer         — strong safety, run support, physical presence
-  S-3 Versatile Weapon     — deploy across safety/slot/box, multi-role
-  S-4 Raw Projection       — athletic tools present, role clarity developing
+  S-1 Centerfielder      — single-high range, ball hawk, anticipatory positioning, deep-third
+  S-2 Box Enforcer       — strong safety, run support, physical dominance at point of attack
+  S-3 Multiplier Safety  — alignment versatility across safety/slot/box, pre-snap conflict
+  S-4 Coverage Safety    — man-coverage skill extending into slot and boundary contexts
+  S-5 Raw Projection     — athletic tools present, role clarity and processing developing
 
 ----------------------------------------------------------------------
 FALLBACK: Unknown or LB (generic)
@@ -801,7 +919,7 @@ Field requirements:
 - failure_mode_primary: REQUIRED. One of FM-1 through FM-6 with full name.
 - failure_mode_secondary: REQUIRED. FM code or "NONE".
 - signature_play: REQUIRED. One specific sentence.
-- translation_risk: REQUIRED. One specific forward-looking sentence.
+- translation_risk: REQUIRED. One specific forward-looking NFL scenario sentence.
 """
 
 

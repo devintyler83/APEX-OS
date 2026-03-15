@@ -353,7 +353,7 @@ ARCHETYPE_OVERRIDES: dict[int, dict] = {
         "name": "Colton Hood",
         "position": "CB",
         "forced_archetype": "CB-3",
-        "archetype_label": "CB-3 Athletic Freak — CB-1 Development Pathway Confirmed",
+        "archetype_label": "CB-3 Press Man Corner — CB-1 Development Pathway Confirmed",
         "paa_findings": {
             "Q1": "CLEAR — 83.3 PFF coverage grade, targeted at starter volume and held up under pressure",
             "Q2": "CLEAR — man coverage confirmed at starter level, PFF 70+ in both man and zone contexts",
@@ -380,7 +380,7 @@ ARCHETYPE_OVERRIDES: dict[int, dict] = {
         "name": "Brandon Cisse",
         "position": "CB",
         "forced_archetype": "CB-3",
-        "archetype_label": "CB-3 Athletic Freak — CB-1 Development Pathway NOT Confirmed",
+        "archetype_label": "CB-3 Press Man Corner — CB-1 Development Pathway NOT Confirmed",
         "paa_findings": {
             "Q1": "CLEAR — athleticism and coverage presence confirmed at starter level",
             "Q2": "CLEAR — physical tools and press ability confirmed",
@@ -416,7 +416,7 @@ ARCHETYPE_OVERRIDES: dict[int, dict] = {
         "name": "Jermod McCoy",
         "position": "CB",
         "forced_archetype": "CB-1",
-        "archetype_label": "CB-1 Press-Man Shutdown — FM-4 Medical Flag Active",
+        "archetype_label": "CB-1 Anticipatory Lockdown — FM-4 Medical Flag Active",
         "paa_findings": {
             "Q1": "CLEAR — production grade and assignment execution confirm CB-1 mechanism",
             "Q2": "CLEAR — man coverage dominant mechanism confirmed, anticipatory processing validated",
@@ -450,7 +450,7 @@ ARCHETYPE_OVERRIDES: dict[int, dict] = {
         "name": "Chris Johnson",
         "position": "CB",
         "forced_archetype": "CB-2",
-        "archetype_label": "CB-2 Zone Coverage Technician — Confirmed Correct",
+        "archetype_label": "CB-2 Zone Architect — Confirmed Correct",
         "paa_findings": {
             "Q1": "CLEAR — zone coverage production grade confirmed at starter level",
             "Q2": (
@@ -477,9 +477,9 @@ ARCHETYPE_OVERRIDES: dict[int, dict] = {
         ),
     },
     3236: {
-        "forced_archetype":  "CB-3 Athletic Freak",
+        "forced_archetype":  "CB-3 Press Man Corner",
         "archetype_direction": (
-            "Assigned archetype: CB-3 Athletic Freak — CB-1 Development Pathway Confirmed\n\n"
+            "Assigned archetype: CB-3 Press Man Corner — CB-1 Development Pathway Confirmed\n\n"
             "Rationale: Ponds wins through physical superiority at the line — length, "
             "burst, and press dominance. His primary winning mechanism is athleticism, "
             "not spatial intelligence or zone reading. "
@@ -487,9 +487,9 @@ ARCHETYPE_OVERRIDES: dict[int, dict] = {
             "and processing is developing, but not yet Tier A confirmed against top-25 competition. "
             "The CB-1 pathway flag is a ceiling expander, not a reclassification — it signals "
             "his technique is trending toward CB-1 mechanism. "
-            "Do NOT score as CB-2 Zone Technician — he is not a spatial processor reading "
+            "Do NOT score as CB-2 Zone Architect — he is not a spatial processor reading "
             "the quarterback. CB-2 overweights scheme dependency he does not yet possess. "
-            "Score against CB-3 archetype weights (Athleticism bumped to 28%). "
+            "Score against CB-3 archetype weights (Athleticism bumped to 26%). "
             "Eval Confidence: Tier B. Capital range: R1 Picks 16-32 / Early R2. "
             "Tier A (Picks 1-15) accessible if PAA Q4 processing confirmation clears. "
             "The CB-1 development pathway flag MUST appear in the archetype field or tags."
