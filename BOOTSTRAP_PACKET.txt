@@ -17,7 +17,7 @@ Authoritative State:
 1) STATE_SNAPSHOT.md
 # DraftOS State Snapshot
 
-Last Updated (UTC): 2026-03-15T20:21:50.553899+00:00
+Last Updated (UTC): 2026-03-15T22:41:49.267560+00:00
 
 ---
 
@@ -504,11 +504,11 @@ Inactive (data preserved): ngs_2026 (source_id=29, is_active=0) — model score,
 
 2) System Snapshot Output
 === DRAFTOS SYSTEM SNAPSHOT ===
-generated_utc: 2026-03-15T20:21:49.377326+00:00
+generated_utc: 2026-03-15T22:41:48.553894+00:00
 
 ## Git
 branch: main
-commit: 7d9153fcf3102a3830af7d9347632c10fa1d066f
+commit: c3a751bbf7e987837eddba32b464e7f0e10d4811
 status: clean
 
 ## Tables
@@ -645,6 +645,7 @@ no is_active column
 - scripts\apply_prospect_universe_2026.py
 - scripts\apply_review_queue_mappings_2026.py
 - scripts\audit_position_mismatches_2026.py
+- scripts\audit_position_overrides_2026.py
 - scripts\autoresolve_mapping_review_queue_2026.py
 - scripts\bootstrap_prospects_from_sources_2026.py
 - scripts\build_consensus_2026.py
@@ -670,6 +671,7 @@ no is_active column
 - scripts\export_reports_html.py
 - scripts\export_source_health_csv.py
 - scripts\fix_calibration_divergence_2026.py
+- scripts\fix_concepcion_2026.py
 - scripts\generate_prospect_pdf_2026.py
 - scripts\import_apex_batch_json.py
 - scripts\ingest_combine_2026.py
