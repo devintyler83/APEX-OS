@@ -10,7 +10,25 @@ Last Updated (UTC): 2026-03-15T06:57:52.274913+00:00
 
 ## Last Completed Milestone
 
-Session 46 (historical comp layer + PDF generator rebuild) — Migration 0044 applied. 80 historical comp records seeded (QB/CB/EDGE/WR). PDF generator rebuilt from ReportLab → Playwright HTML→PDF. Streamlit asyncio/NotImplementedError fixed via threading + WindowsProactorEventLoopPolicy.
+Session 47 (PDF generator polish — viewport fix, tier palette alignment, comp flexbox, data fix) — No migrations. No schema changes. Code-only + one DB data fix.
+
+Session 47:
+- generate_prospect_pdf_2026.py: Four targeted fixes applied.
+  1. Viewport fix: `await page.set_viewport_size({"width": 1056, "height": 816})` added before
+     page.goto() — forces Chromium render viewport to match PDF canvas exactly, eliminating dead space.
+  2. Trait color thresholds tightened: 5-level gradient (9.0+ teal, 8.0+ green, 6.5+ gold, 5.0+ orange, below red).
+     Prior 4-level thresholds (8.5/7.0/5.5) were too loose for typical APEX score distributions.
+  3. TIER_PALETTE updated to match Big Board exactly:
+     ELITE dark gold #b8860b | DAY1 green #1a7a1a | DAY2 navy #005090 | DAY3 burnt orange #cc5500
+     UDFA-P purple #6a1a8a | UDFA slate #455a64. tier-badge CSS uses badge_bg (not raw tc hex).
+  4. comp_block header: replaced table layout with flexbox div row — eliminates player name centering
+     artifact. All four header elements (role label / player name / outcome / era) left-aligned in flex row.
+- historical_comps DB fix: comp_id=22 "Adrian Peterson (CB)" corrected to "Patrick Peterson" on CB-1.
+  Was causing wrong comp name on McCoy and other CB-1 prospects.
+- debug_render.html added to .gitignore.
+- No pipeline changes. No doctor required (no DB schema changes).
+
+Prior: Session 46 (historical comp layer + PDF generator rebuild) — Migration 0044 applied. 80 historical comp records seeded (QB/CB/EDGE/WR). PDF generator rebuilt from ReportLab → Playwright HTML→PDF. Streamlit asyncio/NotImplementedError fixed via threading + WindowsProactorEventLoopPolicy.
 
 Session 46:
 - Migration 0044: historical_comps table created (UNIQUE idx on player_name+archetype_code, 4 additional indexes).
@@ -250,7 +268,7 @@ Prior sessions on record: 12 (DB rebuild), 13 (weekly pipeline), 13b (school/arc
 
 ## Next Milestone (Single Target)
 
-- Session 46: Additional source ingest (2–3 high-quality sources) — unblocked. Targets:
+- Session 48: Additional source ingest (2–3 high-quality sources) — unblocked. Targets:
   DraftKings, Walter Football, or other T2-quality big boards not yet in source registry.
   Also: tag trigger re-run post-Session-45 re-score to generate fresh recs against corrected archetypes.
   Neal MONITOR tag — hold until combine 3-cone data.
