@@ -10,6 +10,36 @@ Last Updated (UTC): 2026-03-15T22:41:49.267560+00:00
 
 ## Last Completed Milestone
 
+Session 48 (PDF generator v4 — bullets fix, contrast pass, positional badge gate, Concepcion remediation) — No migrations. No schema changes. Code-only + one DB data fix (Concepcion).
+
+Session 48:
+- generate_prospect_pdf_2026.py v4: Full rebuild with four layers of fixes:
+  1. Bullets fix: _bullets() was splitting on \n only — but APEX scoring pipeline stores
+     strengths/red_flags as prose paragraphs (3 sentences, no newlines). Added sentence-boundary
+     fallback: re.split(r'(?<=[.!?])\s+(?=[A-Z])', text) when no \n present. Now returns 3 bullets.
+  2. Contrast pass (full): three-tier color hierarchy applied —
+     #999 (least important: scarcity note, comp italic mech, PVC footnote, "Pending evaluation.")
+     #aaa (secondary labels: footer, Eval Confidence, Divergence label, section nav labels,
+           .slbl, .arch-code, radar SVG axis labels, comp era bracket, FM tag non-active, Archetype Pending)
+     #bbb (muted body: trait labels .tl, .badge default, comp summary body text)
+     FM inactive segment label: #888 (clearly "off" but legible)
+  3. Positional rank badge gate: pos_rank_s only rendered when pos_rank != rank.
+     Suppressed when both numbers are equal (e.g. #1 overall who is also #1 at position).
+  4. Layout fixes from prior session: radar flex-wrap, sf-box min-height:0,
+     divergence callout moved inside .comps-region, rp-footer margin-top removed, SVG 100%/viewBox.
+- fix_concepcion_2026.py (new): KC Concepcion remediation — deactivated ghost pids 3516/4324,
+  fixed display_name casing "Kc"→"KC", wiped 2 ILB apex_scores rows, wiped divergence_flags.
+  Re-scored as WR: WR-1 Route Technician 66.1 DAY2.
+- audit_position_overrides_2026.py (new): read-only audit of all 27 TOP50_POSITION_OVERRIDES
+  against canonical DB position_group. All 27 clean post-Concepcion removal.
+- run_apex_scoring_2026.py: removed stale TOP50_POSITION_OVERRIDES[3] ILB entry for Concepcion.
+  Scoring priority: TOP50_POSITION_OVERRIDES → position_raw → position_group.
+- KNOWN GAP (migration pending): divergence_flags.apex_favors is stored as INTEGER (0/1 boolean),
+  not TEXT. Divergence narratives in PDF fall back to "mechanism traits" for all prospects.
+  Migration needed: ALTER TABLE divergence_flags ADD COLUMN apex_favors_text TEXT;
+  populate from run_apex_scoring_2026.py scoring pipeline at divergence-write time.
+- Doctor: PASSED. No DB schema changes. No migrations.
+
 Session 47 (PDF generator polish — viewport fix, tier palette alignment, comp flexbox, data fix) — No migrations. No schema changes. Code-only + one DB data fix.
 
 Session 47:
@@ -268,10 +298,11 @@ Prior sessions on record: 12 (DB rebuild), 13 (weekly pipeline), 13b (school/arc
 
 ## Next Milestone (Single Target)
 
-- Session 48: Additional source ingest (2–3 high-quality sources) — unblocked. Targets:
+- Session 49: Additional source ingest (2–3 high-quality sources) — unblocked. Targets:
   DraftKings, Walter Football, or other T2-quality big boards not yet in source registry.
-  Also: tag trigger re-run post-Session-45 re-score to generate fresh recs against corrected archetypes.
-  Neal MONITOR tag — hold until combine 3-cone data.
+  Also: apex_favors migration — convert divergence_flags.apex_favors INTEGER→TEXT, populate
+  from scoring pipeline so PDF divergence narratives show specific trait phrases instead of
+  "mechanism traits" fallback. Neal MONITOR tag — hold until combine 3-cone data.
 
 ---
 
