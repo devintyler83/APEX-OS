@@ -13,7 +13,7 @@ BOOTSTRAP_FILE = ROOT / "BOOTSTRAP_PACKET.txt"
 # -- UPDATE THIS EVERY SESSION -----------------------------------------------
 # Set to the session number you are currently closing.
 # The validation gate uses this to detect stale milestone content.
-CURRENT_SESSION = 43   # <-- change this before running end_session.py
+CURRENT_SESSION = 44   # <-- change this before running end_session.py
 # ----------------------------------------------------------------------------
 
 

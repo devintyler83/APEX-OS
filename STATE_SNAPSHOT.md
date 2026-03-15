@@ -10,9 +10,9 @@ Last Updated (UTC): 2026-03-14T23:17:06.069048+00:00
 
 ## Last Completed Milestone
 
-Session 29 (archetype library rebuild + top-50 re-score) — prompts.py Section B rebuilt from canonical .docx library files. Top-50 re-scored against corrected v2.3 archetype library.
+Session 44 (archetype library rebuild + top-50 re-score) — prompts.py Section B rebuilt from canonical .docx library files. Top-50 re-scored against corrected v2.3 archetype library.
 
-Session 29:
+Session 44:
 - prompts.py Section B fully rebuilt from 14 canonical .docx library files (Session 28).
   All 14 positions have their own section (C and OLB restored as separate sections).
   Archetype names corrected: EDGE-2 Speed-Bend Specialist, EDGE-3 Power-Counter Technician,
@@ -226,8 +226,8 @@ Prior sessions on record: 12 (DB rebuild), 13 (weekly pipeline), 13b (school/arc
 
 ## Next Milestone (Single Target)
 
-- Session 30: Full 149-prospect APEX re-score against corrected v2.3 archetype library.
-  The 99 non-top-50 prospects still carry pre-Session-28 stale archetype names (DT-3 Scheme Fit,
+- Session 45: Full 149-prospect APEX re-score against corrected v2.3 archetype library.
+  The 99 non-top-50 prospects still carry pre-Session-44 stale archetype names (DT-3 Scheme Fit,
   ILB-4 Raw Projection, OG-4 Chess Piece, S-3 Versatile Weapon, etc.). Re-score all 99 with
   --batch all --force (or targeted --prospect-ids list for non-top-50).
   Neal MONITOR tag — hold until combine 3-cone data.
@@ -350,8 +350,8 @@ EXPORTS: board_2026_v1_default.csv last produced Session 21. Current for that sn
 34. ~~Session 39: APEX ranks 51-150 scoring expansion (99 prospects) + Igbinosun PAA re-score~~ COMPLETE
 35. ~~Session 40-42: UX polish (FM text, compare panel, divergence narrative, tag filter) + position audit~~ COMPLETE
 36. ~~Session 43: Tag triage (147 recs → 204 accepted) + weekly pipeline clean run (rows=1007) + end_session.py hardening~~ COMPLETE
-37. ~~Session 29 (archetype rebuild): prompts.py Section B rebuild, PAA gates, override fix, top-50 re-score, migrations 0042+0043~~ COMPLETE
-38. **Session 30: Full 149-prospect APEX re-score against corrected v2.3 archetype library** ← NEXT
+37. ~~Session 44 (archetype rebuild): prompts.py Section B rebuild, PAA gates, override fix, top-50 re-score, migrations 0042+0043~~ COMPLETE
+38. **Session 45: Full 149-prospect APEX re-score against corrected v2.3 archetype library** ← NEXT
 38. Post-draft audit framework activation (after April 2026 draft)
 
 ---
