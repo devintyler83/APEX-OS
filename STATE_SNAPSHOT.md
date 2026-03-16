@@ -10,6 +10,31 @@ Last Updated (UTC): 2026-03-16T00:53:21.232905+00:00
 
 ## Last Completed Milestone
 
+Session 49 (apex_favors_text, PDF polish — FM legend, white text, bullet unclip) — Migration 0045 applied.
+
+Session 49:
+- Migration 0045: ALTER TABLE divergence_flags ADD COLUMN apex_favors_text TEXT.
+  Populated at divergence-write time by run_apex_scoring_2026.py --batch divergence.
+  APEX_HIGH/APEX_LOW_PVC_STRUCTURAL → mechanism name + " profile" (e.g. "Elite Pass Rusher profile").
+  APEX_LOW → FM code + title-cased label + " risk" (e.g. "FM-2 Conditional risk").
+  ALIGNED → NULL. 114/144 rows populated; 30 ALIGNED rows correctly NULL.
+- run_apex_scoring_2026.py: _make_apex_favors_text() helper added. Divergence SELECT extended
+  to include matched_archetype + failure_mode_primary from apex_scores (no extra join).
+  apex_favors_text written to divergence_flags INSERT (19 columns → 19 values).
+- generate_prospect_pdf_2026.py:
+  1. FM legend: white 6.5pt monospace line below FM risk bar showing active FM names
+     (e.g. "FM-3 Processing Wall  ·  FM-6 Role Mismatch"). No dict needed — name from stored string.
+  2. overflow:hidden removed from .rp CSS — fixes sf-box bullet clipping in Chromium flex/grid layout.
+     html,body overflow:hidden still enforces page boundary.
+  3. Bullet char limit raised 165→360 — eliminates mid-sentence … truncation in strengths/red_flags.
+  4. capital_context font-size 6.5px→8px, line-height 1.4→1.5 (readability on mobile).
+  5. All grey text (#aaa, #bbb, #999, #666, #e0e0e0, #d0d0d0, #b8c4d8) → #ffffff.
+  6. divergence_narrative: uses apex_favors_text from DB instead of fallback "mechanism traits".
+- app/app.py: all grey text (#A0AEC0, #718096, #999, #666, #888, #bbb, #e0e0e0, #E2E8F0) → #ffffff.
+- Doctor: PASSED. No pipeline changes. Sources/consensus/snapshot unchanged.
+- KNOWN ISSUE (pending): pid=27 (TJ Parker EDGE Clemson) — duplicate active pids with stale
+  display_name formatting. Audit query provided; fix deferred to next session.
+
 Session 48 (PDF generator v4 — bullets fix, contrast pass, positional badge gate, Concepcion remediation) — No migrations. No schema changes. Code-only + one DB data fix (Concepcion).
 
 Session 48:
@@ -298,11 +323,9 @@ Prior sessions on record: 12 (DB rebuild), 13 (weekly pipeline), 13b (school/arc
 
 ## Next Milestone (Single Target)
 
-- Session 49: Additional source ingest (2–3 high-quality sources) — unblocked. Targets:
-  DraftKings, Walter Football, or other T2-quality big boards not yet in source registry.
-  Also: apex_favors migration — convert divergence_flags.apex_favors INTEGER→TEXT, populate
-  from scoring pipeline so PDF divergence narratives show specific trait phrases instead of
-  "mechanism traits" fallback. Neal MONITOR tag — hold until combine 3-cone data.
+- Session 50: TJ Parker duplicate pid audit + display_name fix (query result in hand).
+  Additional source ingest deferred to post-pro-days (closer to April).
+  Neal MONITOR tag — hold until combine 3-cone data ingested.
 
 ---
 
@@ -356,7 +379,7 @@ APEX: Operational. 144 v2.3 active non-cal scored + 12 calibration artifacts. 0 
   Keylan Rutledge (pid=136): TOP50_POSITION_OVERRIDES OG added Session 37 (position_raw='G' fix).
   Igbinosun (pid=36): ARCHETYPE_OVERRIDES[36] added Session 39 with PAA gate findings.
   Ghost cleanup (Session 39): pid=3559, 4369 (Klare dups) is_active=0. pid=4347 (Ponds LB) is_active=0.
-  Migrations applied: 0001–0043. Next migration: 0044.
+  Migrations applied: 0001–0045. Next migration: 0046.
     Migration 0040 (apex_v23_mechanism_fields): failure_mode_primary, failure_mode_secondary,
       signature_play, translation_risk columns added to apex_scores — APPLIED. All 149 v2.3 rows populated.
     Migration 0041 (apex_bust_warning): bust_warning column added — APPLIED.
