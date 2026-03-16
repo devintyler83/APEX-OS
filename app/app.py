@@ -101,7 +101,7 @@ _TAG_PILL_COLORS: dict[str, tuple[str, str, str]] = {
     "Value Zone":         ("#1a2e1a", "#2d5a2d", "#7defa7"),
     "Smith Rule":         ("#2e0000", "#5a0000", "#ef4444"),
     "CRUSH":              ("#2e2400", "#5a4800", "#ffd666"),
-    "Walk-On Flag":       ("#1a1a1a", "#333333", "#aaaaaa"),
+    "Walk-On Flag":       ("#1a1a1a", "#333333", "#ffffff"),
     "Two-Way Premium":    ("#1a2e28", "#2d5040", "#5de8a0"),
     "Schwesinger Rule":   ("#1a2e1a", "#2d5a2d", "#7defa7"),
 }
@@ -345,7 +345,7 @@ _APEX_TIER_BADGE: dict[str, tuple[str, str]] = {
     "DAY2":   ("#2e7d32", "#ffffff"),
     "DAY3":   ("#f57f17", "#000000"),
     "UDFA-P": ("#546e7a", "#ffffff"),
-    "UDFA":   ("#37474f", "#cccccc"),
+    "UDFA":   ("#37474f", "#ffffff"),
 }
 
 # Score text colors by tier
@@ -442,16 +442,16 @@ def _trait_bar_html(label: str, val: float | None) -> str:
     if val is None:
         return (
             f'<div style="display:flex;align-items:center;margin-bottom:6px">'
-            f'<div style="width:175px;font-size:12px;color:#777">{label}</div>'
+            f'<div style="width:175px;font-size:12px;color:#ffffff">{label}</div>'
             f'<div style="flex:1;background:#222;border-radius:3px;height:8px;margin:0 10px"></div>'
-            f'<div style="width:28px;text-align:right;font-size:12px;color:#555">—</div>'
+            f'<div style="width:28px;text-align:right;font-size:12px;color:#ffffff">—</div>'
             f'</div>'
         )
     pct   = min(max(val / 10.0 * 100, 0), 100)
     color = _bar_color(val)
     return (
         f'<div style="display:flex;align-items:center;margin-bottom:6px">'
-        f'<div style="width:175px;font-size:12px;color:#bbb">{label}</div>'
+        f'<div style="width:175px;font-size:12px;color:#ffffff">{label}</div>'
         f'<div style="flex:1;background:#222;border-radius:3px;height:8px;margin:0 10px">'
         f'<div style="width:{pct:.0f}%;background:{color};height:100%;border-radius:3px"></div></div>'
         f'<div style="width:28px;text-align:right;font-size:12px;color:{color};font-weight:700">{val:.1f}</div>'
@@ -475,7 +475,7 @@ def _render_apex_detail(d: dict) -> None:
     conf   = d.get("confidence_band") or "—"
     ras    = d.get("ras_score") or d.get("ras_total")
 
-    pos_color = _POS_BADGE_COLORS.get(pos, "#555555")
+    pos_color = _POS_BADGE_COLORS.get(pos, "#ffffff")
     rank_str  = f"#{int(crank)}" if crank is not None and pd.notna(crank) else "—"
     ras_str   = f"{float(ras):.2f}" if ras is not None and pd.notna(ras) else "—"
 
@@ -523,18 +523,18 @@ def _render_apex_detail(d: dict) -> None:
                 <div style="display:flex;justify-content:flex-end;align-items:baseline;gap:24px">
                     <div style="text-align:center">
                         <div style="font-size:36px;font-weight:800;color:#63B3ED">{raw_str}</div>
-                        <div style="font-size:11px;color:#A0AEC0;text-transform:uppercase;letter-spacing:1px">Player Grade</div>
+                        <div style="font-size:11px;color:#ffffff;text-transform:uppercase;letter-spacing:1px">Player Grade</div>
                     </div>
                     <div style="text-align:center">
                         <div style="font-size:36px;font-weight:800;color:#48BB78">{comp_str}</div>
-                        <div style="font-size:11px;color:#A0AEC0;text-transform:uppercase;letter-spacing:1px">Draft Value</div>
+                        <div style="font-size:11px;color:#ffffff;text-transform:uppercase;letter-spacing:1px">Draft Value</div>
                     </div>
                     <div style="text-align:center">
                         <span style="background:{tier_badge_bg};color:white;padding:6px 14px;
                         border-radius:6px;font-size:14px;font-weight:700">{tier or "—"}</span>
                     </div>
                 </div>
-                <div style="font-size:12px;color:#718096;margin-top:6px;text-align:right">
+                <div style="font-size:12px;color:#ffffff;margin-top:6px;text-align:right">
                     RPG {raw_str} × {pvc_str} ({pos}) = APEX {comp_str}
                 </div>
             </div>
@@ -597,7 +597,7 @@ def _render_apex_detail(d: dict) -> None:
         prof_col1, prof_col2 = st.columns([4, 1])
         with prof_col1:
             st.markdown(
-                '<div style="font-size:12px;font-weight:700;color:#999;letter-spacing:1px;'
+                '<div style="font-size:12px;font-weight:700;color:#ffffff;letter-spacing:1px;'
                 'margin-bottom:8px">PLAYER PROFILE</div>',
                 unsafe_allow_html=True,
             )
@@ -678,10 +678,10 @@ def _render_apex_detail(d: dict) -> None:
     arch_html = f"""
 <div style="background:#1a1a2a;border:1px solid #2a2a40;border-radius:8px;
             padding:12px 16px;margin:6px 0">
-  <div style="font-size:11px;color:#666;letter-spacing:1px;margin-bottom:6px">ARCHETYPE</div>
+  <div style="font-size:11px;color:#ffffff;letter-spacing:1px;margin-bottom:6px">ARCHETYPE</div>
   <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-    <span style="font-size:16px;font-weight:700;color:#e0e0e0">{arch}</span>
-    <span style="font-size:13px;color:#888">Fit: {fit_str}</span>
+    <span style="font-size:16px;font-weight:700;color:#ffffff">{arch}</span>
+    <span style="font-size:13px;color:#ffffff">Fit: {fit_str}</span>
     <span style="background:{gap_bg};color:{gap_text};padding:3px 10px;border-radius:999px;
                  font-size:11px;font-weight:700">{gap_display}</span>
   </div>
@@ -714,12 +714,12 @@ def _render_apex_detail(d: dict) -> None:
 
     if _fm_is_present(fm_primary):
         fm_code    = str(fm_primary)[:4]
-        fm_color   = _FM_COLORS.get(fm_code, "#718096")
+        fm_color   = _FM_COLORS.get(fm_code, "#ffffff")
 
         fm_secondary_html = ""
         if _fm_is_present(fm_secondary):
             fm_sec_code  = str(fm_secondary)[:4]
-            fm_sec_color = _FM_COLORS.get(fm_sec_code, "#718096")
+            fm_sec_color = _FM_COLORS.get(fm_sec_code, "#ffffff")
             fm_secondary_html = (
                 f'<span style="background:{fm_sec_color};color:white;padding:4px 10px;'
                 f'border-radius:6px;font-size:12px;font-weight:600;margin-left:8px">'
@@ -736,7 +736,7 @@ def _render_apex_detail(d: dict) -> None:
             f"""
             <div style="background:#1A202C;border:1px solid #2D3748;border-radius:12px;
                         padding:16px;margin:8px 0 4px 0">
-                <div style="font-size:11px;color:#718096;text-transform:uppercase;
+                <div style="font-size:11px;color:#ffffff;text-transform:uppercase;
                             letter-spacing:1px;margin-bottom:8px">Failure Mode Risk</div>
                 <span style="background:{fm_color};color:white;padding:6px 14px;
                 border-radius:6px;font-size:13px;font-weight:700">{fm_primary}</span>
@@ -754,15 +754,15 @@ def _render_apex_detail(d: dict) -> None:
     capital_html = f"""
 <div style="background:#1a1a2a;border:1px solid #2a2a40;border-radius:8px;
             padding:12px 16px;margin:6px 0 14px 0">
-  <div style="font-size:11px;color:#666;letter-spacing:1px;margin-bottom:8px">DRAFT CAPITAL</div>
+  <div style="font-size:11px;color:#ffffff;letter-spacing:1px;margin-bottom:8px">DRAFT CAPITAL</div>
   <div style="display:flex;gap:40px;flex-wrap:wrap">
     <div>
-      <div style="font-size:11px;color:#666;margin-bottom:2px">Base</div>
-      <div style="font-size:16px;font-weight:700;color:#e0e0e0">{cap_base}</div>
+      <div style="font-size:11px;color:#ffffff;margin-bottom:2px">Base</div>
+      <div style="font-size:16px;font-weight:700;color:#ffffff">{cap_base}</div>
     </div>
     <div>
-      <div style="font-size:11px;color:#666;margin-bottom:2px">Adjusted (PVC)</div>
-      <div style="font-size:16px;font-weight:700;color:#e0e0e0">{cap_adj}</div>
+      <div style="font-size:11px;color:#ffffff;margin-bottom:2px">Adjusted (PVC)</div>
+      <div style="font-size:16px;font-weight:700;color:#ffffff">{cap_adj}</div>
     </div>
   </div>
 </div>
@@ -793,7 +793,7 @@ def _render_apex_detail(d: dict) -> None:
                         padding:12px 16px;border-radius:0 8px 8px 0;margin:12px 0">
                 <div style="font-size:11px;color:#4299E1;text-transform:uppercase;
                             letter-spacing:1px;margin-bottom:4px">Signature Play</div>
-                <div style="color:#E2E8F0;font-size:14px">{sig_play}</div>
+                <div style="color:#ffffff;font-size:14px">{sig_play}</div>
             </div>
             """,
             unsafe_allow_html=True,
@@ -805,7 +805,7 @@ def _render_apex_detail(d: dict) -> None:
         st.markdown("✅ **Strengths**")
         if _v23_present(strengths):
             st.markdown(
-                f'<div style="color:#E2E8F0;font-size:13px;line-height:1.6">{strengths}</div>',
+                f'<div style="color:#ffffff;font-size:13px;line-height:1.6">{strengths}</div>',
                 unsafe_allow_html=True,
             )
         else:
@@ -815,7 +815,7 @@ def _render_apex_detail(d: dict) -> None:
         st.markdown("🚩 **Red Flags**")
         if _v23_present(red_flags):
             st.markdown(
-                f'<div style="color:#E2E8F0;font-size:13px;line-height:1.6">{red_flags}</div>',
+                f'<div style="color:#ffffff;font-size:13px;line-height:1.6">{red_flags}</div>',
                 unsafe_allow_html=True,
             )
         else:
@@ -829,7 +829,7 @@ def _render_apex_detail(d: dict) -> None:
                         padding:12px 16px;border-radius:0 8px 8px 0;margin:12px 0">
                 <div style="font-size:11px;color:#F6AD55;text-transform:uppercase;
                             letter-spacing:1px;margin-bottom:4px">Translation Risk</div>
-                <div style="color:#E2E8F0;font-size:14px">{trans_risk}</div>
+                <div style="color:#ffffff;font-size:14px">{trans_risk}</div>
             </div>
             """,
             unsafe_allow_html=True,
@@ -845,7 +845,7 @@ def _render_apex_detail(d: dict) -> None:
         if _comps:
             st.markdown("<hr style='border-color:#333;margin:8px 0 12px 0'>", unsafe_allow_html=True)
             st.markdown(
-                '<div style="font-size:11px;font-weight:700;color:#999;letter-spacing:1px;'
+                '<div style="font-size:11px;font-weight:700;color:#ffffff;letter-spacing:1px;'
                 'margin-bottom:6px">HISTORICAL COMPS</div>',
                 unsafe_allow_html=True,
             )
@@ -855,7 +855,7 @@ def _render_apex_detail(d: dict) -> None:
             _total    = _rate["total"]
             _rate_color = "#48BB78" if _hit_pct >= 67 else "#ECC94B" if _hit_pct >= 40 else "#FC8181"
             st.markdown(
-                f'<span style="font-size:12px;color:#A0AEC0">{_arch_code} translation rate: '
+                f'<span style="font-size:12px;color:#ffffff">{_arch_code} translation rate: '
                 f'<strong style="color:{_rate_color}">{_hit_pct}% HIT</strong> '
                 f'({_hit_cnt} of {_total})</span>',
                 unsafe_allow_html=True,
@@ -998,7 +998,7 @@ def _render_compare_panel(name_a: str, name_b: str, board_df: pd.DataFrame) -> N
     st.subheader("⚖️ Comparison")
     hdr_lbl, hdr_a, hdr_b = st.columns([2, 3, 3])
     with hdr_lbl:
-        st.markdown('<div style="font-size:11px;color:#666;letter-spacing:1px">FIELD</div>', unsafe_allow_html=True)
+        st.markdown('<div style="font-size:11px;color:#ffffff;letter-spacing:1px">FIELD</div>', unsafe_allow_html=True)
     with hdr_a:
         st.markdown(f'<div style="font-size:14px;font-weight:700;color:#63B3ED">{name_a}</div>', unsafe_allow_html=True)
     with hdr_b:
@@ -1007,7 +1007,7 @@ def _render_compare_panel(name_a: str, name_b: str, board_df: pd.DataFrame) -> N
     st.markdown("<hr style='border-color:#333;margin:4px 0 8px 0'>", unsafe_allow_html=True)
 
     for label, va, vb, direction, raw_a, raw_b in compare_rows:
-        style_a = style_b = "color:#E2E8F0"
+        style_a = style_b = "color:#ffffff"
         if direction and raw_a is not None and raw_b is not None:
             try:
                 fa, fb = float(raw_a), float(raw_b)
@@ -1026,7 +1026,7 @@ def _render_compare_panel(name_a: str, name_b: str, board_df: pd.DataFrame) -> N
 
         col_lbl, col_a, col_b = st.columns([2, 3, 3])
         with col_lbl:
-            st.markdown(f'<div style="font-size:11px;color:#718096;padding:3px 0">{label}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div style="font-size:11px;color:#ffffff;padding:3px 0">{label}</div>', unsafe_allow_html=True)
         with col_a:
             st.markdown(f'<div style="font-size:13px;{style_a};padding:3px 0">{va}</div>', unsafe_allow_html=True)
         with col_b:

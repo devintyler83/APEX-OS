@@ -1437,6 +1437,35 @@ def _run_prospect_ids(
     )
 
 
+def _make_apex_favors_text(
+    flag: str,
+    matched_archetype: str | None,
+    failure_mode_primary: str | None,
+) -> str | None:
+    """
+    Build a short human-readable phrase describing what APEX weights differently:
+      APEX_HIGH + APEX_LOW_PVC_STRUCTURAL → archetype mechanism name + " profile"
+        e.g. "EDGE-1 Elite Pass Rusher" → "Elite Pass Rusher profile"
+      APEX_LOW → failure mode risk phrase
+        e.g. "FM-2 CONDITIONAL" → "FM-2 Conditional risk"
+      ALIGNED  → None
+    """
+    if flag in ("APEX_HIGH", "APEX_LOW_PVC_STRUCTURAL"):
+        if matched_archetype:
+            # Strip leading "POS-N " to isolate the mechanism name
+            name = re.sub(r"^[A-Z]+-\d+\s+", "", matched_archetype).strip()
+            return f"{name} profile" if name else None
+        return None
+    if flag == "APEX_LOW":
+        if failure_mode_primary:
+            parts = failure_mode_primary.strip().split(None, 1)
+            code  = parts[0]                              # "FM-2"
+            label = parts[1].title() if len(parts) > 1 else ""
+            return f"{code} {label} risk".strip() if label else f"{code} risk"
+        return None
+    return None  # ALIGNED
+
+
 def _run_divergence_batch(conn, season_id: int, model_version: str, apply: bool) -> None:
     """
     Recompute divergence flags for all scored prospects using rank-relative method.
@@ -1476,12 +1505,14 @@ def _run_divergence_batch(conn, season_id: int, model_version: str, apply: bool)
         """
         SELECT
             a.prospect_id,
-            p.position_group     AS position,
+            p.position_group         AS position,
             a.apex_composite,
             a.apex_tier,
             a.capital_adjusted,
             c.consensus_rank,
-            c.tier               AS consensus_tier
+            c.tier                   AS consensus_tier,
+            a.matched_archetype,
+            a.failure_mode_primary
         FROM apex_scores a
         JOIN prospects p
           ON p.prospect_id = a.prospect_id
@@ -1557,6 +1588,11 @@ def _run_divergence_batch(conn, season_id: int, model_version: str, apply: bool)
             flag = "APEX_LOW"
 
         favors = 1 if rank_delta > 0 else (-1 if rank_delta < 0 else 0)
+        favors_text = _make_apex_favors_text(
+            flag,
+            row["matched_archetype"],
+            row["failure_mode_primary"],
+        )
 
         rows_to_write.append((
             pid, season_id, now, model_version,
@@ -1568,7 +1604,7 @@ def _run_divergence_batch(conn, season_id: int, model_version: str, apply: bool)
             raw_delta,     # divergence_raw_delta — diagnostic
             None,          # rounds_diff — deprecated, keep NULL
             flag, mag, favors,
-            pos_tier,
+            pos_tier, favors_text,
         ))
 
     # Print dry-run summary before any writes
@@ -1618,8 +1654,8 @@ def _run_divergence_batch(conn, season_id: int, model_version: str, apply: bool)
                consensus_ovr_rank, consensus_tier, consensus_round,
                divergence_score, divergence_rank_delta, divergence_raw_delta,
                rounds_diff, divergence_flag, divergence_mag, apex_favors,
-               position_tier)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+               position_tier, apex_favors_text)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             row_vals,
         )

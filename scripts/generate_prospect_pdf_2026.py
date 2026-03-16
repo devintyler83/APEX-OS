@@ -52,14 +52,14 @@ def _arch_label(a: str) -> str:
 
 def _tier_color(tier: str) -> str:
     return {"ELITE":"#a855f7","DAY1":"#f5c518","DAY2":"#3b82f6",
-            "DAY3":"#6b7280","UDFA":"#374151","UDFA-P":"#374151"}.get(
-        (tier or "").upper(), "#6b7280")
+            "DAY3":"#ffffff","UDFA":"#374151","UDFA-P":"#374151"}.get(
+        (tier or "").upper(), "#ffffff")
 
 def _fm_bg_border(fm: str) -> tuple[str,str]:
     n = int(m.group(1)) if (m := re.search(r"FM-(\d+)", fm or "")) else 0
     return {1:("#2a1005","#f97316"),2:("#1a0f2a","#a855f7"),3:("#0a1829","#3b82f6"),
             4:("#2a0505","#ef4444"),5:("#2a1a05","#f59e0b"),6:("#051a0f","#10b981")}.get(
-        n, ("#1a1d2e","#6b7280"))
+        n, ("#1a1d2e","#ffffff"))
 
 def _trunc(text: str, n: int) -> str:
     if not text or len(text) <= n: return text or ""
@@ -86,8 +86,8 @@ def _capital_context_html(position: str) -> str:
     if not note:
         return ""
     return (
-        f'<div style="font-size:6.5px;color:#999;line-height:1.4;'
-        f'margin-top:4px;font-style:italic;">{note}</div>'
+        f'<div style="font-size:8px;color:#ffffff;line-height:1.5;'
+        f'margin-top:5px;font-style:italic;">{note}</div>'
     )
 
 
@@ -135,7 +135,8 @@ def _fetch_prospect_data(conn, prospect_id: int, season_id: int) -> dict:
     data["tag_list"] = [(r["tag_name"],r["tag_color"]) for r in tags]
 
     d = conn.execute(
-        "SELECT divergence_flag,divergence_rank_delta,divergence_score,rounds_diff,apex_favors "
+        "SELECT divergence_flag,divergence_rank_delta,divergence_score,rounds_diff,"
+        "apex_favors,apex_favors_text "
         "FROM divergence_flags "
         "WHERE prospect_id=? AND season_id=? ORDER BY div_id DESC LIMIT 1",
         (prospect_id, season_id)).fetchone()
@@ -143,7 +144,7 @@ def _fetch_prospect_data(conn, prospect_id: int, season_id: int) -> dict:
     data["divergence_rank_delta"] = d["divergence_rank_delta"] if d else None
     data["divergence_score"]      = d["divergence_score"]      if d else None
     data["rounds_diff"]           = d["rounds_diff"]           if d else None
-    data["apex_favors"]           = d["apex_favors"]           if d else None
+    data["apex_favors_text"]      = d["apex_favors_text"]      if d else None
 
     pr = conn.execute(
         "SELECT COUNT(*)+1 AS pr FROM prospect_consensus_rankings pcr "
@@ -239,7 +240,7 @@ def _trait_table(data: dict, tier_col: str) -> str:
         if val is None:
             return (f'<tr><td class="tl">{label}</td>'
                     f'<td class="tbg"><div class="tbf" style="width:0;background:#1e2235;"></div></td>'
-                    f'<td class="tv" style="color:#6b7280;">—</td></tr>')
+                    f'<td class="tv" style="color:#ffffff;">—</td></tr>')
         pct  = float(val) * 10
         col  = ("#00d4aa" if val>=9.0 else   # teal — elite
                 "#34d399" if val>=8.0 else   # green — above average
@@ -338,7 +339,7 @@ def _radar_chart_svg(data: dict) -> str:
         labels += (
             f'<text x="{lx:.1f}" y="{ly:.1f}" '
             f'text-anchor="middle" dominant-baseline="middle" '
-            f'font-size="5.5" fill="#aaa">{label}</text>\n'
+            f'font-size="5.5" fill="#ffffff">{label}</text>\n'
         )
 
     svg = (
@@ -395,12 +396,12 @@ def _fm_risk_bar_html(fm_primary: str, fm_secondary: str = None) -> str:
             bg          = col + "55"
             border      = f"1px solid {col}"
             opacity     = "0.85"
-            label_color = "#ccc"
+            label_color = "#ffffff"
         else:
             bg          = "#111318"
             border      = "1px solid #1c2035"
             opacity     = "1.0"
-            label_color = "#888"
+            label_color = "#ffffff"
 
         segments += (
             f'<div style="flex:1;background:{bg};border:{border};opacity:{opacity};'
@@ -410,11 +411,26 @@ def _fm_risk_bar_html(fm_primary: str, fm_secondary: str = None) -> str:
             f'</div>'
         )
 
+    # Build legend from active FM full strings (e.g. "FM-3 Processing Wall")
+    legend_parts = []
+    if primary_code and fm_primary:
+        legend_parts.append(fm_primary.strip())
+    if secondary_code and fm_secondary:
+        legend_parts.append(fm_secondary.strip())
+    legend_html = ""
+    if legend_parts:
+        legend_text = "  ·  ".join(legend_parts)
+        legend_html = (
+            f'<div style="font-family:monospace;font-size:6.5pt;color:#ffffff;'
+            f'margin-top:3px;letter-spacing:0.02em;">{legend_text}</div>'
+        )
+
     return (
         f'<div style="margin:0 0 8px 0;flex-shrink:0;">'
         f'<div style="font-family:monospace;font-size:5.5pt;letter-spacing:1px;'
-        f'color:#aaa;text-transform:uppercase;margin-bottom:4px;">Failure Mode Risk</div>'
+        f'color:#ffffff;text-transform:uppercase;margin-bottom:4px;">Failure Mode Risk</div>'
         f'<div style="display:flex;gap:2px;height:18px;">{segments}</div>'
+        f'{legend_html}'
         f'</div>'
     )
 
@@ -425,12 +441,9 @@ def _build_divergence_narrative(data: dict) -> str | None:
     """
     Returns a one-sentence divergence narrative, or None if ALIGNED.
 
-    Pulls from: divergence_flag, divergence_score, rounds_diff,
-                apex_favors, matched_archetype, apex_composite.
-    Note: apex_favors in DB is an INTEGER (0/1 boolean), not text —
-    falls back to "mechanism traits" when not a human-readable string.
-    Migration needed: convert apex_favors to TEXT in divergence_flags
-    and populate from scoring pipeline.
+    Pulls from: divergence_flag, divergence_rank_delta, rounds_diff, apex_favors_text.
+    apex_favors_text is populated by run_apex_scoring_2026.py --batch divergence
+    (migration 0045). Falls back to "mechanism traits" if not yet populated.
     """
     flag = (data.get("divergence_flag") or "").strip()
     if flag == "ALIGNED" or not flag:
@@ -438,11 +451,6 @@ def _build_divergence_narrative(data: dict) -> str | None:
 
     name   = data.get("display_name") or data.get("full_name") or "This prospect"
     rounds = data.get("rounds_diff")
-
-    # apex_favors in DB is INTEGER — only use if it's a non-empty string
-    apex_favors_raw = data.get("apex_favors")
-    apex_favors = (apex_favors_raw if isinstance(apex_favors_raw, str)
-                   and apex_favors_raw.strip() else "")
 
     # Direction
     if flag == "APEX_HIGH":
@@ -460,7 +468,8 @@ def _build_divergence_narrative(data: dict) -> str | None:
     else:
         rank_phrase = "meaningfully"
 
-    trait_phrase = apex_favors if apex_favors else "mechanism traits"
+    favors_text  = (data.get("apex_favors_text") or "").strip()
+    trait_phrase = favors_text if favors_text else "mechanism traits"
 
     sentence = (
         f"APEX rates {name} {rank_phrase} {direction} consensus because the model weights "
@@ -485,7 +494,7 @@ def _divergence_callout_html(narrative: str, flag: str) -> str:
         f'padding:6px 10px;margin:6px 0;border-radius:0 4px 4px 0;flex-shrink:0;">'
         f'<div style="font-size:7px;font-weight:700;letter-spacing:0.08em;'
         f'color:{label_color};margin-bottom:3px;">{label}</div>'
-        f'<div style="font-size:8.5px;color:#d0d0d0;line-height:1.4;">{narrative}</div>'
+        f'<div style="font-size:8.5px;color:#ffffff;line-height:1.4;">{narrative}</div>'
         f'</div>'
     )
 
@@ -525,7 +534,7 @@ def _build_html(data: dict, comps: dict) -> str:
         "UDFA-P": {"border": "#6a1a8a", "atm": "rgba(106,26,138,0.10)", "badge": "rgba(106,26,138,0.20)"},
         "UDFA":   {"border": "#455a64", "atm": "rgba(69,90,100,0.08)",  "badge": "rgba(69,90,100,0.15)"},
     }
-    pal      = TIER_PALETTE.get(tier, {"border":"#6b7280","atm":"transparent","badge":"rgba(107,114,128,0.12)"})
+    pal      = TIER_PALETTE.get(tier, {"border":"#ffffff","atm":"transparent","badge":"rgba(192,192,192,0.12)"})
     tc       = pal["border"]
     atm      = pal["atm"]
     badge_bg = pal["badge"]
@@ -555,12 +564,12 @@ def _build_html(data: dict, comps: dict) -> str:
 
     sig_clean = _trunc(sig_play, 280)
 
-    str_lines = _bullets(strengths, 3, 165)
-    rf_lines  = _bullets(redflags,  3, 165)
+    str_lines = _bullets(strengths, 3, 360)
+    rf_lines  = _bullets(redflags,  3, 360)
 
     def bullet_rows(lines, dot_col):
         if not lines:
-            return '<tr><td style="color:#999;font-style:italic;font-size:7pt;">Pending evaluation.</td></tr>'
+            return '<tr><td style="color:#ffffff;font-style:italic;font-size:7pt;">Pending evaluation.</td></tr>'
         rows = ""
         for l in lines:
             rows += (f'<tr><td style="vertical-align:top;padding-right:6px;">'
@@ -575,7 +584,7 @@ def _build_html(data: dict, comps: dict) -> str:
         sign = "+" if (div_delta or 0) > 0 else ""
         dc   = "#00d4aa" if (div_delta or 0)>0 else "#ef4444" if (div_delta or 0)<-5 else "#f5c518"
         delta_str = f" ({sign}{div_delta})" if div_delta is not None else ""
-        div_html = (f'<div style="font-size:6.5pt;font-family:monospace;color:#aaa;">'
+        div_html = (f'<div style="font-size:6.5pt;font-family:monospace;color:#ffffff;">'
                     f'Divergence <span style="color:{dc};font-weight:700;">{div_flag}{delta_str}</span></div>')
 
     tag_map = {"green":"#00d4aa","red":"#ef4444","blue":"#3b82f6","gold":"#f5c518"}
@@ -583,22 +592,22 @@ def _build_html(data: dict, comps: dict) -> str:
     if tag_list:
         pills = ""
         for tn,tc2 in tag_list:
-            c2 = tag_map.get(tc2,"#6b7280")
+            c2 = tag_map.get(tc2,"#ffffff")
             pills += (f'<span style="font-size:5.5pt;font-weight:600;padding:2px 6px;border-radius:3px;'
                       f'border:1px solid {c2}22;background:{c2}11;color:{c2};margin-right:4px;">{tn}</span>')
         tags_html = f'<div style="margin-bottom:6px;flex-wrap:wrap;display:flex;gap:3px;">{pills}</div>'
 
-    conf_html = (f'<div style="font-family:monospace;font-size:6.5pt;color:#aaa;margin-bottom:3px;">'
-                 f'Eval Confidence <span style="color:#aaa;">{eval_conf}</span></div>') if eval_conf else ""
+    conf_html = (f'<div style="font-family:monospace;font-size:6.5pt;color:#ffffff;margin-bottom:3px;">'
+                 f'Eval Confidence <span style="color:#ffffff;">{eval_conf}</span></div>') if eval_conf else ""
 
     def comp_block(comp, role_label, role_color, icon, active_fm):
         if not comp: return ""
         out = comp["translation_outcome"]
-        oc  = {"HIT":"#00d4aa","PARTIAL":"#f5c518","MISS":"#ef4444"}.get(out,"#6b7280")
+        oc  = {"HIT":"#00d4aa","PARTIAL":"#f5c518","MISS":"#ef4444"}.get(out,"#ffffff")
 
         fm_tag = ""
         for code in re.findall(r"FM-\d+", comp.get("fm_code") or ""):
-            col = "#ef4444" if code in active_fm else "#aaa"
+            col = "#ef4444" if code in active_fm else "#ffffff"
             fm_tag += f' <span style="color:{col};font-size:6pt;font-weight:700;">{code}</span>'
 
         summary = _trunc(comp.get("outcome_summary") or "", 210)
@@ -617,11 +626,11 @@ def _build_html(data: dict, comps: dict) -> str:
                          color:{oc};white-space:nowrap;flex-shrink:0;">{comp['player_name']}</span>
             <span style="font-family:monospace;font-size:6.5pt;color:{oc};
                          white-space:nowrap;flex-shrink:0;">{out}{fm_tag}</span>
-            <span style="font-family:monospace;font-size:6pt;color:#aaa;
+            <span style="font-family:monospace;font-size:6pt;color:#ffffff;
                          white-space:nowrap;margin-left:auto;flex-shrink:0;">{era}</span>
           </div>
-          <div style="font-size:7.5pt;color:#bbb;line-height:1.5;">{summary}</div>
-          {'<div style="font-size:6.5pt;color:#999;line-height:1.4;margin-top:3px;font-style:italic;">'+mech+'</div>' if mech else ''}
+          <div style="font-size:7.5pt;color:#ffffff;line-height:1.5;">{summary}</div>
+          {'<div style="font-size:6.5pt;color:#ffffff;line-height:1.4;margin-top:3px;font-style:italic;">'+mech+'</div>' if mech else ''}
         </div>"""
 
     active_fm_set = set(re.findall(r"FM-\d+", fm_pri or ""))
@@ -638,7 +647,7 @@ def _build_html(data: dict, comps: dict) -> str:
         comps_html = f"""
         <div style="margin-top:auto;padding-top:8px;">
           <div style="font-family:monospace;font-size:5.5pt;letter-spacing:1.5px;
-                      color:#aaa;text-transform:uppercase;margin-bottom:6px;">Historical Comps</div>
+                      color:#ffffff;text-transform:uppercase;margin-bottom:6px;">Historical Comps</div>
           {ceiling_html}{fmrisk_html}
         </div>"""
 
@@ -647,7 +656,7 @@ def _build_html(data: dict, comps: dict) -> str:
     fm_bar           = _fm_risk_bar_html(fm_pri, fm_sec)
     capital_context  = _capital_context_html(position)
 
-    pvc_note = (f'<div style="font-family:monospace;font-size:5.5pt;color:#999;text-align:center;margin-top:4px;">'
+    pvc_note = (f'<div style="font-family:monospace;font-size:5.5pt;color:#ffffff;text-align:center;margin-top:4px;">'
                 f'RPG {rpg_s} × PVC {pvc:.2f} = APEX {apex_s}</div>') if rpg and apex else ""
 
     # Divergence callout — rendered inside comps-region above historical comps
@@ -719,11 +728,11 @@ html, body {{
   font-family: 'DM Mono', monospace;
   font-size: 6.5pt; font-weight: 500;
   padding: 2px 7px; border-radius: 3px;
-  border: 1px solid #1c2035; color: #bbb;
+  border: 1px solid #1c2035; color: #ffffff;
 }}
 
 .badge.pos {{ border-color: {tc}; color: {tc}; font-weight: 700; }}
-.badge.hi  {{ border-color: #6b7280; color: #e8eaf0; }}
+.badge.hi  {{ border-color: #ffffff; color: #e8eaf0; }}
 
 .score-box {{
   border: 1px solid #1c2035;
@@ -744,7 +753,7 @@ html, body {{
 
 .slbl {{
   font-family: 'DM Mono', monospace;
-  font-size: 5.5pt; color: #aaa; letter-spacing: 1px;
+  font-size: 5.5pt; color: #ffffff; letter-spacing: 1px;
   text-transform: uppercase; display: block; text-align: center; margin-top: 1px;
 }}
 
@@ -765,7 +774,7 @@ html, body {{
 .inner-trait {{ width: 100%; border-collapse: collapse; }}
 .inner-trait tr {{ height: auto; }}
 .tl {{
-  font-size: 6pt; color: #bbb; font-weight: 500;
+  font-size: 6pt; color: #ffffff; font-weight: 500;
   white-space: nowrap; padding-right: 5px; width: 52px;
   font-family: 'DM Sans', sans-serif; vertical-align: middle;
   padding-bottom: 4px;
@@ -805,7 +814,6 @@ html, body {{
   display: flex;
   flex-direction: column;
   height: 8.5in;
-  overflow: hidden;
 }}
 
 .arch-row {{
@@ -816,7 +824,7 @@ html, body {{
 }}
 
 .arch-code {{
-  font-family: 'DM Mono', monospace; font-size: 7pt; color: #aaa;
+  font-family: 'DM Mono', monospace; font-size: 7pt; color: #ffffff;
   background: #060810; border: 1px solid #1c2035;
   border-radius: 3px; padding: 2px 7px; margin-top: 3px;
   flex-shrink: 0; white-space: nowrap;
@@ -905,14 +913,14 @@ html, body {{
   </div>
 
   <div style="font-family:'DM Mono',monospace;font-size:5.5pt;letter-spacing:1.5px;
-              color:#aaa;text-transform:uppercase;margin-bottom:6px;">Player Profile</div>
+              color:#ffffff;text-transform:uppercase;margin-bottom:6px;">Player Profile</div>
   {trait_table_html}
   <div class="radar-wrap">{radar_svg}</div>
 
   <div class="lp-footer">
     <div style="margin-bottom:5px;">
       <div style="font-family:'DM Mono',monospace;font-size:5.5pt;letter-spacing:1px;
-                  color:#aaa;text-transform:uppercase;margin-bottom:2px;">Draft Capital</div>
+                  color:#ffffff;text-transform:uppercase;margin-bottom:2px;">Draft Capital</div>
       <div style="font-family:'Bebas Neue',sans-serif;font-size:13pt;
                   color:#ffffff;letter-spacing:0.5px;line-height:1;">{cap_clean}</div>
       {capital_context}
@@ -930,7 +938,7 @@ html, body {{
     <div style="min-width:0;">
       {'<div class="arch-code">'+arch_code+'</div>' if arch_code else ''}
       {'<div class="arch-name">'+arch_label+'</div>' if arch_label
-       else '<div style="font-family:Bebas Neue,sans-serif;font-size:14pt;color:#aaa;">Archetype Pending</div>'}
+       else '<div style="font-family:Bebas Neue,sans-serif;font-size:14pt;color:#ffffff;">Archetype Pending</div>'}
     </div>
   </div>
 
@@ -939,7 +947,7 @@ html, body {{
   <div class="sig-block">
     <div style="font-family:'DM Mono',monospace;font-size:5.5pt;letter-spacing:1.5px;
                 color:#3b82f6;text-transform:uppercase;margin-bottom:4px;">Signature Play</div>
-    <div style="font-size:8pt;color:#b8c4d8;line-height:1.5;font-style:italic;">{sig_clean if sig_clean else "Pending evaluation."}</div>
+    <div style="font-size:8pt;color:#ffffff;line-height:1.5;font-style:italic;">{sig_clean if sig_clean else "Pending evaluation."}</div>
   </div>
 
   <div class="sf-grid">
@@ -962,9 +970,9 @@ html, body {{
 
   <div class="rp-footer">
     <div style="font-family:'Bebas Neue',sans-serif;font-size:9pt;
-                letter-spacing:3px;color:#aaa;">DraftOS 2026</div>
+                letter-spacing:3px;color:#ffffff;">DraftOS 2026</div>
     <div style="font-family:'DM Mono',monospace;font-size:6pt;
-                color:#aaa;text-align:right;line-height:1.6;">
+                color:#ffffff;text-align:right;line-height:1.6;">
       Generated {date_str}<br>{rank_s} · {position} · {school}
     </div>
   </div>
