@@ -10,6 +10,25 @@ Last Updated (UTC): 2026-03-17T02:51:28.515068+00:00
 
 ## Last Completed Milestone
 
+Session 52 (Position comp seeding batch 2 — RB/TE/OT/OG/C/IDL/ILB/OLB/S) — 78 rows seeded, schema complete.
+
+Session 52:
+- seed_position_comps_batch2.py: Seeds 78 position comp records across 9 new positions.
+  RB: 15 | TE: 12 | OT: 10 | OG: 6 | C: 8 | IDL: 7 | ILB: 6 | OLB: 7 | S: 7.
+  (Trent Richardson RB-1 was 79th record but skipped — already in DB as is_fm_reference=1 FM-2 row.)
+  Bug found and fixed during session: CHECK constraints on historical_comps require
+    translation_outcome IN ('HIT','PARTIAL','MISS') and comp_confidence IN ('A','B','C').
+    Initial records used 'BUST' and 'HIGH'/'MEDIUM' — INSERT OR IGNORE silently discarded all.
+    Fixed to 'MISS' / 'A' / 'B' before apply run. All 78 now inserted correctly.
+  All rows: is_fm_reference=0, pre_draft_signal=NULL. INSERT OR IGNORE idempotent.
+- Total historical_comps position comps (is_fm_reference=0):
+  C=8, CB=17, EDGE=16, IDL=7, ILB=6, OG=6, OLB=7, OT=10, QB=17, RB=15, S=7, TE=12, WR=24.
+  Full positional library complete across all 13 APEX positions.
+- No schema changes (Migration 0046 already applied in Session 51).
+- Doctor: PASSED.
+- Next: Session 53 — inject historical_comps into APEX scoring prompt.
+  Pull 2 comp records per prospect based on matched_archetype + fm_code match.
+
 Session 51 (Migration 0046 + FM reference seeding — pre_draft_signal column, 35 FM records) — Migration 0046 applied.
 
 Session 51:
@@ -344,10 +363,10 @@ Prior sessions on record: 12 (DB rebuild), 13 (weekly pipeline), 13b (school/arc
 
 ## Next Milestone (Single Target)
 
-- Session 52: Seed remaining 9 position comp files (RB, TE, OT, OG, C, IDL, ILB, OLB, S)
-  into historical_comps using same seed script pattern (seed_position_comps_batch2.py).
-  After Session 52, historical_comps goes from 109 to ~250+ records covering all 13 positions
-  plus all 6 FM codes. Session 53 is prompt injection.
+- Session 53: Inject historical_comps into APEX scoring prompt.
+  Pull 2 comp records per prospect based on matched_archetype + fm_code match.
+  historical_comps is now complete: 152 total rows (74 existing + 78 new position comps + FM refs).
+  All 13 APEX positions have HIT and MISS/bust examples.
   Also: TJ Parker duplicate pid audit (KNOWN ISSUE from Session 49) still pending.
 
 ---
