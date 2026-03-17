@@ -10,6 +10,45 @@ Last Updated (UTC): 2026-03-17T06:05:45.271118+00:00
 
 ## Last Completed Milestone
 
+Session 57 (TJ Parker pid fix + divergence triage — 40 premium signals bucketed) — board clean.
+
+Session 57:
+- TJ Parker (EDGE, Clemson) pid fix:
+  pid=3789 "TJ Parker" EDGE Clemson (is_active=1, 0 sources) — deactivated. Ghost confirmed.
+  pid=3539 "T.j.parker" EDGE Clemson (is_active=0, 4 SPM rows) — 4 rows repointed to pid=27.
+    Sources repointed: bleacherreport_2026, combine_ranks_2026, nflcom_2026, combine_2026.
+    No duplicate conflicts (clean repoint, no DEDUP-DELETE needed).
+  Parker post-fix: sources_covered 9->12, consensus_rank #84->#46, divergence +61 MAJOR -> +23 MODERATE.
+  Parker was another coverage artifact — not a major market inefficiency signal.
+- Consensus rebuilt: 1005 rows.
+- Divergence recomputed post-Parker-fix:
+  Full premium board (QB/CB/EDGE/S, sources_covered>=5): 34 signals audited.
+- Divergence triage completed — 40 total signals bucketed:
+  ACCEPT (new genuine signals — tagging deferred to S58):
+    Daylen Everette CB +69 (11 src, #88, CB-3 Press Man, DAY1)
+    Malik Muhammad CB +63 (13 src, #89, CB-3 Press Man, DAY1)
+    Jaishawn Barham EDGE +54 (9 src, #114, EDGE-4 Athletic Dom, DAY2)
+    Davison Igbinosun CB +46 (13 src, #68, CB-3 Press Man, DAY1) — PAA-corrected
+    Hezekiah Masses CB +55 (9 src, #121, CB-4 Slot, DAY2)
+    Romello Height EDGE +28 (13 src, #72, EDGE-4 Athletic Dom, DAY2)
+    Derrick Moore EDGE +20 (13 src, #65, EDGE-4 Athletic Dom, DAY2)
+  CONDITIONAL (signal present, gate open):
+    Julian Neal CB +42 — MONITOR tag active (3-cone gate still open)
+    TJ Parker EDGE +23 — post-fix moderate signal, well-covered
+    Treydan Stukes CB +54 — 7 sources, CB-5 Raw Projection (borderline)
+    Keionte Scott CB +21 — 7 sources, CB-4 Slot (borderline coverage)
+  DISMISS (archetype-structural, not market miss):
+    Jadon Canady CB +77 — CB-5 #183 (projection archetype, not a miss)
+    Domani Jackson CB +36 / Tacario Davis CB +34 — CB-5 Raw Projection low coverage
+    LT Overton EDGE +37 / Anthony Lucas EDGE +29 — EDGE-5 Hybrid Tweener
+    Michael Taaffe S +25 — S-5 Raw Projection, DAY3 53.6
+    Nadame Tucker EDGE +15 — EDGE-5 DAY3
+  ALREADY TAGGED / MINOR: Hood, Josephs, D.Moore, C.Johnson, Rivers, Abney, Howell, Faulk,
+    Thieneman, Cisse, Terrell, McCoy, Mesidor, Nussmeier (all MINOR or previously accepted)
+- Doctor: PASSED (pre-session close).
+- NOTE: New Divergence Alert tags for Everette/Muhammad/Barham/Masses/Height/D.Moore deferred to S58.
+- NOTE: Antonio Williams 1 JSON parse failure (Session 54) — single retry still pending.
+
 Session 56 (SPM dead-PID repoint + consensus rebuild + divergence recompute) — coverage artifacts resolved.
 
 Session 56:
@@ -431,11 +470,10 @@ Prior sessions on record: 12 (DB rebuild), 13 (weekly pipeline), 13b (school/arc
 
 ## Next Milestone (Single Target)
 
-- Session 57: Divergence board triage with corrected source coverage.
-  Filter premium APEX_HIGH signals for sources_covered >= 5 to identify genuine market inefficiency.
-  39 premium APEX_HIGH signals on board — systematic triage needed (accept/dismiss each).
+- Session 58: Accept new Divergence Alert tags for 7 confirmed signals:
+  Everette CB, Muhammad CB, Barham EDGE, Masses CB, Height EDGE, D.Moore EDGE, Igbinosun CB.
   Then: Antonio Williams retry (1 JSON parse failure from Session 54 top50 run).
-  Then: TJ Parker duplicate pid audit (pid=27 EDGE, +61 APEX_HIGH, KNOWN ISSUE from Session 49).
+  Then: Dismiss structural-noise signals (Canady, Taaffe, Tucker, Overton, A.Lucas) via tag workflow.
 
 ---
 
@@ -599,30 +637,37 @@ EXPORTS: board_2026_v1_default.csv last produced Session 21. Current for that sn
 
 ## Divergence Status
 
-Current recompute: post-Session 56 (144 active scored, SPM dead-PID repoint applied).
-Total: ALIGNED=25, APEX_HIGH=64, APEX_LOW=3, APEX_LOW_PVC_STRUCTURAL=52.
-NOTE: D'Angelo Ponds coverage artifact fully resolved — no longer on list.
+Current recompute: post-Session 57 (Parker pid fix applied).
+Total (premium QB/CB/EDGE/S/OT, sources_covered>=5): 34 signals. Full distribution not re-queried.
 
-Top premium APEX_HIGH signals (post-Session 56, sources_covered-corrected):
-- GABE JACAS EDGE: +81 MAJOR
-- R MASON THOMAS EDGE: +80 MAJOR
-- JADON CANADY CB: +77 MAJOR
-- DAYLEN EVERETTE CB: +69 MAJOR
-- TREYDAN STUKES S: +68 MAJOR (also appears as CB — position artifact, score for primary pos)
-- MALIK MUHAMMAD CB: +63 MAJOR
-- TJ PARKER EDGE (pid=27): +61 MAJOR — duplicate pid audit PENDING (KNOWN ISSUE S49)
-- HEZEKIAH MASSES CB: +55 MAJOR
-- MANSOOR DELANE CB: +54 MAJOR
-- JAISHAWN BARHAM EDGE: +54 MAJOR
-- (39 total premium APEX_HIGH — full triage pending Session 57)
+Confirmed premium APEX_HIGH signals (genuine, ready for Divergence Alert tags — S58):
+- DAYLEN EVERETTE CB (pid=?): +69 MAJOR, 11 src, #88, CB-3 Press Man, DAY1 74.2
+- MALIK MUHAMMAD CB: +63 MAJOR, 13 src, #89, CB-3 Press Man, DAY1 71.8
+- HEZEKIAH MASSES CB: +55 MAJOR, 9 src, #121, CB-4 Slot, DAY2 63.7
+- JAISHAWN BARHAM EDGE: +54 MAJOR, 9 src, #114, EDGE-4 Athletic Dom, DAY2 64.7
+- DAVISON IGBINOSUN CB (pid=36): +46 MAJOR, 13 src, #68, CB-3 Press Man, DAY1 73.2 — PAA-corrected
+- ROMELLO HEIGHT EDGE (pid=43): +28 MODERATE, 13 src, #72, EDGE-4, DAY2 67.8
+- DERRICK MOORE EDGE (pid=81): +20 MODERATE, 13 src, #65, EDGE-4, DAY2 67.8
 
-Artifacts / held:
-- D'ANGELO PONDS CB (pid=3236): RESOLVED — sources_covered 2->12 (Session 56 SPM repoint).
-  Consensus rank corrected #190->#28. No longer APEX_HIGH.
-- JALON KILGORE S (pid=309): held pending combine man-coverage confirmation.
-- TJ PARKER EDGE (pid=27): +61 MAJOR — may have duplicate-pid issue. Audit deferred to S57.
-- KYRON DRONES QB (pid=1420): artifact — very low consensus rank.
-- Low sources_covered signals: filter >= 5 before treating as genuine market inefficiency.
+Previously accepted tags (still valid):
+- COLTON HOOD CB +26, JOSHUA JOSEPHS EDGE +27, DEVIN MOORE CB +23, CHRIS JOHNSON CB +17
+- KAMARI RAMSEY S +21, CHANDLER RIVERS CB +26, KEITH ABNEY CB +13
+
+Conditional / gated:
+- JULIAN NEAL CB +42 — MONITOR tag active, 3-cone gate still open
+- TJ PARKER EDGE (pid=27): +23 MODERATE, 12 src, #46 — FIXED S57 (was +61 MAJOR artifact)
+- TREYDAN STUKES CB +54, KEIONTE SCOTT CB +21 — borderline coverage
+
+Dismiss (archetype-structural):
+- JADON CANADY CB +77 — CB-5 #183, projection archetype (not market miss)
+- DOMANI JACKSON CB +36, TACARIO DAVIS CB +34 — CB-5 low coverage
+- LT OVERTON EDGE +37, ANTHONY LUCAS EDGE +29 — EDGE-5 Tweener
+- MICHAEL TAAFFE S +25 — S-5 DAY3 53.6
+
+Resolved artifacts:
+- D'ANGELO PONDS CB (pid=3236): sources 2->12, rank #190->#28 (Session 56)
+- TJ PARKER EDGE (pid=27): coverage artifact resolved Session 57 (+61->+23)
+- JALON KILGORE S (pid=309): held pending combine man-coverage gate
 
 ---
 
