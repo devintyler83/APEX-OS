@@ -10,6 +10,23 @@ Last Updated (UTC): 2026-03-17T22:34:29.652966+00:00
 
 ## Last Completed Milestone
 
+Session 60 (New source ingest complete: fantasypros_2026 T2 + drafttek_2026 T3, consensus rebuilt 16 sources, divergence recomputed) — board current.
+
+Session 60:
+- fantasypros_2026 (source_id=32, T2, weight=1.0): 100 prospects ingested, 100% SPM mapping via patch_new_source_mapping_s60.py.
+- drafttek_2026 (source_id=33, T3, weight=0.7): 500 prospects ingested, 471/500 SPM mapped (94%). 29 skipped (12 no prospect, 17 ambiguous).
+  DraftTek non-standard positions normalized at ingest: DL5T→EDGE, OC→C, DL3T→DT, DL1T→DT, CBN→CB, WRS→WR.
+- patch_new_source_mapping_s60.py: canonical-SPM disambiguation (prefer highest existing SPM count, non-dedup school). 341 new mappings.
+- 16 new prospects bootstrapped (candidates from 2+ sources in new ingest).
+- Consensus rebuilt: 1007 rows (from 1005). Top 5 all at 16/16 sources_covered.
+- build_consensus_2026.py SOURCE_WEIGHTS updated: fantasypros_2026=1.0, drafttek_2026=0.7.
+- Divergence recomputed: APEX_HIGH=90, ALIGNED=47, APEX_LOW_PVC_STRUCTURAL=65, APEX HIGH(old)=12, APEX LOW(old)=11, APEX_LOW=2.
+- Premium confirmed signals (MAJOR, sources>=5): Everette CB +72 (13src), Igbinosun CB +56 (15src),
+    Muhammad CB +61 (14src), Julian Neal CB +41 (13src), Keyron Crawford EDGE +37 (13src),
+    Joshua Josephs EDGE +25 MODERATE (13src), TJ Parker EDGE +18 MODERATE (14src).
+- No APEX re-score performed. Tag trigger re-run deferred to next session.
+- Doctor: PASSED. Active sources: 16. Total source_rankings: 42743.
+
 Session 59 (Divergence Alert triage complete + full pending tag queue cleared — 0 pending recs) — tag board fully current.
 
 Session 59:
@@ -505,9 +522,10 @@ Prior sessions on record: 12 (DB rebuild), 13 (weekly pipeline), 13b (school/arc
 
 ## Next Milestone (Single Target)
 
-- Session 60: Additional source ingest (2–3 high-quality sources). Deferred from Session 11.
-  Candidates: The Athletic, Pro Football Focus college, Walter Football, Dane Brugler/The Athletic big board.
-  Follow full pipeline: raw CSV → stage → ingest → bootstrap → canonicalize → consensus rebuild → doctor.
+- Session 61: Tag trigger re-run post-source-ingest (evaluate_tag_triggers_2026.py --apply 1), then
+  triage any new Divergence Alert recs from expanded coverage. Priority signals to watch:
+  Julian Neal CB +41 MAJOR (13 src, #65) — new MAJOR signal from S60 expansion. Keyron Crawford EDGE +37 MAJOR (13 src).
+  Also: calibration batch APEX re-score (12 calibration artifacts, is_calibration_artifact=1, API call required).
 
 ---
 
