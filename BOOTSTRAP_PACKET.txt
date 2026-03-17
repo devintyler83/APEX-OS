@@ -10,14 +10,14 @@ Non-negotiables:
 - Provide run order + verification commands
 
 Goal for this chat:
-Session 55: Antonio Williams retry (1 JSON parse failure from Session 54 top50 run).
+Session 57: Divergence board triage with corrected source coverage.
 
 Authoritative State:
 
 1) STATE_SNAPSHOT.md
 # DraftOS State Snapshot
 
-Last Updated (UTC): 2026-03-17T05:37:12.988493+00:00
+Last Updated (UTC): 2026-03-17T06:05:45.271118+00:00
 
 ---
 
@@ -26,6 +26,36 @@ Last Updated (UTC): 2026-03-17T05:37:12.988493+00:00
 - 2026 (season_id=1)
 
 ## Last Completed Milestone
+
+Session 56 (SPM dead-PID repoint + consensus rebuild + divergence recompute) — coverage artifacts resolved.
+
+Session 56:
+- fix_spm_dead_pid_repoint.py (new): finds source_player_map entries pointing to is_active=0
+  prospects, resolves via Rule A (name+school), Rule B (name only), Rule C (ambiguous), Rule D (no match).
+  Dry run: 2451 dead PIDs — 10 unambiguous, 26 ambiguous, 2415 no candidate (garbage ingest, non-blocking).
+  Apply: 30 source_player_map rows re-pointed across 10 dead PIDs.
+  DEDUP-DELETE safety: if source_player_id already mapped to canonical PID, delete dead duplicate.
+  Key re-points: pid=73 -> 3236 (Dangelo Ponds CB, 9 rows), pid=4347 -> 3236 (Ponds LB, 2 rows),
+    pid=144 -> 3401 (Leveon Moss, 8 rows), pid=3516 -> 3 (KC Concepcion, 3 rows).
+  26 ambiguous entries require manual position-group resolution — deferred.
+- Consensus rebuilt: 1005 rows (up from 849, SPM fix reconnected orphaned source rows).
+- Divergence recomputed post-repoint:
+  ALIGNED=25, APEX_HIGH=64, APEX_LOW=3, APEX_LOW_PVC_STRUCTURAL=52
+  D'Angelo Ponds: sources_covered 2->12, consensus_rank #190->#28. Removed from APEX_HIGH list.
+  Premium APEX_HIGH top signals: Gabe Jacas EDGE (+81), R Mason Thomas EDGE (+80),
+    Jadon Canady CB (+77), Daylen Everette CB (+69), Treydan Stukes S (+68), Malik Muhammad CB (+63),
+    TJ Parker EDGE (+61), Hezekiah Masses CB (+55), Mansoor Delane CB (+54).
+  Total premium APEX_HIGH signals: ~39.
+- Doctor: PASSED.
+- KNOWN ISSUE: TJ Parker (pid=27, EDGE) still pending duplicate pid audit (+61 APEX_HIGH).
+- KNOWN ISSUE: Antonio Williams — 1 JSON parse failure from Session 54 top50 run. Needs single retry.
+
+Session 55 (Ponds ghost deactivation):
+- D'Angelo Ponds LB ghost (pid=4347) deactivated (is_active=0).
+  Canonical Ponds is pid=3236 CB Indiana. pid=4347 was Tankathon-only artifact.
+- Root cause of +158 APEX_HIGH artifact: 9 of 12 covering sources mapped to pid=73 (is_active=0),
+  leaving only 2 sources contributing to consensus for pid=3236.
+  After SPM repoint (Session 56): sources_covered 2->12, divergence artifact eliminated.
 
 Session 54 (Full comp-enriched re-score — 144 prospects, --batch all implemented) — all scored.
 
@@ -39,11 +69,9 @@ Session 54:
   Every prospect now has comp-enriched prompts from Sessions 51-53 libraries.
 - Tier distribution (post re-score):
   ELITE=3, DAY1=35, DAY2=68, DAY3=36, UDFA-P=2  (total=144)
-- Divergence distribution (post recompute):
+- Divergence distribution (post recompute, pre-SPM-fix):
   ALIGNED=25, APEX_HIGH=63, APEX_LOW=3, APEX_LOW_PVC_STRUCTURAL=53
-  Top APEX_HIGH: D'Angelo Ponds CB (+158), Gabe Jacas EDGE (+80), R Mason Thomas EDGE (+79),
-    Jadon Canady CB (+76), Daylen Everette CB (+68), Treydan Stukes S (+67)
-  APEX_LOW (premium, actionable): Genesis Smith S (-13), Ty Simpson QB (-13), Carson Beck QB (-9)
+  (D'Angelo Ponds CB +158 was top signal — coverage artifact, resolved Session 56)
 - Doctor: PASSED.
 
 Session 53 (Historical comp injection into APEX scoring prompt) — comp_context live in prompt.
@@ -420,10 +448,11 @@ Prior sessions on record: 12 (DB rebuild), 13 (weekly pipeline), 13b (school/arc
 
 ## Next Milestone (Single Target)
 
-- Session 55: Antonio Williams retry (1 JSON parse failure from Session 54 top50 run).
-  Then: board audit — review divergence board with new comp-enriched scores.
-  APEX_HIGH premium actionable list has expanded significantly (63 total); triage new signals.
-  Also: TJ Parker duplicate pid audit (KNOWN ISSUE from Session 49) still pending.
+- Session 57: Divergence board triage with corrected source coverage.
+  Filter premium APEX_HIGH signals for sources_covered >= 5 to identify genuine market inefficiency.
+  39 premium APEX_HIGH signals on board — systematic triage needed (accept/dismiss each).
+  Then: Antonio Williams retry (1 JSON parse failure from Session 54 top50 run).
+  Then: TJ Parker duplicate pid audit (pid=27 EDGE, +61 APEX_HIGH, KNOWN ISSUE from Session 49).
 
 ---
 
@@ -449,9 +478,9 @@ BOOTSTRAP: Operational. prospects: 4555 total (active managed by is_active flag)
 UNIVERSE: Operational. data/universe/prospect_universe_2026.csv (861 players).
   Migration 0033 applied.
 
-CONSENSUS: Operational. 849 rows (14 active sources, Session 42 rebuild).
+CONSENSUS: Operational. 1005 rows (14 active sources, rebuilt Session 56 post-SPM-repoint).
   Top: Fernando Mendoza QB 98.32 | Jeremiyah Love RB 95.80 | David Bailey EDGE 94.96.
-  Styles LB dropped from #1 after Session 42 consensus rebuild (position audit changed weighting).
+  D'Angelo Ponds (pid=3236): sources_covered 2->12, consensus_rank #190->#28 (SPM fix).
 
 MODEL OUTPUTS: Operational. 1003 rows (Session 42 rebuild).
 
@@ -463,9 +492,14 @@ SNAPSHOTS: Operational. Latest: snapshot_id=5 (2026-03-14). rows=1007, coverage=
 
 APEX: Operational. 144 v2.3 active non-cal scored + 12 calibration artifacts. 0 GEN- archetypes.
   All 144 carry canonical v2.3 archetype names (Session 45 full re-score complete).
-  Tiers (v2.3 active non-cal, post Session 45): ELITE=3, DAY1=30, DAY2=74, DAY3=34, UDFA-P=3.
-  Divergence (current, post Session 45): ALIGNED=30, APEX_HIGH=59, APEX_LOW=4,
-    APEX_LOW_PVC_STRUCTURAL=51.
+  Comp-enriched prompts active (Sessions 52-54): all 144 re-scored with historical comp context.
+  Tiers (v2.3 active non-cal, post Session 54): ELITE=3, DAY1=35, DAY2=68, DAY3=36, UDFA-P=2.
+  Divergence (current, post Session 56 SPM repoint): ALIGNED=25, APEX_HIGH=64, APEX_LOW=3,
+    APEX_LOW_PVC_STRUCTURAL=52.
+  Top premium APEX_HIGH (post-repoint, coverage artifacts resolved):
+    Gabe Jacas EDGE (+81), R Mason Thomas EDGE (+80), Jadon Canady CB (+77),
+    Daylen Everette CB (+69), Treydan Stukes S (+68), Malik Muhammad CB (+63), TJ Parker EDGE (+61).
+  D'Angelo Ponds artifact RESOLVED (sources_covered 2->12, no longer APEX_HIGH).
   Latest backup: data/apex_51_150_session5_scored.json (563KB).
   Igbinosun (pid=36): CB-3 Press Man Corner 68.4 DAY2, Tier B, FM-2 CONDITIONAL, R2 early–R3 top.
     PAA gate injection applied Session 39. Prior score (CB-2 76.4) corrected. Delta: +23 MODERATE.
@@ -582,35 +616,30 @@ EXPORTS: board_2026_v1_default.csv last produced Session 21. Current for that sn
 
 ## Divergence Status
 
-Current recompute: post-Session 45 (144 active scored prospects). Total APEX_HIGH=59, APEX_LOW=4.
-(Note: divergence_flags table also contains stale rows in old space-format "APEX HIGH"/"APEX LOW" — ignore those.)
+Current recompute: post-Session 56 (144 active scored, SPM dead-PID repoint applied).
+Total: ALIGNED=25, APEX_HIGH=64, APEX_LOW=3, APEX_LOW_PVC_STRUCTURAL=52.
+NOTE: D'Angelo Ponds coverage artifact fully resolved — no longer on list.
 
-Premium actionable signals (confirmed, non-artifact):
-- DOMANI JACKSON CB (pid=108): APEX_HIGH MAJOR +88 — rank #150. New signal from 51-150 batch.
-- JAISHAWN BARHAM EDGE (pid=258): APEX_HIGH MAJOR +53 — rank #122. New from batch.
-- ROMELLO HEIGHT EDGE (pid=43): APEX_HIGH MAJOR +49 — rank #68. New from batch.
-- TACARIO DAVIS CB (pid=159): APEX_HIGH MAJOR +49 — rank #123. New from batch.
-- JULIAN NEAL CB (pid=109): APEX_HIGH MAJOR +48 — rank #70. MONITOR tag active (3-cone gate).
-- JADON CANADY CB (pid=252): APEX_HIGH MAJOR +48 — rank #139. New from batch.
-- JUDE BOWRY EDGE (pid=115): APEX_HIGH MAJOR +41 — rank #144. New from batch.
-- KAMARI RAMSEY S (pid=148): APEX_HIGH MODERATE +29 — S-3 confirmed. R3 capital.
-- DAVISON IGBINOSUN CB (pid=36): APEX_HIGH MODERATE +23 — PAA-corrected Session 39. CB-3 68.4.
-- COLTON HOOD CB (pid=72): APEX_HIGH MODERATE +26 — persistent. CB-3 confirmed.
-- KEYRON CRAWFORD EDGE (pid=116): APEX_HIGH MODERATE +22 — rank #101. New from batch.
-- DERRICK MOORE EDGE (pid=81): APEX_HIGH MODERATE +21 — rank #59. New from batch.
-- MANSOOR DELANE CB (pid=3509): APEX_HIGH MAJOR +63 — rank #96. New from batch.
-- CHANDLER RIVERS CB (pid=34): APEX_HIGH MAJOR +36 — rank #80. Confirmed from batch.
-- MICHAEL TAAFFE S (pid=310): APEX_HIGH MAJOR +36 — rank #140. New from batch.
-- GARRETT NUSSMEIER QB (pid=58): APEX_HIGH MAJOR +37 — rank #115. New from batch.
-- DEVIN MOORE CB (pid=37): Prior APEX_HIGH — verify with tag triage post-batch.
-- DILLON THIENEMAN S (pid=29): APEX_HIGH MINOR +12 — minor signal.
+Top premium APEX_HIGH signals (post-Session 56, sources_covered-corrected):
+- GABE JACAS EDGE: +81 MAJOR
+- R MASON THOMAS EDGE: +80 MAJOR
+- JADON CANADY CB: +77 MAJOR
+- DAYLEN EVERETTE CB: +69 MAJOR
+- TREYDAN STUKES S: +68 MAJOR (also appears as CB — position artifact, score for primary pos)
+- MALIK MUHAMMAD CB: +63 MAJOR
+- TJ PARKER EDGE (pid=27): +61 MAJOR — duplicate pid audit PENDING (KNOWN ISSUE S49)
+- HEZEKIAH MASSES CB: +55 MAJOR
+- MANSOOR DELANE CB: +54 MAJOR
+- JAISHAWN BARHAM EDGE: +54 MAJOR
+- (39 total premium APEX_HIGH — full triage pending Session 57)
 
 Artifacts / held:
-- D'ANGELO PONDS CB (pid=3236): +91 MAJOR — artifact (dup divergence source; pid=4347 deactivated S39).
-- JALON KILGORE S (pid=309): +38 MAJOR — held pending combine man-coverage confirmation.
-- JALON KILGORE CB (pid=449): large delta — CB entry for Safety; position artifact.
-- KYRON DRONES QB (pid=1420, rank=351): +369 — very low consensus rank artifact.
-- JALEN CATALON S (pid=1464): large delta — very low consensus coverage artifact.
+- D'ANGELO PONDS CB (pid=3236): RESOLVED — sources_covered 2->12 (Session 56 SPM repoint).
+  Consensus rank corrected #190->#28. No longer APEX_HIGH.
+- JALON KILGORE S (pid=309): held pending combine man-coverage confirmation.
+- TJ PARKER EDGE (pid=27): +61 MAJOR — may have duplicate-pid issue. Audit deferred to S57.
+- KYRON DRONES QB (pid=1420): artifact — very low consensus rank.
+- Low sources_covered signals: filter >= 5 before treating as genuine market inefficiency.
 
 ---
 
@@ -639,11 +668,11 @@ Inactive (data preserved): ngs_2026 (source_id=29, is_active=0) — model score,
 
 2) System Snapshot Output
 === DRAFTOS SYSTEM SNAPSHOT ===
-generated_utc: 2026-03-17T05:37:12.314962+00:00
+generated_utc: 2026-03-17T06:05:44.589076+00:00
 
 ## Git
 branch: main
-commit: a8d342a43d26aa53a1c1951722edc1524542c3f0
+commit: 6abefa483e5033d8f92b4e55fe379026ab5a58f9
 status: clean
 
 ## Tables
@@ -809,6 +838,7 @@ no is_active column
 - scripts\export_source_health_csv.py
 - scripts\fix_calibration_divergence_2026.py
 - scripts\fix_concepcion_2026.py
+- scripts\fix_spm_dead_pid_repoint.py
 - scripts\generate_prospect_pdf_2026.py
 - scripts\import_apex_batch_json.py
 - scripts\ingest_combine_2026.py
