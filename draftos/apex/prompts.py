@@ -933,7 +933,9 @@ def build_user_prompt(prospect_data: dict) -> str:
       archetype_direction (str|None), forced_archetype (bool),
       paa_findings (dict|None) — analyst-verified gate results,
       override_eval_conf (str|None), override_capital (str|None),
-      override_fm_flags (list[str]|None)
+      override_fm_flags (list[str]|None),
+      comp_context (str|None) — pre-formatted historical comp block from historical_comps
+        query; injected between ctx_block and gate_block; empty string = no comps available
     """
     name            = prospect_data["name"]
     position        = prospect_data["position"]
@@ -951,10 +953,15 @@ def build_user_prompt(prospect_data: dict) -> str:
     override_eval_conf  = prospect_data.get("override_eval_conf")
     override_capital    = prospect_data.get("override_capital")
     override_fm_flags   = prospect_data.get("override_fm_flags")
+    comp_context        = prospect_data.get("comp_context") or ""
 
     ras_str = f"{ras_total:.2f}" if ras_total is not None else "Not available"
 
     ctx_block = web_context.strip() if web_context else "No additional context provided."
+
+    comp_block = ""
+    if comp_context.strip():
+        comp_block = f"\n\n{comp_context.strip()}"
 
     # Classification gate block — position-specific mandatory gates.
     gate_key = _normalize_position_for_gate(position)
@@ -1046,7 +1053,7 @@ Evaluate the following NFL draft prospect using the APEX v2.3 framework.
   RAS Score: {ras_str}
 
 === CONTEXT ===
-{ctx_block}{gate_block}{paa_block}{arch_block}{constraints_block}
+{ctx_block}{comp_block}{gate_block}{paa_block}{arch_block}{constraints_block}
 
 Apply ALL applicable modifier rules:
 - Schwesinger Rule (c2 >= 8 + c3 >= 7 → DevTraj boost)

@@ -10,6 +10,27 @@ Last Updated (UTC): 2026-03-17T03:56:09.979553+00:00
 
 ## Last Completed Milestone
 
+Session 53 (Historical comp injection into APEX scoring prompt) — comp_context live in prompt.
+
+Session 53:
+- _get_comp_context(conn, archetype_code, fm_code) added to run_apex_scoring_2026.py.
+  Slot 1: HIT comp, same archetype (is_fm_reference=0), confidence ASC.
+  Slot 2: MISS/PARTIAL comp, same archetype + matching fm_code preferred.
+  Slot 3: FM cross-position reference (is_fm_reference=1) if fm_code set and slot 2 empty.
+  Graceful fallback: returns "" if no comps found — prompt identical to pre-S53 in that case.
+- matched_archetype parsed: "EDGE-1 Every-Down Disruptor" -> "EDGE-1" (split on space, take part[0]).
+- failure_mode_primary parsed: "FM-1 Athleticism Mirage" -> "FM-1" (split on space, take part[0]).
+- Column confirmed: fm codes stored in failure_mode_primary/failure_mode_secondary (NOT tags).
+  tags column stores labels like "CRUSH", "Two-Way Premium" etc.
+- comp_context added to prospect_data dict, passed into build_user_prompt().
+- prompts.py: comp_block injected between ctx_block and gate_block in return string.
+- Dry run verified: 50/50 top50 prospects inject comp context. 0 "no comps" fallbacks.
+  David Bailey: EDGE-1 / FM-1 -> Julius Peppers (HIT) + Jadeveon Clowney (PARTIAL).
+- No DB changes. No new columns. No new migrations. No API calls made.
+- Doctor: PASSED.
+- NOTE: Comps only inject for already-scored prospects. First-time score = empty comp block.
+  Session 54 re-score will be the first run where all prospects get comp-enriched prompts.
+
 Session 52 (Position comp seeding batch 2 — RB/TE/OT/OG/C/IDL/ILB/OLB/S) — 78 rows seeded, schema complete.
 
 Session 52:
@@ -363,10 +384,10 @@ Prior sessions on record: 12 (DB rebuild), 13 (weekly pipeline), 13b (school/arc
 
 ## Next Milestone (Single Target)
 
-- Session 53: Inject historical_comps into APEX scoring prompt.
-  Pull 2 comp records per prospect based on matched_archetype + fm_code match.
-  historical_comps is now complete: 152 total rows (74 existing + 78 new position comps + FM refs).
-  All 13 APEX positions have HIT and MISS/bust examples.
+- Session 54: Force re-score all scored prospects with comp-enriched prompts.
+  python -m scripts.run_apex_scoring_2026 --batch top50 --force --apply 1
+  Then extend to full scored universe (--batch all --force --apply 1).
+  Verify 5 random detail cards across positions confirm comp names present and position-appropriate.
   Also: TJ Parker duplicate pid audit (KNOWN ISSUE from Session 49) still pending.
 
 ---

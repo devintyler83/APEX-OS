@@ -928,6 +928,151 @@ def _validate_response(data: dict, prospect_name: str) -> bool:
 
 
 # ---------------------------------------------------------------------------
+# Historical comp context injection
+# ---------------------------------------------------------------------------
+
+def _get_comp_context(
+    conn,
+    archetype_code: str | None,
+    fm_code: str | None,
+) -> str:
+    """
+    Query historical_comps and build a compact comp context block for injection
+    into the APEX scoring prompt.
+
+    Returns formatted string or "" if no comps found.
+    Selection priority:
+      Slot 1: HIT, same archetype (is_fm_reference=0)
+      Slot 2: MISS/PARTIAL, same archetype + same fm_code (or any MISS/PARTIAL
+              same archetype if no fm_code)
+      Slot 3: FM cross-position reference (is_fm_reference=1), only if fm_code
+              set and slot 2 is empty
+    """
+    if not archetype_code:
+        return ""
+
+    def _trunc(s: str | None, n: int) -> str:
+        if not s:
+            return ""
+        s = s.strip()
+        return s[:n] + "..." if len(s) > n else s
+
+    # SLOT 1: Archetype ceiling HIT
+    slot1 = conn.execute(
+        """
+        SELECT player_name, archetype_code, translation_outcome,
+               mechanism, outcome_summary, fm_code, fm_mechanism,
+               pre_draft_signal, is_fm_reference
+        FROM historical_comps
+        WHERE archetype_code = ?
+          AND translation_outcome = 'HIT'
+          AND is_fm_reference = 0
+        ORDER BY comp_confidence ASC, player_name ASC
+        LIMIT 1
+        """,
+        (archetype_code,),
+    ).fetchone()
+
+    # SLOT 2: Risk comp — same archetype, preferring matching fm_code
+    slot2 = None
+    if fm_code:
+        slot2 = conn.execute(
+            """
+            SELECT player_name, archetype_code, translation_outcome,
+                   mechanism, outcome_summary, fm_code, fm_mechanism,
+                   pre_draft_signal, is_fm_reference
+            FROM historical_comps
+            WHERE archetype_code = ?
+              AND translation_outcome IN ('MISS','PARTIAL')
+              AND fm_code = ?
+            LIMIT 1
+            """,
+            (archetype_code, fm_code),
+        ).fetchone()
+    if slot2 is None:
+        slot2 = conn.execute(
+            """
+            SELECT player_name, archetype_code, translation_outcome,
+                   mechanism, outcome_summary, fm_code, fm_mechanism,
+                   pre_draft_signal, is_fm_reference
+            FROM historical_comps
+            WHERE archetype_code = ?
+              AND translation_outcome IN ('MISS','PARTIAL')
+            ORDER BY
+              CASE WHEN fm_code = ? THEN 0 ELSE 1 END,
+              comp_confidence ASC
+            LIMIT 1
+            """,
+            (archetype_code, fm_code or ""),
+        ).fetchone()
+
+    # SLOT 3: FM cross-position reference fallback (only if slot 2 empty)
+    slot3 = None
+    if fm_code and slot2 is None:
+        slot3 = conn.execute(
+            """
+            SELECT player_name, archetype_code, translation_outcome,
+                   mechanism, outcome_summary, fm_code, fm_mechanism,
+                   pre_draft_signal, is_fm_reference
+            FROM historical_comps
+            WHERE fm_code = ?
+              AND is_fm_reference = 1
+              AND translation_outcome IN ('MISS','PARTIAL')
+            LIMIT 1
+            """,
+            (fm_code,),
+        ).fetchone()
+
+    risk_comp = slot2 or slot3
+    if slot1 is None and risk_comp is None:
+        return ""
+
+    lines = [
+        "=== HISTORICAL COMPS (mechanism anchors — use when writing "
+        "strengths, red_flags, and outcome_summary) ==="
+    ]
+
+    if slot1:
+        fm_tag = f" / {slot1['fm_code']}" if slot1['fm_code'] else ""
+        lines.append(
+            f"\nARCHETYPE CEILING ({slot1['archetype_code']}"
+            f"{fm_tag}): {slot1['player_name']} — {slot1['translation_outcome']}"
+        )
+        mech = _trunc(slot1["mechanism"], 200)
+        if mech:
+            lines.append(f"  Mechanism: {mech}")
+        summ = _trunc(slot1["outcome_summary"], 150)
+        if summ:
+            lines.append(f"  Outcome: {summ}")
+
+    if risk_comp:
+        fm_tag = f" / {risk_comp['fm_code']}" if risk_comp['fm_code'] else ""
+        lines.append(
+            f"\nARCHETYPE FM RISK ({risk_comp['archetype_code']}"
+            f"{fm_tag}): {risk_comp['player_name']} — {risk_comp['translation_outcome']}"
+        )
+        fm_mech = _trunc(risk_comp["fm_mechanism"], 200)
+        if fm_mech:
+            lines.append(f"  Mechanism: {fm_mech}")
+        if risk_comp["is_fm_reference"] and risk_comp["pre_draft_signal"]:
+            sig = _trunc(risk_comp["pre_draft_signal"], 180)
+            lines.append(f"  Pre-Draft Signal: {sig}")
+        else:
+            summ = _trunc(risk_comp["outcome_summary"], 150)
+            if summ:
+                lines.append(f"  Outcome: {summ}")
+
+    lines.append(
+        "\nINSTRUCTION: Reference these comps by name in your evaluation "
+        "text when mechanism parallels exist. Do not invent comps. If the "
+        "prospect's mechanism diverges from both comps, note the divergence explicitly."
+    )
+    lines.append("=== END HISTORICAL COMPS ===")
+
+    return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
 # Per-prospect scoring pipeline
 # ---------------------------------------------------------------------------
 
@@ -1020,6 +1165,44 @@ def _score_prospect(
         if override_fm_flags:
             print(f"  FM flags active: {', '.join(override_fm_flags)}")
 
+    # Pull current matched_archetype + failure_mode_primary for comp injection.
+    # If never scored before, defaults to None → empty comp block (graceful).
+    existing_score = conn.execute(
+        """
+        SELECT matched_archetype, failure_mode_primary
+        FROM apex_scores
+        WHERE prospect_id = ? AND season_id = ? AND model_version = ?
+        ORDER BY scored_at DESC
+        LIMIT 1
+        """,
+        (prospect_id, season_id, MODEL_VERSION),
+    ).fetchone()
+
+    # Extract archetype_code: "EDGE-1 Every-Down Disruptor" → "EDGE-1"
+    existing_archetype_code = None
+    if existing_score and existing_score["matched_archetype"]:
+        raw_arch = existing_score["matched_archetype"].strip()
+        parts = raw_arch.split()
+        if parts and "-" in parts[0]:
+            existing_archetype_code = parts[0]
+
+    # Extract FM code for comp selection:
+    # Priority: override_fm_flags (analyst set) > failure_mode_primary from DB
+    comp_fm_code = None
+    if override_fm_flags:
+        comp_fm_code = override_fm_flags[0]  # primary FM flag
+    elif existing_score and existing_score["failure_mode_primary"]:
+        raw_fm = existing_score["failure_mode_primary"].strip()
+        fm_parts = raw_fm.split()
+        if fm_parts and fm_parts[0].startswith("FM-"):
+            comp_fm_code = fm_parts[0]
+
+    comp_context = _get_comp_context(conn, existing_archetype_code, comp_fm_code)
+    if comp_context:
+        print(f"  Comp context: {existing_archetype_code} / {comp_fm_code or 'no FM'} -> injecting")
+    else:
+        print(f"  Comp context: {existing_archetype_code or 'no prior score'} -> no comps (first score or gap)")
+
     prospect_data = {
         "name":                display_name,
         "position":            position,
@@ -1035,6 +1218,7 @@ def _score_prospect(
         "override_eval_conf":  override_eval_conf,
         "override_capital":    override_capital,
         "override_fm_flags":   override_fm_flags,
+        "comp_context":        comp_context,
     }
     user_prompt = build_user_prompt(prospect_data)
 
