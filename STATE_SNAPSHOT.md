@@ -10,6 +10,24 @@ Last Updated (UTC): 2026-03-17T06:29:26.941820+00:00
 
 ## Last Completed Milestone
 
+Session 58 (Divergence Alert tags accepted for 7 S57 ACCEPT signals + Williams v2.3 confirmed) — tag board current.
+
+Session 58:
+- Divergence Alert tags (tag_def_id=7): all 7 S57 ACCEPT targets confirmed active in prospect_tags.
+  6 were already accepted from prior sessions (Muhammad, Igbinosun, Height, D.Moore, Everette, Barham).
+  Hezekiah Masses (pid=158, CB, California): had no rec — evaluate_tag_triggers re-run created
+    rec_id=241 (Divergence: +55), accepted with S57 triage rationale note.
+  Total active Divergence Alert tags on board: 32 (all on apex_v2.3).
+- evaluate_tag_triggers_2026 re-run (--apply 1): 29 new recs created, 144 already existed.
+  5 new pending Divergence Alert recs generated: TJ Parker EDGE +23, Arvell Reese EDGE +35,
+    LT Overton EDGE +37, Anthony Lucas EDGE +29, Treydan Stukes S pid=3011 +68.
+  These need separate triage (not S58 targets).
+- Antonio Williams (pid=63, WR Clemson): apex_v2.3 score confirmed (69.1 DAY2, WR-1 Route Technician,
+    scored 2026-03-17T04:58:59). S54 parse failure was already resolved in a prior run.
+  Divergence recomputed: apex_v2.3 +5 ALIGNED (consensus #47). Not a signal.
+- Divergence recomputed (--batch divergence --apply 1): all flags updated to apex_v2.3.
+- Doctor: PASSED.
+
 Session 57 (TJ Parker pid fix + divergence triage — 40 premium signals bucketed) — board clean.
 
 Session 57:
@@ -470,10 +488,11 @@ Prior sessions on record: 12 (DB rebuild), 13 (weekly pipeline), 13b (school/arc
 
 ## Next Milestone (Single Target)
 
-- Session 58: Accept new Divergence Alert tags for 7 confirmed signals:
-  Everette CB, Muhammad CB, Barham EDGE, Masses CB, Height EDGE, D.Moore EDGE, Igbinosun CB.
-  Then: Antonio Williams retry (1 JSON parse failure from Session 54 top50 run).
-  Then: Dismiss structural-noise signals (Canady, Taaffe, Tucker, Overton, A.Lucas) via tag workflow.
+- Session 59: Triage 5 new pending Divergence Alert recs from S58 trigger re-run:
+  TJ Parker EDGE +23 (rec_id=235), Arvell Reese EDGE +35 (rec_id=238), LT Overton EDGE +37 (rec_id=242),
+  Anthony Lucas EDGE +29 (rec_id=244), Treydan Stukes S pid=3011 +68 (rec_id=251).
+  Per S57 triage: Overton/Lucas = EDGE-5 Hybrid Tweener (likely dismiss). Parker = MODERATE post-fix.
+  Then: Triage remaining pending tags (Compression Flag x9, Development Bet x12, Scheme Dependent x2).
 
 ---
 
