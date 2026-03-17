@@ -1450,6 +1450,102 @@ def _run_top50(
     )
 
 
+def _run_all(
+    client:        anthropic.Anthropic,
+    conn,
+    system_prompt: str,
+    season_id:     int,
+    apply:         bool,
+    force:         bool,
+) -> None:
+    """
+    Score all active, non-calibration prospects that have consensus data.
+    Skip already-scored unless --force. Calibration artifacts always excluded.
+    """
+    rows = conn.execute(
+        """
+        SELECT
+            p.prospect_id,
+            p.display_name,
+            p.position_group,
+            p.position_raw,
+            p.school_canonical,
+            r.consensus_rank,
+            r.score     AS consensus_score,
+            r.tier      AS consensus_tier
+        FROM apex_scores a
+        JOIN prospects p ON p.prospect_id = a.prospect_id
+        LEFT JOIN prospect_consensus_rankings r
+          ON r.prospect_id = p.prospect_id AND r.season_id = ?
+        WHERE a.season_id = ?
+          AND a.model_version = ?
+          AND a.is_calibration_artifact = 0
+          AND p.is_active = 1
+        GROUP BY p.prospect_id
+        ORDER BY COALESCE(r.consensus_rank, 9999) ASC
+        """,
+        (season_id, season_id, MODEL_VERSION),
+    ).fetchall()
+
+    prospects = [dict(r) for r in rows]
+    total = len(prospects)
+    print(f"\nAll-prospects batch: {total} scored prospects loaded from DB (calibration excluded)")
+
+    already_scored = []
+    to_score       = []
+    for p in prospects:
+        if not force and _is_already_scored(conn, p["prospect_id"], season_id):
+            already_scored.append(p["display_name"])
+        else:
+            to_score.append(p)
+
+    if already_scored:
+        print(f"  Skipping {len(already_scored)} already-scored (pass --force to re-score)")
+    print(f"  Will score: {len(to_score)}")
+
+    if not to_score:
+        print("\n[COMPLETE] All prospects already scored.")
+        return
+
+    backed_up     = False
+    success_count = 0
+    fail_count    = 0
+    skip_count    = len(already_scored)
+
+    for i, p in enumerate(to_score):
+        pid          = p["prospect_id"]
+        display_name = p["display_name"]
+        position     = _resolve_position(pid, p["position_group"], p["position_raw"])
+        school       = p["school_canonical"] or "Unknown"
+
+        override = {
+            "prospect_id":  pid,
+            "position":     position,
+            "school":       school,
+            "display_name": display_name,
+        }
+
+        if i > 0 and apply:
+            print(f"  [sleeping {API_SLEEP_SEC}s for rate limit]")
+            time.sleep(API_SLEEP_SEC)
+
+        ok, backed_up = _score_prospect(
+            client, conn, system_prompt,
+            display_name, override, season_id, apply, backed_up,
+        )
+
+        if ok:
+            success_count += 1
+        else:
+            fail_count += 1
+
+    print(f"\n{'='*60}")
+    print(
+        f"All-prospects complete: {success_count} scored, {fail_count} failed, "
+        f"{skip_count} skipped (total={total})"
+    )
+
+
 def _run_single(
     client:            anthropic.Anthropic,
     conn,
@@ -2040,11 +2136,7 @@ def main() -> None:
             )
 
         elif args.batch == "all":
-            # TODO Session 5: implement all batch
-            #   Query: SELECT from prospect_consensus_rankings
-            #          WHERE season_id=? AND score > 0 ORDER BY consensus_rank ASC
-            print("[TODO] --batch all not yet implemented. Use --batch top50.")
-            sys.exit(1)
+            _run_all(client, conn, system_prompt, season_id, apply, args.force)
 
     if not apply:
         print(
