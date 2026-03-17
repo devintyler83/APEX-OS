@@ -10,6 +10,27 @@ Last Updated (UTC): 2026-03-16T01:01:25.867853+00:00
 
 ## Last Completed Milestone
 
+Session 51 (Migration 0046 + FM reference seeding — pre_draft_signal column, 35 FM records) — Migration 0046 applied.
+
+Session 51:
+- Migration 0046: ALTER TABLE historical_comps ADD COLUMN pre_draft_signal TEXT (nullable).
+  ALTER TABLE historical_comps ADD COLUMN is_fm_reference INTEGER NOT NULL DEFAULT 0.
+  Logged in meta_migrations. Migration file: draftos/db/migrations/0046_historical_comps_fm_seed.sql.
+- seed_fm_reference_comps.py: Seeds 35 FM reference records from FM-1 through FM-6 source docs.
+  FM-1: 6 records | FM-2: 6 records | FM-3: 6 records | FM-4: 4 records | FM-5: 6 records | FM-6: 7 records.
+  Note: FM-4 sourced 4 of 16 (8 highest-confidence not fully provided in prompt).
+  Note: FM-2 sourced 6 (header said 7 but only 6 provided in prompt content).
+  INSERT OR IGNORE + UPDATE fallback for 6 existing position comp rows with same (player_name, archetype_code):
+    Vernon Hargreaves III CB-3, Gareon Conley CB-3 (FM-1),
+    Marcus Peters CB-2 (FM-2), JaMarcus Russell QB-5 (FM-3),
+    Jadeveon Clowney EDGE-1 (FM-4), Von Miller EDGE-1 (FM-5).
+  These 6 rows received is_fm_reference=1 + pre_draft_signal without replacing existing content.
+  Von Miller EDGE-1 fm_code patched to 'FM-5' (was empty in position comp row).
+- Result: 29 inserted, 6 patched (existing rows). Total: 35 FM reference rows.
+  All 35 have pre_draft_signal populated. 0 position comp rows (is_fm_reference=0) have pre_draft_signal.
+  Total historical_comps: 109 rows (80 position comps + 29 new FM reference + 6 dual-purpose rows).
+- Doctor: PASSED. No pipeline changes. No APEX scoring.
+
 Session 49 (apex_favors_text, PDF polish — FM legend, white text, bullet unclip) — Migration 0045 applied.
 
 Session 49:
@@ -323,9 +344,11 @@ Prior sessions on record: 12 (DB rebuild), 13 (weekly pipeline), 13b (school/arc
 
 ## Next Milestone (Single Target)
 
-- Session 50: TJ Parker duplicate pid audit + display_name fix (query result in hand).
-  Additional source ingest deferred to post-pro-days (closer to April).
-  Neal MONITOR tag — hold until combine 3-cone data ingested.
+- Session 52: Seed remaining 9 position comp files (RB, TE, OT, OG, C, IDL, ILB, OLB, S)
+  into historical_comps using same seed script pattern (seed_position_comps_batch2.py).
+  After Session 52, historical_comps goes from 109 to ~250+ records covering all 13 positions
+  plus all 6 FM codes. Session 53 is prompt injection.
+  Also: TJ Parker duplicate pid audit (KNOWN ISSUE from Session 49) still pending.
 
 ---
 
