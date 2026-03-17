@@ -17,7 +17,7 @@ Authoritative State:
 1) STATE_SNAPSHOT.md
 # DraftOS State Snapshot
 
-Last Updated (UTC): 2026-03-17T21:29:17.721322+00:00
+Last Updated (UTC): 2026-03-17T22:34:29.652966+00:00
 
 ---
 
@@ -747,11 +747,11 @@ Inactive (data preserved): ngs_2026 (source_id=29, is_active=0) — model score,
 
 2) System Snapshot Output
 === DRAFTOS SYSTEM SNAPSHOT ===
-generated_utc: 2026-03-17T21:29:17.042470+00:00
+generated_utc: 2026-03-17T22:34:28.962574+00:00
 
 ## Git
 branch: main
-commit: 81f63b86f53663fef41852dc46662387ddf46f0d
+commit: 56cd00213c5117191403e6beb3740f2cfff96759
 status: clean
 
 ## Tables
@@ -799,12 +799,12 @@ status: clean
 - users
 
 ## Row Counts (key tables)
-- sources: 31
+- sources: 33
 - seasons: 1
-- prospects: 4555
-- source_players: 9919
-- source_player_map: 9621
-- source_rankings: 42143
+- prospects: 4571
+- source_players: 10519
+- source_player_map: 10192
+- source_rankings: 42743
 - models: 1
 - model_outputs: 0
 
@@ -921,6 +921,8 @@ no is_active column
 - scripts\generate_prospect_pdf_2026.py
 - scripts\import_apex_batch_json.py
 - scripts\ingest_combine_2026.py
+- scripts\ingest_drafttek_2026.py
+- scripts\ingest_fantasypros_2026.py
 - scripts\ingest_nflcom_2026.py
 - scripts\ingest_ngs_2026.py
 - scripts\ingest_rankings_staged.py
@@ -931,6 +933,7 @@ no is_active column
 - scripts\patch_0007_bootstrap_prospects_2026.py
 - scripts\patch_apex_archetypes_local_2026.py
 - scripts\patch_name_normalization_2026.py
+- scripts\patch_new_source_mapping_s60.py
 - scripts\patch_prospect_canonicalization_2026.py
 - scripts\patch_school_canonicalization_2026.py
 - scripts\patch_school_from_universe_2026.py
