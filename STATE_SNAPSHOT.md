@@ -10,6 +10,25 @@ Last Updated (UTC): 2026-03-17T04:12:22.598761+00:00
 
 ## Last Completed Milestone
 
+Session 54 (Full comp-enriched re-score — 144 prospects, --batch all implemented) — all scored.
+
+Session 54:
+- _run_all() implemented in run_apex_scoring_2026.py (after _run_top50()).
+  Queries apex_scores JOIN prospects — scores existing scored universe only (not all 1005 with
+  consensus data). is_calibration_artifact=0, is_active=1 filters enforced. --force respected.
+  Wired into main() dispatch replacing [TODO] stub.
+- top50 re-score (Step 1): 49/50 scored, 1 JSON parse error (Antonio Williams — one-off retry).
+- all-batch re-score (Step 3): 144/144 scored, 0 failed, 0 errors.
+  Every prospect now has comp-enriched prompts from Sessions 51-53 libraries.
+- Tier distribution (post re-score):
+  ELITE=3, DAY1=35, DAY2=68, DAY3=36, UDFA-P=2  (total=144)
+- Divergence distribution (post recompute):
+  ALIGNED=25, APEX_HIGH=63, APEX_LOW=3, APEX_LOW_PVC_STRUCTURAL=53
+  Top APEX_HIGH: D'Angelo Ponds CB (+158), Gabe Jacas EDGE (+80), R Mason Thomas EDGE (+79),
+    Jadon Canady CB (+76), Daylen Everette CB (+68), Treydan Stukes S (+67)
+  APEX_LOW (premium, actionable): Genesis Smith S (-13), Ty Simpson QB (-13), Carson Beck QB (-9)
+- Doctor: PASSED.
+
 Session 53 (Historical comp injection into APEX scoring prompt) — comp_context live in prompt.
 
 Session 53:
@@ -384,10 +403,9 @@ Prior sessions on record: 12 (DB rebuild), 13 (weekly pipeline), 13b (school/arc
 
 ## Next Milestone (Single Target)
 
-- Session 54: Force re-score all scored prospects with comp-enriched prompts.
-  python -m scripts.run_apex_scoring_2026 --batch top50 --force --apply 1
-  Then extend to full scored universe (--batch all --force --apply 1).
-  Verify 5 random detail cards across positions confirm comp names present and position-appropriate.
+- Session 55: Antonio Williams retry (1 JSON parse failure from Session 54 top50 run).
+  Then: board audit — review divergence board with new comp-enriched scores.
+  APEX_HIGH premium actionable list has expanded significantly (63 total); triage new signals.
   Also: TJ Parker duplicate pid audit (KNOWN ISSUE from Session 49) still pending.
 
 ---
