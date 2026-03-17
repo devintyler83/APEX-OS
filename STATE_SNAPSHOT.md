@@ -10,6 +10,31 @@ Last Updated (UTC): 2026-03-17T22:34:29.652966+00:00
 
 ## Last Completed Milestone
 
+Session 61 (Diagnostic-only: PID split / LB ghost problem scoped — no code written, no DB writes) — board unchanged from S60.
+
+Session 61:
+- Diagnostic 1 (Kilgore): pid=449 (CB, 3 src, APEX 63.1) and pid=309 (S, 7 src, no APEX) are split.
+  +261 divergence on pid=449 is entirely fake. 9/12 active sources map to pid=309 (S/SAF).
+  PFF and NFLDraftBuzz are the only sources listing him as CB. Fix: move APEX to pid=309, repoint CBSSports.
+- Diagnostic 2 (scope): LB ghost PID split affects 6+ premium-position apex-scored prospects.
+  Root cause: early ingests labeled EDGE/DT/CB players as LB → bootstrap LB PID → later correct-position PIDs
+  → APEX scored on correct-position PID with 3-4 sources, real coverage on LB ghost PID with 12-13 sources.
+  EDGE artifacts (divergence signals likely fake or badly inflated):
+    Arvell Reese: APEX on pid=1058 EDGE (4 src, rank=#89). Real coverage: pid=16 LB (12 src, rank=#13).
+    R Mason Thomas: APEX on pid=3538 EDGE (3 src, rank=#164). Real: pid=7 LB (13 src, rank=#60).
+    Gabe Jacas: APEX on pid=3542 EDGE (3 src, rank=#170). Real: pid=18 LB (12 src, rank=#73).
+    Mansoor Delane: APEX on pid=3509 CB (5 src, rank=#76). Real: pid=39 CB (11 src, rank=#28) — ALIGNED.
+  QB artifact: Ty Simpson APEX on pid=3531 QB (3 src, rank=#145). Real: pid=9 LB (13 src, rank=#47).
+  Less severe (APEX PID already has majority coverage): Kamari Ramsey S, Treydan Stukes CB.
+- Diagnostic 3 (unmapped): 96.9% of source_players are mapped. Only 29 active-source unmapped rows
+  (all drafttek_2026 intentional skips from S60). Coverage gaps are NOT caused by missing SPM entries —
+  entirely a PID routing problem. No mapping pass will fix this.
+- CONFIRMED: Gabe Jacas, R Mason Thomas, Arvell Reese divergence signals were artifacts from the split.
+  Do not act on their Divergence Alert tags until consolidation runs.
+- Next session: build consolidate_lb_ghost_pids_s61.py to fix all 6 premium cases in one script.
+  Approach: update apex_scores prospect_id to canonical ghost PID, repoint SPM entries, deactivate split PID,
+  rebuild consensus + recompute divergence. No API calls needed (just row moves).
+
 Session 60 (New source ingest complete: fantasypros_2026 T2 + drafttek_2026 T3, consensus rebuilt 16 sources, divergence recomputed) — board current.
 
 Session 60:
@@ -522,10 +547,17 @@ Prior sessions on record: 12 (DB rebuild), 13 (weekly pipeline), 13b (school/arc
 
 ## Next Milestone (Single Target)
 
-- Session 61: Tag trigger re-run post-source-ingest (evaluate_tag_triggers_2026.py --apply 1), then
-  triage any new Divergence Alert recs from expanded coverage. Priority signals to watch:
-  Julian Neal CB +41 MAJOR (13 src, #65) — new MAJOR signal from S60 expansion. Keyron Crawford EDGE +37 MAJOR (13 src).
-  Also: calibration batch APEX re-score (12 calibration artifacts, is_calibration_artifact=1, API call required).
+- Session 62: Build and run consolidate_lb_ghost_pids_s61.py to fix LB ghost PID split for 6 premium cases.
+  Pairs to consolidate (scored_pid → canonical_pid):
+    pid=1058 EDGE → pid=16 LB  (Arvell Reese)
+    pid=3538 EDGE → pid=7 LB   (R Mason Thomas)
+    pid=3542 EDGE → pid=18 LB  (Gabe Jacas)
+    pid=3509 CB   → pid=39 CB  (Mansoor Delane)
+    pid=3531 QB   → pid=9 LB   (Ty Simpson)
+    pid=449 CB    → pid=309 S  (Jalon Kilgore — also repoint CBSSports sp_id=639)
+  Also repoint Tankathon Kilgore (sp_id=7046) from pid=4410 → pid=309.
+  After consolidation: rebuild consensus, recompute divergence, re-evaluate Divergence Alert tags
+  for Jacas/Thomas/Reese (likely dismiss — artifacts). Then tag trigger re-run.
 
 ---
 
