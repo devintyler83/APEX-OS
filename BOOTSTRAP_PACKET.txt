@@ -10,14 +10,14 @@ Non-negotiables:
 - Provide run order + verification commands
 
 Goal for this chat:
-Session 59: Triage 5 new pending Divergence Alert recs from S58 trigger re-run:
+Session 60: Additional source ingest (2–3 high-quality sources). Deferred from Session 11.
 
 Authoritative State:
 
 1) STATE_SNAPSHOT.md
 # DraftOS State Snapshot
 
-Last Updated (UTC): 2026-03-17T21:22:05.341706+00:00
+Last Updated (UTC): 2026-03-17T21:29:17.721322+00:00
 
 ---
 
@@ -26,6 +26,23 @@ Last Updated (UTC): 2026-03-17T21:22:05.341706+00:00
 - 2026 (season_id=1)
 
 ## Last Completed Milestone
+
+Session 59 (Divergence Alert triage complete + full pending tag queue cleared — 0 pending recs) — tag board fully current.
+
+Session 59:
+- Divergence Alert triage (5 pending → 0):
+  rec_id=235 TJ Parker EDGE +23 → ACCEPTED: DAY1 72.4, 12 sources, post-fix genuine moderate signal.
+  rec_id=238 Arvell Reese EDGE +35 → DISMISSED: EDGE-5 Tweener structural, 4 sources (coverage noise), FM-6.
+  rec_id=242 LT Overton EDGE +37 → DISMISSED: EDGE-5 Tweener structural, FM-6 Role Mismatch.
+  rec_id=244 Anthony Lucas EDGE +29 → DISMISSED: EDGE-5 Tweener structural, FM-6 Role Mismatch.
+  rec_id=251 Treydan Stukes S pid=3011 +68 → DISMISSED: S-5 Raw Projection, 3 sources (coverage gap artifact).
+- Compression Flag x9 → ACCEPTED (all informational, gap_label SOLID/TWEENER).
+- Development Bet x12 → ACCEPTED (all Tier B/C eval_conf — no finished-product exceptions).
+- Scheme Dependent x2 → ACCEPTED (Josh Cameron ILB 3.9, Brian Parker OT 3.8).
+- Pending recs: 0. Rec status: accepted=229, dismissed=34.
+- Active tags: Dev Bet=82, Elite RAS=45, Compression Flag=41, Divergence Alert=33,
+  Great RAS=18, Scheme Dependent=8, Top 5 NextGen=7, Poor RAS=1, Monitor=1, Injury Flag=1.
+- Doctor: PASSED.
 
 Session 58 (Divergence Alert tags accepted for 7 S57 ACCEPT signals + Williams v2.3 confirmed) — tag board current.
 
@@ -505,11 +522,9 @@ Prior sessions on record: 12 (DB rebuild), 13 (weekly pipeline), 13b (school/arc
 
 ## Next Milestone (Single Target)
 
-- Session 59: Triage 5 new pending Divergence Alert recs from S58 trigger re-run:
-  TJ Parker EDGE +23 (rec_id=235), Arvell Reese EDGE +35 (rec_id=238), LT Overton EDGE +37 (rec_id=242),
-  Anthony Lucas EDGE +29 (rec_id=244), Treydan Stukes S pid=3011 +68 (rec_id=251).
-  Per S57 triage: Overton/Lucas = EDGE-5 Hybrid Tweener (likely dismiss). Parker = MODERATE post-fix.
-  Then: Triage remaining pending tags (Compression Flag x9, Development Bet x12, Scheme Dependent x2).
+- Session 60: Additional source ingest (2–3 high-quality sources). Deferred from Session 11.
+  Candidates: The Athletic, Pro Football Focus college, Walter Football, Dane Brugler/The Athletic big board.
+  Follow full pipeline: raw CSV → stage → ingest → bootstrap → canonicalize → consensus rebuild → doctor.
 
 ---
 
@@ -732,11 +747,11 @@ Inactive (data preserved): ngs_2026 (source_id=29, is_active=0) — model score,
 
 2) System Snapshot Output
 === DRAFTOS SYSTEM SNAPSHOT ===
-generated_utc: 2026-03-17T21:22:03.836649+00:00
+generated_utc: 2026-03-17T21:29:17.042470+00:00
 
 ## Git
 branch: main
-commit: dfeca72bcc786fd6de59ff168faa69f0c0d65a22
+commit: 81f63b86f53663fef41852dc46662387ddf46f0d
 status: clean
 
 ## Tables
