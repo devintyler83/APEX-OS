@@ -17,7 +17,7 @@ Authoritative State:
 1) STATE_SNAPSHOT.md
 # DraftOS State Snapshot
 
-Last Updated (UTC): 2026-03-18T02:00:59.839649+00:00
+Last Updated (UTC): 2026-03-18T02:25:52.001298+00:00
 
 ---
 
@@ -857,11 +857,11 @@ Inactive (data preserved): ngs_2026 (source_id=29, is_active=0) — model score,
 
 2) System Snapshot Output
 === DRAFTOS SYSTEM SNAPSHOT ===
-generated_utc: 2026-03-18T02:00:59.136393+00:00
+generated_utc: 2026-03-18T02:25:51.299472+00:00
 
 ## Git
 branch: main
-commit: 78ae6116c47213c4a7f0fa597cdd92059b3be904
+commit: 7fdde8d4d95bbc48c7908b051fa8f1e01764e06f
 status: clean
 
 ## Tables
