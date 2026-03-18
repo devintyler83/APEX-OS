@@ -10,6 +10,25 @@ Last Updated (UTC): 2026-03-18T01:00:57.134428+00:00
 
 ## Last Completed Milestone
 
+Session 63 (APEX re-score: Reese/Thomas/Jacas/Simpson against correct position libraries) — board current.
+
+Session 63:
+- Removed 4 stale TOP50_POSITION_OVERRIDES entries (pids 7/9/16/18) that forced LB/ILB/OLB
+  libraries post-S62 ghost PID consolidation. DB position_group now authoritative.
+- Re-scored all 4 with correct libraries and full source coverage (15-16 sources):
+    Arvell Reese (pid=16): EDGE-5 67.4 DAY2 -> EDGE-1 87.2 ELITE, ALIGNED -1
+      Old score was migrated from ghost PID with limited coverage. True APEX confirms consensus #2.
+    R Mason Thomas (pid=7): EDGE-4 63.4 DAY2 -> EDGE-3 73.8 DAY1, APEX_HIGH +15
+      At divergence_alert_positive threshold (>15 strictly) — no rec fired, monitoring.
+    Gabe Jacas (pid=18): EDGE-5 63.2 DAY2 -> EDGE-3 73.2 DAY1, APEX_HIGH +25
+      Divergence Alert rec_id=267 accepted. Mechanism: EDGE-3 Power-Counter Technician.
+    Ty Simpson (pid=9): QB-5 44.2 DAY3 -> QB-5 64.3 DAY2, APEX_LOW -34 MAJOR
+      Structural QB-5 projection. Dismiss stands. FM-3 Processing Wall.
+- Deactivated 3 stale APEX_LOW Divergence Alert tags (ptag_ids 245/246/247).
+  These were accepted under old APEX_LOW scores; prospects are now ALIGNED/APEX_HIGH.
+- Divergence recomputed: ALIGNED=48, APEX_HIGH=82, APEX_LOW=3, STRUCTURAL=60.
+- Doctor: PASSED. Active sources: 16. Total source_rankings: 42743.
+
 Session 62 (LB ghost PID consolidation — 6 premium prospects fixed, divergence real signals revealed) — board current.
 
 Session 62:
@@ -31,10 +50,6 @@ Session 62:
 - Tag triggers re-run: 3 new Divergence Alert recs (264 Cisse APEX_HIGH, 265 Thomas APEX_LOW, 266 Jacas APEX_LOW).
   All 3 accepted. Reese rec_id=37 (previously dismissed as fake) re-opened and accepted with updated note.
 - Doctor: PASSED. Active sources: 16. Total source_rankings: 42743.
-- NOTE: Ty Simpson APEX_LOW -106 — divergence is real but reflects position confusion (sources ranked as LB,
-  APEX sees QB-5). Not an actionable market miss. Keep monitored.
-- NOTE: Arvell Reese Divergence Alert accepted — consensus loves him (#2) but APEX 67.4 EDGE-5 DAY2 is conservative.
-  Genuine evaluate signal. Not a ghost artifact.
 
 Session 61 (Diagnostic-only: PID split / LB ghost problem scoped — no code written, no DB writes) — board unchanged from S60.
 
@@ -573,13 +588,14 @@ Prior sessions on record: 12 (DB rebuild), 13 (weekly pipeline), 13b (school/arc
 
 ## Next Milestone (Single Target)
 
-- Session 63: APEX re-score for 4 newly-consolidated prospects (Reese/Thomas/Jacas/Simpson).
-  These prospects now have correct position_group (EDGE/QB) but their migrated apex scores were
-  scored against wrong-library (EDGE-5/QB-5 archetypes from ghost PIDs with only 3-4 sources).
-  A full re-score with correct position + full source coverage (17-19 sources) will produce more
-  accurate scores. Target: --batch top50 subset or targeted re-score of these 4 PIDs.
-  Also evaluate: Ty Simpson QB-5 44.2 — is this a genuine projection prospect or position confusion?
-  If no re-score this session, secondary target: export_board_csv + snapshot cycle.
+- Session 64: Three-part session.
+  (1) Kilgore combine man-coverage gate: if combine data available, re-score pid=309 (S, S-3 63.1)
+      with PAA injection confirming or denying man coverage proficiency gate. If data not in, document
+      formal hold criteria for what constitutes gate clearance.
+  (2) Neal 3-cone gate injection: re-score pid=109 with 3-cone=7.13s injected into prompt.
+      Evaluate whether 3-cone narrows archetype to CB-4/CB-5 or confirms CB-2/CB-3 range.
+  (3) Full tag trigger re-run: evaluate_tag_triggers_2026.py --apply 1 to catch any new recs
+      from Reese/Thomas/Jacas/Simpson re-scores (Thomas +15 borderline, Reese ELITE may trigger).
 
 ---
 
