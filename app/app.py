@@ -25,6 +25,547 @@ _ON_SELECT_AVAILABLE = tuple(
 
 st.set_page_config(layout="wide", page_title="DraftOS Big Board")
 
+DRAFTOS_CSS = """
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;400;500;600;700;800;900&family=Barlow:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&display=swap');
+
+/* ── DraftOS token system ── */
+:root {
+  --ink:       #0a0c0f;
+  --ink2:      #0f1318;
+  --ink3:      #161b22;
+  --ink4:      #1c2330;
+  --ink5:      #222b38;
+  --wire:      rgba(255,255,255,0.06);
+  --wire2:     rgba(255,255,255,0.11);
+  --wire3:     rgba(255,255,255,0.20);
+  --dim:       rgba(255,255,255,0.32);
+  --mid:       rgba(255,255,255,0.52);
+  --text:      rgba(255,255,255,0.88);
+  --cold:      #7eb4e2;
+  --cold2:     #4a90d4;
+  --cold-dim:  rgba(126,180,226,0.10);
+  --cold-dim2: rgba(126,180,226,0.20);
+  --amber:     #e8a84a;
+  --amber2:    #c98828;
+  --amber-dim: rgba(232,168,74,0.13);
+  --red:       #e05c5c;
+  --red-dim:   rgba(224,92,92,0.12);
+  --green:     #5ab87a;
+  --green-dim: rgba(90,184,122,0.12);
+  --elite:     #f0c040;
+  --elite-dim: rgba(240,192,64,0.12);
+}
+
+/* ── Page title ── */
+h1 {
+  font-family: 'Barlow Condensed', sans-serif !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.02em !important;
+  text-transform: uppercase !important;
+  color: rgba(255,255,255,0.92) !important;
+}
+
+/* ── Tab labels ── */
+.stTabs [data-baseweb="tab"] {
+  font-family: 'Barlow Condensed', sans-serif !important;
+  font-weight: 700 !important;
+  font-size: 13px !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+  color: rgba(255,255,255,0.52) !important;
+}
+.stTabs [aria-selected="true"] {
+  color: #7eb4e2 !important;
+  border-bottom: 2px solid #7eb4e2 !important;
+}
+
+/* ── Sidebar header ── */
+[data-testid="stSidebar"] h2,
+[data-testid="stSidebar"] h3,
+[data-testid="stSidebar"] .stMarkdown h3 {
+  font-family: 'Barlow Condensed', sans-serif !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.16em !important;
+  text-transform: uppercase !important;
+  color: rgba(255,255,255,0.32) !important;
+}
+
+/* ── Divider ── */
+hr {
+  border-color: rgba(255,255,255,0.06) !important;
+  margin: 10px 0 !important;
+}
+
+/* ── DraftOS detail panel classes ── */
+
+.dos-name {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 48px;
+  font-weight: 900;
+  line-height: 0.92;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.92);
+}
+
+.dos-pos-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(126,180,226,0.15);
+  border: 1px solid rgba(74,144,212,0.45);
+  border-radius: 3px;
+  padding: 3px 10px;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: #7eb4e2;
+  text-transform: uppercase;
+  margin-right: 10px;
+  vertical-align: middle;
+}
+
+.dos-score-block {
+  text-align: right;
+}
+.dos-score-num {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 52px;
+  font-weight: 800;
+  line-height: 0.92;
+  letter-spacing: -0.02em;
+}
+.dos-score-num.rpg   { color: #7eb4e2; }
+.dos-score-num.apex  { color: #e8a84a; }
+.dos-score-lbl {
+  font-family: 'Barlow', sans-serif;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.32);
+  margin-top: 2px;
+}
+
+.dos-tier-ELITE  { background: rgba(240,192,64,0.12); border: 1px solid rgba(240,192,64,0.40); color: #f0c040; }
+.dos-tier-DAY1   { background: rgba(126,180,226,0.10); border: 1px solid rgba(126,180,226,0.35); color: #7eb4e2; }
+.dos-tier-DAY2   { background: rgba(90,184,122,0.10); border: 1px solid rgba(90,184,122,0.35); color: #5ab87a; }
+.dos-tier-DAY3   { background: rgba(232,168,74,0.10); border: 1px solid rgba(232,168,74,0.30); color: #e8a84a; }
+.dos-tier-UDFAP  { background: rgba(196,122,224,0.10); border: 1px solid rgba(196,122,224,0.30); color: #c47ae0; }
+.dos-tier-UDFA   { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); color: rgba(255,255,255,0.45); }
+
+.dos-tier-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 16px;
+  border-radius: 4px;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 16px;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.dos-sec-lbl {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.32);
+  margin-bottom: 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+.dos-panel {
+  background: #161b22;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 6px;
+  padding: 14px 16px;
+  margin: 8px 0;
+}
+
+.dos-arch-name {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 22px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #e8a84a;
+  line-height: 1;
+}
+
+.dos-fit-CLEAN       { background: rgba(90,184,122,0.12); border: 1px solid rgba(90,184,122,0.30); color: #5ab87a; }
+.dos-fit-SOLID       { background: rgba(90,184,122,0.10); border: 1px solid rgba(90,184,122,0.25); color: #5ab87a; }
+.dos-fit-TWEENER     { background: rgba(232,168,74,0.12); border: 1px solid rgba(232,168,74,0.30); color: #e8a84a; }
+.dos-fit-COMPRESSION { background: rgba(91,156,240,0.12); border: 1px solid rgba(91,156,240,0.30); color: #5b9cf0; }
+.dos-fit-NO_FIT      { background: rgba(224,92,92,0.12); border: 1px solid rgba(224,92,92,0.30); color: #e05c5c; }
+
+.dos-fit-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 3px;
+  font-family: 'Barlow', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.dos-fm-1 { background: rgba(224,92,92,0.12); border: 1px solid rgba(224,92,92,0.35); color: #e05c5c; }
+.dos-fm-2 { background: rgba(232,168,74,0.12); border: 1px solid rgba(232,168,74,0.35); color: #e8a84a; }
+.dos-fm-3 { background: rgba(91,156,240,0.14); border: 1px solid rgba(91,156,240,0.35); color: #5b9cf0; }
+.dos-fm-4 { background: rgba(224,92,92,0.14); border: 1px solid rgba(224,92,92,0.38); color: #e05c5c; }
+.dos-fm-5 { background: rgba(196,122,224,0.14); border: 1px solid rgba(196,122,224,0.35); color: #c47ae0; }
+.dos-fm-6 { background: rgba(165,126,224,0.14); border: 1px solid rgba(165,126,224,0.35); color: #a57ee0; }
+
+.dos-fm-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 3px;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-right: 8px;
+}
+
+.dos-fm-pips {
+  display: flex;
+  gap: 3px;
+  margin-bottom: 10px;
+}
+.dos-fm-pip {
+  flex: 1;
+  height: 4px;
+  border-radius: 1.5px;
+  background: rgba(255,255,255,0.06);
+}
+.dos-pip-1 { background: #e05c5c; }
+.dos-pip-2 { background: #e8a84a; }
+.dos-pip-3 { background: #5b9cf0; }
+.dos-pip-4 { background: #e05c5c; }
+.dos-pip-5 { background: #c47ae0; }
+.dos-pip-6 { background: #a57ee0; }
+
+.dos-trait-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 7px;
+}
+.dos-trait-lbl {
+  font-family: 'Barlow', sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.52);
+  width: 160px;
+  flex-shrink: 0;
+  letter-spacing: 0.01em;
+}
+.dos-trait-track {
+  flex: 1;
+  height: 3px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.dos-trait-fill {
+  height: 100%;
+  border-radius: 2px;
+}
+.dos-tf-hi  { background: #5ab87a; }
+.dos-tf-mid { background: #7eb4e2; }
+.dos-tf-lo  { background: #e8a84a; }
+.dos-tf-red { background: #e05c5c; }
+.dos-trait-val {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  width: 28px;
+  text-align: right;
+  color: rgba(255,255,255,0.88);
+}
+
+.dos-sig-play {
+  background: #161b22;
+  border: 1px solid rgba(255,255,255,0.06);
+  border-left: 3px solid #4a90d4;
+  border-radius: 0 5px 5px 0;
+  padding: 12px 16px;
+  margin: 10px 0;
+}
+.dos-sig-lbl {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #7eb4e2;
+  margin-bottom: 6px;
+}
+.dos-sig-text {
+  font-family: 'Barlow', sans-serif;
+  font-size: 13px;
+  line-height: 1.6;
+  color: rgba(255,255,255,0.60);
+  font-style: italic;
+}
+
+.dos-risk-banner {
+  background: rgba(232,168,74,0.08);
+  border: 1px solid rgba(232,168,74,0.18);
+  border-left: 3px solid #c98828;
+  border-radius: 0 5px 5px 0;
+  padding: 10px 14px;
+  margin: 10px 0;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+.dos-risk-icon {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 13px;
+  font-weight: 800;
+  color: #e8a84a;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.dos-risk-text {
+  font-family: 'Barlow', sans-serif;
+  font-size: 12px;
+  line-height: 1.6;
+  color: rgba(232,168,74,0.78);
+}
+
+.dos-sf-panel {
+  background: #161b22;
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 5px;
+  padding: 12px 14px;
+}
+.dos-sf-hdr {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.dos-sf-hdr.g { color: #5ab87a; }
+.dos-sf-hdr.r { color: #e05c5c; }
+.dos-sf-ind { width: 5px; height: 5px; border-radius: 1px; flex-shrink: 0; }
+.dos-sf-ind.g { background: #5ab87a; }
+.dos-sf-ind.r { background: #e05c5c; }
+.dos-sf-item {
+  font-family: 'Barlow', sans-serif;
+  font-size: 12px;
+  line-height: 1.6;
+  color: rgba(255,255,255,0.55);
+  padding: 5px 0;
+  border-top: 1px solid rgba(255,255,255,0.05);
+  display: flex;
+  gap: 7px;
+  align-items: flex-start;
+}
+.dos-sf-item:first-of-type { border-top: none; }
+.dos-dot { width: 3px; height: 3px; border-radius: 50%; margin-top: 6px; flex-shrink: 0; }
+.dos-dot.g { background: #5ab87a; }
+.dos-dot.r { background: rgba(224,92,92,0.55); }
+
+.dos-comp-card {
+  background: #161b22;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 5px;
+  padding: 14px;
+  position: relative;
+  overflow: hidden;
+  flex: 1;
+}
+.dos-comp-card::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+}
+.dos-comp-card.hit::before     { background: linear-gradient(180deg, #5ab87a, rgba(90,184,122,0.3)); }
+.dos-comp-card.partial::before { background: linear-gradient(180deg, #e8a84a, rgba(232,168,74,0.3)); }
+.dos-comp-card.miss::before    { background: linear-gradient(180deg, #e05c5c, rgba(224,92,92,0.3)); }
+
+.dos-comp-type {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.dos-comp-type.hit     { color: #5ab87a; }
+.dos-comp-type.partial { color: #e8a84a; }
+.dos-comp-type.miss    { color: #e05c5c; }
+
+.dos-comp-name {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 20px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: rgba(255,255,255,0.92);
+  line-height: 1;
+  margin-bottom: 6px;
+}
+.dos-comp-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: 'Barlow', sans-serif;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 2px;
+  margin-bottom: 8px;
+}
+.dos-comp-badge.hit     { background: rgba(90,184,122,0.10); color: #5ab87a; border: 1px solid rgba(90,184,122,0.25); }
+.dos-comp-badge.partial { background: rgba(232,168,74,0.10); color: #e8a84a; border: 1px solid rgba(232,168,74,0.25); }
+.dos-comp-badge.miss    { background: rgba(224,92,92,0.10);  color: #e05c5c; border: 1px solid rgba(224,92,92,0.25); }
+
+.dos-comp-desc {
+  font-family: 'Barlow', sans-serif;
+  font-size: 11px;
+  line-height: 1.6;
+  color: rgba(255,255,255,0.35);
+  margin-bottom: 6px;
+}
+.dos-comp-year {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 9px;
+  color: rgba(255,255,255,0.18);
+  letter-spacing: 0.06em;
+}
+
+.dos-formula {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 10px;
+  color: rgba(255,255,255,0.28);
+  letter-spacing: 0.04em;
+  margin-top: 6px;
+}
+
+.dos-meta {
+  font-family: 'Barlow', sans-serif;
+  font-size: 12px;
+  color: rgba(255,255,255,0.38);
+  letter-spacing: 0.02em;
+  margin-top: 4px;
+}
+.dos-meta span {
+  color: rgba(255,255,255,0.52);
+}
+
+.dos-div-bar {
+  background: rgba(91,156,240,0.08);
+  border: 1px solid rgba(91,156,240,0.18);
+  border-left: 3px solid #4a90d4;
+  border-radius: 0 4px 4px 0;
+  padding: 8px 14px;
+  margin: 8px 0 12px 0;
+  font-family: 'Barlow', sans-serif;
+  font-size: 12px;
+  line-height: 1.55;
+  color: rgba(255,255,255,0.52);
+}
+
+.dos-cap-row {
+  display: flex;
+  gap: 40px;
+  flex-wrap: wrap;
+}
+.dos-cap-lbl {
+  font-family: 'Barlow', sans-serif;
+  font-size: 10px;
+  color: rgba(255,255,255,0.32);
+  margin-bottom: 3px;
+  letter-spacing: 0.04em;
+}
+.dos-cap-val {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.88);
+}
+
+.dos-eval-footer {
+  font-family: 'Barlow', sans-serif;
+  font-size: 11px;
+  color: rgba(255,255,255,0.28);
+  letter-spacing: 0.04em;
+  margin-top: 6px;
+}
+
+.dos-fm-ref-card {
+  border-radius: 4px;
+  padding: 10px 14px;
+  margin-bottom: 6px;
+  background: #0d1117;
+}
+.dos-fm-ref-outcome {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.dos-fm-ref-name {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 18px;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.88);
+  letter-spacing: 0.02em;
+}
+.dos-fm-ref-meta {
+  font-family: 'Barlow', sans-serif;
+  font-size: 12px;
+  color: rgba(255,255,255,0.38);
+}
+.dos-fm-ref-era {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 10px;
+  color: rgba(255,255,255,0.22);
+  letter-spacing: 0.06em;
+}
+.dos-bust-mech {
+  font-family: 'Barlow', sans-serif;
+  font-size: 12px;
+  line-height: 1.6;
+  padding: 8px 12px;
+  margin: 4px 0 10px 0;
+  border-left: 3px solid #e05c5c;
+  background: rgba(224,92,92,0.05);
+  color: rgba(224,92,92,0.80);
+}
+.dos-bust-lbl {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: rgba(224,92,92,0.55);
+  margin-right: 4px;
+}
+</style>
+"""
+st.markdown(DRAFTOS_CSS, unsafe_allow_html=True)
+
 # ---------------------------------------------------------------------------
 # Tag display maps
 # ---------------------------------------------------------------------------
@@ -382,7 +923,8 @@ def _render_tag_pill(tag_name: str) -> str:
     bg, border, text = _TAG_PILL_COLORS.get(tag_name, _TAG_PILL_DEFAULT)
     return (
         f'<span style="background:{bg};border:1px solid {border};color:{text};'
-        f'border-radius:999px;padding:2px 10px;font-size:11px;font-weight:600;'
+        f'border-radius:3px;padding:2px 9px;font-family:\'Barlow Condensed\',sans-serif;'
+        f'font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;'
         f'display:inline-block;margin:2px">{label}</span>'
     )
 
@@ -425,6 +967,36 @@ def _render_gap_label(gap_label: str | None, archetype_gap: float | None) -> str
     return _GAP_LABEL_DISPLAY_MAP.get(gap_label.strip().upper(), gap_label.strip().title())
 
 
+def _safe_float(v, fmt=".1f"):
+    """Return formatted float string or '—'."""
+    if v is None:
+        return "—"
+    try:
+        f = float(v)
+        if math.isnan(f):
+            return "—"
+        return format(f, fmt)
+    except (TypeError, ValueError):
+        return "—"
+
+
+def _v23_present(v) -> bool:
+    """True when a v2.3 text field contains usable content."""
+    if v is None:
+        return False
+    if isinstance(v, float):
+        return not math.isnan(v)
+    return bool(str(v).strip())
+
+
+def _fm_is_present(v) -> bool:
+    if v is None:
+        return False
+    if isinstance(v, float):
+        return not math.isnan(v)
+    return str(v).strip().upper() not in ("", "NONE", "N/A")
+
+
 # ---------------------------------------------------------------------------
 # Trait bar helpers (detail card)
 # ---------------------------------------------------------------------------
@@ -440,22 +1012,44 @@ def _bar_color(val: float) -> str:
 
 
 def _trait_bar_html(label: str, val: float | None) -> str:
-    if val is None:
+    """
+    DraftOS-branded trait bar with threshold color system.
+    >= 8.5  -> green  (hi)
+    7.0-8.4 -> cold blue (mid)
+    5.0-6.9 -> amber (lo)
+    < 5.0   -> red (red)
+    """
+    if val is None or (isinstance(val, float) and math.isnan(val)) or val == 0.0:
         return (
-            f'<div style="display:flex;align-items:center;margin-bottom:6px">'
-            f'<div style="width:175px;font-size:13px;color:#ffffff">{label}</div>'
-            f'<div style="flex:1;background:#222;border-radius:3px;height:8px;margin:0 10px"></div>'
-            f'<div style="width:28px;text-align:right;font-size:13px;color:#ffffff">—</div>'
+            f'<div class="dos-trait-row">'
+            f'<span class="dos-trait-lbl">{label}</span>'
+            f'<div class="dos-trait-track"></div>'
+            f'<span class="dos-trait-val" style="color:rgba(255,255,255,0.22)">—</span>'
             f'</div>'
         )
-    pct   = min(max(val / 10.0 * 100, 0), 100)
-    color = _bar_color(val)
+
+    pct = min(max(val / 10.0 * 100, 0), 100)
+
+    if val >= 8.5:
+        color_cls = "dos-tf-hi"
+        val_color = "#5ab87a"
+    elif val >= 7.0:
+        color_cls = "dos-tf-mid"
+        val_color = "#7eb4e2"
+    elif val >= 5.0:
+        color_cls = "dos-tf-lo"
+        val_color = "#e8a84a"
+    else:
+        color_cls = "dos-tf-red"
+        val_color = "#e05c5c"
+
     return (
-        f'<div style="display:flex;align-items:center;margin-bottom:6px">'
-        f'<div style="width:175px;font-size:13px;color:#ffffff">{label}</div>'
-        f'<div style="flex:1;background:#222;border-radius:3px;height:8px;margin:0 10px">'
-        f'<div style="width:{pct:.0f}%;background:{color};height:100%;border-radius:3px"></div></div>'
-        f'<div style="width:28px;text-align:right;font-size:13px;color:{color};font-weight:700">{val:.1f}</div>'
+        f'<div class="dos-trait-row">'
+        f'<span class="dos-trait-lbl">{label}</span>'
+        f'<div class="dos-trait-track">'
+        f'<div class="dos-trait-fill {color_cls}" style="width:{pct:.0f}%"></div>'
+        f'</div>'
+        f'<span class="dos-trait-val" style="color:{val_color}">{val:.1f}</span>'
         f'</div>'
     )
 
@@ -465,87 +1059,92 @@ def _trait_bar_html(label: str, val: float | None) -> str:
 # ---------------------------------------------------------------------------
 
 def _render_apex_detail(d: dict) -> None:
-    """Render full APEX evaluation card with styled HTML sections and dynamic bullets."""
+    """
+    DraftOS Classified Dossier x Prizm visual rebuild.
+    Full replacement for the original _render_apex_detail function.
+    Signature unchanged. All DB calls and session_state wiring are upstream.
+    """
 
-    # ── Header ────────────────────────────────────────────────────────────────
-    pos    = d.get("position_group") or "?"
-    name   = d.get("display_name") or "Unknown"
-    school = d.get("school_canonical") or "—"
-    tier   = (d.get("apex_tier") or "").strip().upper()
-    crank  = d.get("consensus_rank")
-    conf   = d.get("confidence_band") or "—"
-    ras    = d.get("ras_score") or d.get("ras_total")
+    # ── Unpack core fields ──────────────────────────────────────────────────
+    pos       = d.get("position_group") or "?"
+    name      = d.get("display_name") or "Unknown"
+    school    = d.get("school_canonical") or "—"
+    tier      = (d.get("apex_tier") or "").strip().upper()
+    crank     = d.get("consensus_rank")
+    conf      = d.get("confidence_band") or "—"
+    ras_raw   = d.get("ras_score") or d.get("ras_total")
 
-    pos_color = _POS_BADGE_COLORS.get(pos, "#ffffff")
     rank_str  = f"#{int(crank)}" if crank is not None and pd.notna(crank) else "—"
-    ras_str   = f"{float(ras):.2f}" if ras is not None and pd.notna(ras) else "—"
+    ras_str   = _safe_float(ras_raw, ".2f") if ras_raw is not None and pd.notna(ras_raw) else "—"
+    raw_str   = _safe_float(d.get("raw_score"))
+    comp_str  = _safe_float(d.get("apex_composite"))
+    pvc_str   = _safe_float(d.get("pvc"), ".2f")
 
-    raw       = d.get("raw_score")
-    composite = d.get("apex_composite")
-    pvc       = d.get("pvc")
-
-    def _safe_float_str(v, fmt):
-        if v is None:
-            return "—"
-        try:
-            f = float(v)
-            if math.isnan(f):
-                return "—"
-            return format(f, fmt)
-        except (TypeError, ValueError):
-            return "—"
-
-    raw_str  = _safe_float_str(raw, ".1f")
-    comp_str = _safe_float_str(composite, ".1f")
-    pvc_str  = _safe_float_str(pvc, ".2f")
-
-    _tier_colors_header = {
-        "ELITE": "#48BB78", "DAY1": "#4299E1", "DAY2": "#ECC94B",
-        "DAY3": "#ED8936", "UDFA-P": "#FC8181", "UDFA": "#FC8181",
+    # Tier badge CSS class
+    tier_css_map = {
+        "ELITE": "dos-tier-ELITE",
+        "DAY1":  "dos-tier-DAY1",
+        "DAY2":  "dos-tier-DAY2",
+        "DAY3":  "dos-tier-DAY3",
+        "UDFA-P":"dos-tier-UDFAP",
+        "UDFA":  "dos-tier-UDFA",
     }
-    tier_badge_bg = _tier_colors_header.get(tier, "#718096")
+    tier_css  = tier_css_map.get(tier, "dos-tier-UDFA")
+    tier_lbl  = {"ELITE": "★ ELITE"}.get(tier, tier or "—")
 
-    header_left, header_right = st.columns([3, 2])
+    # ── HEADER ZONE ─────────────────────────────────────────────────────────
+    header_l, header_r = st.columns([5, 3])
 
-    with header_left:
+    with header_l:
         st.markdown(
-            f'<span style="background:{pos_color};color:white;padding:4px 10px;'
-            f'border-radius:6px;font-size:14px;font-weight:700;'
-            f'margin-right:8px">{pos}</span>'
-            f'<span style="font-size:24px;font-weight:700;color:#E2E8F0">{name}</span>',
-            unsafe_allow_html=True,
-        )
-        st.caption(f"{school} · Consensus {rank_str} · Confidence: {conf} · RAS: {ras_str}")
-
-    with header_right:
-        st.markdown(
-            f"""
-            <div style="text-align:right">
-                <div style="display:flex;justify-content:flex-end;align-items:baseline;gap:24px">
-                    <div style="text-align:center">
-                        <div style="font-size:36px;font-weight:800;color:#63B3ED">{raw_str}</div>
-                        <div style="font-size:11px;color:#ffffff;text-transform:uppercase;letter-spacing:1px">Player Grade</div>
-                    </div>
-                    <div style="text-align:center">
-                        <div style="font-size:36px;font-weight:800;color:#48BB78">{comp_str}</div>
-                        <div style="font-size:11px;color:#ffffff;text-transform:uppercase;letter-spacing:1px">Draft Value</div>
-                    </div>
-                    <div style="text-align:center">
-                        <span style="background:{tier_badge_bg};color:white;padding:6px 14px;
-                        border-radius:6px;font-size:14px;font-weight:700">{tier or "—"}</span>
-                    </div>
-                </div>
-                <div style="font-size:13px;color:#ffffff;margin-top:6px;text-align:right">
-                    RPG {raw_str} × {pvc_str} ({pos}) = APEX {comp_str}
-                </div>
-            </div>
-            """,
+            f'<div style="margin-bottom:4px">'
+            f'<span class="dos-pos-chip">{pos}</span>'
+            f'</div>'
+            f'<div class="dos-name">{name}</div>'
+            f'<div class="dos-meta" style="margin-top:8px">'
+            f'<span>{school}</span>'
+            f'&nbsp;·&nbsp;Consensus <span>{rank_str}</span>'
+            f'&nbsp;·&nbsp;Confidence: <span>{conf}</span>'
+            + (f'&nbsp;·&nbsp;RAS: <span>{ras_str}</span>' if ras_str != "—" else "")
+            + f'</div>',
             unsafe_allow_html=True,
         )
 
-    st.markdown("<hr style='border-color:#333;margin:8px 0 12px 0'>", unsafe_allow_html=True)
+    with header_r:
+        st.markdown(
+            f'<div class="dos-score-block">'
+            f'<div style="display:flex;justify-content:flex-end;align-items:baseline;gap:28px;margin-bottom:4px">'
 
-    # ── Divergence Narrative ──────────────────────────────────────────────────
+            f'<div style="text-align:center">'
+            f'<div class="dos-score-num rpg">{raw_str}</div>'
+            f'<div class="dos-score-lbl">Player Grade</div>'
+            f'</div>'
+
+            f'<div style="text-align:center">'
+            f'<div class="dos-score-num apex">{comp_str}</div>'
+            f'<div class="dos-score-lbl">Draft Value</div>'
+            f'</div>'
+
+            f'<div style="text-align:center;align-self:center">'
+            f'<div class="dos-tier-badge {tier_css}">{tier_lbl}</div>'
+            f'</div>'
+
+            f'</div>'
+            f'<div class="dos-formula">'
+            f'RPG {raw_str} × {pvc_str} ({pos}) = APEX {comp_str}'
+            f'</div>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+
+    # ── HEADER DIVIDER ───────────────────────────────────────────────────────
+    st.markdown(
+        '<div style="height:1px;background:linear-gradient(90deg,'
+        '#4a90d4 0%,rgba(74,144,212,0.3) 40%,transparent 100%);margin:12px 0 16px 0"></div>',
+        unsafe_allow_html=True,
+    )
+
+    # ── DIVERGENCE NARRATIVE ─────────────────────────────────────────────────
     _div_delta = d.get("auto_apex_delta")
     if _div_delta is not None:
         _narr_traits = {
@@ -566,9 +1165,12 @@ def _render_apex_detail(d: dict) -> None:
             fm_primary=d.get("failure_mode_primary"),
         )
         if _narrative:
-            st.caption(f"📊 {_narrative}")
+            st.markdown(
+                f'<div class="dos-div-bar">📊 {_narrative}</div>',
+                unsafe_allow_html=True,
+            )
 
-    # ── Player Profile / Trait Vectors Bars ──────────────────────────────────
+    # ── PLAYER PROFILE / TRAIT METERS ───────────────────────────────────────
     _traits_raw = {
         "v_processing":     d.get("v_processing"),
         "v_athleticism":    d.get("v_athleticism"),
@@ -586,22 +1188,15 @@ def _render_apex_detail(d: dict) -> None:
         k: (float(v) if v is not None and not (isinstance(v, float) and pd.isna(v)) else 0.0)
         for k, v in _traits_raw.items()
     }
-
     _has_apex_data = any(v > 0 for v in _traits.values())
 
-    if not _has_apex_data:
-        st.caption("APEX evaluation not yet available.")
-    else:
+    if _has_apex_data:
+        st.markdown('<div class="dos-sec-lbl">Player Profile</div>', unsafe_allow_html=True)
+
         profile_dims = get_profile_dimensions(d.get("position_group", ""), _traits)
         has_profile = len(profile_dims) > 0 and any(s > 0 for _, s in profile_dims)
 
         prof_col1, prof_col2 = st.columns([4, 1])
-        with prof_col1:
-            st.markdown(
-                '<div style="font-size:12px;font-weight:700;color:#ffffff;letter-spacing:1px;'
-                'margin-bottom:8px">PLAYER PROFILE</div>',
-                unsafe_allow_html=True,
-            )
         with prof_col2:
             if has_profile:
                 profile_view = st.radio(
@@ -642,201 +1237,235 @@ def _render_apex_detail(d: dict) -> None:
                 unsafe_allow_html=True,
             )
 
-    # Character sub-scores
-    c1 = d.get("c1_public_record")
-    c2 = d.get("c2_motivation")
-    c3 = d.get("c3_psych_profile")
-    if any(v is not None for v in [c1, c2, c3]):
-        sub = []
-        if c1 is not None: sub.append(f"Off-field record: **{c1:.1f}**")
-        if c2 is not None: sub.append(f"Motor & drive: **{c2:.1f}**")
-        if c3 is not None: sub.append(f"Mental makeup: **{c3:.1f}**")
-        st.caption("  ·  ".join(sub))
+        # Character sub-scores
+        c1, c2, c3 = d.get("c1_public_record"), d.get("c2_motivation"), d.get("c3_psych_profile")
+        if any(v is not None for v in [c1, c2, c3]):
+            sub = []
+            if c1 is not None: sub.append(f"Off-field: <span style='color:rgba(255,255,255,0.65)'>{c1:.1f}</span>")
+            if c2 is not None: sub.append(f"Motor & drive: <span style='color:rgba(255,255,255,0.65)'>{c2:.1f}</span>")
+            if c3 is not None: sub.append(f"Mental makeup: <span style='color:rgba(255,255,255,0.65)'>{c3:.1f}</span>")
+            st.markdown(
+                f'<div class="dos-meta" style="margin-top:6px">{"  ·  ".join(sub)}</div>',
+                unsafe_allow_html=True,
+            )
 
-    # Special rule badges
-    badges = []
-    if d.get("smith_rule"):
-        badges.append("⚠️ Character cap applied — reduces draft capital")
-    if d.get("schwesinger_full"):
-        badges.append("🚀 Elite character bonus — Dev Trajectory boosted (full)")
-    if d.get("schwesinger_half"):
-        badges.append("📈 Character bonus — Dev Trajectory boosted")
-    if d.get("two_way_premium"):
-        badges.append("⭐ Two-way prospect — scored at higher-value position")
-    for b in badges:
-        st.caption(b)
+        # Special rule badges
+        badges = []
+        if d.get("smith_rule"):
+            badges.append(("⚠", "#e8a84a", "Character cap applied — draft capital reduced"))
+        if d.get("schwesinger_full"):
+            badges.append(("▲", "#5ab87a", "Elite character bonus — Dev Trajectory boosted (full)"))
+        if d.get("schwesinger_half"):
+            badges.append(("▲", "#5ab87a", "Character bonus — Dev Trajectory boosted"))
+        if d.get("two_way_premium"):
+            badges.append(("◈", "#7eb4e2", "Two-way prospect — scored at higher-value position"))
+        for icon, color, text in badges:
+            st.markdown(
+                f'<div class="dos-meta" style="color:{color};margin-top:4px">{icon} {text}</div>',
+                unsafe_allow_html=True,
+            )
 
-    st.divider()
-
-    # ── Archetype Block ───────────────────────────────────────────────────────
+    # ── ARCHETYPE BLOCK ──────────────────────────────────────────────────────
     arch      = d.get("matched_archetype") or "—"
     gap_label = (d.get("gap_label") or "").strip().upper()
     fit_score = d.get("archetype_gap")
-    gap_bg, gap_text = _GAP_BADGE_COLORS.get(gap_label, ("#555555", "#ffffff"))
-    fit_str      = f"{fit_score:.1f} pts" if fit_score is not None else "—"
-    gap_display  = _GAP_LABEL_DISPLAY_MAP.get(gap_label, gap_label)
+    fit_str   = f"{fit_score:.1f} pts" if fit_score is not None else "—"
+    gap_display = _GAP_LABEL_DISPLAY_MAP.get(gap_label, gap_label.title() if gap_label else "—")
 
-    arch_html = f"""
-<div style="background:#1a1a2a;border:1px solid #2a2a40;border-radius:8px;
-            padding:12px 16px;margin:6px 0">
-  <div style="font-size:11px;color:#ffffff;letter-spacing:1px;margin-bottom:6px">ARCHETYPE</div>
-  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-    <span style="font-size:16px;font-weight:700;color:#ffffff">{arch}</span>
-    <span style="font-size:13px;color:#ffffff">Fit: {fit_str}</span>
-    <span style="background:{gap_bg};color:{gap_text};padding:3px 10px;border-radius:999px;
-                 font-size:13px;font-weight:700">{gap_display}</span>
-  </div>
-</div>
-"""
-    st.markdown(arch_html, unsafe_allow_html=True)
+    arch_parts = arch.split(" ", 1) if arch != "—" else ["—", ""]
+    arch_code  = arch_parts[0]
+    arch_label = arch_parts[1] if len(arch_parts) > 1 else ""
+
+    fit_css_map = {
+        "CLEAN":       "dos-fit-CLEAN",
+        "SOLID":       "dos-fit-SOLID",
+        "TWEENER":     "dos-fit-TWEENER",
+        "COMPRESSION": "dos-fit-COMPRESSION",
+        "NO_FIT":      "dos-fit-NO_FIT",
+    }
+    fit_css = fit_css_map.get(gap_label, "dos-fit-SOLID")
+
+    st.markdown(
+        f'<div class="dos-panel" style="margin-top:18px">'
+        f'<div class="dos-sec-lbl" style="border-bottom:none;margin-bottom:8px;padding-bottom:0">Archetype</div>'
+        f'<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">'
+        f'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:11px;'
+        f'font-weight:700;letter-spacing:0.18em;color:#7eb4e2;text-transform:uppercase">{arch_code}</span>'
+        f'<span class="dos-arch-name">{arch_label or arch}</span>'
+        f'<span class="dos-fit-badge {fit_css}">{gap_display}</span>'
+        f'<span style="font-family:\'Barlow\',sans-serif;font-size:11px;color:rgba(255,255,255,0.32);'
+        f'margin-left:4px">Fit: {fit_str}</span>'
+        f'</div>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
 
     gap_explanation = _GAP_LABEL_EXPLANATIONS.get(gap_label, "")
     if gap_explanation:
-        st.caption(gap_explanation)
+        st.markdown(
+            f'<div class="dos-meta" style="margin:6px 0 0 2px">{gap_explanation}</div>',
+            unsafe_allow_html=True,
+        )
 
     if d.get("override_arch"):
         od = d.get("override_delta") or 0
-        st.warning(
-            f"🔧 **OVERRIDE:** {d['override_arch']} "
-            f"(Δ{od:+.1f}) — "
-            f"{d.get('override_rationale') or 'No rationale recorded.'}"
+        st.markdown(
+            f'<div style="background:rgba(232,168,74,0.08);border:1px solid rgba(232,168,74,0.20);'
+            f'border-left:3px solid #c98828;border-radius:0 4px 4px 0;padding:8px 14px;margin:8px 0">'
+            f'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:9px;font-weight:700;'
+            f'letter-spacing:0.16em;text-transform:uppercase;color:#e8a84a">Override</span>'
+            f'<span style="font-family:\'Barlow\',sans-serif;font-size:12px;color:rgba(232,168,74,0.80);'
+            f'margin-left:8px">{d["override_arch"]} (Δ{od:+.1f}) — '
+            f'{d.get("override_rationale") or "No rationale recorded."}</span>'
+            f'</div>',
+            unsafe_allow_html=True,
         )
 
-    # ── Failure Mode Section ───────────────────────────────────────────────────
+    # ── FAILURE MODE RISK ────────────────────────────────────────────────────
     fm_primary   = d.get("failure_mode_primary")
     fm_secondary = d.get("failure_mode_secondary")
 
-    def _fm_is_present(v) -> bool:
-        if v is None:
-            return False
-        if isinstance(v, float):
-            return not math.isnan(v)
-        return str(v).strip().upper() not in ("", "NONE", "N/A")
-
     if _fm_is_present(fm_primary):
-        fm_code    = str(fm_primary)[:4]
-        fm_color   = _FM_COLORS.get(fm_code, "#ffffff")
+        fm_code     = str(fm_primary)[:4]
+        fm_num      = fm_code.replace("FM-", "")
+        fm_css      = f"dos-fm-{fm_num}" if fm_num in "123456" else "dos-fm-3"
+        pip_css_map = {"1":"dos-pip-1","2":"dos-pip-2","3":"dos-pip-3",
+                       "4":"dos-pip-4","5":"dos-pip-5","6":"dos-pip-6"}
 
-        fm_secondary_html = ""
+        active_codes = set()
+        if _fm_is_present(fm_primary):
+            _m = re.search(r"FM-(\d+)", str(fm_primary))
+            if _m: active_codes.add(_m.group(1))
         if _fm_is_present(fm_secondary):
-            fm_sec_code  = str(fm_secondary)[:4]
-            fm_sec_color = _FM_COLORS.get(fm_sec_code, "#ffffff")
-            fm_secondary_html = (
-                f'<span style="background:{fm_sec_color};color:white;padding:4px 10px;'
-                f'border-radius:6px;font-size:12px;font-weight:600;margin-left:8px">'
-                f'{fm_secondary}</span>'
-            )
+            _m = re.search(r"FM-(\d+)", str(fm_secondary))
+            if _m: active_codes.add(_m.group(1))
+
+        pips_html = "".join(
+            f'<div class="dos-fm-pip {pip_css_map.get(str(i), "")}">'
+            f'</div>'
+            if str(i) in active_codes
+            else f'<div class="dos-fm-pip"></div>'
+            for i in range(1, 7)
+        )
+
+        fm_tags_html = f'<span class="dos-fm-badge {fm_css}">{fm_primary}</span>'
+        if _fm_is_present(fm_secondary):
+            fm_sec_code = str(fm_secondary)[:4]
+            fm_sec_num  = fm_sec_code.replace("FM-", "")
+            fm_sec_css  = f"dos-fm-{fm_sec_num}" if fm_sec_num in "123456" else "dos-fm-6"
+            fm_tags_html += f'<span class="dos-fm-badge {fm_sec_css}">{fm_secondary}</span>'
 
         bust_warning = d.get("bust_warning")
-        if _fm_is_present(bust_warning):
-            fm_mechanism_text = str(bust_warning).strip()
-        else:
-            fm_mechanism_text = _FM_DESCRIPTIONS.get(fm_code, str(fm_primary))
+        fm_mechanism_text = (
+            str(bust_warning).strip()
+            if _fm_is_present(bust_warning)
+            else _FM_DESCRIPTIONS.get(fm_code, str(fm_primary))
+        )
 
         st.markdown(
-            f"""
-            <div style="background:#1A202C;border:1px solid #2D3748;border-radius:12px;
-                        padding:16px;margin:8px 0 4px 0">
-                <div style="font-size:11px;color:#ffffff;text-transform:uppercase;
-                            letter-spacing:1px;margin-bottom:8px">Failure Mode Risk</div>
-                <span style="background:{fm_color};color:white;padding:6px 14px;
-                border-radius:6px;font-size:13px;font-weight:700">{fm_primary}</span>
-                {fm_secondary_html}
-            </div>
-            """,
+            f'<div class="dos-panel" style="margin-top:12px">'
+            f'<div class="dos-sec-lbl" style="border-bottom:none;margin-bottom:8px;padding-bottom:0">Failure Mode Risk</div>'
+            f'<div class="dos-fm-pips">{pips_html}</div>'
+            f'<div>{fm_tags_html}</div>'
+            f'</div>',
             unsafe_allow_html=True,
         )
-        st.caption(fm_mechanism_text)
+        st.markdown(
+            f'<div class="dos-meta" style="margin:4px 0 8px 2px">{fm_mechanism_text}</div>',
+            unsafe_allow_html=True,
+        )
 
-    # ── Draft Capital ─────────────────────────────────────────────────────────
+    # ── DRAFT CAPITAL ────────────────────────────────────────────────────────
     cap_base = d.get("capital_base") or "—"
     cap_adj  = d.get("capital_adjusted") or "—"
 
-    capital_html = f"""
-<div style="background:#1a1a2a;border:1px solid #2a2a40;border-radius:8px;
-            padding:12px 16px;margin:6px 0 14px 0">
-  <div style="font-size:11px;color:#ffffff;letter-spacing:1px;margin-bottom:8px">DRAFT CAPITAL</div>
-  <div style="display:flex;gap:40px;flex-wrap:wrap">
-    <div>
-      <div style="font-size:13px;color:#ffffff;margin-bottom:2px">Base</div>
-      <div style="font-size:16px;font-weight:700;color:#ffffff">{cap_base}</div>
-    </div>
-    <div>
-      <div style="font-size:13px;color:#ffffff;margin-bottom:2px">Adjusted (PVC)</div>
-      <div style="font-size:16px;font-weight:700;color:#ffffff">{cap_adj}</div>
-    </div>
-  </div>
-</div>
-"""
-    st.markdown(capital_html, unsafe_allow_html=True)
+    st.markdown(
+        f'<div class="dos-panel" style="margin-top:12px">'
+        f'<div class="dos-sec-lbl" style="border-bottom:none;margin-bottom:10px;padding-bottom:0">Draft Capital</div>'
+        f'<div class="dos-cap-row">'
+        f'<div><div class="dos-cap-lbl">Base</div><div class="dos-cap-val">{cap_base}</div></div>'
+        f'<div><div class="dos-cap-lbl">Adjusted (PVC)</div><div class="dos-cap-val">{cap_adj}</div></div>'
+        f'</div>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
 
-    st.divider()
+    # ── DIVIDER ──────────────────────────────────────────────────────────────
+    st.markdown(
+        '<div style="height:1px;background:rgba(255,255,255,0.06);margin:20px 0 16px 0"></div>',
+        unsafe_allow_html=True,
+    )
 
-    # ── Mechanism Section ─────────────────────────────────────────────────────
-    sig_play  = d.get("signature_play")
-    strengths = d.get("strengths")
-    red_flags = d.get("red_flags")
-    trans_risk = d.get("translation_risk")
-
-    def _v23_present(v) -> bool:
-        """True when a v2.3 text field contains usable content."""
-        if v is None:
-            return False
-        if isinstance(v, float):
-            return not math.isnan(v)
-        return bool(str(v).strip())
-
-    # Signature Play
+    # ── SIGNATURE PLAY ───────────────────────────────────────────────────────
+    sig_play = d.get("signature_play")
     if _v23_present(sig_play):
         st.markdown(
-            f"""
-            <div style="background:#1A202C;border-left:3px solid #4299E1;
-                        padding:12px 16px;border-radius:0 8px 8px 0;margin:12px 0">
-                <div style="font-size:11px;color:#4299E1;text-transform:uppercase;
-                            letter-spacing:1px;margin-bottom:4px">Signature Play</div>
-                <div style="color:#ffffff;font-size:14px">{sig_play}</div>
-            </div>
-            """,
+            f'<div class="dos-sig-play">'
+            f'<div class="dos-sig-lbl">◆ Signature Play</div>'
+            f'<div class="dos-sig-text">{sig_play}</div>'
+            f'</div>',
             unsafe_allow_html=True,
         )
 
-    # Strengths + Red Flags side by side
-    str_col, rf_col = st.columns(2)
-    with str_col:
-        st.markdown("✅ **Strengths**")
-        if _v23_present(strengths):
-            st.markdown(
-                f'<div style="color:#ffffff;font-size:13px;line-height:1.6">{strengths}</div>',
-                unsafe_allow_html=True,
+    # ── STRENGTHS + RED FLAGS ────────────────────────────────────────────────
+    strengths  = d.get("strengths")
+    red_flags  = d.get("red_flags")
+    trans_risk = d.get("translation_risk")
+
+    def _build_sf_items(text: str, dot_cls: str) -> str:
+        if not _v23_present(text):
+            return (
+                '<div class="dos-sf-item"><span class="dos-dot ' + dot_cls + '"></span>'
+                '<span style="color:rgba(255,255,255,0.22);font-style:italic">Not yet available</span></div>'
             )
-        else:
-            st.caption("Not yet scored with v2.3 prompt.")
+        lines = [l.strip() for l in str(text).split("\n") if l.strip()]
+        if not lines:
+            lines = [str(text).strip()]
+        items = []
+        for line in lines[:3]:
+            items.append(
+                f'<div class="dos-sf-item">'
+                f'<span class="dos-dot {dot_cls}"></span>'
+                f'<span>{line}</span>'
+                f'</div>'
+            )
+        return "".join(items)
+
+    str_col, rf_col = st.columns(2)
+
+    with str_col:
+        st.markdown(
+            f'<div class="dos-sf-panel">'
+            f'<div class="dos-sf-hdr g">'
+            f'<span class="dos-sf-ind g"></span>Strengths'
+            f'</div>'
+            f'{_build_sf_items(strengths, "g")}'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
 
     with rf_col:
-        st.markdown("🚩 **Red Flags**")
-        if _v23_present(red_flags):
-            st.markdown(
-                f'<div style="color:#ffffff;font-size:13px;line-height:1.6">{red_flags}</div>',
-                unsafe_allow_html=True,
-            )
-        else:
-            st.caption("Not yet scored with v2.3 prompt.")
-
-    # Translation Risk
-    if _v23_present(trans_risk):
         st.markdown(
-            f"""
-            <div style="background:#1A202C;border-left:3px solid #F6AD55;
-                        padding:12px 16px;border-radius:0 8px 8px 0;margin:12px 0">
-                <div style="font-size:11px;color:#F6AD55;text-transform:uppercase;
-                            letter-spacing:1px;margin-bottom:4px">Translation Risk</div>
-                <div style="color:#ffffff;font-size:14px">{trans_risk}</div>
-            </div>
-            """,
+            f'<div class="dos-sf-panel">'
+            f'<div class="dos-sf-hdr r">'
+            f'<span class="dos-sf-ind r"></span>Red Flags'
+            f'</div>'
+            f'{_build_sf_items(red_flags, "r")}'
+            f'</div>',
             unsafe_allow_html=True,
         )
 
-    # ── Historical Comps ──────────────────────────────────────────────────────
+    # ── TRANSLATION RISK BANNER ───────────────────────────────────────────────
+    if _v23_present(trans_risk):
+        st.markdown(
+            f'<div class="dos-risk-banner">'
+            f'<span class="dos-risk-icon">!</span>'
+            f'<div class="dos-risk-text">{trans_risk}</div>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+
+    # ── HISTORICAL COMPS ─────────────────────────────────────────────────────
     _arch_code = d.get("matched_archetype")
     if _arch_code:
         with connect() as _hconn:
@@ -844,42 +1473,81 @@ def _render_apex_detail(d: dict) -> None:
             _rate  = get_archetype_translation_rate(_hconn, _arch_code)
 
         if _comps:
-            st.markdown("<hr style='border-color:#333;margin:8px 0 12px 0'>", unsafe_allow_html=True)
             st.markdown(
-                '<div style="font-size:11px;font-weight:700;color:#ffffff;letter-spacing:1px;'
-                'margin-bottom:6px">HISTORICAL COMPS</div>',
+                '<div style="height:1px;background:rgba(255,255,255,0.06);margin:20px 0 16px 0"></div>',
                 unsafe_allow_html=True,
             )
+            st.markdown('<div class="dos-sec-lbl">Historical Comps</div>', unsafe_allow_html=True)
 
-            _hit_pct  = _rate["hit_rate_pct"]
-            _hit_cnt  = _rate["hit_count"]
-            _total    = _rate["total"]
-            _rate_color = "#48BB78" if _hit_pct >= 67 else "#ECC94B" if _hit_pct >= 40 else "#FC8181"
+            _hit_pct = _rate["hit_rate_pct"]
+            _hit_cnt = _rate["hit_count"]
+            _total   = _rate["total"]
+            rate_color = (
+                "#5ab87a" if _hit_pct >= 67
+                else "#e8a84a" if _hit_pct >= 40
+                else "#e05c5c"
+            )
             st.markdown(
-                f'<span style="font-size:13px;color:#ffffff">{_arch_code} translation rate: '
-                f'<strong style="color:{_rate_color}">{_hit_pct}% HIT</strong> '
-                f'({_hit_cnt} of {_total})</span>',
+                f'<div class="dos-meta" style="margin-bottom:6px">'
+                f'{_arch_code} translation rate: '
+                f'<span style="color:{rate_color};font-weight:700">{_hit_pct}% HIT</span>'
+                f' ({_hit_cnt} of {_total})</div>',
                 unsafe_allow_html=True,
             )
 
             _comp_parts = []
             for _c in _comps:
-                _icon = {"HIT": "✓", "PARTIAL": "~", "MISS": "✗"}.get(_c["translation_outcome"], "")
-                _fm   = f" — {_c['fm_code']}" if _c.get("fm_code") else ""
-                _comp_parts.append(f"{_c['player_name']} ({_icon}{_c['translation_outcome']}{_fm})")
-            st.caption("Mechanism comps: " + " · ".join(_comp_parts))
+                _icon = {"HIT": "✓", "PARTIAL": "~", "MISS": "✗"}.get(
+                    _c["translation_outcome"], ""
+                )
+                _fm_note = f" · {_c['fm_code']}" if _c.get("fm_code") else ""
+                _comp_parts.append(
+                    f'<span style="color:rgba(255,255,255,0.52)">'
+                    f'{_c["player_name"]}</span>'
+                    f'<span style="color:rgba(255,255,255,0.28)">'
+                    f' ({_icon}{_c["translation_outcome"]}{_fm_note})</span>'
+                )
+            st.markdown(
+                '<div class="dos-meta" style="margin-bottom:12px">Mechanism comps: '
+                + ' · '.join(_comp_parts)
+                + '</div>',
+                unsafe_allow_html=True,
+            )
 
-            with st.expander("Comp details"):
-                for _c in _comps:
-                    _oc = _c["translation_outcome"]
-                    _oc_color = {"HIT": "green", "PARTIAL": "orange", "MISS": "red"}.get(_oc, "gray")
+            prominent = _comps[:2]
+            comp_cols = st.columns(len(prominent))
+
+            _outcome_to_cls = {"HIT": "hit", "PARTIAL": "partial", "MISS": "miss"}
+
+            for col, _c in zip(comp_cols, prominent):
+                oc  = _c["translation_outcome"]
+                cls = _outcome_to_cls.get(oc, "miss")
+                with col:
                     st.markdown(
-                        f"**:{_oc_color}[{_c['player_name']}]** "
-                        f"({_c['era_bracket']}) — {_c['outcome_summary']}",
-                        unsafe_allow_html=False,
+                        f'<div class="dos-comp-card {cls}">'
+                        f'<div class="dos-comp-type {cls}">'
+                        f'{"Archetype Ceiling" if oc == "HIT" else "FM Risk Comp" if oc == "PARTIAL" else "Miss Pattern"}'
+                        f'</div>'
+                        f'<div class="dos-comp-name">{_c["player_name"]}</div>'
+                        f'<span class="dos-comp-badge {cls}">{oc}</span>'
+                        f'<div class="dos-comp-desc">{_c.get("outcome_summary","")}</div>'
+                        f'<div class="dos-comp-year">{_c.get("era_bracket","")}</div>'
+                        f'</div>',
+                        unsafe_allow_html=True,
                     )
 
-    # ── FM Risk Reference (full depth — app is the analytical surface) ──────
+            if len(_comps) > 2:
+                with st.expander("All comp details"):
+                    for _c in _comps:
+                        oc = _c["translation_outcome"]
+                        oc_color = {"HIT": "#5ab87a", "PARTIAL": "#e8a84a", "MISS": "#e05c5c"}.get(oc, "#888")
+                        st.markdown(
+                            f'<span style="color:{oc_color};font-weight:700">{_c["player_name"]}</span>'
+                            f' ({_c["era_bracket"]}) — {_c.get("outcome_summary","")}',
+                            unsafe_allow_html=True,
+                        )
+
+    # ── FM RISK REFERENCE ────────────────────────────────────────────────────
     _fm_primary_str  = d.get("failure_mode_primary") or ""
     _fm_primary_code = None
     if _fm_primary_str:
@@ -899,14 +1567,17 @@ def _render_apex_detail(d: dict) -> None:
         _frc_prospect_pos = (d.get("position_group") or "").upper()
 
         if _fm_ref_comps:
-            st.markdown("<hr style='border-color:#333;margin:8px 0 12px 0'>", unsafe_allow_html=True)
             st.markdown(
-                '<div style="font-size:11px;font-weight:700;color:#ffffff;text-transform:uppercase;'
-                'letter-spacing:0.08em;margin-bottom:8px;">FM Risk Reference</div>',
+                '<div style="height:1px;background:rgba(255,255,255,0.06);margin:20px 0 16px 0"></div>',
                 unsafe_allow_html=True,
             )
+            st.markdown('<div class="dos-sec-lbl">FM Risk Reference</div>', unsafe_allow_html=True)
 
-            _OUTCOME_COLOR = {"MISS": "#cc3333", "PARTIAL": "#cc8800", "HIT": "#228B22"}
+            _OUTCOME_COLOR = {
+                "MISS":    "#e05c5c",
+                "PARTIAL": "#e8a84a",
+                "HIT":     "#5ab87a",
+            }
 
             for _frc in _fm_ref_comps:
                 _frc_outcome = _frc.get("translation_outcome", "MISS")
@@ -919,65 +1590,69 @@ def _render_apex_detail(d: dict) -> None:
                 _frc_mech    = _frc.get("fm_mechanism") or ""
                 _frc_pre     = _frc.get("pre_draft_signal") or ""
 
-                # Cross-position callout
                 _frc_comp_pos = _frc_arch.split("-")[0].strip() if _frc_arch and "-" in _frc_arch else ""
                 _frc_is_cross = bool(_frc_comp_pos) and _frc_comp_pos != _frc_prospect_pos
                 _cross_html = ""
                 if _frc_is_cross:
                     _cross_html = (
-                        f'<div style="font-size:13px;color:#f0a500;margin:4px 0 6px 0;">'
+                        f'<div style="font-family:\'Barlow\',sans-serif;font-size:11px;'
+                        f'color:rgba(232,168,74,0.75);margin:4px 0 6px 0;line-height:1.5">'
                         f'Cross-position reference — {_frc_fm} mechanism is position-independent. '
-                        f'{_frc_comp_pos} shown as highest-severity historical pattern for this FM code.'
+                        f'{_frc_comp_pos} shown as highest-severity historical pattern.'
                         f'</div>'
                     )
 
-                # Card container with colored left border
                 st.markdown(
-                    f'<div style="border-left:3px solid {_frc_color};padding:8px 12px;'
-                    f'margin-bottom:4px;background:#0d1117;">'
-                    f'<div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:4px;">'
-                    f'<span style="color:{_frc_color};font-size:11px;font-weight:700;">■ {_frc_outcome}</span>'
-                    f'<span style="color:#ffffff;font-size:16px;font-weight:700;">{_frc_player}</span>'
-                    f'<span style="color:#ffffff;font-size:13px;opacity:0.7;">{_frc_arch} · {_frc_fm}</span>'
-                    f'<span style="color:#ffffff;font-size:11px;opacity:0.5;margin-left:auto;">{_frc_era}</span>'
+                    f'<div class="dos-fm-ref-card" style="border-left:3px solid {_frc_color}">'
+                    f'<div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:4px">'
+                    f'<span class="dos-fm-ref-outcome" style="color:{_frc_color}">■ {_frc_outcome}</span>'
+                    f'<span class="dos-fm-ref-name">{_frc_player}</span>'
+                    f'<span class="dos-fm-ref-meta">{_frc_arch} · {_frc_fm}</span>'
+                    f'<span class="dos-fm-ref-era" style="margin-left:auto">{_frc_era}</span>'
                     f'</div>'
                     f'{_cross_html}'
-                    + (f'<div style="color:#ffffff;font-size:14px;margin-bottom:6px;">{_frc_summary}</div>'
-                       if _frc_summary else '')
-                    + '</div>',
+                    + (f'<div style="font-family:\'Barlow\',sans-serif;font-size:13px;'
+                       f'color:rgba(255,255,255,0.60);line-height:1.6;margin-bottom:4px">'
+                       f'{_frc_summary}</div>' if _frc_summary else "")
+                    + f'</div>',
                     unsafe_allow_html=True,
                 )
 
-                # Pre-draft signal — expanded by default (this is the analytical surface)
                 if _frc_pre:
                     with st.expander("Pre-draft signal", expanded=True):
                         st.markdown(
-                            f'<div style="color:#ffffff;font-size:13px;line-height:1.6;">'
-                            f'{_frc_pre}</div>',
+                            f'<div style="font-family:\'Barlow\',sans-serif;font-size:12px;'
+                            f'line-height:1.6;color:rgba(255,255,255,0.55)">{_frc_pre}</div>',
                             unsafe_allow_html=True,
                         )
 
-                # Bust mechanism — inline, not hidden
                 if _frc_mech:
                     st.markdown(
-                        f'<div style="color:#cc6666;font-size:13px;'
-                        f'padding:6px 12px;margin-bottom:12px;border-left:3px solid #cc3333;">'
-                        f'<span style="font-size:11px;color:#cc6666;text-transform:uppercase;'
-                        f'letter-spacing:0.05em;">Bust mechanism: </span>{_frc_mech}'
+                        f'<div class="dos-bust-mech">'
+                        f'<span class="dos-bust-lbl">Bust mechanism:</span>{_frc_mech}'
                         f'</div>',
                         unsafe_allow_html=True,
                     )
 
-                st.divider()
+                st.markdown(
+                    '<div style="height:1px;background:rgba(255,255,255,0.05);margin:8px 0"></div>',
+                    unsafe_allow_html=True,
+                )
 
-    # ── Eval Confidence ───────────────────────────────────────────────────────
-    st.divider()
+    # ── EVAL CONFIDENCE FOOTER ───────────────────────────────────────────────
     conf_field = d.get("eval_confidence") or "—"
-    conf_color = {"Tier A": "🟢", "Tier B": "🟡", "Tier C": "🔴"}.get(conf_field, "⚪")
     scored_at  = d.get("scored_at") or ""
-    st.caption(
-        f"**Eval Confidence:** {conf_color} {conf_field}   |   "
-        f"Scored: {scored_at[:10] if scored_at else '—'}"
+    conf_color_map = {"Tier A": "#5ab87a", "Tier B": "#e8a84a", "Tier C": "#e05c5c"}
+    conf_color = conf_color_map.get(conf_field, "rgba(255,255,255,0.28)")
+
+    st.markdown(
+        f'<div style="height:1px;background:rgba(255,255,255,0.06);margin:16px 0 10px 0"></div>'
+        f'<div class="dos-eval-footer">'
+        f'Eval Confidence: <span style="color:{conf_color};font-weight:700">{conf_field}</span>'
+        f'&nbsp;&nbsp;·&nbsp;&nbsp;'
+        f'Scored: {scored_at[:10] if scored_at else "—"}'
+        f'</div>',
+        unsafe_allow_html=True,
     )
 
 
@@ -1505,34 +2180,34 @@ display = display.reset_index(drop=True)
 # Styling
 # ---------------------------------------------------------------------------
 CONFIDENCE_COLORS = {
-    "High":   "background-color: #1a7a1a; color: white",
-    "Medium": "background-color: #7a6a00; color: white",
-    "Low":    "background-color: #7a1a1a; color: white",
+    "High":   "color: #5ab87a; font-weight: 600",   # green text — DraftOS --green
+    "Medium": "color: #e8a84a; font-weight: 600",   # amber text — DraftOS --amber
+    "Low":    "color: #e05c5c; font-weight: 500",   # red text   — DraftOS --red
 }
 
-# Draft-capital tier colors
+# Draft-capital tier colors — visual hierarchy matches draft capital importance
 APEX_TIER_COLORS = {
-    "ELITE":  "background-color: #b8860b; color: white",   # dark gold
-    "DAY1":   "background-color: #1a7a1a; color: white",   # green
-    "DAY2":   "background-color: #005090; color: white",   # blue
-    "DAY3":   "background-color: #cc5500; color: white",   # orange
-    "UDFA-P": "background-color: #6a1a8a; color: white",   # purple
-    "UDFA":   "background-color: #455a64; color: white",   # grey-blue
+    "ELITE":  "background-color: #c89820; color: #000000; font-weight: 800; letter-spacing: 0.06em",
+    "DAY1":   "background-color: #1a4a7a; color: #7eb4e2; font-weight: 700",
+    "DAY2":   "background-color: #1a3d28; color: #5ab87a; font-weight: 700",
+    "DAY3":   "background-color: #3d2800; color: #e8a84a; font-weight: 600",
+    "UDFA-P": "background-color: #2a1a3d; color: #a57ee0; font-weight: 500",
+    "UDFA":   "background-color: #1a1a22; color: rgba(255,255,255,0.35); font-weight: 400",
 }
 
-DIVERGENCE_COLOR = "background-color: #8a5700; color: white"   # amber
+DIVERGENCE_COLOR = "color: #e8a84a; font-weight: 700"   # amber text, no background
 
 
 def _style_confidence(val: str) -> str:
     return CONFIDENCE_COLORS.get(val, "")
 
 
-# Consensus tier: text color only (no background fill)
+# Consensus tier: text color only, aligned to DraftOS token system
 _CONSENSUS_TIER_COLORS = {
-    "Elite":    "color: #4ade80; font-weight: 600",
-    "Strong":   "color: #60a5fa; font-weight: 600",
-    "Playable": "color: #facc15; font-weight: 600",
-    "Watch":    "color: #f97316; font-weight: 600",
+    "Elite":    "color: #f0c040; font-weight: 600",   # --elite gold
+    "Strong":   "color: #7eb4e2; font-weight: 600",   # --cold blue
+    "Playable": "color: #e8a84a; font-weight: 500",   # --amber
+    "Watch":    "color: #e05c5c; font-weight: 500",   # --red
 }
 
 
@@ -1541,21 +2216,27 @@ def _style_consensus_tier(val: str) -> str:
 
 
 def _style_divergence(val: str) -> str:
-    return DIVERGENCE_COLOR if val != "" else ""
+    """Amber text on any non-empty divergence value."""
+    return DIVERGENCE_COLOR if val not in ("", None) else ""
 
 
 def _style_apex_delta(val: str) -> str:
-    if val in ("", "\u2014"):
+    """
+    Positive (APEX higher than market) -> cold blue — system sees premium not priced in.
+    Negative (APEX lower than market)  -> red, muted.
+    Zero / em-dash -> no style.
+    """
+    if val in ("", "—", "\u2014", None):
         return ""
     try:
-        n = int(val.replace("+", ""))
+        n = int(str(val).replace("+", ""))
     except (ValueError, AttributeError):
         return ""
     if n > 0:
-        return "background-color: #1a5a1a; color: white"
+        return "color: #7eb4e2; font-weight: 700"   # cold blue — APEX higher than market
     if n < 0:
-        return "background-color: #6a1a1a; color: white"
-    return ""
+        return "color: #e05c5c; font-weight: 500"   # red — APEX lower than market
+    return "color: rgba(255,255,255,0.35)"           # aligned — dim neutral
 
 
 def _style_apex_tier(val: str) -> str:
@@ -1568,15 +2249,71 @@ _STR_COLS = ["Player", "School", "Pos", "Consensus", "Confidence", "APEX Tier",
 
 styled = (
     display.style
-    .set_properties(subset=[c for c in _NUM_COLS if c in display.columns],
-                    **{"text-align": "right"})
-    .set_properties(subset=[c for c in _STR_COLS if c in display.columns],
-                    **{"text-align": "left"})
-    .map(_style_confidence, subset=["Confidence"])
+    # ── Alignment ──────────────────────────────────────────────────────────
+    .set_properties(
+        subset=[c for c in _NUM_COLS if c in display.columns],
+        **{"text-align": "right"}
+    )
+    .set_properties(
+        subset=[c for c in _STR_COLS if c in display.columns],
+        **{"text-align": "left"}
+    )
+    # ── Color signals ───────────────────────────────────────────────────────
+    .map(_style_confidence,     subset=["Confidence"])
     .map(_style_consensus_tier, subset=["Consensus"])
-    .map(_style_divergence, subset=["⚡ Div"])
-    .map(_style_apex_delta, subset=["\u0394 APEX"])
-    .map(_style_apex_tier, subset=["APEX Tier"])
+    .map(_style_divergence,     subset=["⚡ Div"])
+    .map(_style_apex_delta,     subset=["\u0394 APEX"])
+    .map(_style_apex_tier,      subset=["APEX Tier"])
+    # ── Table-level properties ───────────────────────────────────────────────
+    .set_table_styles([
+        {
+            "selector": "thead tr th",
+            "props": [
+                ("font-family", "'Barlow Condensed', sans-serif"),
+                ("font-size",   "9px"),
+                ("font-weight", "700"),
+                ("letter-spacing", "0.12em"),
+                ("text-transform", "uppercase"),
+                ("color", "rgba(255,255,255,0.32)"),
+                ("border-bottom", "1px solid rgba(255,255,255,0.08)"),
+                ("padding-bottom", "6px"),
+            ]
+        },
+        {
+            "selector": "tbody tr td",
+            "props": [
+                ("font-family", "'Barlow', sans-serif"),
+                ("font-size",   "13px"),
+                ("color", "rgba(255,255,255,0.80)"),
+            ]
+        },
+        {
+            "selector": "tbody tr td:nth-child(2)",
+            "props": [
+                ("font-family", "'Barlow Condensed', sans-serif"),
+                ("font-size",   "14px"),
+                ("font-weight", "600"),
+                ("color", "rgba(255,255,255,0.92)"),
+            ]
+        },
+        {
+            "selector": "tbody tr td:nth-child(1)",
+            "props": [
+                ("font-family", "'Barlow Condensed', sans-serif"),
+                ("font-size",   "13px"),
+                ("font-weight", "700"),
+                ("color", "rgba(255,255,255,0.45)"),
+            ]
+        },
+        {
+            "selector": "tbody tr:hover td",
+            "props": [
+                ("background-color", "rgba(74,144,212,0.05)"),
+            ]
+        },
+    ])
+    # ── Hide Snapshot column (internal/noise) ────────────────────────────────
+    .hide(axis="columns", subset=["Snapshot"] if "Snapshot" in display.columns else [])
 )
 
 # ---------------------------------------------------------------------------
@@ -1761,10 +2498,45 @@ with tab_apex:
 
         apex_styled = (
             ab.style
-            .map(_style_apex_tier, subset=["APEX Tier"])
+            .map(_style_apex_tier,  subset=["APEX Tier"])
             .map(_style_apex_delta, subset=["\u0394 APEX"])
             .set_properties(subset=_right_cols_apex, **{"text-align": "right"})
             .set_properties(subset=_left_cols_apex,  **{"text-align": "left"})
+            .set_table_styles([
+                {
+                    "selector": "thead tr th",
+                    "props": [
+                        ("font-family", "'Barlow Condensed', sans-serif"),
+                        ("font-size",   "9px"),
+                        ("font-weight", "700"),
+                        ("letter-spacing", "0.12em"),
+                        ("text-transform", "uppercase"),
+                        ("color", "rgba(255,255,255,0.32)"),
+                        ("border-bottom", "1px solid rgba(255,255,255,0.08)"),
+                    ]
+                },
+                {
+                    "selector": "tbody tr td",
+                    "props": [
+                        ("font-family", "'Barlow', sans-serif"),
+                        ("font-size",   "13px"),
+                        ("color", "rgba(255,255,255,0.80)"),
+                    ]
+                },
+                {
+                    "selector": "tbody tr td:nth-child(2)",
+                    "props": [
+                        ("font-family", "'Barlow Condensed', sans-serif"),
+                        ("font-size",   "14px"),
+                        ("font-weight", "600"),
+                        ("color", "rgba(255,255,255,0.92)"),
+                    ]
+                },
+                {
+                    "selector": "tbody tr:hover td",
+                    "props": [("background-color", "rgba(74,144,212,0.05)")]
+                },
+            ])
         )
 
         ab_event = st.dataframe(

@@ -125,3 +125,69 @@ def get_archetype_translation_rate(conn, archetype_code: str) -> dict:
         "miss_count": counts["MISS"],
         "hit_rate_pct": hit_rate,
     }
+
+
+# ---------------------------------------------------------------------------
+# prospect_comps — prospect-specific curated comp cards (Migration 0047)
+# ---------------------------------------------------------------------------
+
+def get_prospect_comps(conn, prospect_id: int, season_id: int = 1) -> list[dict]:
+    """
+    Return analyst-curated comp cards for a specific prospect, ordered by sort_order.
+    Returns empty list if no comps exist.
+    """
+    rows = conn.execute(
+        """
+        SELECT comp_type, type_label, player_name, description, years, sort_order
+        FROM   prospect_comps
+        WHERE  prospect_id = ? AND season_id = ?
+        ORDER  BY sort_order ASC
+        """,
+        (prospect_id, season_id),
+    ).fetchall()
+    return [
+        {
+            "type":       r["comp_type"],
+            "type_label": r["type_label"],
+            "name":       r["player_name"],
+            "desc":       r["description"],
+            "years":      r["years"],
+            "order":      r["sort_order"],
+        }
+        for r in rows
+    ]
+
+
+def upsert_prospect_comp(
+    conn,
+    prospect_id: int,
+    comp_type: str,
+    type_label: str,
+    player_name: str,
+    description: str,
+    years: Optional[str] = None,
+    sort_order: int = 0,
+    season_id: int = 1,
+) -> None:
+    """
+    Upsert a single comp card row. Idempotent on (prospect_id, season_id, player_name).
+    comp_type must be one of: 'hit', 'partial', 'miss'.
+    """
+    conn.execute(
+        """
+        INSERT INTO prospect_comps
+            (prospect_id, season_id, comp_type, type_label, player_name,
+             description, years, sort_order, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+        ON CONFLICT(prospect_id, season_id, player_name) DO UPDATE SET
+            comp_type  = excluded.comp_type,
+            type_label = excluded.type_label,
+            description = excluded.description,
+            years      = excluded.years,
+            sort_order = excluded.sort_order,
+            updated_at = datetime('now')
+        """,
+        (prospect_id, season_id, comp_type, type_label, player_name,
+         description, years, sort_order),
+    )
+    conn.commit()

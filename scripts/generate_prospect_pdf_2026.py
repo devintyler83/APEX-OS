@@ -554,6 +554,14 @@ def _divergence_callout_html(narrative: str, flag: str) -> str:
 # ── HTML builder ───────────────────────────────────────────────────────────────
 
 def _build_html(data: dict, comps: dict, fm_ref_comps: list | None = None) -> str:
+    """
+    DraftOS Classified Dossier × Panini Prizm card for PDF export.
+    Playwright HTML → PDF via generate_pdf(). 11in × 8.5in landscape.
+    """
+    import re
+    from datetime import datetime, timezone
+
+    # ── Unpack data ────────────────────────────────────────────────────────
     name      = data.get("display_name") or "Unknown"
     position  = data.get("position_group") or "—"
     school    = data.get("school_canonical") or "—"
@@ -578,19 +586,59 @@ def _build_html(data: dict, comps: dict, fm_ref_comps: list | None = None) -> st
     tag_list  = data.get("tag_list") or []
     date_str  = datetime.now(timezone.utc).strftime("%b %d, %Y")
 
+    # ── DraftOS token system — tier-specific palette ───────────────────────
     TIER_PALETTE = {
-        "ELITE":  {"border": "#b8860b", "atm": "rgba(184,134,11,0.13)",  "badge": "rgba(184,134,11,0.22)"},
-        "DAY1":   {"border": "#1a7a1a", "atm": "rgba(26,122,26,0.11)",   "badge": "rgba(26,122,26,0.22)"},
-        "DAY2":   {"border": "#005090", "atm": "rgba(0,80,144,0.11)",    "badge": "rgba(0,80,144,0.22)"},
-        "DAY3":   {"border": "#cc5500", "atm": "rgba(204,85,0,0.10)",    "badge": "rgba(204,85,0,0.20)"},
-        "UDFA-P": {"border": "#6a1a8a", "atm": "rgba(106,26,138,0.10)", "badge": "rgba(106,26,138,0.20)"},
-        "UDFA":   {"border": "#455a64", "atm": "rgba(69,90,100,0.08)",  "badge": "rgba(69,90,100,0.15)"},
+        "ELITE":  {
+            "border":   "#c89820",
+            "text":     "#f0c040",
+            "badge_bg": "rgba(240,192,64,0.12)",
+            "badge_bd": "rgba(240,192,64,0.40)",
+            "atm":      "rgba(240,192,64,0.05)",
+        },
+        "DAY1": {
+            "border":   "#4a90d4",
+            "text":     "#7eb4e2",
+            "badge_bg": "rgba(126,180,226,0.10)",
+            "badge_bd": "rgba(126,180,226,0.35)",
+            "atm":      "rgba(126,180,226,0.04)",
+        },
+        "DAY2": {
+            "border":   "#3d8a58",
+            "text":     "#5ab87a",
+            "badge_bg": "rgba(90,184,122,0.10)",
+            "badge_bd": "rgba(90,184,122,0.35)",
+            "atm":      "rgba(90,184,122,0.04)",
+        },
+        "DAY3": {
+            "border":   "#c98828",
+            "text":     "#e8a84a",
+            "badge_bg": "rgba(232,168,74,0.10)",
+            "badge_bd": "rgba(232,168,74,0.30)",
+            "atm":      "rgba(232,168,74,0.04)",
+        },
+        "UDFA-P": {
+            "border":   "#8a5ab8",
+            "text":     "#c47ae0",
+            "badge_bg": "rgba(196,122,224,0.10)",
+            "badge_bd": "rgba(196,122,224,0.28)",
+            "atm":      "rgba(196,122,224,0.03)",
+        },
+        "UDFA": {
+            "border":   "rgba(255,255,255,0.20)",
+            "text":     "rgba(255,255,255,0.45)",
+            "badge_bg": "rgba(255,255,255,0.05)",
+            "badge_bd": "rgba(255,255,255,0.12)",
+            "atm":      "transparent",
+        },
     }
-    pal      = TIER_PALETTE.get(tier, {"border":"#ffffff","atm":"transparent","badge":"rgba(192,192,192,0.12)"})
+    pal      = TIER_PALETTE.get(tier, TIER_PALETTE["UDFA"])
     tc       = pal["border"]
+    tier_txt = pal["text"]
+    badge_bg = pal["badge_bg"]
+    badge_bd = pal["badge_bd"]
     atm      = pal["atm"]
-    badge_bg = pal["badge"]
 
+    # ── Derived display values ─────────────────────────────────────────────
     arch_code  = _extract_arch_code(archetype)
     arch_label = _arch_label(archetype)
 
@@ -598,131 +646,326 @@ def _build_html(data: dict, comps: dict, fm_ref_comps: list | None = None) -> st
     apex_s = f"{apex:.1f}" if apex else "Pending"
 
     if cap_adj:
-        cap_clean = re.sub(r"\s*[—–]\s*[a-zA-Z].*$","",cap_adj).strip().rstrip(" —–-")
+        cap_clean = re.sub(r"\s*[—–]\s*[a-zA-Z].*$", "", cap_adj).strip().rstrip(" —–-")
     elif rank:
-        cap_clean = ("R1 Picks 1–32" if rank<=32 else "R2 / Day 2 Early" if rank<=64
-                     else "R3 / Day 2 Late" if rank<=105 else "Day 3")
+        cap_clean = (
+            "R1 Picks 1–32"    if rank <= 32  else
+            "R2 / Day 2 Early" if rank <= 64  else
+            "R3 / Day 2 Late"  if rank <= 105 else "Day 3"
+        )
     else:
         cap_clean = "—"
 
-    rank_s    = f"#{rank}" if rank else "NR"
-    pos_badge = f"{position} {rank_s}"
-
-    # Positional rank badge: only informative when it differs from overall consensus rank.
-    # Suppressed when pos_rank == rank (e.g. #1 overall who is also #1 at their position).
+    rank_s     = f"#{rank}" if rank else "NR"
+    pos_badge  = f"{position} {rank_s}"
     pos_rank_s = f"#{pos_rank} at {position}" if (pos_rank and pos_rank != rank) else ""
+    ras_s      = f"RAS {ras:.2f}" if ras else ""
+    sig_clean  = _trunc(sig_play, 280)
+    trans_clean = _trunc(trans, 220)
 
-    ras_s     = f"RAS {ras:.2f}" if ras else ""
+    # ── Pre-computed conditionals (avoid nested f-strings) ─────────────────
+    pos_rank_badge = f'<span class="badge">{pos_rank_s}</span>' if pos_rank_s else ""
+    ras_badge      = f'<span class="badge">{ras_s}</span>'      if ras_s      else ""
+    arch_code_div  = f'<div class="arch-code">{arch_code}</div>' if arch_code else ""
+    arch_name_div  = (
+        f'<div class="arch-name">{arch_label}</div>'
+        if arch_label
+        else '<div class="arch-name" style="color:rgba(255,255,255,0.35)">Archetype Pending</div>'
+    )
+    tier_star    = "★ " if tier == "ELITE" else ""
+    tier_display = tier if tier else "Pending"
 
-    sig_clean = _trunc(sig_play, 280)
+    # ── Trait color threshold — DraftOS 4-step token system ───────────────
+    def _trait_color(val: float) -> str:
+        if val >= 8.5: return "#5ab87a"   # --green
+        if val >= 7.0: return "#7eb4e2"   # --cold
+        if val >= 5.0: return "#e8a84a"   # --amber
+        return "#e05c5c"                   # --red
 
+    # ── Trait bar builder ─────────────────────────────────────────────────
+    def _bar(label: str, key: str) -> str:
+        raw = data.get(key)
+        if raw is None:
+            return (
+                f'<div class="lp-bar-item">'
+                f'<div class="lp-bar-label">{label}</div>'
+                f'<div class="lp-bar-track">'
+                f'<div class="lp-bar-outer">'
+                f'<div class="lp-bar-inner" style="width:0%"></div>'
+                f'</div>'
+                f'<div class="lp-bar-val" style="color:rgba(255,255,255,0.22)">—</div>'
+                f'</div></div>'
+            )
+        try:
+            val = float(raw)
+        except (TypeError, ValueError):
+            val = 0.0
+        pct   = min(100.0, max(0.0, val / 10.0 * 100.0))
+        color = _trait_color(val)
+        return (
+            f'<div class="lp-bar-item">'
+            f'<div class="lp-bar-label">{label}</div>'
+            f'<div class="lp-bar-track">'
+            f'<div class="lp-bar-outer">'
+            f'<div class="lp-bar-inner" style="width:{pct:.1f}%;background:{color}"></div>'
+            f'</div>'
+            f'<div class="lp-bar-val" style="color:{color}">{val:.1f}</div>'
+            f'</div></div>'
+        )
+
+    FOOTBALL = [
+        ("Processing",  "v_processing"),
+        ("Athleticism", "v_athleticism"),
+        ("Comp. Tough", "v_comp_tough"),
+        ("Durability",  "v_injury"),
+    ]
+    SYSTEM = [
+        ("Scheme Vers.", "v_scheme_vers"),
+        ("Production",   "v_production"),
+        ("Dev. Traj.",   "v_dev_traj"),
+        ("Character",    "v_character"),
+    ]
+    football_bars = "\n".join(_bar(lbl, key) for lbl, key in FOOTBALL)
+    system_bars   = "\n".join(_bar(lbl, key) for lbl, key in SYSTEM)
+
+    # ── FM pip bar ────────────────────────────────────────────────────────
+    FM_PIP_COLORS = {
+        "FM-1": "#e05c5c",
+        "FM-2": "#e8a84a",
+        "FM-3": "#5b9cf0",
+        "FM-4": "#e05c5c",
+        "FM-5": "#c47ae0",
+        "FM-6": "#a57ee0",
+    }
+
+    def _extract_fm_code(s: str) -> str:
+        m = re.search(r"FM-(\d+)", s or "")
+        return m.group(0) if m else ""
+
+    fm_pri_code = _extract_fm_code(fm_pri)
+    fm_sec_code = _extract_fm_code(fm_sec)
+    active_codes = {c for c in [fm_pri_code, fm_sec_code] if c}
+
+    pips_html = ""
+    for i in range(1, 7):
+        code  = f"FM-{i}"
+        color = FM_PIP_COLORS[code]
+        if code in active_codes:
+            pips_html += (
+                f'<div style="flex:1;height:4px;border-radius:1.5px;'
+                f'background:{color}"></div>'
+            )
+        else:
+            pips_html += (
+                f'<div style="flex:1;height:4px;border-radius:1.5px;'
+                f'background:rgba(255,255,255,0.06)"></div>'
+            )
+
+    fm_chips_html = ""
+    for code in [fm_pri_code, fm_sec_code]:
+        if not code:
+            continue
+        col  = FM_PIP_COLORS.get(code, "#ffffff")
+        full = fm_pri if code == fm_pri_code else fm_sec
+        fm_chips_html += (
+            f'<span style="display:inline-flex;align-items:center;'
+            f'background:{col}22;border:1px solid {col}66;'
+            f'color:{col};border-radius:3px;padding:2px 8px;'
+            f'font-size:7pt;font-weight:700;letter-spacing:0.06em;'
+            f'font-family:\'Barlow Condensed\',sans-serif;'
+            f'text-transform:uppercase;margin-right:6px;">'
+            f'{full.strip()}'
+            f'</span>'
+        )
+
+    # ── Bullet rows for strengths / red flags ─────────────────────────────
     str_lines = _bullets(strengths, 3, 360)
     rf_lines  = _bullets(redflags,  3, 360)
 
     def bullet_rows(lines, dot_col):
         if not lines:
-            return '<tr><td style="color:#ffffff;font-size:7pt;">Pending evaluation.</td></tr>'
+            return (
+                '<tr><td style="font-family:\'Barlow\',sans-serif;font-size:7pt;'
+                'color:rgba(255,255,255,0.28);font-style:italic">Pending evaluation.</td></tr>'
+            )
         rows = ""
-        for l in lines:
-            rows += (f'<tr><td style="vertical-align:top;padding-right:6px;">'
-                     f'<span style="color:{dot_col};font-size:8pt;">▸</span></td>'
-                     f'<td style="font-size:7pt;line-height:1.45;color:#e8eaf0;padding-bottom:4px;">{l}</td></tr>')
+        for line in lines:
+            rows += (
+                f'<tr>'
+                f'<td style="vertical-align:top;padding-right:5px;padding-top:1px">'
+                f'<span style="color:{dot_col};font-size:7pt">▸</span>'
+                f'</td>'
+                f'<td style="font-family:\'Barlow\',sans-serif;font-size:7pt;'
+                f'line-height:1.5;color:rgba(255,255,255,0.65);padding-bottom:4px">'
+                f'{line}'
+                f'</td>'
+                f'</tr>'
+            )
         return rows
 
-    trans_clean = _trunc(trans, 220)
-
-    div_html = ""
-    if div_flag:
-        sign = "+" if (div_delta or 0) > 0 else ""
-        dc   = "#00d4aa" if (div_delta or 0)>0 else "#ef4444" if (div_delta or 0)<-5 else "#f5c518"
-        delta_str = f" ({sign}{div_delta})" if div_delta is not None else ""
-        div_html = (f'<div style="font-size:6.5pt;font-family:monospace;color:#ffffff;">'
-                    f'Divergence <span style="color:{dc};font-weight:700;">{div_flag}{delta_str}</span></div>')
-
-    tag_map = {"green":"#00d4aa","red":"#ef4444","blue":"#3b82f6","gold":"#f5c518"}
-    tags_html = ""
-    if tag_list:
-        pills = ""
-        for tn,tc2 in tag_list:
-            c2 = tag_map.get(tc2,"#ffffff")
-            pills += (f'<span style="font-size:5.5pt;font-weight:600;padding:2px 6px;border-radius:3px;'
-                      f'border:1px solid {c2}22;background:{c2}11;color:{c2};margin-right:4px;">{tn}</span>')
-        tags_html = f'<div style="margin-bottom:6px;flex-wrap:wrap;display:flex;gap:3px;">{pills}</div>'
-
-    conf_html = (f'<div style="font-family:monospace;font-size:6.5pt;color:#ffffff;margin-bottom:3px;">'
-                 f'Eval Confidence <span style="color:#ffffff;">{eval_conf}</span></div>') if eval_conf else ""
-
+    # ── Comp card builder ─────────────────────────────────────────────────
     def comp_block(comp, role_label, role_color, icon, active_fm):
-        if not comp: return ""
-        out = comp["translation_outcome"]
-        oc  = {"HIT":"#00d4aa","PARTIAL":"#f5c518","MISS":"#ef4444"}.get(out,"#ffffff")
+        if not comp:
+            return ""
+        out    = comp["translation_outcome"]
+        oc_map = {"HIT": "#5ab87a", "PARTIAL": "#e8a84a", "MISS": "#e05c5c"}
+        oc     = oc_map.get(out, "#888888")
+        grad   = f"linear-gradient(180deg, {oc} 0%, {oc}66 100%)"
 
         fm_tag = ""
         for code in re.findall(r"FM-\d+", comp.get("fm_code") or ""):
-            col = "#ef4444" if code in active_fm else "#ffffff"
-            fm_tag += f' <span style="color:{col};font-size:6pt;font-weight:700;">{code}</span>'
+            col = FM_PIP_COLORS.get(code, "#ffffff")
+            fm_tag += (
+                f' <span style="color:{col};font-size:6pt;font-weight:700">{code}</span>'
+            )
 
         summary = _trunc(comp.get("outcome_summary") or "", 210)
-        mech    = _trunc((re.split(r"(?<=[.!?])\s+",
-                          (comp.get("mechanism") or "").strip()) or [""])[0], 130)
         era     = comp.get("era_bracket") or ""
+        player  = comp.get("player_name") or ""
 
-        return f"""
-        <div style="background:#07090f;border:1px solid #1c2035;border-left:3px solid {oc};
-                    border-radius:0 5px 5px 0;padding:8px 11px;margin-bottom:7px;">
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:5px;flex-wrap:nowrap;">
-            <span style="font-family:monospace;font-size:5.5pt;color:{role_color};
-                         text-transform:uppercase;letter-spacing:0.5px;
-                         white-space:nowrap;flex-shrink:0;">{icon} {role_label}</span>
-            <span style="font-family:'Bebas Neue',sans-serif;font-size:12pt;
-                         color:{oc};white-space:nowrap;flex-shrink:0;">{comp['player_name']}</span>
-            <span style="font-family:monospace;font-size:6.5pt;color:{oc};
-                         white-space:nowrap;flex-shrink:0;">{out}{fm_tag}</span>
-            <span style="font-family:monospace;font-size:6pt;color:#ffffff;
-                         white-space:nowrap;margin-left:auto;flex-shrink:0;">{era}</span>
-          </div>
-          <div style="font-size:7.5pt;color:#ffffff;line-height:1.5;">{summary}</div>
-          {'<div style="font-size:6.5pt;color:#ffffff;line-height:1.4;margin-top:3px;opacity:0.75;">'+mech+'</div>' if mech else ''}
-        </div>"""
+        return (
+            f'<div style="background:#161b22;border:1px solid rgba(255,255,255,0.08);'
+            f'border-radius:5px;padding:10px 12px;margin-bottom:7px;position:relative;'
+            f'overflow:hidden;">'
+            f'<div style="position:absolute;left:0;top:0;bottom:0;width:3px;'
+            f'background:{grad}"></div>'
+            f'<div style="padding-left:8px">'
+            f'<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:7pt;'
+            f'font-weight:700;letter-spacing:0.14em;text-transform:uppercase;'
+            f'color:{role_color};margin-bottom:3px">{icon} {role_label}</div>'
+            f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;'
+            f'flex-wrap:nowrap">'
+            f'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:14pt;'
+            f'font-weight:900;text-transform:uppercase;letter-spacing:0.02em;'
+            f'color:rgba(255,255,255,0.92);white-space:nowrap">{player}</span>'
+            f'<span style="display:inline-flex;align-items:center;gap:3px;'
+            f'background:{oc}1a;border:1px solid {oc}44;color:{oc};'
+            f'border-radius:2px;padding:1px 6px;font-family:\'Barlow\',sans-serif;'
+            f'font-size:7pt;font-weight:700;letter-spacing:0.08em;white-space:nowrap">'
+            f'<span style="width:4px;height:4px;border-radius:50%;background:{oc};'
+            f'display:inline-block"></span>{out}{fm_tag}'
+            f'</span>'
+            f'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:7pt;'
+            f'color:rgba(255,255,255,0.22);margin-left:auto;white-space:nowrap">{era}</span>'
+            f'</div>'
+            f'<div style="font-family:\'Barlow\',sans-serif;font-size:7.5pt;'
+            f'color:rgba(255,255,255,0.55);line-height:1.5">{summary}</div>'
+            f'</div>'
+            f'</div>'
+        )
 
     active_fm_set = set(re.findall(r"FM-\d+", fm_pri or ""))
-    fm_codes_label = ""
-    if comps.get("fm_risk") and comps["fm_risk"].get("fm_code"):
-        match = [c for c in re.findall(r"FM-\d+", comps["fm_risk"]["fm_code"]) if c in active_fm_set]
-        if match: fm_codes_label = " · " + " / ".join(match)
-
-    ceiling_html = comp_block(comps.get("ceiling"), "ARCHETYPE CEILING", "#00d4aa", "✓", active_fm_set)
-    fmrisk_html  = comp_block(comps.get("fm_risk"), f"ARCHETYPE FM RISK{fm_codes_label}", "#ef4444", "⚑", active_fm_set)
+    ceiling_html  = comp_block(comps.get("ceiling"),  "Archetype Ceiling", "#5ab87a", "✓", active_fm_set)
+    fmrisk_html   = comp_block(comps.get("fm_risk"),  "FM Risk Comp",      "#e8a84a", "⚑", active_fm_set)
 
     comps_html = ""
     if ceiling_html or fmrisk_html:
-        comps_html = f"""
-        <div style="margin-top:auto;padding-top:8px;">
-          <div style="font-family:monospace;font-size:5.5pt;letter-spacing:1.5px;
-                      color:#ffffff;text-transform:uppercase;margin-bottom:6px;">Historical Comps</div>
-          {ceiling_html}{fmrisk_html}
-        </div>"""
+        comps_html = (
+            f'<div style="margin-top:auto;padding-top:8px">'
+            f'<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:8pt;'
+            f'font-weight:700;letter-spacing:0.16em;text-transform:uppercase;'
+            f'color:rgba(255,255,255,0.32);margin-bottom:8px;padding-bottom:5px;'
+            f'border-bottom:1px solid rgba(255,255,255,0.06)">Historical Comps</div>'
+            f'{ceiling_html}{fmrisk_html}'
+            f'</div>'
+        )
 
-    trait_grid_html  = _build_lp_trait_grid(data)
-    fm_ref_block     = _fm_ref_block_html(fm_ref_comps or [], prospect_position=position)
-    fm_bar           = _fm_risk_bar_html(fm_pri, fm_sec)
-    capital_context  = _capital_context_html(position)
+    # ── Tags ──────────────────────────────────────────────────────────────
+    TAG_COLORS = {
+        "green": "#5ab87a",
+        "red":   "#e05c5c",
+        "blue":  "#7eb4e2",
+        "gold":  "#e8a84a",
+    }
+    tags_html = ""
+    if tag_list:
+        pills = ""
+        for tn, tc2 in tag_list:
+            c2 = TAG_COLORS.get(tc2, "rgba(255,255,255,0.52)")
+            pills += (
+                f'<span style="font-family:\'Barlow Condensed\',sans-serif;'
+                f'font-size:7pt;font-weight:700;padding:1px 7px;border-radius:3px;'
+                f'border:1px solid {c2}44;background:{c2}15;color:{c2};'
+                f'letter-spacing:0.06em;text-transform:uppercase">{tn}</span>'
+            )
+        tags_html = (
+            f'<div style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:6px">'
+            f'{pills}'
+            f'</div>'
+        )
 
-    pvc_note = (f'<div style="font-family:monospace;font-size:5.5pt;color:#ffffff;text-align:center;margin-top:4px;">'
-                f'RPG {rpg_s} × PVC {pvc:.2f} = APEX {apex_s}</div>') if rpg and apex else ""
+    # ── Confidence / divergence footer ────────────────────────────────────
+    conf_html = ""
+    if eval_conf:
+        conf_color = {"Tier A": "#5ab87a", "Tier B": "#e8a84a", "Tier C": "#e05c5c"}.get(
+            eval_conf, "rgba(255,255,255,0.35)"
+        )
+        conf_html = (
+            f'<div style="font-family:\'Barlow\',sans-serif;font-size:7pt;'
+            f'color:rgba(255,255,255,0.35);margin-bottom:2px">'
+            f'Eval Confidence '
+            f'<span style="color:{conf_color};font-weight:700">{eval_conf}</span>'
+            f'</div>'
+        )
 
-    # Divergence callout — rendered inside comps-region above historical comps
+    div_html = ""
+    if div_flag:
+        sign      = "+" if (div_delta or 0) > 0 else ""
+        dc        = "#7eb4e2" if (div_delta or 0) > 0 else "#e05c5c" if (div_delta or 0) < -5 else "rgba(255,255,255,0.45)"
+        delta_str = f" ({sign}{div_delta})" if div_delta is not None else ""
+        div_html  = (
+            f'<div style="font-family:\'Barlow\',sans-serif;font-size:7pt;'
+            f'color:rgba(255,255,255,0.35)">'
+            f'Divergence <span style="color:{dc};font-weight:700">'
+            f'{div_flag}{delta_str}</span></div>'
+        )
+
+    # ── PVC formula line ──────────────────────────────────────────────────
+    pvc_note = ""
+    if rpg and apex:
+        pvc_note = (
+            f'<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:7pt;'
+            f'color:rgba(255,255,255,0.28);text-align:center;margin-top:4px;'
+            f'letter-spacing:0.04em">'
+            f'RPG {rpg_s} × PVC {pvc:.2f} ({position}) = APEX {apex_s}'
+            f'</div>'
+        )
+
+    # ── Translation risk block (pre-computed to avoid nested f-string) ────
+    trans_block_html = ""
+    if trans_clean:
+        trans_block_html = (
+            f'<div class="trans-block">'
+            f'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:9pt;'
+            f'font-weight:800;color:#e8a84a;flex-shrink:0;margin-top:1px">!</span>'
+            f'<span style="font-family:\'Barlow\',sans-serif;font-size:7.5pt;'
+            f'color:rgba(232,168,74,0.78);line-height:1.5">{trans_clean}</span>'
+            f'</div>'
+        )
+
+    # ── Divergence callout ────────────────────────────────────────────────
     narrative = _build_divergence_narrative(data)
     divergence_callout_html = ""
     if narrative:
         divergence_callout_html = _divergence_callout_html(narrative, div_flag)
 
+    # ── FM reference block ────────────────────────────────────────────────
+    fm_ref_block = _fm_ref_block_html(fm_ref_comps or [], prospect_position=position)
+
+    # ── Capital scarcity note ─────────────────────────────────────────────
+    capital_context = _capital_context_html(position)
+
+    # ─────────────────────────────────────────────────────────────────────
+    # HTML ASSEMBLY
+    # ─────────────────────────────────────────────────────────────────────
+
     return f"""<!DOCTYPE html>
 <html>
 <head>
 <meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;400;500;600;700;800;900&family=Barlow:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&display=swap" rel="stylesheet">
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap');
 
 @page {{
   size: 11in 8.5in landscape;
@@ -736,10 +979,10 @@ def _build_html(data: dict, comps: dict, fm_ref_comps: list | None = None) -> st
 
 html, body {{
   width: 11in; height: 8.5in;
-  background: #07090f;
-  font-family: 'DM Sans', sans-serif;
+  background: #0a0c0f;
+  font-family: 'Barlow', sans-serif;
   font-size: 8pt;
-  color: #e8eaf0;
+  color: rgba(255,255,255,0.88);
   overflow: hidden;
 }}
 
@@ -747,351 +990,643 @@ html, body {{
   width: 11in; height: 8.5in;
   display: grid;
   grid-template-columns: 2.6in 8.4in;
-  grid-template-rows: 8.5in;
+  background: #0a0c0f;
+  position: relative;
 }}
 
-/* LEFT PANEL */
+.page::before {{
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 4px;
+  background: linear-gradient(
+    180deg,
+    #7eb4e2 0%,
+    #a57ee0 30%,
+    #e8a84a 60%,
+    #5ab87a 100%
+  );
+  z-index: 20;
+}}
+
+.page::after {{
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: repeating-linear-gradient(
+    0deg,
+    rgba(255,255,255,0.012) 0px,
+    rgba(255,255,255,0.012) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  pointer-events: none;
+  z-index: 2;
+}}
+
 .lp {{
-  background: #0b0e18;
-  border-right: 1px solid #1c2035;
-  border-top: 3px solid {tc};
-  padding: 0.18in 0.18in 0.14in;
+  background: #0f1318;
+  border-right: 1px solid rgba(255,255,255,0.08);
+  padding: 0.2in 0.18in 0.14in 0.22in;
   display: flex;
   flex-direction: column;
   height: 8.5in;
   overflow: hidden;
+  position: relative;
+  z-index: 3;
+}}
+
+.lp::before {{
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, {tc} 0%, {tc}66 50%, transparent 100%);
+}}
+
+.lp::after {{
+  content: '';
+  position: absolute;
+  top: -50px; right: -60px;
+  width: 180px; height: 180px;
+  background: radial-gradient(ellipse at center,
+    rgba(126,180,226,0.05) 0%,
+    transparent 70%
+  );
+  pointer-events: none;
 }}
 
 .player-name {{
-  font-family: 'Bebas Neue', sans-serif;
-  font-size: 34pt;
-  line-height: 0.92;
-  color: #ffffff;
-  letter-spacing: 1px;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 38pt;
+  font-weight: 900;
+  line-height: 0.88;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.92);
   word-break: break-word;
-  margin-bottom: 7px;
+  margin-bottom: 10px;
+  margin-top: 6px;
 }}
 
 .badges {{
-  display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 10px;
 }}
 
 .badge {{
-  font-family: 'DM Mono', monospace;
-  font-size: 6.5pt; font-weight: 500;
-  padding: 2px 7px; border-radius: 3px;
-  border: 1px solid #1c2035; color: #ffffff;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 8pt;
+  font-weight: 700;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 3px;
+  border: 1px solid rgba(255,255,255,0.11);
+  color: rgba(255,255,255,0.60);
+  background: rgba(255,255,255,0.04);
 }}
 
-.badge.pos {{ border-color: {tc}; color: {tc}; font-weight: 700; }}
-.badge.hi  {{ border-color: #ffffff; color: #e8eaf0; }}
+.badge.pos {{
+  border-color: {tc}88;
+  color: {tier_txt};
+  background: {badge_bg};
+}}
 
 .score-box {{
-  border: 1px solid #1c2035;
+  background: #161b22;
+  border: 1px solid rgba(255,255,255,0.10);
   border-radius: 6px;
-  padding: 8px 10px 5px;
+  padding: 10px 12px 8px;
   margin-bottom: 10px;
-  background: linear-gradient(135deg, {atm} 0%, #060810 60%);
+  position: relative;
+  overflow: hidden;
+}}
+
+.score-box::before {{
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(126,180,226,0.04) 0%,
+    transparent 40%,
+    {atm} 100%
+  );
+  pointer-events: none;
 }}
 
 .score-row {{
-  display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-bottom: 5px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-bottom: 7px;
 }}
 
 .snum {{
-  font-family: 'Bebas Neue', sans-serif;
-  font-size: 28pt; line-height: 1; display: block; text-align: center;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 30pt;
+  font-weight: 800;
+  line-height: 0.92;
+  letter-spacing: -0.01em;
+  display: block;
+  text-align: center;
 }}
 
 .slbl {{
-  font-family: 'DM Mono', monospace;
-  font-size: 5.5pt; color: #ffffff; letter-spacing: 1px;
-  text-transform: uppercase; display: block; text-align: center; margin-top: 1px;
+  font-family: 'Barlow', sans-serif;
+  font-size: 6pt;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.32);
+  display: block;
+  text-align: center;
+  margin-top: 2px;
 }}
 
 .tier-badge {{
-  display: block; text-align: center;
-  font-family: 'Bebas Neue', sans-serif;
-  font-size: 12pt; letter-spacing: 3px; color: {tc};
-  background: {badge_bg}; border: 1px solid {tc}88;
-  border-radius: 4px; padding: 2px 0; margin-bottom: 3px;
+  display: block;
+  text-align: center;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 13pt;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: {tier_txt};
+  background: {badge_bg};
+  border: 1px solid {badge_bd};
+  border-radius: 4px;
+  padding: 3px 0;
+  margin-bottom: 3px;
 }}
 
-/* Left panel trait grid — flexbox two-column */
 .lp-profile-section {{
-    margin: 6px 0 8px 0;
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-}}
-.lp-profile-header {{
-    display: flex;
-    flex-direction: row;
-    margin-bottom: 4px;
-}}
-.lp-col-label {{
-    flex: 1;
-    font-size: 7px;
-    color: #ffffff;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    opacity: 0.55;
-}}
-.lp-bars-row {{
-    display: flex;
-    flex-direction: row;
-    gap: 10px;
-}}
-.lp-bar-col {{
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-}}
-.lp-bar-item {{
-    display: flex;
-    flex-direction: column;
-    gap: 1px;
-}}
-.lp-bar-label {{
-    font-size: 8px;
-    color: #ffffff;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-    opacity: 0.65;
-}}
-.lp-bar-track {{
-    display: flex;
-    align-items: center;
-    gap: 3px;
-}}
-.lp-bar-outer {{
-    flex: 1;
-    height: 4px;
-    background: #1a2030;
-    border-radius: 2px;
-    overflow: hidden;
-}}
-.lp-bar-inner {{
-    height: 4px;
-    border-radius: 2px;
-}}
-.lp-bar-val {{
-    font-size: 9px;
-    color: #ffffff;
-    min-width: 20px;
-    text-align: right;
-    font-weight: 600;
+  margin: 6px 0 8px 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }}
 
-/* FM ref compact block — comp-section used by _fm_ref_block_html */
-.comp-section {{
-    margin-top: 8px;
-    padding-top: 8px;
-    border-top: 1px solid #1c2035;
+.lp-profile-header {{
+  display: flex;
+  flex-direction: row;
+  margin-bottom: 5px;
 }}
-.section-label {{
-    font-family: monospace;
-    font-size: 8px;
-    letter-spacing: 1.5px;
-    color: #ffffff;
-    text-transform: uppercase;
-    margin-bottom: 6px;
+
+.lp-col-label {{
+  flex: 1;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 7pt;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.28);
 }}
-.comp-header {{
-    font-family: monospace;
-    font-size: 8px;
-    color: #ffffff;
-    display: flex;
-    flex-wrap: nowrap;
-    gap: 5px;
-    align-items: baseline;
+
+.lp-bars-row {{
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
 }}
-.comp-name {{
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 11pt;
-    color: #ffffff;
-    white-space: nowrap;
+
+.lp-bar-col {{
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
 }}
-.comp-arch {{
-    font-size: 7px;
-    color: #ffffff;
-    opacity: 0.75;
-    white-space: nowrap;
+
+.lp-bar-item {{
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }}
-.comp-era {{
-    font-size: 7px;
-    color: #ffffff;
-    opacity: 0.5;
-    margin-left: auto;
-    white-space: nowrap;
+
+.lp-bar-label {{
+  font-family: 'Barlow', sans-serif;
+  font-size: 7.5pt;
+  color: rgba(255,255,255,0.45);
+  letter-spacing: 0.02em;
 }}
-.comp-body {{
-    font-size: 9px;
-    color: #ffffff;
-    line-height: 1.4;
+
+.lp-bar-track {{
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}}
+
+.lp-bar-outer {{
+  flex: 1;
+  height: 3px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 2px;
+  overflow: hidden;
+}}
+
+.lp-bar-inner {{
+  height: 3px;
+  border-radius: 2px;
+}}
+
+.lp-bar-val {{
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 9pt;
+  font-weight: 700;
+  min-width: 22px;
+  text-align: right;
 }}
 
 .lp-footer {{
   margin-top: auto;
-  border-top: 1px solid #1c2035;
+  border-top: 1px solid rgba(255,255,255,0.06);
   padding-top: 8px;
 }}
 
-/* RIGHT PANEL */
+.cap-val {{
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 14pt;
+  font-weight: 700;
+  color: rgba(255,255,255,0.88);
+  letter-spacing: 0.02em;
+  line-height: 1;
+  margin-bottom: 4px;
+}}
+
 .rp {{
-  background: linear-gradient(160deg, {atm} 0%, #0d1020 35%);
-  border-top: 3px solid {tc};
-  padding: 0.2in 0.26in 0.16in;
+  background: #0a0c0f;
+  padding: 0.2in 0.26in 0.16in 0.22in;
   display: flex;
   flex-direction: column;
   height: 8.5in;
+  position: relative;
+  z-index: 3;
+}}
+
+.rp::before {{
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, {tc} 0%, {tc}55 40%, transparent 100%);
+}}
+
+.rp::after {{
+  content: '';
+  position: absolute;
+  top: 0; right: 0;
+  width: 280px; height: 280px;
+  background: conic-gradient(
+    from 200deg at 100% 0%,
+    {atm} 0deg,
+    rgba(126,180,226,0.03) 60deg,
+    transparent 120deg
+  );
+  pointer-events: none;
 }}
 
 .arch-row {{
-  display: flex; align-items: flex-start;
-  gap: 10px; padding-bottom: 8px;
-  border-bottom: 1px solid #1c2035;
-  margin-bottom: 8px; flex-shrink: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  margin-bottom: 8px;
+  flex-shrink: 0;
+  position: relative;
+}}
+
+.rank-ghost {{
+  position: absolute;
+  right: 0; top: -6px;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 72pt;
+  font-weight: 900;
+  color: rgba(255,255,255,0.025);
+  letter-spacing: -0.04em;
+  line-height: 1;
+  pointer-events: none;
+  user-select: none;
 }}
 
 .arch-code {{
-  font-family: 'DM Mono', monospace; font-size: 7pt; color: #ffffff;
-  background: #060810; border: 1px solid #1c2035;
-  border-radius: 3px; padding: 2px 7px; margin-top: 3px;
-  flex-shrink: 0; white-space: nowrap;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 9pt;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #7eb4e2;
+  margin-bottom: 3px;
 }}
 
 .arch-name {{
-  font-family: 'Bebas Neue', sans-serif; font-size: 20pt;
-  color: {tc}; line-height: 1; letter-spacing: 0.5px;
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 22pt;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: #e8a84a;
+  line-height: 0.92;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}}
+
+.fm-section {{
+  margin-bottom: 8px;
+  flex-shrink: 0;
+}}
+
+.fm-sec-lbl {{
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 7.5pt;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.28);
+  margin-bottom: 5px;
+}}
+
+.fm-pips {{
+  display: flex;
+  gap: 3px;
+  margin-bottom: 6px;
 }}
 
 .sig-block {{
-  background: #060d1a; border-left: 3px solid #1e4080;
-  border-radius: 0 4px 4px 0; padding: 7px 12px;
-  margin-bottom: 8px; flex-shrink: 0;
+  background: #161b22;
+  border: 1px solid rgba(255,255,255,0.06);
+  border-left: 3px solid #4a90d4;
+  border-radius: 0 5px 5px 0;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  flex-shrink: 0;
+}}
+
+.sig-lbl {{
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 7pt;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #7eb4e2;
+  margin-bottom: 4px;
+}}
+
+.sig-text {{
+  font-family: 'Barlow', sans-serif;
+  font-size: 7.5pt;
+  color: rgba(255,255,255,0.60);
+  line-height: 1.5;
+  font-style: italic;
 }}
 
 .sf-grid {{
-  display: grid; grid-template-columns: 1fr 1fr;
-  gap: 9px; margin-bottom: 8px; flex-shrink: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 8px;
+  flex-shrink: 0;
 }}
 
 .sf-box {{
-  background: #07090f; border: 1px solid #1c2035;
-  border-radius: 4px; padding: 7px 9px;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-height: 0;
+  background: #161b22;
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 5px;
+  padding: 8px 10px;
 }}
 
 .sf-title {{
-  font-family: 'DM Mono', monospace;
-  font-size: 5.5pt; letter-spacing: 1.2px;
-  text-transform: uppercase; margin-bottom: 4px; font-weight: 600;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 7.5pt;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}}
+
+.sf-ind {{
+  width: 5px; height: 5px;
+  border-radius: 1px;
+  display: inline-block;
 }}
 
 .trans-block {{
-  background: #110e00; border: 1px solid #f5c51825;
-  border-left: 3px solid #f5c518;
-  border-radius: 0 4px 4px 0;
-  padding: 7px 12px; margin-bottom: 8px; flex-shrink: 0;
-  display: flex; gap: 10px; align-items: flex-start;
+  background: rgba(232,168,74,0.07);
+  border: 1px solid rgba(232,168,74,0.18);
+  border-left: 3px solid #c98828;
+  border-radius: 0 5px 5px 0;
+  padding: 7px 12px;
+  margin-bottom: 8px;
+  flex-shrink: 0;
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
 }}
 
 .comps-region {{
-  flex: 1; display: flex; flex-direction: column;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
   min-height: 0;
 }}
 
 .rp-footer {{
-  border-top: 1px solid #1c2035; padding-top: 7px;
-  display: flex; align-items: center; justify-content: space-between;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  padding-top: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   flex-shrink: 0;
 }}
+
+.comp-section {{
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}}
+
+.section-label {{
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 7.5pt;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.28);
+  margin-bottom: 6px;
+}}
+
+.comp-header {{
+  font-family: 'Barlow', sans-serif;
+  font-size: 8pt;
+  color: rgba(255,255,255,0.70);
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 5px;
+  align-items: baseline;
+}}
+
+.comp-name {{
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 12pt;
+  font-weight: 900;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.88);
+  white-space: nowrap;
+}}
+
+.comp-arch {{
+  font-family: 'Barlow', sans-serif;
+  font-size: 7pt;
+  color: rgba(255,255,255,0.40);
+  white-space: nowrap;
+}}
+
+.comp-era {{
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 7pt;
+  color: rgba(255,255,255,0.22);
+  margin-left: auto;
+  white-space: nowrap;
+  letter-spacing: 0.06em;
+}}
+
+.comp-body {{
+  font-family: 'Barlow', sans-serif;
+  font-size: 8pt;
+  color: rgba(255,255,255,0.55);
+  line-height: 1.5;
+}}
+
+body::before {{
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.018) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.018) 1px, transparent 1px);
+  background-size: 32px 32px;
+  pointer-events: none;
+  z-index: 1;
+}}
+
 </style>
 </head>
 <body>
 <div class="page">
 
-<!-- LEFT -->
+<!-- LEFT PANEL -->
 <div class="lp">
+
   <div class="player-name">{name}</div>
 
   <div class="badges">
     <span class="badge pos">{pos_badge}</span>
     <span class="badge">{school}</span>
-    {'<span class="badge hi">'+pos_rank_s+'</span>' if pos_rank_s else ''}
-    {'<span class="badge">'+ras_s+'</span>' if ras_s else ''}
+    {pos_rank_badge}
+    {ras_badge}
   </div>
 
   <div class="score-box">
     <div class="score-row">
       <div>
-        <span class="snum" style="color:#00d4aa;">{rpg_s}</span>
+        <span class="snum" style="color:#7eb4e2">{rpg_s}</span>
         <span class="slbl">Player Grade</span>
       </div>
       <div>
-        <span class="snum" style="color:{tc};">{apex_s}</span>
+        <span class="snum" style="color:{tier_txt}">{apex_s}</span>
         <span class="slbl">Draft Value</span>
       </div>
     </div>
-    <div class="tier-badge">{tier if tier else 'Pending'}</div>
+    <div class="tier-badge">{tier_star}{tier_display}</div>
     {pvc_note}
   </div>
 
-  {trait_grid_html}
+  <div class="lp-profile-section">
+    <div class="lp-profile-header">
+      <div class="lp-col-label">Football</div>
+      <div class="lp-col-label">System</div>
+    </div>
+    <div class="lp-bars-row">
+      <div class="lp-bar-col">{football_bars}</div>
+      <div class="lp-bar-col">{system_bars}</div>
+    </div>
+  </div>
 
   <div class="lp-footer">
-    <div style="margin-bottom:5px;">
-      <div style="font-family:'DM Mono',monospace;font-size:5.5pt;letter-spacing:1px;
-                  color:#ffffff;text-transform:uppercase;margin-bottom:2px;">Draft Capital</div>
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:13pt;
-                  color:#ffffff;letter-spacing:0.5px;line-height:1;">{cap_clean}</div>
+    <div style="margin-bottom:6px">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:7.5pt;
+                  font-weight:700;letter-spacing:0.14em;text-transform:uppercase;
+                  color:rgba(255,255,255,0.28);margin-bottom:3px">Draft Capital</div>
+      <div class="cap-val">{cap_clean}</div>
       {capital_context}
     </div>
     {tags_html}
     {conf_html}
     {div_html}
-  </div>
-</div>
-
-<!-- RIGHT -->
-<div class="rp">
-
-  <div class="arch-row">
-    <div style="min-width:0;">
-      {'<div class="arch-code">'+arch_code+'</div>' if arch_code else ''}
-      {'<div class="arch-name">'+arch_label+'</div>' if arch_label
-       else '<div style="font-family:Bebas Neue,sans-serif;font-size:14pt;color:#ffffff;">Archetype Pending</div>'}
+    <div style="margin-top:8px;display:flex;justify-content:space-between;
+                align-items:flex-end">
+      <span style="font-family:'Barlow Condensed',sans-serif;font-size:9pt;
+                   font-weight:900;letter-spacing:0.20em;text-transform:uppercase;
+                   color:rgba(255,255,255,0.14)">DraftOS</span>
+      <span style="font-family:'Barlow Condensed',sans-serif;font-size:7pt;
+                   color:rgba(255,255,255,0.12);letter-spacing:0.10em;
+                   text-transform:uppercase">v2.3 · 2026</span>
     </div>
   </div>
 
-  {fm_bar}
+</div>
+
+<!-- RIGHT PANEL -->
+<div class="rp">
+
+  <div class="arch-row">
+    <div class="rank-ghost">{rank_s}</div>
+    <div style="min-width:0">
+      {arch_code_div}
+      {arch_name_div}
+    </div>
+  </div>
+
+  <div class="fm-section">
+    <div class="fm-sec-lbl">Failure Mode Risk</div>
+    <div class="fm-pips">{pips_html}</div>
+    <div>{fm_chips_html}</div>
+  </div>
 
   <div class="sig-block">
-    <div style="font-family:'DM Mono',monospace;font-size:5.5pt;letter-spacing:1.5px;
-                color:#3b82f6;text-transform:uppercase;margin-bottom:4px;">Signature Play</div>
-    <div style="font-size:8pt;color:#ffffff;line-height:1.5;">{sig_clean if sig_clean else "Pending evaluation."}</div>
+    <div class="sig-lbl">◆ Signature Play</div>
+    <div class="sig-text">{sig_clean if sig_clean else "Pending evaluation."}</div>
   </div>
 
   <div class="sf-grid">
     <div class="sf-box">
-      <div class="sf-title" style="color:#34d399;">&#10003; Strengths</div>
-      <table style="border-collapse:collapse;width:100%;">{bullet_rows(str_lines,"#34d399")}</table>
+      <div class="sf-title" style="color:#5ab87a">
+        <span class="sf-ind" style="background:#5ab87a"></span>
+        Strengths
+      </div>
+      <table style="border-collapse:collapse;width:100%">
+        {bullet_rows(str_lines, "#5ab87a")}
+      </table>
     </div>
     <div class="sf-box">
-      <div class="sf-title" style="color:#ef4444;">&#9873; Red Flags</div>
-      <table style="border-collapse:collapse;width:100%;">{bullet_rows(rf_lines,"#ef4444")}</table>
+      <div class="sf-title" style="color:#e05c5c">
+        <span class="sf-ind" style="background:#e05c5c"></span>
+        Red Flags
+      </div>
+      <table style="border-collapse:collapse;width:100%">
+        {bullet_rows(rf_lines, "#e05c5c")}
+      </table>
     </div>
   </div>
 
-  {'<div class="trans-block"><span style="color:#f5c518;font-size:8pt;flex-shrink:0;margin-top:1px;">&#9888;</span><span style="font-size:7.5pt;color:#d4b84a;line-height:1.45;">'+trans_clean+'</span></div>' if trans_clean else ''}
+  {trans_block_html}
 
   <div class="comps-region">
     {divergence_callout_html}
@@ -1100,11 +1635,14 @@ html, body {{
   </div>
 
   <div class="rp-footer">
-    <div style="font-family:'Bebas Neue',sans-serif;font-size:9pt;
-                letter-spacing:3px;color:#ffffff;">DraftOS 2026</div>
-    <div style="font-family:'DM Mono',monospace;font-size:6pt;
-                color:#ffffff;text-align:right;line-height:1.6;">
-      Generated {date_str}<br>{rank_s} · {position} · {school}
+    <span style="font-family:'Barlow Condensed',sans-serif;font-size:9pt;
+                 font-weight:900;letter-spacing:0.20em;text-transform:uppercase;
+                 color:rgba(255,255,255,0.14)">DraftOS 2026</span>
+    <div style="font-family:'Barlow Condensed',sans-serif;font-size:7pt;
+                color:rgba(255,255,255,0.28);text-align:right;line-height:1.8;
+                letter-spacing:0.04em">
+      Generated {date_str}<br>
+      {rank_s} · {position} · {school}
     </div>
   </div>
 
