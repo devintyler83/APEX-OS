@@ -443,19 +443,19 @@ def _trait_bar_html(label: str, val: float | None) -> str:
     if val is None:
         return (
             f'<div style="display:flex;align-items:center;margin-bottom:6px">'
-            f'<div style="width:175px;font-size:12px;color:#ffffff">{label}</div>'
+            f'<div style="width:175px;font-size:13px;color:#ffffff">{label}</div>'
             f'<div style="flex:1;background:#222;border-radius:3px;height:8px;margin:0 10px"></div>'
-            f'<div style="width:28px;text-align:right;font-size:12px;color:#ffffff">—</div>'
+            f'<div style="width:28px;text-align:right;font-size:13px;color:#ffffff">—</div>'
             f'</div>'
         )
     pct   = min(max(val / 10.0 * 100, 0), 100)
     color = _bar_color(val)
     return (
         f'<div style="display:flex;align-items:center;margin-bottom:6px">'
-        f'<div style="width:175px;font-size:12px;color:#ffffff">{label}</div>'
+        f'<div style="width:175px;font-size:13px;color:#ffffff">{label}</div>'
         f'<div style="flex:1;background:#222;border-radius:3px;height:8px;margin:0 10px">'
         f'<div style="width:{pct:.0f}%;background:{color};height:100%;border-radius:3px"></div></div>'
-        f'<div style="width:28px;text-align:right;font-size:12px;color:{color};font-weight:700">{val:.1f}</div>'
+        f'<div style="width:28px;text-align:right;font-size:13px;color:{color};font-weight:700">{val:.1f}</div>'
         f'</div>'
     )
 
@@ -535,7 +535,7 @@ def _render_apex_detail(d: dict) -> None:
                         border-radius:6px;font-size:14px;font-weight:700">{tier or "—"}</span>
                     </div>
                 </div>
-                <div style="font-size:12px;color:#ffffff;margin-top:6px;text-align:right">
+                <div style="font-size:13px;color:#ffffff;margin-top:6px;text-align:right">
                     RPG {raw_str} × {pvc_str} ({pos}) = APEX {comp_str}
                 </div>
             </div>
@@ -684,7 +684,7 @@ def _render_apex_detail(d: dict) -> None:
     <span style="font-size:16px;font-weight:700;color:#ffffff">{arch}</span>
     <span style="font-size:13px;color:#ffffff">Fit: {fit_str}</span>
     <span style="background:{gap_bg};color:{gap_text};padding:3px 10px;border-radius:999px;
-                 font-size:11px;font-weight:700">{gap_display}</span>
+                 font-size:13px;font-weight:700">{gap_display}</span>
   </div>
 </div>
 """
@@ -758,11 +758,11 @@ def _render_apex_detail(d: dict) -> None:
   <div style="font-size:11px;color:#ffffff;letter-spacing:1px;margin-bottom:8px">DRAFT CAPITAL</div>
   <div style="display:flex;gap:40px;flex-wrap:wrap">
     <div>
-      <div style="font-size:11px;color:#ffffff;margin-bottom:2px">Base</div>
+      <div style="font-size:13px;color:#ffffff;margin-bottom:2px">Base</div>
       <div style="font-size:16px;font-weight:700;color:#ffffff">{cap_base}</div>
     </div>
     <div>
-      <div style="font-size:11px;color:#ffffff;margin-bottom:2px">Adjusted (PVC)</div>
+      <div style="font-size:13px;color:#ffffff;margin-bottom:2px">Adjusted (PVC)</div>
       <div style="font-size:16px;font-weight:700;color:#ffffff">{cap_adj}</div>
     </div>
   </div>
@@ -856,7 +856,7 @@ def _render_apex_detail(d: dict) -> None:
             _total    = _rate["total"]
             _rate_color = "#48BB78" if _hit_pct >= 67 else "#ECC94B" if _hit_pct >= 40 else "#FC8181"
             st.markdown(
-                f'<span style="font-size:12px;color:#ffffff">{_arch_code} translation rate: '
+                f'<span style="font-size:13px;color:#ffffff">{_arch_code} translation rate: '
                 f'<strong style="color:{_rate_color}">{_hit_pct}% HIT</strong> '
                 f'({_hit_cnt} of {_total})</span>',
                 unsafe_allow_html=True,
@@ -896,6 +896,8 @@ def _render_apex_detail(d: dict) -> None:
                 limit=2,
             )
 
+        _frc_prospect_pos = (d.get("position_group") or "").upper()
+
         if _fm_ref_comps:
             st.markdown("<hr style='border-color:#333;margin:8px 0 12px 0'>", unsafe_allow_html=True)
             st.markdown(
@@ -906,7 +908,7 @@ def _render_apex_detail(d: dict) -> None:
             for _frc in _fm_ref_comps:
                 _frc_outcome = _frc.get("translation_outcome", "")
                 _frc_color   = {"MISS": "#cc3333", "PARTIAL": "#cc8800", "HIT": "#228B22"}.get(
-                    _frc_outcome, "#888888"
+                    _frc_outcome, "#ef4444"
                 )
                 _frc_player  = _frc.get("player_name", "")
                 _frc_arch    = _frc.get("archetype_code", "")
@@ -916,29 +918,41 @@ def _render_apex_detail(d: dict) -> None:
                 _frc_mech    = _frc.get("fm_mechanism") or ""
                 _frc_pre     = _frc.get("pre_draft_signal") or ""
 
+                # Cross-position callout
+                _frc_comp_pos = _frc_arch.split("-")[0].strip() if _frc_arch and "-" in _frc_arch else ""
+                _frc_is_cross = bool(_frc_comp_pos) and _frc_comp_pos != _frc_prospect_pos
+
                 st.markdown(
                     f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">'
-                    f'<span style="color:{_frc_color};font-weight:700;font-size:11px;">■ {_frc_outcome}</span>'
+                    f'<span style="color:{_frc_color};font-weight:700;font-size:13px;">■ {_frc_outcome}</span>'
                     f'<span style="font-weight:700;font-size:13px;color:#ffffff;">{_frc_player}</span>'
-                    f'<span style="color:#aaa;font-size:11px;">{_frc_arch} · {_frc_fm}</span>'
-                    f'<span style="color:#666;font-size:10px;margin-left:auto;">{_frc_era}</span>'
+                    f'<span style="color:#ffffff;font-size:13px;opacity:0.75;">{_frc_arch} · {_frc_fm}</span>'
+                    f'<span style="color:#ffffff;font-size:13px;opacity:0.55;margin-left:auto;">{_frc_era}</span>'
                     f'</div>',
                     unsafe_allow_html=True,
                 )
+                if _frc_is_cross:
+                    st.markdown(
+                        f'<div style="font-size:13px;color:#f0a500;margin-bottom:6px;">'
+                        f'Cross-position reference — {_frc_fm} mechanism is position-independent. '
+                        f'{_frc_comp_pos} shown as highest-severity historical pattern for this FM code.'
+                        f'</div>',
+                        unsafe_allow_html=True,
+                    )
                 if _frc_summary:
                     st.markdown(
-                        f'<div style="color:#cccccc;font-size:12px;margin-bottom:4px;">{_frc_summary}</div>',
+                        f'<div style="color:#ffffff;font-size:13px;margin-bottom:4px;">{_frc_summary}</div>',
                         unsafe_allow_html=True,
                     )
                 if _frc_pre:
                     with st.expander("Pre-draft signal", expanded=False):
                         st.markdown(
-                            f'<div style="color:#aaaaaa;font-size:11px;line-height:1.5;">{_frc_pre}</div>',
+                            f'<div style="color:#ffffff;font-size:13px;line-height:1.5;">{_frc_pre}</div>',
                             unsafe_allow_html=True,
                         )
                 if _frc_mech:
                     st.markdown(
-                        f'<div style="color:#cc6666;font-size:11px;font-style:italic;">'
+                        f'<div style="color:#cc6666;font-size:13px;">'
                         f'Bust mechanism: {_frc_mech}</div>',
                         unsafe_allow_html=True,
                     )
@@ -1092,7 +1106,7 @@ def _render_compare_panel(name_a: str, name_b: str, board_df: pd.DataFrame) -> N
 
         col_lbl, col_a, col_b = st.columns([2, 3, 3])
         with col_lbl:
-            st.markdown(f'<div style="font-size:11px;color:#ffffff;padding:3px 0">{label}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div style="font-size:13px;color:#ffffff;padding:3px 0">{label}</div>', unsafe_allow_html=True)
         with col_a:
             st.markdown(f'<div style="font-size:13px;{style_a};padding:3px 0">{va}</div>', unsafe_allow_html=True)
         with col_b:

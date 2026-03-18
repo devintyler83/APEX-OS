@@ -86,7 +86,7 @@ def _capital_context_html(position: str) -> str:
         return ""
     return (
         f'<div style="font-size:8px;color:#ffffff;line-height:1.5;'
-        f'margin-top:5px;font-style:italic;">{note}</div>'
+        f'margin-top:5px;">{note}</div>'
     )
 
 
@@ -269,13 +269,91 @@ def _trait_table(data: dict, tier_col: str) -> str:
     </table>"""
 
 
+def _build_trait_grid_html(data: dict) -> str:
+    """
+    Two-column trait bar grid for PDF left panel.
+    Fills available flex space with Football traits (left) and System traits (right).
+    Uses CSS grid layout — no dead air between traits and footer.
+    DB column names: v_injury (not v_durability), v_scheme_vers (not v_scheme).
+    """
+    FOOTBALL = [
+        ("Processing",  "v_processing"),
+        ("Athleticism", "v_athleticism"),
+        ("Comp. Tough", "v_comp_tough"),
+        ("Durability",  "v_injury"),
+    ]
+    SYSTEM = [
+        ("Scheme Vers.", "v_scheme_vers"),
+        ("Production",   "v_production"),
+        ("Dev. Traj.",   "v_dev_traj"),
+        ("Character",    "v_character"),
+    ]
+
+    def bar(label: str, key: str) -> str:
+        val = data.get(key)
+        if val is None:
+            return (
+                f'<div style="margin-bottom:9px;">'
+                f'<div style="font-size:7pt;color:#ffffff;text-transform:uppercase;'
+                f'letter-spacing:0.03em;opacity:0.6;margin-bottom:3px;">{label}</div>'
+                f'<div style="color:#334;font-size:8pt;">—</div>'
+                f'</div>'
+            )
+        try:
+            fval = float(val)
+        except (TypeError, ValueError):
+            fval = 0.0
+        pct = min(100.0, max(0.0, fval / 10.0 * 100.0))
+        if fval >= 9.0:   col = "#00d4aa"
+        elif fval >= 8.0: col = "#34d399"
+        elif fval >= 6.5: col = "#f5c518"
+        elif fval >= 5.0: col = "#f97316"
+        else:             col = "#ef4444"
+        return (
+            f'<div style="margin-bottom:9px;">'
+            f'<div style="font-size:7pt;color:#ffffff;text-transform:uppercase;'
+            f'letter-spacing:0.03em;opacity:0.6;margin-bottom:3px;">{label}</div>'
+            f'<div style="display:flex;align-items:center;gap:4px;">'
+            f'<div style="flex:1;height:5px;background:#1a2030;border-radius:2px;overflow:hidden;">'
+            f'<div style="height:5px;width:{pct:.1f}%;background:{col};border-radius:2px;"></div>'
+            f'</div>'
+            f'<div style="font-size:8pt;color:{col};min-width:24px;text-align:right;'
+            f'font-family:monospace;font-weight:600;">{fval:.1f}</div>'
+            f'</div>'
+            f'</div>'
+        )
+
+    left_html  = "".join(bar(lbl, key) for lbl, key in FOOTBALL)
+    right_html = "".join(bar(lbl, key) for lbl, key in SYSTEM)
+
+    return (
+        f'<div style="flex:1;margin:6px 0;min-height:0;">'
+        f'<div style="font-family:\'DM Mono\',monospace;font-size:5.5pt;letter-spacing:1.5px;'
+        f'color:#ffffff;text-transform:uppercase;margin-bottom:7px;">Player Profile</div>'
+        f'<div style="display:grid;grid-template-columns:1fr 1fr;gap:0 14px;">'
+        f'<div>'
+        f'<div style="font-size:7pt;color:#ffffff;font-family:\'DM Mono\',monospace;'
+        f'text-transform:uppercase;letter-spacing:0.08em;opacity:0.45;margin-bottom:6px;">Football</div>'
+        f'{left_html}'
+        f'</div>'
+        f'<div>'
+        f'<div style="font-size:7pt;color:#ffffff;font-family:\'DM Mono\',monospace;'
+        f'text-transform:uppercase;letter-spacing:0.08em;opacity:0.45;margin-bottom:6px;">System</div>'
+        f'{right_html}'
+        f'</div>'
+        f'</div>'
+        f'</div>'
+    )
+
+
 # ── FM reference comp block (PDF right panel) ─────────────────────────────────
 
-def _fm_ref_block_html(fm_comps: list[dict]) -> str:
+def _fm_ref_block_html(fm_comps: list[dict], prospect_position: str = "") -> str:
     """
     Renders FM reference comps as a styled block for the PDF right panel.
     Uses actual DB column names: outcome_summary (concise), fm_mechanism (bust mech),
-    pre_draft_signal (truncated to 220 chars for PDF layout).
+    pre_draft_signal (truncated to 240 chars for PDF layout).
+    Shows cross-position callout when comp archetype position != prospect position.
     """
     if not fm_comps:
         return ""
@@ -288,16 +366,27 @@ def _fm_ref_block_html(fm_comps: list[dict]) -> str:
         'color:#ffffff;text-transform:uppercase;margin-bottom:6px;">FM Risk Reference</div>'
     ]
     for comp in fm_comps:
-        outcome = comp.get("translation_outcome", "")
-        color   = OUTCOME_COLOR.get(outcome, "#888888")
-        player  = comp.get("player_name", "")
-        arch    = comp.get("archetype_code", "")
-        fm      = comp.get("fm_code", "")
-        era     = comp.get("era_bracket") or ""
-        summary = comp.get("outcome_summary") or ""
-        mech    = comp.get("fm_mechanism") or ""
-        pre_raw = comp.get("pre_draft_signal") or ""
-        pre_short = (pre_raw[:217] + "…") if len(pre_raw) > 220 else pre_raw
+        outcome  = comp.get("translation_outcome", "")
+        color    = OUTCOME_COLOR.get(outcome, "#ef4444")
+        player   = comp.get("player_name", "")
+        arch     = comp.get("archetype_code", "")
+        fm       = comp.get("fm_code", "")
+        era      = comp.get("era_bracket") or ""
+        summary  = comp.get("outcome_summary") or ""
+        mech     = comp.get("fm_mechanism") or ""
+        pre_raw  = comp.get("pre_draft_signal") or ""
+        pre_short = (pre_raw[:237] + "…") if len(pre_raw) > 240 else pre_raw
+
+        # Cross-position callout
+        comp_pos = arch.split("-")[0].strip() if arch and "-" in arch else ""
+        is_cross = bool(comp_pos) and comp_pos != (prospect_position or "").upper()
+        cross_html = ""
+        if is_cross:
+            cross_html = (
+                f'<div style="font-size:7pt;color:#f0a500;margin-bottom:4px;">'
+                f'Cross-position ref — {fm} mechanism is position-independent. '
+                f'{comp_pos} shown as highest-severity {fm} pattern.</div>'
+            )
 
         parts.append(
             f'<div style="background:#07090f;border:1px solid #1c2035;'
@@ -314,6 +403,7 @@ def _fm_ref_block_html(fm_comps: list[dict]) -> str:
             f'<span style="font-family:monospace;font-size:6pt;color:#ffffff;'
             f'white-space:nowrap;margin-left:auto;flex-shrink:0;">{era}</span>'
             f'</div>'
+            f'{cross_html}'
         )
         if summary:
             parts.append(
@@ -321,8 +411,8 @@ def _fm_ref_block_html(fm_comps: list[dict]) -> str:
             )
         if pre_short:
             parts.append(
-                f'<div style="font-size:6.5pt;color:#aaaaaa;line-height:1.4;'
-                f'margin-top:3px;font-style:italic;">{pre_short}</div>'
+                f'<div style="font-size:6.5pt;color:#ffffff;line-height:1.4;'
+                f'margin-top:3px;opacity:0.75;">{pre_short}</div>'
             )
         if mech:
             parts.append(
@@ -386,7 +476,7 @@ def _fm_risk_bar_html(fm_primary: str, fm_secondary: str = None) -> str:
         segments += (
             f'<div style="flex:1;background:{bg};border:{border};opacity:{opacity};'
             f'border-radius:2px;display:flex;align-items:center;justify-content:center;">'
-            f'<span style="font-size:5.5px;font-weight:700;color:{label_color};'
+            f'<span style="font-size:8px;font-weight:700;color:{label_color};'
             f'letter-spacing:0.04em;font-family:monospace;">{fm}</span>'
             f'</div>'
         )
@@ -472,7 +562,7 @@ def _divergence_callout_html(narrative: str, flag: str) -> str:
     return (
         f'<div style="border-left:3px solid {border_color};background:rgba(255,255,255,0.04);'
         f'padding:6px 10px;margin:6px 0;border-radius:0 4px 4px 0;flex-shrink:0;">'
-        f'<div style="font-size:7px;font-weight:700;letter-spacing:0.08em;'
+        f'<div style="font-size:8px;font-weight:700;letter-spacing:0.08em;'
         f'color:{label_color};margin-bottom:3px;">{label}</div>'
         f'<div style="font-size:8.5px;color:#ffffff;line-height:1.4;">{narrative}</div>'
         f'</div>'
@@ -549,7 +639,7 @@ def _build_html(data: dict, comps: dict, fm_ref_comps: list | None = None) -> st
 
     def bullet_rows(lines, dot_col):
         if not lines:
-            return '<tr><td style="color:#ffffff;font-style:italic;font-size:7pt;">Pending evaluation.</td></tr>'
+            return '<tr><td style="color:#ffffff;font-size:7pt;">Pending evaluation.</td></tr>'
         rows = ""
         for l in lines:
             rows += (f'<tr><td style="vertical-align:top;padding-right:6px;">'
@@ -610,7 +700,7 @@ def _build_html(data: dict, comps: dict, fm_ref_comps: list | None = None) -> st
                          white-space:nowrap;margin-left:auto;flex-shrink:0;">{era}</span>
           </div>
           <div style="font-size:7.5pt;color:#ffffff;line-height:1.5;">{summary}</div>
-          {'<div style="font-size:6.5pt;color:#ffffff;line-height:1.4;margin-top:3px;font-style:italic;">'+mech+'</div>' if mech else ''}
+          {'<div style="font-size:6.5pt;color:#ffffff;line-height:1.4;margin-top:3px;opacity:0.75;">'+mech+'</div>' if mech else ''}
         </div>"""
 
     active_fm_set = set(re.findall(r"FM-\d+", fm_pri or ""))
@@ -631,8 +721,8 @@ def _build_html(data: dict, comps: dict, fm_ref_comps: list | None = None) -> st
           {ceiling_html}{fmrisk_html}
         </div>"""
 
-    trait_table_html = _trait_table(data, tc)
-    fm_ref_block     = _fm_ref_block_html(fm_ref_comps or [])
+    trait_grid_html  = _build_trait_grid_html(data)
+    fm_ref_block     = _fm_ref_block_html(fm_ref_comps or [], prospect_position=position)
     fm_bar           = _fm_risk_bar_html(fm_pri, fm_sec)
     capital_context  = _capital_context_html(position)
 
@@ -772,11 +862,6 @@ html, body {{
   padding-bottom: 4px; white-space: nowrap;
 }}
 
-.lp-spacer {{
-  flex: 1;
-  min-height: 8px;
-}}
-
 .lp-footer {{
   margin-top: auto;
   border-top: 1px solid #1c2035;
@@ -889,16 +974,7 @@ html, body {{
     {pvc_note}
   </div>
 
-  <div style="font-family:'DM Mono',monospace;font-size:5.5pt;letter-spacing:1.5px;
-              color:#ffffff;text-transform:uppercase;margin-bottom:5px;">Player Profile</div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 12px;margin-bottom:4px;">
-    <div style="font-size:5pt;color:#ffffff;font-family:'DM Mono',monospace;
-                text-transform:uppercase;letter-spacing:0.08em;opacity:0.7;">Football</div>
-    <div style="font-size:5pt;color:#ffffff;font-family:'DM Mono',monospace;
-                text-transform:uppercase;letter-spacing:0.08em;opacity:0.7;">System</div>
-  </div>
-  {trait_table_html}
-  <div class="lp-spacer"></div>
+  {trait_grid_html}
 
   <div class="lp-footer">
     <div style="margin-bottom:5px;">
@@ -930,7 +1006,7 @@ html, body {{
   <div class="sig-block">
     <div style="font-family:'DM Mono',monospace;font-size:5.5pt;letter-spacing:1.5px;
                 color:#3b82f6;text-transform:uppercase;margin-bottom:4px;">Signature Play</div>
-    <div style="font-size:8pt;color:#ffffff;line-height:1.5;font-style:italic;">{sig_clean if sig_clean else "Pending evaluation."}</div>
+    <div style="font-size:8pt;color:#ffffff;line-height:1.5;">{sig_clean if sig_clean else "Pending evaluation."}</div>
   </div>
 
   <div class="sf-grid">
