@@ -10,7 +10,27 @@ Last Updated (UTC): 2026-03-18T02:25:52.001298+00:00
 
 ## Last Completed Milestone
 
-Session 64 (Kilgore combine gate + Neal 3-cone gate + tag trigger re-run) — board current.
+Session 65 (capital range fix + FM reference comps + PDF spider chart removal) — board current.
+
+Session 65:
+- Capital range derivation bug fixed: capital_base/capital_adjusted were derived from raw_score
+  (RPG, pre-PVC) instead of apex_composite (PVC-adjusted). Added _derive_capital_range() to
+  run_apex_scoring_2026.py. All future scores derive capital from apex_composite. Analyst override
+  capitals (ARCHETYPE_OVERRIDES capital_range) preserved and take priority.
+  DB patch: all 140 existing apex_v2.3 non-calibration rows patched with correct formula.
+  11 analyst-override PIDs (72,71,38,35,449,309,1420,61,148,36,109) preserved exactly.
+  Mauigoa (OG, pid=22): was R1 Picks 11-32 → now R2 Mid–R3 Top. apex_composite=69.8. PASS.
+- historical_comps.py: added get_fm_reference_comps() using actual DB column names
+  (outcome_summary, fm_mechanism, pre_draft_signal). Gracefully returns [] if no FM code set.
+- app.py: FM Risk Reference block added in _render_apex_detail() after Historical Comps block.
+  pre_draft_signal shown in collapsed expander. fm_mechanism shown as bust text. re imported.
+- PDF generator: spider chart (_radar_chart_svg) removed permanently. Left panel redesigned:
+  - .radar-wrap CSS replaced with .lp-spacer (flex:1) to eliminate dead air.
+  - Trait table reorganized: Football left (Processing/Athleticism/Comp.Tough/Durability),
+    System right (Scheme Vers./Production/Dev.Traj./Character). Column headers added.
+  - FM Risk Reference block added to right panel comps-region using actual DB columns.
+  - math import removed (no longer needed without SVG computation).
+- Divergence recomputed post-capital-patch. Doctor: PASSED.
 
 Session 64:
 - Kilgore (pid=309) combine gate: forty=4.40s CLEAR, shuttle=4.32s S-tier (not elite man-CB),
