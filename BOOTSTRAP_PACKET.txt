@@ -10,14 +10,14 @@ Non-negotiables:
 - Provide run order + verification commands
 
 Goal for this chat:
-Session 62: Build and run consolidate_lb_ghost_pids_s61.py to fix LB ghost PID split for 6 premium cases.
+Session 63: APEX re-score for 4 newly-consolidated prospects (Reese/Thomas/Jacas/Simpson).
 
 Authoritative State:
 
 1) STATE_SNAPSHOT.md
 # DraftOS State Snapshot
 
-Last Updated (UTC): 2026-03-18T00:45:40.318007+00:00
+Last Updated (UTC): 2026-03-18T01:00:57.134428+00:00
 
 ---
 
@@ -26,6 +26,32 @@ Last Updated (UTC): 2026-03-18T00:45:40.318007+00:00
 - 2026 (season_id=1)
 
 ## Last Completed Milestone
+
+Session 62 (LB ghost PID consolidation — 6 premium prospects fixed, divergence real signals revealed) — board current.
+
+Session 62:
+- consolidate_lb_ghost_pids_s62.py: Consolidated 6 LB ghost PID splits in one idempotent script.
+  Pairs fixed (keep_pid <- ghost_pid):
+    Arvell Reese       16 (LB->EDGE) <- 1058 (EDGE): 7 SPM rerouted, EDGE-5 67.4 apex migrated
+    R Mason Thomas      7 (LB->EDGE) <- 3538 (EDGE): 4 SPM rerouted, EDGE-4 63.4 apex migrated
+    Gabe Jacas         18 (LB->EDGE) <- 3542 (EDGE): 4 SPM rerouted, EDGE-5 63.2 apex migrated
+    Ty Simpson          9 (LB->QB)   <- 3531 (QB):   4 SPM rerouted, QB-5 44.2 apex migrated
+    Mansoor Delane     39 (CB, OK)   <- 3509 (CB):   6 SPM rerouted, ghost CB-2 66.8 apex deleted
+    Jalon Kilgore     309 (S, OK)   <- 449  (CB):   3 SPM rerouted, S-3 63.1 v2.2 apex migrated
+  Total: 28 SPM rows rerouted. 4 position_group corrections. 8 wrong-library apex rows deleted.
+  5 ghost PIDs deactivated with __ghost_N__ position marker (constraint-safe).
+  Override log: 26 entries written documenting all changes.
+- Consensus rebuilt: 1001 rows. Arvell Reese now #2 overall (was split across LB/EDGE PIDs).
+- Divergence recomputed: fake +80-170 artifacts eliminated for EDGE/QB pairs.
+  Real signals revealed: Reese APEX_LOW -44 (consensus #2 vs APEX 67.4 EDGE-5),
+    Thomas APEX_LOW -27, Jacas APEX_LOW -17, Simpson APEX_LOW -106 (QB-5 vs consensus #29 from LB coverage).
+- Tag triggers re-run: 3 new Divergence Alert recs (264 Cisse APEX_HIGH, 265 Thomas APEX_LOW, 266 Jacas APEX_LOW).
+  All 3 accepted. Reese rec_id=37 (previously dismissed as fake) re-opened and accepted with updated note.
+- Doctor: PASSED. Active sources: 16. Total source_rankings: 42743.
+- NOTE: Ty Simpson APEX_LOW -106 — divergence is real but reflects position confusion (sources ranked as LB,
+  APEX sees QB-5). Not an actionable market miss. Keep monitored.
+- NOTE: Arvell Reese Divergence Alert accepted — consensus loves him (#2) but APEX 67.4 EDGE-5 DAY2 is conservative.
+  Genuine evaluate signal. Not a ghost artifact.
 
 Session 61 (Diagnostic-only: PID split / LB ghost problem scoped — no code written, no DB writes) — board unchanged from S60.
 
@@ -564,17 +590,13 @@ Prior sessions on record: 12 (DB rebuild), 13 (weekly pipeline), 13b (school/arc
 
 ## Next Milestone (Single Target)
 
-- Session 62: Build and run consolidate_lb_ghost_pids_s61.py to fix LB ghost PID split for 6 premium cases.
-  Pairs to consolidate (scored_pid → canonical_pid):
-    pid=1058 EDGE → pid=16 LB  (Arvell Reese)
-    pid=3538 EDGE → pid=7 LB   (R Mason Thomas)
-    pid=3542 EDGE → pid=18 LB  (Gabe Jacas)
-    pid=3509 CB   → pid=39 CB  (Mansoor Delane)
-    pid=3531 QB   → pid=9 LB   (Ty Simpson)
-    pid=449 CB    → pid=309 S  (Jalon Kilgore — also repoint CBSSports sp_id=639)
-  Also repoint Tankathon Kilgore (sp_id=7046) from pid=4410 → pid=309.
-  After consolidation: rebuild consensus, recompute divergence, re-evaluate Divergence Alert tags
-  for Jacas/Thomas/Reese (likely dismiss — artifacts). Then tag trigger re-run.
+- Session 63: APEX re-score for 4 newly-consolidated prospects (Reese/Thomas/Jacas/Simpson).
+  These prospects now have correct position_group (EDGE/QB) but their migrated apex scores were
+  scored against wrong-library (EDGE-5/QB-5 archetypes from ghost PIDs with only 3-4 sources).
+  A full re-score with correct position + full source coverage (17-19 sources) will produce more
+  accurate scores. Target: --batch top50 subset or targeted re-score of these 4 PIDs.
+  Also evaluate: Ty Simpson QB-5 44.2 — is this a genuine projection prospect or position confusion?
+  If no re-score this session, secondary target: export_board_csv + snapshot cycle.
 
 ---
 
@@ -797,11 +819,11 @@ Inactive (data preserved): ngs_2026 (source_id=29, is_active=0) — model score,
 
 2) System Snapshot Output
 === DRAFTOS SYSTEM SNAPSHOT ===
-generated_utc: 2026-03-18T00:45:39.595122+00:00
+generated_utc: 2026-03-18T01:00:56.448884+00:00
 
 ## Git
 branch: main
-commit: 7dec0ffee7858dcdc227ca02726c33a551b8fcaf
+commit: 7b9aaf3d57af6ba1a3fe599e3c803d5db1954247
 status: clean
 
 ## Tables
