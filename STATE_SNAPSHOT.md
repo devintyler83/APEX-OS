@@ -10,6 +10,25 @@ Last Updated (UTC): 2026-03-18T01:00:57.134428+00:00
 
 ## Last Completed Milestone
 
+Session 64 (Kilgore combine gate + Neal 3-cone gate + tag trigger re-run) — board current.
+
+Session 64:
+- Kilgore (pid=309) combine gate: forty=4.40s CLEAR, shuttle=4.32s S-tier (not elite man-CB),
+  3-cone NOT TESTED at combine. Gate result: S-3 REINFORCED. Athletic profile = elite S, not CB.
+  Stored combine data in ras_json. ARCHETYPE_OVERRIDES[309] updated with full gate assessment.
+  Re-scored to v2.3: S-3 Multiplier Safety 64.1 DAY2, R3 base confirmed, APEX_HIGH +23.
+  Man coverage ceiling NOT raised. Existing recs (Elite RAS, Divergence Alert, Dev Bet) — all accepted, no new triage.
+- Neal (pid=109) 3-cone gate: 7.13s confirmed. Gate FIRES (7.13 > 6.90 per S39 doctrine).
+  ARCHETYPE_OVERRIDES[109] added with 3-cone gate injection. R3 capital cap enforced.
+  Re-scored to v2.3: CB-2 Zone Architect 71.8 DAY1, R3 top, APEX_HIGH +37 MAJOR.
+  CB-2 archetype gate-consistent (zone-first, not man-first). Capital ceiling: R2->R3.
+  Monitor tag (ptag_id=71) deactivated. Override logged. Gate closed.
+- Tag trigger re-run: 0 new recs. pending=0. accepted=224, dismissed=35.
+- Active tags: Dev Bet=80, Elite RAS=45, Compression Flag=41, Divergence Alert=29,
+  Great RAS=18, Scheme Dependent=8, Top 5 NextGen=7, Poor RAS=1, Injury Flag=1. Monitor=0.
+- Divergence: ALIGNED=30, APEX_HIGH=61, APEX_LOW=3, STRUCTURAL=46 (140 scored total).
+- Doctor: PASSED. Active sources: 16. Total source_rankings: 42743.
+
 Session 63 (APEX re-score: Reese/Thomas/Jacas/Simpson against correct position libraries) — board current.
 
 Session 63:
@@ -588,14 +607,17 @@ Prior sessions on record: 12 (DB rebuild), 13 (weekly pipeline), 13b (school/arc
 
 ## Next Milestone (Single Target)
 
-- Session 64: Three-part session.
-  (1) Kilgore combine man-coverage gate: if combine data available, re-score pid=309 (S, S-3 63.1)
-      with PAA injection confirming or denying man coverage proficiency gate. If data not in, document
-      formal hold criteria for what constitutes gate clearance.
-  (2) Neal 3-cone gate injection: re-score pid=109 with 3-cone=7.13s injected into prompt.
-      Evaluate whether 3-cone narrows archetype to CB-4/CB-5 or confirms CB-2/CB-3 range.
-  (3) Full tag trigger re-run: evaluate_tag_triggers_2026.py --apply 1 to catch any new recs
-      from Reese/Thomas/Jacas/Simpson re-scores (Thomas +15 borderline, Reese ELITE may trigger).
+- Session 65: Pre-draft snapshot + source freshness check.
+  (1) Pre-draft snapshot: run take_predraft_snapshot_2026.py (or equivalent snapshot cycle)
+      to lock the board state before April 2026 draft begins. This is the authoritative
+      pre-draft evaluation record.
+  (2) Source freshness audit: verify all 16 active sources have post-combine rankings available.
+      Check source_rankings updated dates and flag any sources that are pre-combine-stale.
+      Priority: PFF, TDN, Ringer (T1) — these should have combine-adjusted rankings by now.
+  (3) If new source data available: re-run consensus build + recompute divergence.
+      Note: Neal APEX_HIGH +37 MAJOR — if consensus adjusts post-combine (expected upward
+      for Neal given athletic profile), divergence will compress. Monitor before accepting
+      new Divergence Alert recs.
 
 ---
 
