@@ -10,6 +10,30 @@ Last Updated (UTC): 2026-03-18T03:00:58.444487+00:00
 
 ## Last Completed Milestone
 
+Session 67 (PDF left panel flexbox trait grid, compact FM ref, app FM ref full depth, pre-draft snapshot) — board current.
+
+Session 67:
+- PDF left panel trait grid: replaced _build_trait_grid_html() with _build_lp_trait_grid() using
+  flexbox row layout (not CSS grid). CSS classes: .lp-profile-section, .lp-bars-row, .lp-bar-col,
+  .lp-bar-item, .lp-bar-label, .lp-bar-track, .lp-bar-outer, .lp-bar-inner, .lp-bar-val.
+  Font sizes: 8px labels, 9px values — PDF-scale, compact, proportional to 2.6in column.
+  Column headers: .lp-col-label 7px uppercase. Correct DB columns: v_injury, v_scheme_vers.
+- PDF FM reference block: replaced with compact one-liner per comp (no pre_draft_signal).
+  New CSS classes: .comp-section, .section-label, .comp-header, .comp-name, .comp-arch, .comp-era,
+  .comp-body. Mechanism truncated at 110 chars. Cross-position note: one line, 8px amber.
+  No overflow — right panel height budget respected.
+- App FM reference: upgraded to full analytical depth. Colored left border per outcome.
+  Player name 16px bold, mechanism 14px. Pre-draft signal expander OPEN by default.
+  Bust mechanism inline below card (border-left red). Cross-position callout 13px amber.
+- Source freshness audit: all 16 active sources ingested post-combine (≥2026-03-12). No stale sources.
+  T1 (pff, thedraftnetwork, theringer) all ingested 2026-03-14. Clean.
+  Note: ras_2026.csv updated today (2026-03-17) — new RAS data available for re-ingest.
+- Pre-draft snapshot: take_predraft_snapshot_2026.py --apply 1. 140 rows written.
+  Tier dist: ELITE=4, DAY1=36, DAY2=64, DAY3=34, UDFA-P=2.
+- Board snapshot 6 (2026-03-18): rows=1001, coverage=1001, confidence=1001 — PASSED.
+- Board CSV exported: exports/board_2026_v1_default.csv (1001 rows). Top: Mendoza #1, Downs #2, Love #3.
+- Doctor: PASSED.
+
 Session 66 (visual quality pass: grey→white, font floor 13px, trait grid, FM cross-position callout) — board current.
 
 Session 66:
@@ -646,17 +670,12 @@ Prior sessions on record: 12 (DB rebuild), 13 (weekly pipeline), 13b (school/arc
 
 ## Next Milestone (Single Target)
 
-- Session 67: Pre-draft snapshot + source freshness check.
-  (1) Pre-draft snapshot: run take_predraft_snapshot_2026.py (or equivalent snapshot cycle)
-      to lock the board state before April 2026 draft begins. This is the authoritative
-      pre-draft evaluation record.
-  (2) Source freshness audit: verify all 16 active sources have post-combine rankings available.
-      Check source_rankings updated dates and flag any sources that are pre-combine-stale.
-      Priority: PFF, TDN, Ringer (T1) — these should have combine-adjusted rankings by now.
-  (3) If new source data available: re-run consensus build + recompute divergence.
-      Note: Neal APEX_HIGH +37 MAJOR — if consensus adjusts post-combine (expected upward
-      for Neal given athletic profile), divergence will compress. Monitor before accepting
-      new Divergence Alert recs.
+- Session 68: User analyst tag UI — sidebar widget for Crush / Want / Do Not Want / Off-Field Concern
+  tag assignment directly from the app. Writes source='analyst' to prospect_tags table.
+  (1) Add tag_def_id lookup for these 4 analyst tags (or create them if not seeded).
+  (2) Sidebar widget: selectbox + submit button, writes prospect_tags row with user_id=1.
+  (3) Board column showing active analyst tags per prospect.
+  (4) Also: RAS re-ingest — ras_2026.csv updated 2026-03-17, run ingest_ras_2026.py --apply 1.
 
 ---
 
