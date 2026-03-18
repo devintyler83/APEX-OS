@@ -990,6 +990,34 @@ def _validate_response(data: dict, prospect_name: str) -> bool:
 
 
 # ---------------------------------------------------------------------------
+# Capital range derivation — PVC-adjusted APEX composite
+# ---------------------------------------------------------------------------
+
+def _derive_capital_range(apex_composite: float) -> str:
+    """
+    Derive draft capital range from PVC-adjusted APEX composite score.
+    Capital must reflect what the system values the player at after PVC discount,
+    not the raw positional grade (RPG) before discount.
+    """
+    if apex_composite >= 85.0:
+        return "R1 Picks 1-10"
+    elif apex_composite >= 80.0:
+        return "R1 Picks 11-32"
+    elif apex_composite >= 74.0:
+        return "R2 Top"
+    elif apex_composite >= 68.0:
+        return "R2 Mid–R3 Top"
+    elif apex_composite >= 62.0:
+        return "R3"
+    elif apex_composite >= 56.0:
+        return "R4"
+    elif apex_composite >= 50.0:
+        return "R5–R6"
+    else:
+        return "R7–UDFA"
+
+
+# ---------------------------------------------------------------------------
 # Historical comp context injection
 # ---------------------------------------------------------------------------
 
@@ -1308,6 +1336,17 @@ def _score_prospect(
     raw_score      = float(apex_data["raw_score"])
     apex_composite = compute_apex_composite(raw_score, position)
     apex_tier      = compute_apex_tier(apex_composite)
+
+    # Capital range must derive from PVC-adjusted apex_composite, not raw_score (RPG).
+    # Analyst gate (override_capital from ARCHETYPE_OVERRIDES) takes priority.
+    if override_capital:
+        apex_data["capital_base"]     = override_capital
+        apex_data["capital_adjusted"] = override_capital
+    else:
+        _derived_cap = _derive_capital_range(apex_composite)
+        apex_data["capital_base"]     = _derived_cap
+        apex_data["capital_adjusted"] = _derived_cap
+
     divergence     = compute_divergence(
         apex_composite,
         consensus["consensus_rank"],

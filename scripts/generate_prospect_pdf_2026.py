@@ -5,7 +5,6 @@ Playwright (Chromium) HTML → PDF. Premium dark scouting card.
 from __future__ import annotations
 
 import argparse
-import math
 import re
 import sqlite3
 import tempfile
@@ -15,7 +14,7 @@ from pathlib import Path
 
 from draftos.db.connect import connect
 from draftos.config import PATHS
-from draftos.queries.historical_comps import get_archetype_translation_rate
+from draftos.queries.historical_comps import get_archetype_translation_rate, get_fm_reference_comps
 
 SEASON_ID = 1
 
@@ -222,18 +221,20 @@ def _get_best_comps(conn, archetype_code: str, fm_primary: str, data: dict) -> d
 # ── Trait table (table-based — zero UA bullet risk) ────────────────────────────
 
 def _trait_table(data: dict, tier_col: str) -> str:
-    traits = [
-        ("Processing",  "v_processing"),
-        ("Athleticism", "v_athleticism"),
-        ("Scheme",      "v_scheme_vers"),
-        ("Comp. Tough", "v_comp_tough"),
-        ("Character",   "v_character"),
-        ("Dev. Traj.",  "v_dev_traj"),
-        ("Production",  "v_production"),
-        ("Durability",  "v_injury"),
+    # Football traits (left column) — player mechanism traits
+    left = [
+        ("Processing",   "v_processing"),
+        ("Athleticism",  "v_athleticism"),
+        ("Comp. Tough",  "v_comp_tough"),
+        ("Durability",   "v_injury"),
     ]
-    left  = traits[:4]
-    right = traits[4:]
+    # System traits (right column) — evaluation/projection traits
+    right = [
+        ("Scheme Vers.", "v_scheme_vers"),
+        ("Production",   "v_production"),
+        ("Dev. Traj.",   "v_dev_traj"),
+        ("Character",    "v_character"),
+    ]
 
     def row(label, key):
         val = data.get(key)
@@ -268,91 +269,70 @@ def _trait_table(data: dict, tier_col: str) -> str:
     </table>"""
 
 
-# ── Radar chart ────────────────────────────────────────────────────────────────
+# ── FM reference comp block (PDF right panel) ─────────────────────────────────
 
-def _radar_chart_svg(data: dict) -> str:
+def _fm_ref_block_html(fm_comps: list[dict]) -> str:
     """
-    Renders an 8-axis radar/spider chart as inline SVG.
-    Axes: Processing, Athleticism, Scheme, Comp/Tough,
-          Character, Dev Traj, Production, Durability.
-    Each trait is 0-10. Chart scales to 10 = outer ring.
-    Uses actual v_* DB key names from apex_scores.
+    Renders FM reference comps as a styled block for the PDF right panel.
+    Uses actual DB column names: outcome_summary (concise), fm_mechanism (bust mech),
+    pre_draft_signal (truncated to 220 chars for PDF layout).
     """
-    traits = [
-        ("Process",    float(data.get("v_processing")  or 0)),
-        ("Athletic",   float(data.get("v_athleticism") or 0)),
-        ("Scheme",     float(data.get("v_scheme_vers") or 0)),
-        ("Comp/Tough", float(data.get("v_comp_tough")  or 0)),
-        ("Character",  float(data.get("v_character")   or 0)),
-        ("Dev Traj",   float(data.get("v_dev_traj")    or 0)),
-        ("Production", float(data.get("v_production")  or 0)),
-        ("Durability", float(data.get("v_injury")      or 0)),
+    if not fm_comps:
+        return ""
+
+    OUTCOME_COLOR = {"MISS": "#cc3333", "PARTIAL": "#cc8800", "HIT": "#228B22"}
+
+    parts = [
+        '<div style="margin-top:8px;padding-top:8px;border-top:1px solid #1c2035;">'
+        '<div style="font-family:monospace;font-size:5.5pt;letter-spacing:1.5px;'
+        'color:#ffffff;text-transform:uppercase;margin-bottom:6px;">FM Risk Reference</div>'
     ]
+    for comp in fm_comps:
+        outcome = comp.get("translation_outcome", "")
+        color   = OUTCOME_COLOR.get(outcome, "#888888")
+        player  = comp.get("player_name", "")
+        arch    = comp.get("archetype_code", "")
+        fm      = comp.get("fm_code", "")
+        era     = comp.get("era_bracket") or ""
+        summary = comp.get("outcome_summary") or ""
+        mech    = comp.get("fm_mechanism") or ""
+        pre_raw = comp.get("pre_draft_signal") or ""
+        pre_short = (pre_raw[:217] + "…") if len(pre_raw) > 220 else pre_raw
 
-    n = len(traits)
-    cx, cy, r = 72, 72, 54  # center x, center y, max radius
-
-    def point(angle_deg: float, value: float, max_val: float = 10.0):
-        angle_rad = math.radians(angle_deg - 90)
-        dist = r * (value / max_val)
-        x = cx + dist * math.cos(angle_rad)
-        y = cy + dist * math.sin(angle_rad)
-        return x, y
-
-    angles = [i * 360 / n for i in range(n)]
-
-    # Grid rings at 25%, 50%, 75%, 100%
-    grid_lines = ""
-    for pct in [0.25, 0.5, 0.75, 1.0]:
-        pts = " ".join(
-            f"{cx + r * pct * math.cos(math.radians(a - 90)):.1f},"
-            f"{cy + r * pct * math.sin(math.radians(a - 90)):.1f}"
-            for a in angles
+        parts.append(
+            f'<div style="background:#07090f;border:1px solid #1c2035;'
+            f'border-left:3px solid {color};border-radius:0 5px 5px 0;'
+            f'padding:7px 10px;margin-bottom:7px;">'
+            f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:nowrap;">'
+            f'<span style="font-family:monospace;font-size:5.5pt;color:{color};'
+            f'font-weight:700;letter-spacing:0.5px;white-space:nowrap;flex-shrink:0;">'
+            f'■ FM RISK · {outcome}</span>'
+            f'<span style="font-family:\'Bebas Neue\',sans-serif;font-size:11pt;'
+            f'color:{color};white-space:nowrap;flex-shrink:0;">{player}</span>'
+            f'<span style="font-family:monospace;font-size:6.5pt;color:{color};'
+            f'white-space:nowrap;flex-shrink:0;">{arch} · {fm}</span>'
+            f'<span style="font-family:monospace;font-size:6pt;color:#ffffff;'
+            f'white-space:nowrap;margin-left:auto;flex-shrink:0;">{era}</span>'
+            f'</div>'
         )
-        opacity = "0.8" if pct == 1.0 else "0.4"
-        grid_lines += (f'<polygon points="{pts}" fill="none" '
-                       f'stroke="#2a2f45" stroke-width="0.6" opacity="{opacity}"/>\n')
+        if summary:
+            parts.append(
+                f'<div style="font-size:7.5pt;color:#ffffff;line-height:1.4;">{summary}</div>'
+            )
+        if pre_short:
+            parts.append(
+                f'<div style="font-size:6.5pt;color:#aaaaaa;line-height:1.4;'
+                f'margin-top:3px;font-style:italic;">{pre_short}</div>'
+            )
+        if mech:
+            parts.append(
+                f'<div style="font-size:6.5pt;color:#cc6666;margin-top:3px;">'
+                f'Bust mechanism: {mech}</div>'
+            )
+        parts.append('</div>')
 
-    # Axis spokes
-    spokes = ""
-    for a in angles:
-        ex = cx + r * math.cos(math.radians(a - 90))
-        ey = cy + r * math.sin(math.radians(a - 90))
-        spokes += f'<line x1="{cx}" y1="{cy}" x2="{ex:.1f}" y2="{ey:.1f}" stroke="#2a2f45" stroke-width="0.6"/>\n'
-
-    # Data polygon
-    data_pts = [point(angles[i], traits[i][1]) for i in range(n)]
-    poly_pts  = " ".join(f"{x:.1f},{y:.1f}" for x, y in data_pts)
-    data_polygon = (f'<polygon points="{poly_pts}" '
-                    f'fill="#1a7a1a33" stroke="#34d399" stroke-width="1.2"/>\n')
-
-    # Dot at each vertex
-    dots = ""
-    for x, y in data_pts:
-        dots += f'<circle cx="{x:.1f}" cy="{y:.1f}" r="1.8" fill="#34d399"/>\n'
-
-    # Axis labels — pushed outward with extra offset
-    labels = ""
-    for i, (label, _) in enumerate(traits):
-        lx = cx + (r + 14) * math.cos(math.radians(angles[i] - 90))
-        ly = cy + (r + 14) * math.sin(math.radians(angles[i] - 90))
-        labels += (
-            f'<text x="{lx:.1f}" y="{ly:.1f}" '
-            f'text-anchor="middle" dominant-baseline="middle" '
-            f'font-size="5.5" fill="#ffffff">{label}</text>\n'
-        )
-
-    svg = (
-        f'<svg width="100%" height="100%" viewBox="0 0 144 144" '
-        f'xmlns="http://www.w3.org/2000/svg" style="display:block;">\n'
-        f'  {grid_lines}'
-        f'  {spokes}'
-        f'  {data_polygon}'
-        f'  {dots}'
-        f'  {labels}'
-        f'</svg>'
-    )
-    return svg
+    parts.append('</div>')
+    return "\n".join(parts)
 
 
 # ── FM risk bar ────────────────────────────────────────────────────────────────
@@ -501,7 +481,7 @@ def _divergence_callout_html(narrative: str, flag: str) -> str:
 
 # ── HTML builder ───────────────────────────────────────────────────────────────
 
-def _build_html(data: dict, comps: dict) -> str:
+def _build_html(data: dict, comps: dict, fm_ref_comps: list | None = None) -> str:
     name      = data.get("display_name") or "Unknown"
     position  = data.get("position_group") or "—"
     school    = data.get("school_canonical") or "—"
@@ -652,7 +632,7 @@ def _build_html(data: dict, comps: dict) -> str:
         </div>"""
 
     trait_table_html = _trait_table(data, tc)
-    radar_svg        = _radar_chart_svg(data)
+    fm_ref_block     = _fm_ref_block_html(fm_ref_comps or [])
     fm_bar           = _fm_risk_bar_html(fm_pri, fm_sec)
     capital_context  = _capital_context_html(position)
 
@@ -792,12 +772,9 @@ html, body {{
   padding-bottom: 4px; white-space: nowrap;
 }}
 
-.radar-wrap {{
+.lp-spacer {{
   flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 120px;
+  min-height: 8px;
 }}
 
 .lp-footer {{
@@ -913,9 +890,15 @@ html, body {{
   </div>
 
   <div style="font-family:'DM Mono',monospace;font-size:5.5pt;letter-spacing:1.5px;
-              color:#ffffff;text-transform:uppercase;margin-bottom:6px;">Player Profile</div>
+              color:#ffffff;text-transform:uppercase;margin-bottom:5px;">Player Profile</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 12px;margin-bottom:4px;">
+    <div style="font-size:5pt;color:#ffffff;font-family:'DM Mono',monospace;
+                text-transform:uppercase;letter-spacing:0.08em;opacity:0.7;">Football</div>
+    <div style="font-size:5pt;color:#ffffff;font-family:'DM Mono',monospace;
+                text-transform:uppercase;letter-spacing:0.08em;opacity:0.7;">System</div>
+  </div>
   {trait_table_html}
-  <div class="radar-wrap">{radar_svg}</div>
+  <div class="lp-spacer"></div>
 
   <div class="lp-footer">
     <div style="margin-bottom:5px;">
@@ -966,6 +949,7 @@ html, body {{
   <div class="comps-region">
     {divergence_callout_html}
     {comps_html}
+    {fm_ref_block}
   </div>
 
   <div class="rp-footer">
@@ -996,7 +980,14 @@ def generate_pdf(prospect_id: int, season_id: int = SEASON_ID) -> Path:
         fm    = data.get("failure_mode_primary") or ""
         comps = _get_best_comps(conn, arch, fm, data) if arch else {"ceiling": None, "fm_risk": None}
 
-    html_str = _build_html(data, comps)
+        # FM reference comps — is_fm_reference=1 rows for the prospect's primary FM code
+        fm_ref_comps = []
+        fm_primary_str = data.get("failure_mode_primary") or ""
+        fm_m = re.search(r"FM-\d+", fm_primary_str)
+        if fm_m:
+            fm_ref_comps = get_fm_reference_comps(conn, fm_m.group(0), arch, limit=2)
+
+    html_str = _build_html(data, comps, fm_ref_comps=fm_ref_comps)
     Path("C:/DraftOS/debug_render.html").write_text(html_str, encoding="utf-8")
     name_key = _slugify(data.get("display_name") or str(prospect_id))
     date_str = datetime.now(timezone.utc).strftime("%Y%m%d")

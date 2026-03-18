@@ -6,13 +6,14 @@ No DB writes except through save_apex_rank() and clear_apex_rank(). No business 
 """
 
 import math
+import re
 
 import pandas as pd
 import streamlit as st
 
 from draftos.db.connect import connect
 from draftos.queries.apex import save_apex_rank, clear_apex_rank, get_apex_detail
-from draftos.queries.historical_comps import get_historical_comps, get_archetype_translation_rate
+from draftos.queries.historical_comps import get_historical_comps, get_archetype_translation_rate, get_fm_reference_comps
 from draftos.queries.model_outputs import get_big_board, get_prospect_detail, get_prospect_tags_map
 from draftos.ui.profile_dimensions import get_profile_dimensions
 from scripts.generate_prospect_pdf_2026 import generate_pdf
@@ -877,6 +878,71 @@ def _render_apex_detail(d: dict) -> None:
                         f"({_c['era_bracket']}) — {_c['outcome_summary']}",
                         unsafe_allow_html=False,
                     )
+
+    # ── FM Reference Comps ────────────────────────────────────────────────────
+    _fm_primary_str  = d.get("failure_mode_primary") or ""
+    _fm_primary_code = None
+    if _fm_primary_str:
+        _fm_m = re.search(r"FM-\d+", _fm_primary_str)
+        if _fm_m:
+            _fm_primary_code = _fm_m.group(0)
+
+    if _fm_primary_code:
+        with connect() as _fmconn:
+            _fm_ref_comps = get_fm_reference_comps(
+                _fmconn,
+                _fm_primary_code,
+                archetype_code=d.get("matched_archetype"),
+                limit=2,
+            )
+
+        if _fm_ref_comps:
+            st.markdown("<hr style='border-color:#333;margin:8px 0 12px 0'>", unsafe_allow_html=True)
+            st.markdown(
+                '<div style="font-size:11px;font-weight:700;color:#ffffff;letter-spacing:1px;'
+                'margin-bottom:6px">FM RISK REFERENCE</div>',
+                unsafe_allow_html=True,
+            )
+            for _frc in _fm_ref_comps:
+                _frc_outcome = _frc.get("translation_outcome", "")
+                _frc_color   = {"MISS": "#cc3333", "PARTIAL": "#cc8800", "HIT": "#228B22"}.get(
+                    _frc_outcome, "#888888"
+                )
+                _frc_player  = _frc.get("player_name", "")
+                _frc_arch    = _frc.get("archetype_code", "")
+                _frc_fm      = _frc.get("fm_code", "")
+                _frc_era     = _frc.get("era_bracket") or ""
+                _frc_summary = _frc.get("outcome_summary") or ""
+                _frc_mech    = _frc.get("fm_mechanism") or ""
+                _frc_pre     = _frc.get("pre_draft_signal") or ""
+
+                st.markdown(
+                    f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">'
+                    f'<span style="color:{_frc_color};font-weight:700;font-size:11px;">■ {_frc_outcome}</span>'
+                    f'<span style="font-weight:700;font-size:13px;color:#ffffff;">{_frc_player}</span>'
+                    f'<span style="color:#aaa;font-size:11px;">{_frc_arch} · {_frc_fm}</span>'
+                    f'<span style="color:#666;font-size:10px;margin-left:auto;">{_frc_era}</span>'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
+                if _frc_summary:
+                    st.markdown(
+                        f'<div style="color:#cccccc;font-size:12px;margin-bottom:4px;">{_frc_summary}</div>',
+                        unsafe_allow_html=True,
+                    )
+                if _frc_pre:
+                    with st.expander("Pre-draft signal", expanded=False):
+                        st.markdown(
+                            f'<div style="color:#aaaaaa;font-size:11px;line-height:1.5;">{_frc_pre}</div>',
+                            unsafe_allow_html=True,
+                        )
+                if _frc_mech:
+                    st.markdown(
+                        f'<div style="color:#cc6666;font-size:11px;font-style:italic;">'
+                        f'Bust mechanism: {_frc_mech}</div>',
+                        unsafe_allow_html=True,
+                    )
+                st.divider()
 
     # ── Eval Confidence ───────────────────────────────────────────────────────
     st.divider()
