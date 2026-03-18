@@ -531,20 +531,45 @@ ARCHETYPE_OVERRIDES: dict[int, dict] = {
         },
     },
 
-    # Jalon Kilgore — S entry (pid=309). Canonical Safety entry. No prior APEX score.
-    # Documented here for completeness; lower consensus score reflects coverage gap not quality gap.
+    # Jalon Kilgore — S entry (pid=309). Canonical Safety entry.
+    # S64 combine gate injection — gate evaluated, S-3 archetype REINFORCED.
     309: {
         "forced_archetype":   "S-3",
         "archetype_label":    "S-3 Multiplier Safety",
         "archetype_rationale": (
-            "Same evaluation as pid=449 (CB entry). Canonical Safety entry for Jalon Kilgore. "
-            "Lower consensus score reflects coverage gap not quality gap — fewer sources ranked "
-            "the S row vs the CB row due to source normalization. S-3 Multiplier Safety archetype "
-            "and Tier B confidence carry forward from full PAA evaluation."
+            "S64 combine gate injection. Combine results: forty=4.40s (CLEAR, speed gate passes), "
+            "20yd shuttle=4.32s (S-tier profile — consistent with elite S athleticism, NOT elite "
+            "man-coverage CB profile), vertical=37in (ELITE burst), broad=10ft-10in (ELITE), "
+            "bench=16 reps, RAS=9.67 ELITE. 3-cone NOT TESTED at combine. "
+            "GATE RESULT: S-3 REINFORCED. Athletic profile confirms elite Safety athleticism — "
+            "40yd speed is elite, explosiveness is elite, but COD profile (shuttle 4.32) is "
+            "S-tier floor, not elite slot/man-CB territory. Man coverage ceiling NOT raised. "
+            "Zone deployment remains primary confirmed mechanism. S-3 Multiplier Safety archetype "
+            "is the correct framing. FM-6 (Role Mismatch) primary: value destroyed in heavy "
+            "man-coverage schemes. FM-2 (Development Ceiling) secondary: post-snap reads still "
+            "developing. Capital: R3 base confirmed — 3-cone absent, shuttle profile does not "
+            "support R2 late upgrade. Source coverage gap (10 sources, consensus #89) reflects "
+            "CB/S normalization artifact from S62 consolidation, not quality gap."
         ),
         "eval_confidence":     "Tier B",
-        "capital_range":       "R3 base; R2 late if combine confirms man coverage floor",
+        "capital_range":       "R3 base (combine gate evaluated S64 — R2 upgrade path closed: 3-cone not tested, shuttle S-tier)",
         "fm_flags":            ["FM-6", "FM-2"],
+        "paa_findings": {
+            "Man_coverage_gate":     "PARTIAL — 3-cone not tested; shuttle 4.32 = S-tier floor, not elite man-CB profile",
+            "Speed_gate":            "CLEAR — forty 4.40 sub-4.50 threshold",
+            "COD_gate":              "NOT RESOLVED via 3-cone (absent); shuttle S-tier consistent with S-3",
+            "Explosiveness":         "ELITE — 37in vertical, 10ft-10in broad (top-tier burst for S)",
+            "RAS":                   "9.67 ELITE — arm 33.25in, wing 79.25in, hand 9.38in",
+            "Post_snap_adjustment":  "PARTIAL — crossfield range confirmed, scripted vs genuine ambiguous",
+            "Zone_production":       "PRIMARY confirmed mechanism",
+            "SOS_Gate":              "PASSES (SEC Power 4)",
+            "Gate_result":           "S-3 REINFORCED. Not a man-coverage ceiling upgrade.",
+        },
+        "bust_warning": (
+            "FM-6 Role Mismatch primary: CB/S hybrid value requires scheme that actively deploys "
+            "multiplier. Heavy man-coverage teams destroy value. 3-cone not tested — COD "
+            "ceiling unresolved. Shuttle profile = S floor, not elite man-CB."
+        ),
     },
 
     # Kyron Drones — QB (pid=1420). Documentation override only — no API re-score warranted.
@@ -736,6 +761,43 @@ ARCHETYPE_OVERRIDES: dict[int, dict] = {
             "FM-2 is conditional only — scheme ghost activates in zone-heavy deployment, "
             "not guaranteed. Capital: R2 early to R3 top, with LSM as the critical variable. "
             "Do NOT score as CB-2. Score against CB-3 archetype weight table."
+        ),
+    },
+
+    # Julian Neal — CB (pid=109). S64 3-cone gate injection.
+    # Gate doctrine (S39): sub-6.9s = R2 ceiling clear; above 6.9s = R3 cap fires.
+    # 3-cone = 7.13s confirmed. Gate FIRES. R3 capital cap applies.
+    109: {
+        "gate_three_cone":           7.13,
+        "gate_three_cone_threshold": 6.90,
+        "gate_three_cone_result":    "FAIL",
+        "gate_capital_cap":          "R3",
+        "archetype_rationale": (
+            "S64 3-cone gate injection. 3-cone = 7.13s (ABOVE 6.90 threshold). "
+            "Gate FIRES per S39 doctrine. R3 capital cap applies. "
+            "Neal wins as CB-2 Zone Architect through anticipatory read-and-react zone coverage "
+            "and spatial awareness — the 3-cone result is mechanically consistent: "
+            "he is a zone-first processor, not an elite man-coverage hip-flipper. "
+            "7.13s 3-cone narrows his ceiling — he cannot credibly play press-man at the "
+            "next level without elite COD recovery. Capital ceiling: R3 top, not R2. "
+            "Score against CB-2 Zone Architect weights. Reduce capital expectation from "
+            "pre-gate R2 base to post-gate R3 ceiling. "
+            "Consensus #66 (13 sources) — APEX_HIGH signal should reflect gate-adjusted capital."
+        ),
+        "eval_confidence":    "Tier B",
+        "paa_findings": {
+            "Three_cone_gate":       "FAIL — 7.13s > 6.90 threshold; R3 cap fires (S39 doctrine)",
+            "Man_coverage_floor":    "CONCERN — 7.13s 3-cone inconsistent with elite press-man alignment",
+            "Zone_mechanism":        "CONFIRMED — CB-2 Zone Architect; spatial anticipation primary",
+            "Capital_gate":          "R3 ceiling confirmed — R2 upgrade path closed by 3-cone gate",
+            "Archetype_consistency": "CB-2 Zone Architect is gate-consistent (zone-first, not man-first)",
+        },
+        "capital_range":      "R3 top (3-cone gate fired S64 — R2 ceiling closed)",
+        "fm_flags":           ["FM-2"],
+        "bust_warning": (
+            "FM-2 Scheme Ghost primary: CB-2 value requires zone-heavy deployment. "
+            "3-cone 7.13s removes man-coverage utility — heavy man scheme = floor player. "
+            "Capital ceiling R3 hard gate."
         ),
     },
 }
