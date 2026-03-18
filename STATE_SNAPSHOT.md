@@ -10,7 +10,26 @@ Last Updated (UTC): 2026-03-18T02:59:28.447759+00:00
 
 ## Last Completed Milestone
 
-Session 65 (capital range fix + FM reference comps + PDF spider chart removal) — board current.
+Session 66 (visual quality pass: grey→white, font floor 13px, trait grid, FM cross-position callout) — board current.
+
+Session 66:
+- Systematic grey→white text pass: replaced all #aaa/#888/#999/#cccccc/#aaaaaa grey hex values with
+  #ffffff (or opacity variants) in app/app.py and scripts/generate_prospect_pdf_2026.py.
+- Font floor enforcement: 13px minimum for body text in app injected HTML.
+  Body text bumped: trait bar labels (12px→13px), formula line (12px→13px), translation rate span
+  (12px→13px), FM ref header spans (11px→13px), gap badge (11px→13px), Draft Capital sub-labels
+  (11px→13px), comparison field name labels (11px→13px).
+  PDF: FM bar segment label (5.5px→8px), divergence section label (7px→8px).
+  UI chrome labels with letter-spacing/text-transform:uppercase preserved at 11px (intentional).
+- PDF left panel trait grid: replaced _trait_table() + lp-spacer dead air with _build_trait_grid_html().
+  8 trait bars in 2-column layout (Football: Processing/Athleticism/Comp.Tough/Durability;
+  System: Scheme Vers./Production/Dev.Traj./Character). Container uses flex:1 to fill available space.
+- FM reference cross-position callout: when FM ref comp is from a different position group,
+  amber (#f0a500) callout line explains mechanism is position-independent.
+  Applies to both app.py (_render_apex_detail) and PDF (_fm_ref_block_html).
+- italic removal: font-style:italic removed from all injected HTML in both files.
+- Validation script: scripts/fix_text_styles_s66.py added. Final run: Total violations: 0.
+- Doctor: PASSED.
 
 Session 65:
 - Capital range derivation bug fixed: capital_base/capital_adjusted were derived from raw_score
@@ -627,7 +646,7 @@ Prior sessions on record: 12 (DB rebuild), 13 (weekly pipeline), 13b (school/arc
 
 ## Next Milestone (Single Target)
 
-- Session 65: Pre-draft snapshot + source freshness check.
+- Session 67: Pre-draft snapshot + source freshness check.
   (1) Pre-draft snapshot: run take_predraft_snapshot_2026.py (or equivalent snapshot cycle)
       to lock the board state before April 2026 draft begins. This is the authoritative
       pre-draft evaluation record.
