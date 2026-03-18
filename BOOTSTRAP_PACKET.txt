@@ -17,7 +17,7 @@ Authoritative State:
 1) STATE_SNAPSHOT.md
 # DraftOS State Snapshot
 
-Last Updated (UTC): 2026-03-18T02:25:52.001298+00:00
+Last Updated (UTC): 2026-03-18T02:59:28.447759+00:00
 
 ---
 
@@ -27,7 +27,27 @@ Last Updated (UTC): 2026-03-18T02:25:52.001298+00:00
 
 ## Last Completed Milestone
 
-Session 64 (Kilgore combine gate + Neal 3-cone gate + tag trigger re-run) — board current.
+Session 65 (capital range fix + FM reference comps + PDF spider chart removal) — board current.
+
+Session 65:
+- Capital range derivation bug fixed: capital_base/capital_adjusted were derived from raw_score
+  (RPG, pre-PVC) instead of apex_composite (PVC-adjusted). Added _derive_capital_range() to
+  run_apex_scoring_2026.py. All future scores derive capital from apex_composite. Analyst override
+  capitals (ARCHETYPE_OVERRIDES capital_range) preserved and take priority.
+  DB patch: all 140 existing apex_v2.3 non-calibration rows patched with correct formula.
+  11 analyst-override PIDs (72,71,38,35,449,309,1420,61,148,36,109) preserved exactly.
+  Mauigoa (OG, pid=22): was R1 Picks 11-32 → now R2 Mid–R3 Top. apex_composite=69.8. PASS.
+- historical_comps.py: added get_fm_reference_comps() using actual DB column names
+  (outcome_summary, fm_mechanism, pre_draft_signal). Gracefully returns [] if no FM code set.
+- app.py: FM Risk Reference block added in _render_apex_detail() after Historical Comps block.
+  pre_draft_signal shown in collapsed expander. fm_mechanism shown as bust text. re imported.
+- PDF generator: spider chart (_radar_chart_svg) removed permanently. Left panel redesigned:
+  - .radar-wrap CSS replaced with .lp-spacer (flex:1) to eliminate dead air.
+  - Trait table reorganized: Football left (Processing/Athleticism/Comp.Tough/Durability),
+    System right (Scheme Vers./Production/Dev.Traj./Character). Column headers added.
+  - FM Risk Reference block added to right panel comps-region using actual DB columns.
+  - math import removed (no longer needed without SVG computation).
+- Divergence recomputed post-capital-patch. Doctor: PASSED.
 
 Session 64:
 - Kilgore (pid=309) combine gate: forty=4.40s CLEAR, shuttle=4.32s S-tier (not elite man-CB),
@@ -857,11 +877,11 @@ Inactive (data preserved): ngs_2026 (source_id=29, is_active=0) — model score,
 
 2) System Snapshot Output
 === DRAFTOS SYSTEM SNAPSHOT ===
-generated_utc: 2026-03-18T02:25:51.299472+00:00
+generated_utc: 2026-03-18T02:59:27.277645+00:00
 
 ## Git
 branch: main
-commit: 7fdde8d4d95bbc48c7908b051fa8f1e01764e06f
+commit: b7fb4b85bdfaa879d394f79fd28eb45c8e5d65d0
 status: clean
 
 ## Tables
@@ -1029,6 +1049,7 @@ no is_active column
 - scripts\fix_calibration_divergence_2026.py
 - scripts\fix_concepcion_2026.py
 - scripts\fix_spm_dead_pid_repoint.py
+- scripts\fix_text_styles_s66.py
 - scripts\generate_prospect_pdf_2026.py
 - scripts\import_apex_batch_json.py
 - scripts\ingest_combine_2026.py
