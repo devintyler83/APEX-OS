@@ -269,11 +269,11 @@ def _trait_table(data: dict, tier_col: str) -> str:
     </table>"""
 
 
-def _build_trait_grid_html(data: dict) -> str:
+def _build_lp_trait_grid(prospect_data: dict) -> str:
     """
-    Two-column trait bar grid for PDF left panel.
-    Fills available flex space with Football traits (left) and System traits (right).
-    Uses CSS grid layout — no dead air between traits and footer.
+    Two-column Football/System trait grid for PDF left panel.
+    Uses flexbox row layout — reliable in headless Chromium.
+    Font sizes are PDF-scale (8-9px), not app-scale (13px+).
     DB column names: v_injury (not v_durability), v_scheme_vers (not v_scheme).
     """
     FOOTBALL = [
@@ -289,137 +289,119 @@ def _build_trait_grid_html(data: dict) -> str:
         ("Character",    "v_character"),
     ]
 
-    def bar(label: str, key: str) -> str:
-        val = data.get(key)
-        if val is None:
+    def _color(val: float) -> str:
+        if val >= 9.0:   return "#00bcd4"
+        if val >= 8.0:   return "#1a7a1a"
+        if val >= 6.5:   return "#b8860b"
+        if val >= 5.0:   return "#cc5500"
+        return "#cc2200"
+
+    def _bar(label: str, key: str) -> str:
+        raw = prospect_data.get(key)
+        if raw is None:
             return (
-                f'<div style="margin-bottom:9px;">'
-                f'<div style="font-size:7pt;color:#ffffff;text-transform:uppercase;'
-                f'letter-spacing:0.03em;opacity:0.6;margin-bottom:3px;">{label}</div>'
-                f'<div style="color:#334;font-size:8pt;">—</div>'
-                f'</div>'
+                f'<div class="lp-bar-item">'
+                f'<div class="lp-bar-label">{label}</div>'
+                f'<div class="lp-bar-track">'
+                f'<div class="lp-bar-outer"><div class="lp-bar-inner" style="width:0%;background:#334;"></div></div>'
+                f'<div class="lp-bar-val" style="opacity:0.4;">—</div>'
+                f'</div></div>'
             )
         try:
-            fval = float(val)
+            val = float(raw)
         except (TypeError, ValueError):
-            fval = 0.0
-        pct = min(100.0, max(0.0, fval / 10.0 * 100.0))
-        if fval >= 9.0:   col = "#00d4aa"
-        elif fval >= 8.0: col = "#34d399"
-        elif fval >= 6.5: col = "#f5c518"
-        elif fval >= 5.0: col = "#f97316"
-        else:             col = "#ef4444"
+            val = 0.0
+        pct = min(100.0, max(0.0, val / 10.0 * 100.0))
+        color = _color(val)
         return (
-            f'<div style="margin-bottom:9px;">'
-            f'<div style="font-size:7pt;color:#ffffff;text-transform:uppercase;'
-            f'letter-spacing:0.03em;opacity:0.6;margin-bottom:3px;">{label}</div>'
-            f'<div style="display:flex;align-items:center;gap:4px;">'
-            f'<div style="flex:1;height:5px;background:#1a2030;border-radius:2px;overflow:hidden;">'
-            f'<div style="height:5px;width:{pct:.1f}%;background:{col};border-radius:2px;"></div>'
+            f'<div class="lp-bar-item">'
+            f'<div class="lp-bar-label">{label}</div>'
+            f'<div class="lp-bar-track">'
+            f'<div class="lp-bar-outer">'
+            f'<div class="lp-bar-inner" style="width:{pct:.1f}%;background:{color};"></div>'
             f'</div>'
-            f'<div style="font-size:8pt;color:{col};min-width:24px;text-align:right;'
-            f'font-family:monospace;font-weight:600;">{fval:.1f}</div>'
-            f'</div>'
-            f'</div>'
+            f'<div class="lp-bar-val">{val:.1f}</div>'
+            f'</div></div>'
         )
 
-    left_html  = "".join(bar(lbl, key) for lbl, key in FOOTBALL)
-    right_html = "".join(bar(lbl, key) for lbl, key in SYSTEM)
+    football_bars = "\n".join(_bar(lbl, key) for lbl, key in FOOTBALL)
+    system_bars   = "\n".join(_bar(lbl, key) for lbl, key in SYSTEM)
 
-    return (
-        f'<div style="flex:1;margin:6px 0;min-height:0;">'
-        f'<div style="font-family:\'DM Mono\',monospace;font-size:5.5pt;letter-spacing:1.5px;'
-        f'color:#ffffff;text-transform:uppercase;margin-bottom:7px;">Player Profile</div>'
-        f'<div style="display:grid;grid-template-columns:1fr 1fr;gap:0 14px;">'
-        f'<div>'
-        f'<div style="font-size:7pt;color:#ffffff;font-family:\'DM Mono\',monospace;'
-        f'text-transform:uppercase;letter-spacing:0.08em;opacity:0.45;margin-bottom:6px;">Football</div>'
-        f'{left_html}'
-        f'</div>'
-        f'<div>'
-        f'<div style="font-size:7pt;color:#ffffff;font-family:\'DM Mono\',monospace;'
-        f'text-transform:uppercase;letter-spacing:0.08em;opacity:0.45;margin-bottom:6px;">System</div>'
-        f'{right_html}'
-        f'</div>'
-        f'</div>'
-        f'</div>'
-    )
+    return f"""
+<div class="lp-profile-section">
+  <div class="lp-profile-header">
+    <div class="lp-col-label">Football</div>
+    <div class="lp-col-label">System</div>
+  </div>
+  <div class="lp-bars-row">
+    <div class="lp-bar-col">{football_bars}</div>
+    <div class="lp-bar-col">{system_bars}</div>
+  </div>
+</div>
+"""
 
 
 # ── FM reference comp block (PDF right panel) ─────────────────────────────────
 
 def _fm_ref_block_html(fm_comps: list[dict], prospect_position: str = "") -> str:
     """
-    Renders FM reference comps as a styled block for the PDF right panel.
-    Uses actual DB column names: outcome_summary (concise), fm_mechanism (bust mech),
-    pre_draft_signal (truncated to 240 chars for PDF layout).
-    Shows cross-position callout when comp archetype position != prospect position.
+    Compact FM reference for PDF right panel.
+    One line per comp: outcome badge + name + archetype + mechanism.
+    NO pre_draft_signal — that belongs in the app, not the print card.
+    Must not overflow the right panel height budget.
     """
     if not fm_comps:
         return ""
 
-    OUTCOME_COLOR = {"MISS": "#cc3333", "PARTIAL": "#cc8800", "HIT": "#228B22"}
+    OUTCOME_COLOR = {
+        "MISS":    "#cc3333",
+        "PARTIAL": "#cc8800",
+        "HIT":     "#228B22",
+    }
+
+    def _pos_from_arch(arch: str) -> str:
+        return arch.split("-")[0].strip() if arch else ""
 
     parts = [
-        '<div style="margin-top:8px;padding-top:8px;border-top:1px solid #1c2035;">'
-        '<div style="font-family:monospace;font-size:5.5pt;letter-spacing:1.5px;'
-        'color:#ffffff;text-transform:uppercase;margin-bottom:6px;">FM Risk Reference</div>'
+        '<div class="comp-section">',
+        '<div class="section-label">FM RISK REFERENCE</div>',
     ]
+
     for comp in fm_comps:
-        outcome  = comp.get("translation_outcome", "")
-        color    = OUTCOME_COLOR.get(outcome, "#ef4444")
+        outcome  = comp.get("translation_outcome", "MISS")
+        color    = OUTCOME_COLOR.get(outcome, "#888888")
         player   = comp.get("player_name", "")
         arch     = comp.get("archetype_code", "")
         fm       = comp.get("fm_code", "")
         era      = comp.get("era_bracket") or ""
-        summary  = comp.get("outcome_summary") or ""
-        mech     = comp.get("fm_mechanism") or ""
-        pre_raw  = comp.get("pre_draft_signal") or ""
-        pre_short = (pre_raw[:237] + "…") if len(pre_raw) > 240 else pre_raw
+        mech     = comp.get("outcome_summary") or ""
 
-        # Cross-position callout
-        comp_pos = arch.split("-")[0].strip() if arch and "-" in arch else ""
-        is_cross = bool(comp_pos) and comp_pos != (prospect_position or "").upper()
-        cross_html = ""
-        if is_cross:
-            cross_html = (
-                f'<div style="font-size:7pt;color:#f0a500;margin-bottom:4px;">'
+        # Truncate mechanism to one line
+        mech_short = (mech[:110] + "…") if len(mech) > 113 else mech
+
+        # Cross-position callout — one line only
+        comp_pos = _pos_from_arch(arch)
+        cross_note = ""
+        if comp_pos and comp_pos != (prospect_position or "").upper():
+            cross_note = (
+                f'<div style="font-size:8px;color:#f0a500;margin-bottom:2px;">'
                 f'Cross-position ref — {fm} mechanism is position-independent. '
-                f'{comp_pos} shown as highest-severity {fm} pattern.</div>'
+                f'{comp_pos} shown as highest-severity pattern.'
+                f'</div>'
             )
 
         parts.append(
-            f'<div style="background:#07090f;border:1px solid #1c2035;'
-            f'border-left:3px solid {color};border-radius:0 5px 5px 0;'
-            f'padding:7px 10px;margin-bottom:7px;">'
-            f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:nowrap;">'
-            f'<span style="font-family:monospace;font-size:5.5pt;color:{color};'
-            f'font-weight:700;letter-spacing:0.5px;white-space:nowrap;flex-shrink:0;">'
-            f'■ FM RISK · {outcome}</span>'
-            f'<span style="font-family:\'Bebas Neue\',sans-serif;font-size:11pt;'
-            f'color:{color};white-space:nowrap;flex-shrink:0;">{player}</span>'
-            f'<span style="font-family:monospace;font-size:6.5pt;color:{color};'
-            f'white-space:nowrap;flex-shrink:0;">{arch} · {fm}</span>'
-            f'<span style="font-family:monospace;font-size:6pt;color:#ffffff;'
-            f'white-space:nowrap;margin-left:auto;flex-shrink:0;">{era}</span>'
+            f'<div style="border-left:2px solid {color};padding-left:6px;margin-bottom:7px;">'
+            f'<div class="comp-header" style="margin-bottom:2px;">'
+            f'<span style="color:{color};font-size:8px;font-weight:700;">■ {outcome}</span> '
+            f'<span class="comp-name">{player}</span> '
+            f'<span class="comp-arch">{arch} · {fm}</span>'
+            f'<span class="comp-era">{era}</span>'
             f'</div>'
-            f'{cross_html}'
+            f'{cross_note}'
+            f'<div class="comp-body" style="font-size:9px;">{mech_short}</div>'
+            f'</div>'
         )
-        if summary:
-            parts.append(
-                f'<div style="font-size:7.5pt;color:#ffffff;line-height:1.4;">{summary}</div>'
-            )
-        if pre_short:
-            parts.append(
-                f'<div style="font-size:6.5pt;color:#ffffff;line-height:1.4;'
-                f'margin-top:3px;opacity:0.75;">{pre_short}</div>'
-            )
-        if mech:
-            parts.append(
-                f'<div style="font-size:6.5pt;color:#cc6666;margin-top:3px;">'
-                f'Bust mechanism: {mech}</div>'
-            )
-        parts.append('</div>')
 
     parts.append('</div>')
     return "\n".join(parts)
@@ -721,7 +703,7 @@ def _build_html(data: dict, comps: dict, fm_ref_comps: list | None = None) -> st
           {ceiling_html}{fmrisk_html}
         </div>"""
 
-    trait_grid_html  = _build_trait_grid_html(data)
+    trait_grid_html  = _build_lp_trait_grid(data)
     fm_ref_block     = _fm_ref_block_html(fm_ref_comps or [], prospect_position=position)
     fm_bar           = _fm_risk_bar_html(fm_pri, fm_sec)
     capital_context  = _capital_context_html(position)
@@ -835,31 +817,120 @@ html, body {{
   border-radius: 4px; padding: 2px 0; margin-bottom: 3px;
 }}
 
-/* Traits via table — zero UA bullet risk */
-.trait-table {{
-  width: 100%; border-collapse: collapse; table-layout: fixed;
+/* Left panel trait grid — flexbox two-column */
+.lp-profile-section {{
+    margin: 6px 0 8px 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
 }}
-.trait-half {{ width: 48%; vertical-align: top; }}
-.trait-gap  {{ width: 4%; }}
-.inner-trait {{ width: 100%; border-collapse: collapse; }}
-.inner-trait tr {{ height: auto; }}
-.tl {{
-  font-size: 6pt; color: #ffffff; font-weight: 500;
-  white-space: nowrap; padding-right: 5px; width: 52px;
-  font-family: 'DM Sans', sans-serif; vertical-align: middle;
-  padding-bottom: 4px;
+.lp-profile-header {{
+    display: flex;
+    flex-direction: row;
+    margin-bottom: 4px;
 }}
-.tbg {{
-  padding-bottom: 4px; vertical-align: middle;
+.lp-col-label {{
+    flex: 1;
+    font-size: 7px;
+    color: #ffffff;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    opacity: 0.55;
 }}
-.tbf {{
-  height: 4px; border-radius: 2px; display: block; min-width: 1px;
+.lp-bars-row {{
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
 }}
-.tv {{
-  font-family: 'DM Mono', monospace;
-  font-size: 6.5pt; font-weight: 500; text-align: right;
-  width: 22px; padding-left: 4px; vertical-align: middle;
-  padding-bottom: 4px; white-space: nowrap;
+.lp-bar-col {{
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}}
+.lp-bar-item {{
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}}
+.lp-bar-label {{
+    font-size: 8px;
+    color: #ffffff;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    opacity: 0.65;
+}}
+.lp-bar-track {{
+    display: flex;
+    align-items: center;
+    gap: 3px;
+}}
+.lp-bar-outer {{
+    flex: 1;
+    height: 4px;
+    background: #1a2030;
+    border-radius: 2px;
+    overflow: hidden;
+}}
+.lp-bar-inner {{
+    height: 4px;
+    border-radius: 2px;
+}}
+.lp-bar-val {{
+    font-size: 9px;
+    color: #ffffff;
+    min-width: 20px;
+    text-align: right;
+    font-weight: 600;
+}}
+
+/* FM ref compact block — comp-section used by _fm_ref_block_html */
+.comp-section {{
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid #1c2035;
+}}
+.section-label {{
+    font-family: monospace;
+    font-size: 8px;
+    letter-spacing: 1.5px;
+    color: #ffffff;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+}}
+.comp-header {{
+    font-family: monospace;
+    font-size: 8px;
+    color: #ffffff;
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 5px;
+    align-items: baseline;
+}}
+.comp-name {{
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 11pt;
+    color: #ffffff;
+    white-space: nowrap;
+}}
+.comp-arch {{
+    font-size: 7px;
+    color: #ffffff;
+    opacity: 0.75;
+    white-space: nowrap;
+}}
+.comp-era {{
+    font-size: 7px;
+    color: #ffffff;
+    opacity: 0.5;
+    margin-left: auto;
+    white-space: nowrap;
+}}
+.comp-body {{
+    font-size: 9px;
+    color: #ffffff;
+    line-height: 1.4;
 }}
 
 .lp-footer {{

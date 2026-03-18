@@ -879,7 +879,7 @@ def _render_apex_detail(d: dict) -> None:
                         unsafe_allow_html=False,
                     )
 
-    # ── FM Reference Comps ────────────────────────────────────────────────────
+    # ── FM Risk Reference (full depth — app is the analytical surface) ──────
     _fm_primary_str  = d.get("failure_mode_primary") or ""
     _fm_primary_code = None
     if _fm_primary_str:
@@ -901,15 +901,16 @@ def _render_apex_detail(d: dict) -> None:
         if _fm_ref_comps:
             st.markdown("<hr style='border-color:#333;margin:8px 0 12px 0'>", unsafe_allow_html=True)
             st.markdown(
-                '<div style="font-size:11px;font-weight:700;color:#ffffff;letter-spacing:1px;'
-                'margin-bottom:6px">FM RISK REFERENCE</div>',
+                '<div style="font-size:11px;font-weight:700;color:#ffffff;text-transform:uppercase;'
+                'letter-spacing:0.08em;margin-bottom:8px;">FM Risk Reference</div>',
                 unsafe_allow_html=True,
             )
+
+            _OUTCOME_COLOR = {"MISS": "#cc3333", "PARTIAL": "#cc8800", "HIT": "#228B22"}
+
             for _frc in _fm_ref_comps:
-                _frc_outcome = _frc.get("translation_outcome", "")
-                _frc_color   = {"MISS": "#cc3333", "PARTIAL": "#cc8800", "HIT": "#228B22"}.get(
-                    _frc_outcome, "#ef4444"
-                )
+                _frc_outcome = _frc.get("translation_outcome", "MISS")
+                _frc_color   = _OUTCOME_COLOR.get(_frc_outcome, "#888888")
                 _frc_player  = _frc.get("player_name", "")
                 _frc_arch    = _frc.get("archetype_code", "")
                 _frc_fm      = _frc.get("fm_code", "")
@@ -921,41 +922,52 @@ def _render_apex_detail(d: dict) -> None:
                 # Cross-position callout
                 _frc_comp_pos = _frc_arch.split("-")[0].strip() if _frc_arch and "-" in _frc_arch else ""
                 _frc_is_cross = bool(_frc_comp_pos) and _frc_comp_pos != _frc_prospect_pos
-
-                st.markdown(
-                    f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">'
-                    f'<span style="color:{_frc_color};font-weight:700;font-size:13px;">■ {_frc_outcome}</span>'
-                    f'<span style="font-weight:700;font-size:13px;color:#ffffff;">{_frc_player}</span>'
-                    f'<span style="color:#ffffff;font-size:13px;opacity:0.75;">{_frc_arch} · {_frc_fm}</span>'
-                    f'<span style="color:#ffffff;font-size:13px;opacity:0.55;margin-left:auto;">{_frc_era}</span>'
-                    f'</div>',
-                    unsafe_allow_html=True,
-                )
+                _cross_html = ""
                 if _frc_is_cross:
-                    st.markdown(
-                        f'<div style="font-size:13px;color:#f0a500;margin-bottom:6px;">'
+                    _cross_html = (
+                        f'<div style="font-size:13px;color:#f0a500;margin:4px 0 6px 0;">'
                         f'Cross-position reference — {_frc_fm} mechanism is position-independent. '
                         f'{_frc_comp_pos} shown as highest-severity historical pattern for this FM code.'
+                        f'</div>'
+                    )
+
+                # Card container with colored left border
+                st.markdown(
+                    f'<div style="border-left:3px solid {_frc_color};padding:8px 12px;'
+                    f'margin-bottom:4px;background:#0d1117;">'
+                    f'<div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:4px;">'
+                    f'<span style="color:{_frc_color};font-size:11px;font-weight:700;">■ {_frc_outcome}</span>'
+                    f'<span style="color:#ffffff;font-size:16px;font-weight:700;">{_frc_player}</span>'
+                    f'<span style="color:#ffffff;font-size:13px;opacity:0.7;">{_frc_arch} · {_frc_fm}</span>'
+                    f'<span style="color:#ffffff;font-size:11px;opacity:0.5;margin-left:auto;">{_frc_era}</span>'
+                    f'</div>'
+                    f'{_cross_html}'
+                    + (f'<div style="color:#ffffff;font-size:14px;margin-bottom:6px;">{_frc_summary}</div>'
+                       if _frc_summary else '')
+                    + '</div>',
+                    unsafe_allow_html=True,
+                )
+
+                # Pre-draft signal — expanded by default (this is the analytical surface)
+                if _frc_pre:
+                    with st.expander("Pre-draft signal", expanded=True):
+                        st.markdown(
+                            f'<div style="color:#ffffff;font-size:13px;line-height:1.6;">'
+                            f'{_frc_pre}</div>',
+                            unsafe_allow_html=True,
+                        )
+
+                # Bust mechanism — inline, not hidden
+                if _frc_mech:
+                    st.markdown(
+                        f'<div style="color:#cc6666;font-size:13px;'
+                        f'padding:6px 12px;margin-bottom:12px;border-left:3px solid #cc3333;">'
+                        f'<span style="font-size:11px;color:#cc6666;text-transform:uppercase;'
+                        f'letter-spacing:0.05em;">Bust mechanism: </span>{_frc_mech}'
                         f'</div>',
                         unsafe_allow_html=True,
                     )
-                if _frc_summary:
-                    st.markdown(
-                        f'<div style="color:#ffffff;font-size:13px;margin-bottom:4px;">{_frc_summary}</div>',
-                        unsafe_allow_html=True,
-                    )
-                if _frc_pre:
-                    with st.expander("Pre-draft signal", expanded=False):
-                        st.markdown(
-                            f'<div style="color:#ffffff;font-size:13px;line-height:1.5;">{_frc_pre}</div>',
-                            unsafe_allow_html=True,
-                        )
-                if _frc_mech:
-                    st.markdown(
-                        f'<div style="color:#cc6666;font-size:13px;">'
-                        f'Bust mechanism: {_frc_mech}</div>',
-                        unsafe_allow_html=True,
-                    )
+
                 st.divider()
 
     # ── Eval Confidence ───────────────────────────────────────────────────────
