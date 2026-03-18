@@ -10,6 +10,26 @@ Last Updated (UTC): 2026-03-18T03:27:58.880292+00:00
 
 ## Last Completed Milestone
 
+Session 68 (Visual system rebuild: DraftOS design token system, Prizm card aesthetic, prospect_comps Migration 0047) — board current.
+
+Session 68:
+- app/app.py: DRAFTOS_CSS token system (Barlow Condensed/Barlow fonts, --ink/--cold/--amber/--green/--elite
+  CSS custom properties). _render_apex_detail full Prizm rebuild with nameplate, FM pip bar, threshold-color
+  trait bars, dos-panel archetype block, comp cards. Board Styler updated: APEX_TIER_COLORS/CONFIDENCE_COLORS/
+  DIVERGENCE_COLOR to token palette. set_table_styles with Barlow Condensed headers.
+- scripts/export_reports_html.py: html_page(prospect: dict) -> str — standalone Card v2 renderer
+  (Classified Dossier × Panini Prizm). MOCK_RUEBEN_BAIN test record. Live DB fallback: if comps not
+  passed by caller and prospect_id set, pulls from prospect_comps table automatically.
+  Old html_page() renamed to html_report_page() — all 3 main() call sites updated.
+- scripts/generate_prospect_pdf_2026.py: _build_html() full Prizm card rebuild. 6-tier TIER_PALETTE.
+  Prism strip left-edge gradient. Holographic shimmer on score window. Ghost rank watermark.
+  FM pip bar (6 pips, 4px). Threshold-color trait bars. Translation risk amber banner. Gradient comp cards.
+- draftos/db/migrations/0047_prospect_comps.sql: prospect_comps table. UNIQUE(prospect_id, season_id, player_name).
+  FK to prospects. comp_type CHECK IN ('hit','partial','miss'). sort_order for display ordering.
+- draftos/queries/historical_comps.py: get_prospect_comps() + upsert_prospect_comp(). sort_order returned
+  in dict as "order" key. Idempotent ON CONFLICT upsert.
+- Doctor: PASSED. Migrations applied through 0047.
+
 Session 67 (PDF left panel flexbox trait grid, compact FM ref, app FM ref full depth, pre-draft snapshot) — board current.
 
 Session 67:
@@ -670,12 +690,10 @@ Prior sessions on record: 12 (DB rebuild), 13 (weekly pipeline), 13b (school/arc
 
 ## Next Milestone (Single Target)
 
-- Session 68: User analyst tag UI — sidebar widget for Crush / Want / Do Not Want / Off-Field Concern
-  tag assignment directly from the app. Writes source='analyst' to prospect_tags table.
-  (1) Add tag_def_id lookup for these 4 analyst tags (or create them if not seeded).
-  (2) Sidebar widget: selectbox + submit button, writes prospect_tags row with user_id=1.
-  (3) Board column showing active analyst tags per prospect.
-  (4) Also: RAS re-ingest — ras_2026.csv updated 2026-03-17, run ingest_ras_2026.py --apply 1.
+- Session 69: RAS re-ingest (ras_2026.csv updated 2026-03-17 with post-combine data — run
+  ingest_ras_2026.py --apply 1). Then: user analyst tag UI — sidebar widget for Crush / Want /
+  Do Not Want / Off-Field Concern tag assignment directly from app. Writes source='analyst' to
+  prospect_tags table.
 
 ---
 
