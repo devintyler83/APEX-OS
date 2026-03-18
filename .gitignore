@@ -67,3 +67,8 @@ data/*.json
 data/edge/
 scripts/run_apex_scoring_2026.backup_*.py
 debug_render.html
+scripts/_card_test_output.html
+DRAFTOS_CARD_HANDOFF.md
+draftos_card_v2*.html
+draftos_schema.md
+surface_map.md
