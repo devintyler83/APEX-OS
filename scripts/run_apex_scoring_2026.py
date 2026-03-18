@@ -174,14 +174,14 @@ TOP50_POSITION_OVERRIDES: dict[int, str] = {
     4:    "ILB",   # Lee Hunter        (Texas Tech)
     5:    "ILB",   # Max Iheanachor    (Arizona State)
     6:    "TE",    # Max Klare         (Ohio State — projects as TE, not LB)
-    7:    "ILB",   # R Mason Thomas    (Oklahoma)
+    # 7: removed S62 — R Mason Thomas PID consolidated; position_group=EDGE in DB
     8:    "ILB",   # Sonny Styles      (Ohio State)
-    9:    "ILB",   # Ty Simpson        (Alabama)
+    # 9: removed S62 — Ty Simpson PID consolidated; position_group=QB in DB
     10:   "ILB",   # Zion Young        (Missouri)
     11:   "ILB",   # Cj Allen          (Georgia)
     12:   "ILB",   # Omar Cooper       (Indiana)
-    16:   "OLB",   # Arvell Reese      (Ohio State — pass-rush LB, OLB library)
-    18:   "ILB",   # Gabe Jacas        (Illinois)
+    # 16: removed S62 — Arvell Reese PID consolidated; position_group=EDGE in DB
+    # 18: removed S62 — Gabe Jacas PID consolidated; position_group=EDGE in DB
     20:   "ILB",   # Josiah Trotter    (Missouri)
 }
 
