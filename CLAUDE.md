@@ -50,11 +50,12 @@ RAW CSVs          (data/imports/rankings/raw/{season}/)
 -> SNAPSHOTS      snapshot_board.py + compute_snapshot_*.py -> prospect_board_snapshot_*
 -> EXPORTS        export_*.py -> exports/
 -> PACKET         build_snapshot_packet.py + verify + publish -> exports/packets/
+-> TAG TRIGGERS   run_tag_triggers_2026.py -> prospect_tag_recommendations (Step 19)
 ```
 
 Each layer has exactly one responsibility. No layer may recompute logic that belongs to another layer.
 
-Weekly orchestrator: `run_weekly_update.py` (18 steps). Universe apply runs as Step 3b — after bootstrap, before source canonicalization. Added Session 14 to prevent active prospect inflation on weekly runs.
+Weekly orchestrator: `run_weekly_update.py` (19 steps). Universe apply runs as Step 3b — after bootstrap, before source canonicalization. Step 19 evaluates tag_trigger_rules.
 
 ---
 
@@ -70,52 +71,50 @@ The `prospects` table contains additional soft-deprecated rows (`is_active=0`) f
 
 ---
 
-## Current System State (Post-Session 14)
+## Current System State (Post-Session 68)
 
 ### Database
-- Size: ~11MB (rebuilt clean Session 12 from corrupt 33MB)
-- Migrations applied: 35 (0001 through 0035). Next migration: 0036.
+- Size: ~19MB
+- Migrations applied: 46 applied (0001–0047). Next migration: 0048.
 - Git: clean, branch=main
-- Doctor: PASSED (post-Session 14)
+- Doctor: PASSED (post-Session 68)
 
 ### Sources
-- Total in DB: 26
-- Active canonical: 11
-- `source_canonical_map` entries: 4 (espn(1), pff(1), pfsn-consensus-*, theringer)
 
-**11 Canonical Sources:**
+**NGS RULE: Model-output/algorithmic composite scores (ngs_2026) stored with `is_active=0`. A model score is not a scout ranking. Deactivate at ingest time.**
+
+**16 Active Canonical Scout Sources:**
 
 | Tier | Sources | Weight |
 |------|---------|--------|
 | T1 | pff_2026, thedraftnetwork_2026, theringer_2026 | 1.3x |
-| T2 | nfldraftbuzz_2026_v2, cbssports_2026, espn_2026, nytimes_2026, pfsn_2026, jfosterfilm_2026 | 1.0x |
-| T3 | bnbfootball_2026, tankathon_2026 | 0.7x |
+| T2 | nfldraftbuzz_2026_v2, cbssports_2026, espn_2026, nytimes_2026, pfsn_2026, jfosterfilm_2026, nflcom_2026, combine_ranks_2026, bleacherreport_2026, fantasypros_2026 | 1.0x |
+| T3 | bnbfootball_2026, tankathon_2026, drafttek_2026 | 0.7x |
+| Inactive (model) | ngs_2026 (is_active=0) | — |
+
+- `source_canonical_map` entries: resolve duplicates (espn, pff, pfsn-consensus-*, theringer)
+- SOURCE NAMING RULE: source name must match file and methodology exactly. combine_2026.csv rankings → combine_ranks_2026. nflcom_2026.csv editorial board → nflcom_2026.
 
 ### Consensus
-- Rows: 609 (active prospects with ranking data from canonical sources)
-- Top: #1 Fernando Mendoza QB 98.56 | #2 Caleb Downs S 96.80 | #3 Rueben Bain EDGE 95.13
-- Confidence: High=4, Medium=53, Low=529
+- Rows: 1001+ (Session 62+ multi-source ingest, LB ghost PID consolidation)
+- Top: #1 Fernando Mendoza QB | #2 Arvell Reese EDGE | #3 Rueben Bain EDGE (per Session 62 rebuild)
 - Build method: Full DELETE + INSERT on each rebuild (not upsert). Safe — consensus is derived data.
-- Latest snapshot: snapshot_id=1 (2026-03-10): rows=586, coverage=586, confidence=586 — OK
+- Latest board snapshot: snapshot_id=6 (2026-03-18): rows=1001 — PASSED
 
 ### APEX Engine
-- Version: v2.2
-- Scored prospects: 58 active 2026 (is_active=1, is_calibration_artifact=0) + 12 calibration artifacts (excluded from board)
+- Version: v2.3
+- Scored prospects: 140 active 2026 (is_active=1, is_calibration_artifact=0) + 12 calibration artifacts (excluded from board)
 - **Canonical tier labels: ELITE (≥85), DAY1 (≥70), DAY2 (≥55), DAY3 (≥40), UDFA-P (≥28), UDFA (<28)**
-  - All rows standardized to new labels (Session 14). New labels are canonical going forward.
   - `compute_apex_tier()` in `engine.py` emits all 6 labels. Board display script (`app/app.py`) recognizes all 6.
-- Board tier dist (Session 15): ELITE=3, DAY1=21, DAY2=30, DAY3=4
+- Board tier dist (Session 67 pre-draft snapshot): ELITE=4, DAY1=36, DAY2=64, DAY3=34, UDFA-P=2 (140 total)
 - PVC: QB/CB/EDGE=1.0x | OT/S/IDL=0.90x | ILB/OLB=0.85x | OG/TE/C=0.80x | RB=0.70x
-- Divergence method: Rank-relative (migration 0035). `consensus_rank` vs `apex_ovr_rank` delta.
-- Divergence dist (Session 15): ALIGNED=15, APEX_HIGH=22, APEX_LOW=2, APEX_LOW_PVC_STRUCTURAL=19
-- Backup: `data/apex_top50_rescored_session15.json` (141KB) — always export after re-score
-- Top APEX_HIGH (actionable — premium positions only): Thieneman S +23, Mesidor EDGE +16, Joshua Josephs EDGE +26, Cashius Howell EDGE +8
-- **CRITICAL OVERRIDE NOTE (Session 15)**: TOP50_POSITION_OVERRIDES and ARCHETYPE_OVERRIDES in
-  run_apex_scoring_2026.py had stale pre-rebuild IDs. Both fully corrected. If DB is ever rebuilt,
-  re-verify ALL prospect_ids in both dicts before running any batch scoring.
+- Divergence method: Rank-relative. `consensus_rank` vs `apex_ovr_rank` delta.
+- Divergence dist (Session 64): ALIGNED=30, APEX_HIGH=61, APEX_LOW=3, STRUCTURAL=46
+- Capital range derived from `apex_composite` (PVC-adjusted), not raw_score. Patched Session 65.
+- **CRITICAL OVERRIDE NOTE**: TOP50_POSITION_OVERRIDES and ARCHETYPE_OVERRIDES in run_apex_scoring_2026.py use prospect_ids. If DB is ever rebuilt, re-verify ALL prospect_ids in both dicts before running any batch scoring.
 - Calibration artifacts: 12 players (PIDs: 230,304,313,455,504,880,1050,1278,1371,1391,1729,1925).
   All is_active=0 + is_calibration_artifact=1. Do NOT re-score. tag_calibration_artifacts_2026.py
-  now uses explicit PIDs (not display_name matching). Migration 0036 applied.
+  uses explicit PIDs (not display_name matching).
 
 ### Positional Archetype Libraries — All 13 Complete
 
@@ -137,6 +136,19 @@ The `prospects` table contains additional soft-deprecated rows (`is_active=0`) f
 
 ---
 
+## Tag System (Active as of Session 18)
+
+- Schema: tag_definitions (27), tag_trigger_rules (14), prospect_tag_recommendations, prospect_tags, prospect_tag_history
+- Step 19 in pipeline: `run_tag_triggers_2026.py` evaluates rules → writes recommendations
+- Acceptance workflow: `accept_tag_recs_2026.py` (--list / --accept / --dismiss / --accept-all)
+- Triage helper: `triage_pending_tags_2026.py` for batch review
+- PREMIUM_POSITIONS = {QB, CB, EDGE, OT, S} for divergence rules only
+- `prospect_tag_recommendations` has NO season_id column — do not filter by it
+- `tag_trigger_rules` use `=` operator (not `==`) for equality; eval_condition handles both
+- Current rec status (Session 64): accepted=224, dismissed=35, pending=0
+
+---
+
 ## Snapshot Authority Hierarchy
 
 When state is in conflict, resolve by this priority order (highest to lowest):
@@ -155,16 +167,19 @@ Conversation is last and lowest authority. Never infer system state from chat hi
 
 - **Travis Hunter school=Unknown** — Not in universe CSV. Known, non-blocking.
 - **Tate Ratledge position_group=TE** — Should be OG per CALIBRATION_OVERRIDES. Pre-existing issue. Non-blocking.
-- **APEX tier label migration** — Old labels (APEX/SOLID/DEVELOPMENTAL) replaced by DAY1/DAY2/DAY3 in Session 14. All rows standardized. Board display script (`app/app.py`) already has all 6 tier labels in `APEX_TIER_COLORS` and the filter dropdown — no fix needed. The `APEX` board column showing `<NA>` is `apex_rank` (analyst-assigned rank from `prospect_tags`), not the tier label. It is `<NA>` when no analyst rank has been set — expected behavior.
-- **Jalon Kilgore CB-3 90.0 ELITE** — pid=449, consensus rank=210. FM-1 (Athleticism Mirage) vs genuine APEX_HIGH not yet evaluated. Needs full CB PAA run before accepting score. Do NOT cite as signal.
+- **APEX tier label migration** — Old labels (APEX/SOLID/DEVELOPMENTAL) replaced by DAY1/DAY2/DAY3 in Session 14. All rows standardized. Board display script (`app/app.py`) already has all 6 tier labels — no fix needed.
+- **Jalon Kilgore (pid=309)** — Re-scored Session 18 from CB-3 ELITE 90.0 to S-3 Multiplier Safety DAY2. ARCHETYPE_OVERRIDES entry at pid=309. Combine gate cleared Session 64 (forty=4.40s, shuttle S-tier). Score: 64.1 DAY2, APEX_HIGH +23.
 - **Calibration batch GEN traits** — 12 calibration prospects (is_calibration_artifact=1) still have generic trait vectors. Calibration-only — do not re-score for 2026 board signal.
-- **Stale override IDs fixed Session 15** — TOP50_POSITION_OVERRIDES and ARCHETYPE_OVERRIDES in run_apex_scoring_2026.py had pre-rebuild IDs causing 9 prospects to receive wrong positional libraries or forced archetypes. Both corrected. Caveat: if DB is ever rebuilt again, re-verify both dicts.
+- **Stale override IDs** — If DB is ever rebuilt, re-verify all prospect_ids in TOP50_POSITION_OVERRIDES and ARCHETYPE_OVERRIDES before running batch scoring.
 - **RAS join workaround** — `get_big_board()` uses `AND r.ras_total IS NOT NULL` instead of season_id filter. Two-generation RAS data artifact. Revert to season_id join after RAS re-ingest post pro days.
 - **jfosterfilm encoding** — `jfosterfilm_2026.csv` is latin-1 encoded. Stage script handles this.
 - **jfosterfilm ranked vs unranked** — 293 ranked rows (rank=1..293) + 442 unranked. Ingest ingests ranked only. 322 unranked/RAS-only players inserted directly into prospects during rebuild.
 - **TANKATHON + THERINGER** — Raw CSVs use combined Position,School column. `stage_rankings_csv.py` handles with column detection. Do NOT break this logic.
 - **Gunnar Helm (pid=842)** — 2025 draftee, ghost row from spamml. `apex_scores` row force-deleted Session 6. Do NOT re-score. Cross-season contamination.
 - **CALIBRATION_OVERRIDES position overrides** — Schwesinger=ILB, Membou=OT, Ratledge=OG, Emmanwori=S, Williams=IDL, Paul/Wilson=C
+- **D'Angelo Ponds (pid=3236)** — No consensus ranking row; divergence batch skips him. Non-blocking.
+- **LB ghost PID splits** — Root cause: early ingests labeled EDGE/QB players as LB → bootstrap LB PID → later correct-position PIDs. 6 cases consolidated Session 62 via consolidate_lb_ghost_pids_s62.py. If new coverage anomalies appear, check for ghost PID splits before acting on divergence signals.
+- **The `APEX` board column showing `<NA>`** — This is `apex_rank` (analyst-assigned rank from `prospect_tags`), not the tier label. Expected when no analyst rank is set.
 
 ---
 
@@ -178,14 +193,14 @@ $env:ANTHROPIC_API_KEY = "sk-ant-..."
 python -m scripts.run_apex_scoring_2026 --batch top50 --force --apply 0   # dry run
 python -m scripts.run_apex_scoring_2026 --batch top50 --force --apply 1   # execute
 
-# Re-score calibration batch (pending)
+# Re-score calibration batch
 python -m scripts.run_apex_scoring_2026 --batch calibration --force --apply 1
 
 # Recompute divergence only (no API calls)
 python -m scripts.run_apex_scoring_2026 --batch divergence --apply 1
 
 # ALWAYS export after any re-score
-sqlite3 .\data\edge\draftos.sqlite ".mode json" ".output data/apex_top50_rescored_session14.json" "SELECT * FROM apex_scores;"
+sqlite3 .\data\edge\draftos.sqlite ".mode json" ".output data/apex_top50_rescored_sessionN.json" "SELECT * FROM apex_scores;"
 ```
 
 APEX LOW on non-premium positions (ILB, OLB, OG, C, TE, RB) is structural PVC behavior, not actionable. Monitor APEX_HIGH on premium positions (QB, CB, EDGE, OT, S) only.
@@ -194,12 +209,12 @@ APEX LOW on non-premium positions (ILB, OLB, OG, C, TE, RB) is structural PVC be
 
 ## Current Priorities (Ordered)
 
-1. **Additional source ingest** (2–3 high-quality sources) — deferred from Session 11, unblocked.
-2. **Calibration batch API re-score** — 12 calibration prospects have generic trait vectors. These are is_calibration_artifact=1 2025 players — re-score for engine calibration only, not 2026 board signal.
-3. **Kilgore CB evaluation** — CB-3 ELITE 90.0, consensus=210. FM-1 vs genuine find unresolved. Full CB PAA run required before divergence board is trusted for CB position.
-4. **Tag system activation** — Layer 10 + 11 schema deployed. Trigger evaluation engine and acceptance workflow needed.
-5. **RAS re-ingest** — After pro days complete. Run `ingest_ras_2026.py` with updated file. Fully idempotent.
-6. **Post-draft audit framework** — APEX Framework Section 9. Activate after April 2026 draft.
+1. **prospect_comps expansion** — Migration 0047 applied. Seed historical comps for scored prospects; build comp suggestion engine.
+2. **Remaining source ingest** — drafttek_2026 seeded (T3). Any additional high-quality sources.
+3. **Post-draft audit framework** — APEX Framework Section 9. Activate after April 2026 draft.
+4. **Pre-draft snapshot** — `take_predraft_snapshot_2026.py`; run before draft night (already run Session 67, 140 rows).
+5. **RAS re-ingest** — After pro days complete (April). Run `ingest_ras_2026.py` with updated file. Fully idempotent.
+6. **App UI** — Streamlit app is a stub; `surface_map.md` defines four rendering surfaces.
 
 ---
 
@@ -220,9 +235,24 @@ If STATE_SNAPSHOT.md is missing or doctor fails — pause and resolve before pro
 git add .
 git commit -m "Milestone: <short description>"
 python scripts/end_session.py
+# REQUIRED: manually update STATE_SNAPSHOT.md with session milestone detail before committing
+git add BOOTSTRAP_PACKET.txt STATE_SNAPSHOT.md && git commit -m "chore: end_session..."
 ```
 
 Copy contents of BOOTSTRAP_PACKET.txt for next session handoff. No session may end without a clean snapshot.
+
+---
+
+## Files Updated Every Session (Mandatory)
+
+| File | Who Updates | How |
+|------|-------------|-----|
+| STATE_SNAPSHOT.md | You (manually) | Write milestone block, layer status, next target BEFORE committing |
+| BOOTSTRAP_PACKET.txt | end_session.py | Auto-generated. Copy contents for next session handoff |
+| CLAUDE.md | You (every ~5 sessions) | Sync source list, migration count, priorities with STATE_SNAPSHOT.md |
+
+STATE_SNAPSHOT.md must be updated BEFORE running `git commit`. end_session.py does NOT write
+milestone detail — only you can write the narrative of what changed in the session.
 
 ---
 

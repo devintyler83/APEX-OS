@@ -1,6 +1,6 @@
 \# DraftOS
 
-
+**For all session instructions, system state, and architecture: read [CLAUDE.md](CLAUDE.md) first.**
 
 NFL Draft analytics OS (Streamlit MVP).
 
