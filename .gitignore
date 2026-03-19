@@ -72,3 +72,6 @@ DRAFTOS_CARD_HANDOFF.md
 draftos_card_v2*.html
 draftos_schema.md
 surface_map.md
+
+# Build artifacts
+draftos.egg-info/
