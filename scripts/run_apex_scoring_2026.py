@@ -180,7 +180,7 @@ TOP50_POSITION_OVERRIDES: dict[int, str] = {
     10:   "ILB",   # Zion Young        (Missouri)
     11:   "ILB",   # Cj Allen          (Georgia)
     12:   "ILB",   # Omar Cooper       (Indiana)
-    # 16: removed S62 — Arvell Reese PID consolidated; position_group=EDGE in DB
+    16:   "ILB",   # Arvell Reese — S71: ILB-3 mechanism confirmed; DB=EDGE is S62 consolidation artifact
     # 18: removed S62 — Gabe Jacas PID consolidated; position_group=EDGE in DB
     20:   "ILB",   # Josiah Trotter    (Missouri)
 }
@@ -310,6 +310,33 @@ CALIBRATION_PROSPECTS = list(CALIBRATION_OVERRIDES.keys())
 ARCHETYPE_OVERRIDES: dict[int, dict] = {
     # Keys rebuilt Session 15: all IDs verified against current DB (post-Session 12 rebuild).
     # Previous keys used stale pre-rebuild IDs; all 8 entries corrected here.
+    16: {
+        # Arvell Reese — Session 71: ILB-3 Run-First Enforcer.
+        # Pipeline correction: DB=EDGE (S62 consolidation artifact). Mechanism analysis confirms ILB-3.
+        # S70 scored as EDGE-4/FM-1 (wrong library). S71 gate scored as EDGE-1/FM-3 (still wrong library).
+        # Correct classification: ILB-3. Run defense Blk Shed=99, Anchor=98, HitPow=97. Coverage=39.4 (structural).
+        # TOP50_POSITION_OVERRIDES[16]="ILB" reinstated to route scoring against ILB library.
+        "archetype_label":    "ILB-3 Run-First Enforcer",
+        "archetype_rationale": (
+            "Reese's primary win mechanism is run-gap enforcement via elite hand technique and anchor "
+            "(Block Shedding 99, Anchor 98, Hit Power 97). YaTA 2.0, 2nd among P4 LBs — run-stopping "
+            "mechanism is Tier A confirmed. 4.46 forty at 241 lbs is elite ILB athleticism "
+            "(95th+ percentile at position) and scores as a competitive toughness asset, NOT a speed-arc ceiling. "
+            "Coverage grade 39.4 (Zone 31, Man 53) is a structural scheme constraint — route to SchemeVers, "
+            "not Processing. This is not a coverage LB with developmental upside in coverage; "
+            "this is a run defender who has been correctly not deployed in coverage. "
+            "Pass-rush production (22/27 pressures, 8 sacks in first 8 games) is context-dependent "
+            "(QB spy, package deployment) — do not price as every-down EDGE mechanism. "
+            "Primary bust risk: FM-6 (Role Mismatch) — organizations deploying him as a coverage-first "
+            "ILB in a coverage-demanding scheme generate the bust from their own misread of the profile. "
+            "Secondary risk: FM-3 limited (PA bite 100%, late route ID) — coverage-specific processing "
+            "floor, not a positional Processing Wall. "
+            "Landing spot is a mandatory capital modifier: run-first schemes (gap-sound, two-high) "
+            "unlock full value; coverage-demanding schemes (Tampa 2, pattern-match heavy) structurally "
+            "limit him to a rotational role regardless of run-stopping ability."
+        ),
+        "fm_flags": ["FM-6", "FM-3-limited"],
+    },
     80: {
         "forced_archetype":  "EDGE-4 Athletic Dominator",
         "archetype_direction": (
@@ -922,11 +949,121 @@ def _build_web_context(
     return "\n".join(lines)
 
 
-def _get_measurables_context(conn, prospect_id: int) -> str:
+MEASURABLES_ARCHETYPE_CONTEXT: dict[str, str] = {
+
+    "EDGE-1": (
+        "ARCHETYPE CONTEXT — EDGE-1 Every-Down Disruptor: "
+        "Primary mechanism metrics: hand size, arm length, wingspan, 10-yard split, "
+        "weight-adjusted power metrics. "
+        "Evaluation standard: This archetype wins on technique, hand fighting, and motor "
+        "— not speed arc. A 40-time in the 4.40–4.55 range is functionally adequate; "
+        "do not read it as a ceiling signal. Forty time is a secondary metric for EDGE-1. "
+        "Primary athleticism signals are first-step quickness (10-yard split) and "
+        "size-power combination (weight + arm length). "
+        "Counter sequencing and pre-snap processing score against Processing. A player "
+        "with one dominant rush move and no confirmed counter is an FM-3 risk — "
+        "but absence of elite forty time is not FM-3 evidence. "
+        "FM-1 (Athleticism Mirage) does not apply to technique-primary archetypes. "
+        "Do not penalize functional-not-elite speed metrics on EDGE-1 profiles."
+    ),
+
+    "EDGE-2": (
+        "ARCHETYPE CONTEXT — EDGE-2 Speed-Bend Specialist: "
+        "Primary mechanism metrics: 40-time, 10-yard split, bend angle on film, "
+        "wingspan, agility scores. "
+        "Evaluation standard: Speed is the primary mechanism — a 40-time ≥4.55 is a "
+        "genuine ceiling signal for this archetype. Forty time scores directly against "
+        "Athleticism as a mechanism-primary metric, not a secondary one. "
+        "FM-1 (Athleticism Mirage) is the highest-frequency bust mode — confirm that "
+        "combine speed translates to bend and arc on film before pricing athleticism "
+        "at ceiling value. A fast forty with stiff hips is FM-1, not EDGE-2."
+    ),
+
+    "EDGE-3": (
+        "EVALUATION NOTE — EDGE-3 Power-Counter Technician: "
+        "Primary mechanism metrics are arm length, wingspan, and SIZE score "
+        "(base strength and anchor). "
+        "ACC score (acceleration) is a secondary positive signal. "
+        "Forty-yard dash is NOT a primary ceiling gate for this archetype — "
+        "EDGE-3 wins through counter sequencing and hand technique, not burst. "
+        "Apply forty time as a floor check only (flag if >4.75), not as a ceiling limiter."
+    ),
+
+    "CB-1": (
+        "EVALUATION NOTE — CB-1 Anticipatory Lockdown: "
+        "Primary mechanism metrics are AGI score (hip fluidity and transition), "
+        "shuttle time, and hand size (press disruption). "
+        "Forty-yard dash is secondary — CB-1 wins through anticipation and "
+        "processing, not chase speed. "
+        "A forty in the 4.45-4.52 range is acceptable for CB-1 if AGI and "
+        "shuttle are elite. Flag forty >4.55 as a potential recovery-speed concern."
+    ),
+
+    "CB-3": (
+        "EVALUATION NOTE — CB-3 Press Man Corner: "
+        "Primary mechanism metrics are forty-yard dash, SPEED score, shuttle, "
+        "and wingspan (press leverage). "
+        "This archetype wins through physical press and recovery speed — "
+        "forty and shuttle are genuine ceiling indicators here, not just floor checks. "
+        "SIZE score matters for press leverage at the line. "
+        "Apply all speed metrics at full weight for this archetype."
+    ),
+
+    "OT-2": (
+        "EVALUATION NOTE — OT-2 Athletic Pass Protector: "
+        "Primary mechanism metrics are AGI score, shuttle, and arm length "
+        "(kick-slide fluidity and reach). "
+        "Forty-yard dash is NOT a meaningful ceiling gate for offensive tackles — "
+        "lateral agility and anchor, not straight-line speed, determine pass "
+        "protection ceiling. "
+        "Apply forty time as a curiosity only. Weight AGI, shuttle, and arm "
+        "length as the primary athletic ceiling indicators."
+    ),
+
+    "OT-3": (
+        "EVALUATION NOTE — OT-3 Power Run Blocker: "
+        "Primary mechanism metrics are SIZE score, weight, and arm length "
+        "(mass, anchor, and reach at the point of attack). "
+        "AGI and shuttle are secondary — sufficient mobility matters but "
+        "this archetype wins through base and drive, not athleticism. "
+        "Forty-yard dash is NOT a ceiling gate. "
+        "Flag SIZE score <70 or arm length <32\" as legitimate concerns "
+        "for the power mechanism."
+    ),
+
+    "S-1": (
+        "EVALUATION NOTE — S-1 Range Enforcer: "
+        "Primary mechanism metrics are forty-yard dash, SPEED score, and "
+        "ten-yard split (range and closing speed). "
+        "AGI score matters for zone-to-man transitions. "
+        "Apply speed metrics at full weight — range is the core mechanism. "
+        "SIZE score is secondary; S-1 does not require CB-caliber size."
+    ),
+
+    "ILB-3": (
+        "ARCHETYPE CONTEXT — ILB-3 Run-First Enforcer: "
+        "Primary mechanism metrics: size-adjusted speed (40-time at playing weight), "
+        "hand size, arm length, acceleration (10-yard split). "
+        "Evaluation standard: A 40-time ≤4.50 at 235+ lbs is an elite ILB athleticism "
+        "signal — price it as a competitive toughness and pursuit-angle asset, not a "
+        "speed-arc ceiling. Lateral agility and short-area quickness are secondary "
+        "metrics for this archetype; absence of elite agility scores does not cap the "
+        "ceiling of a run-first mechanism player. "
+        "Coverage metrics (zone/man ratings) score against SchemeVers, not Processing. "
+        "A coverage floor at ILB-3 is a scheme deployment constraint — evaluate against "
+        "landing spot fit, not as a Processing Wall indicator. "
+        "FM-6 (Role Mismatch) is the primary bust mode for this archetype. Flag it when "
+        "coverage demands exceed confirmed coverage capability."
+    ),
+}
+
+
+def _get_measurables_context(conn, prospect_id: int, archetype_code: str | None = None) -> str:
     """
     Returns a structured measurables string for the APEX prompt,
     or empty string if no data exists for this prospect.
     Session 69 — jfosterfilm expanded measurables pipeline.
+    Session 71 — archetype_code parameter for mechanism-aware prefix injection.
     """
     row = conn.execute(
         """
@@ -981,6 +1118,15 @@ def _get_measurables_context(conn, prospect_id: int) -> str:
     )
     if row["consensus_rank"]:
         lines.append(f"  Consensus rank: #{row['consensus_rank']}")
+
+    # Archetype-aware priority prefix (Session 71)
+    prefix = ""
+    if archetype_code:
+        base_code = archetype_code.split()[0] if archetype_code else ""
+        prefix = MEASURABLES_ARCHETYPE_CONTEXT.get(base_code, "")
+
+    if prefix:
+        return prefix + "\n\n" + "\n".join(lines)
     return "\n".join(lines)
 
 
@@ -1279,11 +1425,6 @@ def _score_prospect(
         consensus["consensus_rank"], consensus["consensus_score"], ras_score,
     )
 
-    # --- Measurables block (Session 69) ---
-    measurables_block = _get_measurables_context(conn, prospect_id)
-    if measurables_block:
-        web_context = web_context + "\n\n" + measurables_block
-
     # Inject archetype direction / gate enforcement if this prospect has an override
     arch_override      = ARCHETYPE_OVERRIDES.get(prospect_id)
     arch_direction     = None
@@ -1359,6 +1500,21 @@ def _score_prospect(
         print(f"  Comp context: {existing_archetype_code} / {comp_fm_code or 'no FM'} -> injecting")
     else:
         print(f"  Comp context: {existing_archetype_code or 'no prior score'} -> no comps (first score or gap)")
+
+    # --- Measurables block (Session 71: archetype-aware prefix) ---
+    # Priority: forced_archetype from ARCHETYPE_OVERRIDES > prior DB score's matched_archetype
+    _archetype_for_measurables = None
+    if arch_override:
+        _archetype_for_measurables = (
+            arch_override.get("forced_archetype") or arch_override.get("archetype_label")
+        )
+    if not _archetype_for_measurables and existing_score and existing_score["matched_archetype"]:
+        _archetype_for_measurables = existing_score["matched_archetype"]
+    measurables_block = _get_measurables_context(
+        conn, prospect_id, archetype_code=_archetype_for_measurables
+    )
+    if measurables_block:
+        web_context = web_context + "\n\n" + measurables_block
 
     prospect_data = {
         "name":                display_name,
