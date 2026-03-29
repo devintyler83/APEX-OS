@@ -183,7 +183,22 @@ def get_apex_detail(conn, *, prospect_id: int, season_id: int = 1) -> dict | Non
             a.schwesinger_full,
             a.schwesinger_half,
             a.tags,
-            a.scored_at
+            a.scored_at,
+            (
+                SELECT COUNT(*) + 1
+                FROM prospect_consensus_rankings pcr2
+                JOIN prospects p2
+                  ON p2.prospect_id = pcr2.prospect_id
+                 AND p2.season_id   = pcr2.season_id
+                WHERE p2.position_group = p.position_group
+                  AND pcr2.season_id    = a.season_id
+                  AND pcr2.consensus_rank < (
+                      SELECT consensus_rank
+                      FROM prospect_consensus_rankings
+                      WHERE prospect_id = a.prospect_id
+                        AND season_id   = a.season_id
+                  )
+            ) AS position_rank
         FROM apex_scores a
         JOIN prospects p
           ON p.prospect_id = a.prospect_id
@@ -204,4 +219,8 @@ def get_apex_detail(conn, *, prospect_id: int, season_id: int = 1) -> dict | Non
     # Derive two_way_premium from the comma-separated tags field
     tags_str = d.get("tags") or ""
     d["two_way_premium"] = 1 if "Two-Way Premium" in tags_str else 0
+    # Derive position_rank_label for display (e.g. "QB #1")
+    pos_rank = d.get("position_rank")
+    pos_grp  = d.get("position_group") or ""
+    d["position_rank_label"] = f"{pos_grp} #{pos_rank}" if pos_rank else None
     return d
