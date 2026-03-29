@@ -45,6 +45,10 @@ draftos.sqlite
 exports/
 exports/packets/
 **/*.bak
+**/*.bak_*
+fix_card_*.py
+fix_score_*.py
+GATE_TRACKER.md
 
 # Python
 __pycache__/
