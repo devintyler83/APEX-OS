@@ -10,14 +10,14 @@ Non-negotiables:
 - Provide run order + verification commands
 
 Goal for this chat:
-Session 71: Investigate Arvell Reese (#2 consensus, pid=16) ELITE->DAY1 drop (-8.8 pts).
+Session 72: Track 2 Mode C board review — divergence triage with updated full-batch scores.
 
 Authoritative State:
 
 1) STATE_SNAPSHOT.md
 # DraftOS State Snapshot
 
-Last Updated (UTC): 2026-03-29T04:48:52.162890+00:00
+Last Updated (UTC): 2026-03-29T06:32:47.436618+00:00
 
 ---
 
@@ -26,6 +26,41 @@ Last Updated (UTC): 2026-03-29T04:48:52.162890+00:00
 - 2026 (season_id=1)
 
 ## Last Completed Milestone
+
+Session 71 (Full batch APEX re-score; archetype-aware measurables fix; Reese ILB-3 pipeline correction) — board current.
+
+Session 71:
+- Archetype-aware measurables fix: MEASURABLES_ARCHETYPE_CONTEXT dict added to run_apex_scoring_2026.py.
+  9 archetypes mapped (EDGE-1, EDGE-2, EDGE-3, CB-1, CB-3, OT-2, OT-3, S-1, ILB-3).
+  _get_measurables_context() updated: archetype_code parameter, prefix injected before raw measurables block.
+  Call site moved to after existing_score fetch; archetype resolved from ARCHETYPE_OVERRIDES label > DB score.
+- Reese pipeline correction (pid=16, ILB-3 Run-First Enforcer):
+  Sports Almanac handoff confirmed: DB=EDGE was S62 consolidation artifact. Correct classification: ILB-3.
+  S70 EDGE-4/FM-1 (78.4) and S71 gate EDGE-1/FM-3 (84.1) both discarded — scored against wrong library.
+  Corrections applied: position_group EDGE→LB in prospects table; TOP50_POSITION_OVERRIDES[16]="ILB";
+  ARCHETYPE_OVERRIDES[16] added with ILB-3 archetype_label, FM-6 primary, FM-3-limited secondary.
+  Re-score result: ILB-3 Run-First Enforcer, composite=68.5 DAY2 (raw=80.6, PVC=0.85), Tier A confidence.
+  FM-6 (Role Mismatch) confirmed as primary bust risk. Capital: R2 Mid–R3 Top.
+  GATE_TRACKER.md updated: Reese MANUAL_HOLD added. APEX_LOW MAJOR (delta=-31) — legitimate
+  architectural disagreement. Consensus prices EDGE athleticism+LB production as additive ceiling.
+  APEX prices Zone=31 coverage floor as structural deployment constraint. Do not suppress.
+  Clear condition: Landing Spot Note (Mode B) confirming scheme match for ILB-3 deployment.
+- Full batch re-score: 140/140 scored (136 in main batch, 4 JSON parse failures retried individually).
+  0 GEN- archetypes. 0 skipped.
+  Failures retried: Jordyn Tyson (pid=68), Domonique Orange (pid=110), Gracen Halton (pid=164),
+  Nate Boerkircher (pid=150). All 4 scored cleanly on retry.
+- Tier distribution post S71 (full board, 140 active):
+  ELITE=1, DAY1=36, DAY2=67, DAY3=33, UDFA-P=3.
+  vs S70 full board estimate: ELITE=3, DAY1=35, DAY2=66, DAY3=34, UDFA-P=2.
+  ELITE dropped 3→1: only Fernando Mendoza (QB, 87.3). Caleb Downs dropped to 79.6 DAY1.
+- ARCHETYPE_OVERRIDES integrity: Kilgore (pid=309) INTACT (65.5 DAY2, S-3 ✓).
+  Neal (pid=109): 70.1 DAY1, CB-2 ✓ (-1.7 from S70 estimate, within variance, DAY1 maintained).
+- Divergence post full batch: APEX_HIGH=58, ALIGNED=27, APEX_LOW=5, APEX_LOW_PVC_STRUCTURAL=50.
+  vs S70: APEX_HIGH=63→58 (-5), STRUCTURAL=45→50 (+5), ALIGNED=28→27 (-1), APEX_LOW=4→5 (+1).
+  STRUCTURAL increase consistent with position corrections (Reese ILB-3) and measurables-informed scoring.
+- Tag triggers re-run: 15 new recs fired and accepted (pending=0).
+- Doctor: PASSED.
+- Backup: data/apex_all_rescored_s71_20260329T063036Z.json (140 records).
 
 Session 70 (Top-50 APEX re-score with measurables block live; state file updates) — board changed.
 
@@ -753,13 +788,14 @@ Prior sessions on record: 12 (DB rebuild), 13 (weekly pipeline), 13b (school/arc
 
 ## Next Milestone (Single Target)
 
-- Session 71: Investigate Arvell Reese (#2 consensus, pid=16) ELITE->DAY1 drop (-8.8 pts).
-  Determine whether measurables context (forty=4.46, ATH=86.6, SPEED=72.6) mechanistically
-  justifies the drop or represents a measurables over-weighting artifact. If justified:
-  proceed with --batch all --force --apply 1 (full re-score). If artifact: add Reese to
-  ARCHETYPE_OVERRIDES with score floor directive before full batch.
-  After investigation decision: run --batch all, recompute divergence, re-run tag triggers,
-  triage pending recs, doctor.
+- Session 72: Track 2 Mode C board review — divergence triage with updated full-batch scores.
+  Priority 1: STRUCTURAL audit — compare STRUCTURAL count S70 (45) vs S71 (50). Identify any
+  prospects that moved from STRUCTURAL to APEX_HIGH or ALIGNED; those are real signals.
+  Priority 2: Premium APEX_HIGH triage — use the premium signal list from Session 71 final state
+  (Jadon Canady CB +85, Treydan Stukes S +73 leading). Update divergence signal queue.
+  Priority 3: Arvell Reese MANUAL_HOLD — Landing Spot Note (Mode B) to determine which teams run
+  the scheme that unlocks ILB-3 run-first ceiling. Clear condition: scheme match confirmed for
+  ILB-3 deployment. Required before any capital recommendation above R2 Mid.
 
 ---
 
@@ -794,20 +830,19 @@ SNAPSHOTS: Operational. Latest: snapshot_id=6 (2026-03-18). rows=1001 — PASSED
   compute_snapshot_confidence → verify_snapshot_integrity
 
 APEX: Operational. 140 v2.3 active non-cal scored + 12 calibration artifacts.
-  Measurables block live in prompt (Session 69): _get_measurables_context() injected into
-  web_context after RAS block. 716 prospects have measurables data.
-  Tiers (v2.3 active non-cal, post Session 70 top-50 re-score):
-    Full board: ELITE=3, DAY1=35, DAY2=66, DAY3=34, UDFA-P=2 (approx — top-50 only re-scored)
-    Top-50 subset: ELITE=3, DAY1=26, DAY2=20, DAY3=1, UDFA-P=0
-  Decision gate: HOLD. Arvell Reese ELITE->DAY1 drop under investigation.
-  Divergence: APEX_HIGH=63, ALIGNED=28, STRUCTURAL=45, APEX_LOW=4.
-  Divergence (current, post Session 56 SPM repoint): ALIGNED=25, APEX_HIGH=64, APEX_LOW=3,
-    APEX_LOW_PVC_STRUCTURAL=52.
-  Top premium APEX_HIGH (post-repoint, coverage artifacts resolved):
-    Gabe Jacas EDGE (+81), R Mason Thomas EDGE (+80), Jadon Canady CB (+77),
-    Daylen Everette CB (+69), Treydan Stukes S (+68), Malik Muhammad CB (+63), TJ Parker EDGE (+61).
-  D'Angelo Ponds artifact RESOLVED (sources_covered 2->12, no longer APEX_HIGH).
-  Latest backup: data/apex_51_150_session5_scored.json (563KB).
+  Archetype-aware measurables context live (Session 71): MEASURABLES_ARCHETYPE_CONTEXT dict,
+  9 archetypes mapped. _get_measurables_context() updated with archetype_code parameter.
+  716 prospects have measurables data.
+  Tiers (v2.3 active non-cal, post Session 71 full batch re-score):
+    ELITE=1, DAY1=36, DAY2=67, DAY3=33, UDFA-P=3
+    Only ELITE: Fernando Mendoza (QB, 87.3). Caleb Downs dropped to 79.6 DAY1.
+  Divergence (post Session 71 full batch):
+    APEX_HIGH=58, ALIGNED=27, APEX_LOW=5, APEX_LOW_PVC_STRUCTURAL=50.
+  Top premium APEX_HIGH signals (full batch, S71):
+    Jadon Canady CB (+85), Treydan Stukes S (+73), Daylen Everette CB (+62),
+    Chandler Rivers CB (+61), Jaishawn Barham EDGE (+57), Anthony Lucas EDGE (+56).
+  Arvell Reese (pid=16): ILB-3 Run-First Enforcer, 68.5 DAY2. MANUAL_HOLD in GATE_TRACKER.md.
+  Latest backup: data/apex_all_rescored_s71_20260329T063036Z.json (140 records).
   Igbinosun (pid=36): CB-3 Press Man Corner 68.4 DAY2, Tier B, FM-2 CONDITIONAL, R2 early–R3 top.
     PAA gate injection applied Session 39. Prior score (CB-2 76.4) corrected. Delta: +23 MODERATE.
   Love (pid=61): RB-1 59.8 DAY2 Tier A v_injury=9.0 (carry clock CLEAR, Session 21).
@@ -982,11 +1017,11 @@ Inactive (data preserved): ngs_2026 (source_id=29, is_active=0) — model score,
 
 2) System Snapshot Output
 === DRAFTOS SYSTEM SNAPSHOT ===
-generated_utc: 2026-03-29T04:48:50.986942+00:00
+generated_utc: 2026-03-29T06:32:46.730485+00:00
 
 ## Git
 branch: main
-commit: 723bab1d36c2b72f6e12d3a74b47eecb03e61b71
+commit: d9ea21a8f144a7b0017aeb11ca3568cbfcdbad07
 status: clean
 
 ## Tables
