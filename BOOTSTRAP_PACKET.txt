@@ -10,14 +10,14 @@ Non-negotiables:
 - Provide run order + verification commands
 
 Goal for this chat:
-Session 70: Full APEX re-score (run_apex_scoring_2026.py --batch all --force --apply 1).
+Session 71: Investigate Arvell Reese (#2 consensus, pid=16) ELITE->DAY1 drop (-8.8 pts).
 
 Authoritative State:
 
 1) STATE_SNAPSHOT.md
 # DraftOS State Snapshot
 
-Last Updated (UTC): 2026-03-29T02:58:48.475229+00:00
+Last Updated (UTC): 2026-03-29T04:48:52.162890+00:00
 
 ---
 
@@ -26,6 +26,27 @@ Last Updated (UTC): 2026-03-29T02:58:48.475229+00:00
 - 2026 (season_id=1)
 
 ## Last Completed Milestone
+
+Session 70 (Top-50 APEX re-score with measurables block live; state file updates) — board changed.
+
+Session 70:
+- Top-50 re-score: 50/50 scored (Fano retried individually after JSON parse failure on batch run).
+  0 failed, 0 GEN- archetypes.
+- Tier distribution post re-score (top 50): ELITE=3, DAY1=26, DAY2=20, DAY3=1, UDFA-P=0.
+  vs pre-score (top 50):                   ELITE=4, DAY1=30, DAY2=15, DAY3=1, UDFA-P=0.
+- Notable score shifts (|delta| > 3 pts): 17 prospects.
+  Largest: Mansoor Delane +9.1 (DAY1), Arvell Reese -8.8 (ELITE->DAY1), Ty Simpson +7.3 (DAY2->DAY1).
+  Full list in data/exports/s70_rescore_report.txt.
+- ARCHETYPE_OVERRIDES integrity: Kilgore (pid=309) INTACT, Neal (pid=109) INTACT.
+- Divergence post re-score: APEX_HIGH=63, ALIGNED=28, STRUCTURAL=45, APEX_LOW=4.
+  (vs S69: APEX_HIGH=61, ALIGNED=30, STRUCTURAL=46, APEX_LOW=3 — shifts of <=2, stable)
+- Decision gate report: HOLD -- INVESTIGATE.
+  Trigger: DAY1 shifted -4, DAY2 shifted +5 in top-50 (threshold <=3 per tier).
+  Primary driver: Arvell Reese (#2 consensus) dropped ELITE->DAY1 (-8.8 pts) with measurables
+  context (forty=4.46, ATH=86.6, SPEED=72.6). Investigate before full batch.
+  Report: data/exports/s70_rescore_report.txt.
+- STATE_SNAPSHOT.md and CLAUDE.md updated to reflect S69-S70.
+- Doctor: PASSED.
 
 Session 69 (RAS re-ingest, jfosterfilm measurables pipeline, combine_2026 decommission, Migration 0048) — board current.
 
@@ -732,12 +753,13 @@ Prior sessions on record: 12 (DB rebuild), 13 (weekly pipeline), 13b (school/arc
 
 ## Next Milestone (Single Target)
 
-- Session 70: Full APEX re-score (run_apex_scoring_2026.py --batch all --force --apply 1).
-  First re-score with measurables block live in the prompt (Session 69). Before batch:
-  spot-check one prospect with measurables data (--prospect-ids [pid]) and confirm the
-  MEASURABLES block appears in the prompt. After re-score: recompute divergence, re-run
-  tag triggers, doctor. Expect tier distribution and divergence to shift as composite
-  scores (ATH/SPEED/ACC/AGI) give the model more signal on thin prospects.
+- Session 71: Investigate Arvell Reese (#2 consensus, pid=16) ELITE->DAY1 drop (-8.8 pts).
+  Determine whether measurables context (forty=4.46, ATH=86.6, SPEED=72.6) mechanistically
+  justifies the drop or represents a measurables over-weighting artifact. If justified:
+  proceed with --batch all --force --apply 1 (full re-score). If artifact: add Reese to
+  ARCHETYPE_OVERRIDES with score floor directive before full batch.
+  After investigation decision: run --batch all, recompute divergence, re-run tag triggers,
+  triage pending recs, doctor.
 
 ---
 
@@ -774,7 +796,11 @@ SNAPSHOTS: Operational. Latest: snapshot_id=6 (2026-03-18). rows=1001 — PASSED
 APEX: Operational. 140 v2.3 active non-cal scored + 12 calibration artifacts.
   Measurables block live in prompt (Session 69): _get_measurables_context() injected into
   web_context after RAS block. 716 prospects have measurables data.
-  Tiers (v2.3 active non-cal, post Session 69): ELITE=4, DAY1=36, DAY2=64, DAY3=34, UDFA-P=2.
+  Tiers (v2.3 active non-cal, post Session 70 top-50 re-score):
+    Full board: ELITE=3, DAY1=35, DAY2=66, DAY3=34, UDFA-P=2 (approx — top-50 only re-scored)
+    Top-50 subset: ELITE=3, DAY1=26, DAY2=20, DAY3=1, UDFA-P=0
+  Decision gate: HOLD. Arvell Reese ELITE->DAY1 drop under investigation.
+  Divergence: APEX_HIGH=63, ALIGNED=28, STRUCTURAL=45, APEX_LOW=4.
   Divergence (current, post Session 56 SPM repoint): ALIGNED=25, APEX_HIGH=64, APEX_LOW=3,
     APEX_LOW_PVC_STRUCTURAL=52.
   Top premium APEX_HIGH (post-repoint, coverage artifacts resolved):
@@ -956,11 +982,11 @@ Inactive (data preserved): ngs_2026 (source_id=29, is_active=0) — model score,
 
 2) System Snapshot Output
 === DRAFTOS SYSTEM SNAPSHOT ===
-generated_utc: 2026-03-29T02:58:47.545147+00:00
+generated_utc: 2026-03-29T04:48:50.986942+00:00
 
 ## Git
 branch: main
-commit: 55f8f4eb9468769ae1eaa0b31525756a639bbc65
+commit: 723bab1d36c2b72f6e12d3a74b47eecb03e61b71
 status: clean
 
 ## Tables
