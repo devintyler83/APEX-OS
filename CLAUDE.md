@@ -71,13 +71,23 @@ The `prospects` table contains additional soft-deprecated rows (`is_active=0`) f
 
 ---
 
-## Current System State (Post-Session 68)
+## Current System State (Post-Session 70)
 
 ### Database
 - Size: ~19MB
-- Migrations applied: 46 applied (0001–0047). Next migration: 0048.
+- Migrations applied: 48 applied (0001–0048). Next migration: 0049.
 - Git: clean, branch=main
-- Doctor: PASSED (post-Session 68)
+- Doctor: PASSED (post-Session 70)
+
+### Measurables Pipeline (Session 69)
+- prospect_measurables table (Migration 0048): 716 rows. One row per prospect per season.
+  Source: jfosterfilm_2026.csv expanded column set (OVR, POS, CON, AGE, HEIGHT, WEIGHT,
+  ARM, WING, HAND, 10Y, 40Y, SHUTTLE, 3Cone, VRT, BRD, PROD, ATH, SIZE, SPEED, ACC, AGI).
+  CON column (consensus_rank): stored for reference and APEX prompt injection only.
+  Not injected into consensus build weights.
+- APEX scoring prompt: _get_measurables_context() injected after RAS block in web_context.
+  Graceful fallback — no-op if no measurables row exists for the prospect.
+- Ingest script: scripts/ingest_jfosterfilm_measurables_2026.py (idempotent, INSERT OR REPLACE).
 
 ### Sources
 
@@ -91,13 +101,23 @@ The `prospects` table contains additional soft-deprecated rows (`is_active=0`) f
 | T2 | nfldraftbuzz_2026_v2, cbssports_2026, espn_2026, nytimes_2026, pfsn_2026, jfosterfilm_2026, nflcom_2026, combine_ranks_2026, bleacherreport_2026, fantasypros_2026 | 1.0x |
 | T3 | bnbfootball_2026, tankathon_2026, drafttek_2026 | 0.7x |
 | Inactive (model) | ngs_2026 (is_active=0) | — |
+| Inactive (decommissioned) | combine_2026 (source_id=31, is_active=0) | — |
 
 - `source_canonical_map` entries: resolve duplicates (espn, pff, pfsn-consensus-*, theringer)
 - SOURCE NAMING RULE: source name must match file and methodology exactly. combine_2026.csv rankings → combine_ranks_2026. nflcom_2026.csv editorial board → nflcom_2026.
+- **jfosterfilm_2026 expanded columns (Session 69):** source_id=1, T2, weight=1.0.
+  Ranking columns (feed consensus): OVR rank, POS rank.
+  Measurables columns (stored in prospect_measurables, NOT in consensus weights):
+  CON (consensus rank, 700+ player coverage), AGE, HEIGHT, WEIGHT, ARM, WING, HAND,
+  10Y, 40Y, SHUTTLE, 3Cone, VRT, BRD, PROD, ATH, SIZE, SPEED, ACC, AGI.
+  Available in APEX scoring prompt via _get_measurables_context().
+- **combine_2026 DECOMMISSIONED Session 69:** source_id=31, is_active=0. CSV removed from
+  filesystem. Data superseded by prospect_measurables table (jfosterfilm measurables pipeline).
+  ingest_combine_2026.py retained for audit history — prints decommission message and exits.
 
 ### Consensus
-- Rows: 1001+ (Session 62+ multi-source ingest, LB ghost PID consolidation)
-- Top: #1 Fernando Mendoza QB | #2 Arvell Reese EDGE | #3 Rueben Bain EDGE (per Session 62 rebuild)
+- Rows: 1001 (rebuilt Session 69)
+- Top: #1 Fernando Mendoza QB | #2 Arvell Reese EDGE | #3 Caleb Downs S (per Session 69 rebuild)
 - Build method: Full DELETE + INSERT on each rebuild (not upsert). Safe — consensus is derived data.
 - Latest board snapshot: snapshot_id=6 (2026-03-18): rows=1001 — PASSED
 
@@ -106,10 +126,13 @@ The `prospects` table contains additional soft-deprecated rows (`is_active=0`) f
 - Scored prospects: 140 active 2026 (is_active=1, is_calibration_artifact=0) + 12 calibration artifacts (excluded from board)
 - **Canonical tier labels: ELITE (≥85), DAY1 (≥70), DAY2 (≥55), DAY3 (≥40), UDFA-P (≥28), UDFA (<28)**
   - `compute_apex_tier()` in `engine.py` emits all 6 labels. Board display script (`app/app.py`) recognizes all 6.
-- Board tier dist (Session 67 pre-draft snapshot): ELITE=4, DAY1=36, DAY2=64, DAY3=34, UDFA-P=2 (140 total)
+- Board tier dist (Session 70, top-50 re-scored): ELITE=3, DAY1=35*, DAY2=66*, DAY3=34, UDFA-P=2 (140 total)
+  (*approx — only top 50 re-scored S70; full board re-score pending Session 71 gate)
+  Top-50 subset post S70: ELITE=3, DAY1=26, DAY2=20, DAY3=1.
+  Pre-S69 snapshot (Session 67): ELITE=4, DAY1=36, DAY2=64, DAY3=34, UDFA-P=2.
 - PVC: QB/CB/EDGE=1.0x | OT/S/IDL=0.90x | ILB/OLB=0.85x | OG/TE/C=0.80x | RB=0.70x
 - Divergence method: Rank-relative. `consensus_rank` vs `apex_ovr_rank` delta.
-- Divergence dist (Session 64): ALIGNED=30, APEX_HIGH=61, APEX_LOW=3, STRUCTURAL=46
+- Divergence dist (Session 70): ALIGNED=28, APEX_HIGH=63, APEX_LOW=4, STRUCTURAL=45
 - Capital range derived from `apex_composite` (PVC-adjusted), not raw_score. Patched Session 65.
 - **CRITICAL OVERRIDE NOTE**: TOP50_POSITION_OVERRIDES and ARCHETYPE_OVERRIDES in run_apex_scoring_2026.py use prospect_ids. If DB is ever rebuilt, re-verify ALL prospect_ids in both dicts before running any batch scoring.
 - Calibration artifacts: 12 players (PIDs: 230,304,313,455,504,880,1050,1278,1371,1391,1729,1925).
@@ -209,11 +232,13 @@ APEX LOW on non-premium positions (ILB, OLB, OG, C, TE, RB) is structural PVC be
 
 ## Current Priorities (Ordered)
 
-1. **prospect_comps expansion** — Migration 0047 applied. Seed historical comps for scored prospects; build comp suggestion engine.
-2. **Remaining source ingest** — drafttek_2026 seeded (T3). Any additional high-quality sources.
+1. **Full batch re-score** — Session 71. Investigate Arvell Reese (#2, pid=16) ELITE→DAY1 drop
+   (-8.8 pts, measurables context forty=4.46/ATH=86.6). If justified, run --batch all --force.
+   Decision gate report: data/exports/s70_rescore_report.txt.
+2. **prospect_comps expansion** — Migration 0047 applied. Seed historical comps for scored prospects.
 3. **Post-draft audit framework** — APEX Framework Section 9. Activate after April 2026 draft.
-4. **Pre-draft snapshot** — `take_predraft_snapshot_2026.py`; run before draft night (already run Session 67, 140 rows).
-5. **RAS re-ingest** — After pro days complete (April). Run `ingest_ras_2026.py` with updated file. Fully idempotent.
+4. **Pre-draft snapshot** — Already run Session 67 (140 rows). Re-run after full batch re-score.
+5. **RAS re-ingest (post pro days)** — Already re-ingested S69 (post-combine). Re-run after April pro days.
 6. **App UI** — Streamlit app is a stub; `surface_map.md` defines four rendering surfaces.
 
 ---
