@@ -10,14 +10,14 @@ Non-negotiables:
 - Provide run order + verification commands
 
 Goal for this chat:
-Session 69: RAS re-ingest (ras_2026.csv updated 2026-03-17 with post-combine data — run
+Session 70: Full APEX re-score (run_apex_scoring_2026.py --batch all --force --apply 1).
 
 Authoritative State:
 
 1) STATE_SNAPSHOT.md
 # DraftOS State Snapshot
 
-Last Updated (UTC): 2026-03-18T06:55:55.549609+00:00
+Last Updated (UTC): 2026-03-29T02:58:48.475229+00:00
 
 ---
 
@@ -26,6 +26,31 @@ Last Updated (UTC): 2026-03-18T06:55:55.549609+00:00
 - 2026 (season_id=1)
 
 ## Last Completed Milestone
+
+Session 69 (RAS re-ingest, jfosterfilm measurables pipeline, combine_2026 decommission, Migration 0048) — board current.
+
+Session 69:
+- RAS re-ingest: ingest_ras_2026.py --apply 1. 726 matched, 1135 unmatched (UDFA/FCS). RAS updated
+  with post-combine data (ras_2026.csv 2026-03-17). updated_at timestamps refreshed.
+- Migration 0048: prospect_measurables table. 27 columns. UNIQUE(prospect_id, season_id).
+  Stores jfosterfilm expanded measurables: bio, arm/wing/hand, speed/agility drills,
+  explosiveness, composite scores (ATH/SPEED/ACC/AGI/SIZE/PROD), consensus_rank.
+  meta_migrations: 0048_prospect_measurables logged.
+- ingest_jfosterfilm_measurables_2026.py: new script. 731 rows in CSV, 716 matched (97.9%),
+  15 unmatched (minor UDFA-tier players not in DB). All via exact_name_school_raw.
+  prospect_measurables: 716 rows written.
+- run_apex_scoring_2026.py: _get_measurables_context() added. Injected into web_context
+  immediately after RAS block. Graceful fallback — no-op for prospects with no measurables row.
+  Kilgore/Neal/Drones ARCHETYPE_OVERRIDES gates untouched (constraint respected).
+- combine_2026 decommission: source_id=31 was already is_active=0 (no DB change needed).
+  ingest_combine_2026.py: DECOMMISSIONED header + sys-exit in main(). Prints clean message.
+  patch_source_canonicalization_2026.py: decommission comment at lines 77-80.
+  ingest_nflcom_2026.py: doc comment updated to reference prospect_measurables pipeline.
+- Consensus rebuild: 1001 rows. Fernando Mendoza #1, Arvell Reese #2, Caleb Downs #3. Stable.
+- Divergence recompute: ALIGNED=30, APEX_HIGH=61, APEX_LOW=3, STRUCTURAL=46. Identical to S68 baseline.
+- Tag triggers: 16 new recs (6 Elite RAS, 8 Great RAS, 2 Poor RAS). All 16 auto-accepted.
+  pending=0. System tags total=249.
+- Doctor: PASSED. Active sources=16. Migrations applied through 0048.
 
 Session 68 (Visual system rebuild: DraftOS design token system, Prizm card aesthetic, prospect_comps Migration 0047) — board current.
 
@@ -707,51 +732,49 @@ Prior sessions on record: 12 (DB rebuild), 13 (weekly pipeline), 13b (school/arc
 
 ## Next Milestone (Single Target)
 
-- Session 69: RAS re-ingest (ras_2026.csv updated 2026-03-17 with post-combine data — run
-  ingest_ras_2026.py --apply 1). Then: user analyst tag UI — sidebar widget for Crush / Want /
-  Do Not Want / Off-Field Concern tag assignment directly from app. Writes source='analyst' to
-  prospect_tags table.
+- Session 70: Full APEX re-score (run_apex_scoring_2026.py --batch all --force --apply 1).
+  First re-score with measurables block live in the prompt (Session 69). Before batch:
+  spot-check one prospect with measurables data (--prospect-ids [pid]) and confirm the
+  MEASURABLES block appears in the prompt. After re-score: recompute divergence, re-run
+  tag triggers, doctor. Expect tier distribution and divergence to shift as composite
+  scores (ATH/SPEED/ACC/AGI) give the model more signal on thin prospects.
 
 ---
 
 ## Layer Status
 
-RAW CSVs: 15 raw CSVs present in data/imports/rankings/raw/2026/ (includes combine_2026.csv,
-  nflcom_2026.csv, ngs_2026.csv).
+RAW CSVs: CSVs present in data/imports/rankings/raw/2026/. combine_2026.csv REMOVED Session 69
+  (superseded by jfosterfilm measurables pipeline). nflcom_2026.csv, ngs_2026.csv present.
 
 STAGING: Staged CSVs present per source under data/imports/rankings/staged/2026/.
 
-INGEST: Operational. 31 sources (14 active canonical), source_players: 9919,
-  source_rankings: 42143.
-  analyst_grade column active on source_rankings (migration 0038). Populated for
-  bleacherreport_2026 only.
-  combine_2026.csv → combine_ranks_2026 (source_id=28): 735 rows. Also writes
-    hand_size/arm_length/wingspan to ras (migration 0039).
-  nflcom_2026.csv → nflcom_2026 (source_id=30, T2 1.0): 303 rows. NFL.com editorial big board.
-  ngs_2026.csv → ngs_2026 (source_id=29, is_active=0): 312 rows. ngs_score in grade column.
-    Not in consensus — model score, not scout ranking.
+INGEST: Operational. 33 sources (16 active canonical), source_players: 10519,
+  source_rankings: 42743.
+  combine_2026 (source_id=31): is_active=0. CSV removed Session 69. Alias retained for audit.
+  nflcom_2026 (source_id=30, T2 1.0): 303 rows. NFL.com editorial big board.
+  ngs_2026 (source_id=29, is_active=0): 312 rows. Model score — not in consensus.
+  MEASURABLES: prospect_measurables table (Migration 0048). 716 rows from jfosterfilm_2026.csv.
+    ingest_jfosterfilm_measurables_2026.py — idempotent, INSERT OR REPLACE on (prospect_id, season_id).
 
-BOOTSTRAP: Operational. prospects: 4555 total (active managed by is_active flag).
+BOOTSTRAP: Operational. prospects: 4571 total (active managed by is_active flag).
 
 UNIVERSE: Operational. data/universe/prospect_universe_2026.csv (861 players).
   Migration 0033 applied.
 
-CONSENSUS: Operational. 1005 rows (14 active sources, rebuilt Session 56 post-SPM-repoint).
-  Top: Fernando Mendoza QB 98.32 | Jeremiyah Love RB 95.80 | David Bailey EDGE 94.96.
-  D'Angelo Ponds (pid=3236): sources_covered 2->12, consensus_rank #190->#28 (SPM fix).
+CONSENSUS: Operational. 1001 rows (16 active sources, rebuilt Session 69).
+  Top: Fernando Mendoza QB #1 | Arvell Reese EDGE #2 | Caleb Downs S #3.
 
-MODEL OUTPUTS: Operational. 1003 rows (Session 42 rebuild).
+MODEL OUTPUTS: Operational.
 
-SNAPSHOTS: Operational. Latest: snapshot_id=5 (2026-03-14). rows=1007, coverage=1007,
-  confidence=1007 — PASSED (Session 43 weekly pipeline clean run).
+SNAPSHOTS: Operational. Latest: snapshot_id=6 (2026-03-18). rows=1001 — PASSED.
   Full pipeline: build_consensus → snapshot_board → compute_snapshot_metrics →
   compute_source_snapshot_metrics → compute_snapshot_coverage →
   compute_snapshot_confidence → verify_snapshot_integrity
 
-APEX: Operational. 144 v2.3 active non-cal scored + 12 calibration artifacts. 0 GEN- archetypes.
-  All 144 carry canonical v2.3 archetype names (Session 45 full re-score complete).
-  Comp-enriched prompts active (Sessions 52-54): all 144 re-scored with historical comp context.
-  Tiers (v2.3 active non-cal, post Session 54): ELITE=3, DAY1=35, DAY2=68, DAY3=36, UDFA-P=2.
+APEX: Operational. 140 v2.3 active non-cal scored + 12 calibration artifacts.
+  Measurables block live in prompt (Session 69): _get_measurables_context() injected into
+  web_context after RAS block. 716 prospects have measurables data.
+  Tiers (v2.3 active non-cal, post Session 69): ELITE=4, DAY1=36, DAY2=64, DAY3=34, UDFA-P=2.
   Divergence (current, post Session 56 SPM repoint): ALIGNED=25, APEX_HIGH=64, APEX_LOW=3,
     APEX_LOW_PVC_STRUCTURAL=52.
   Top premium APEX_HIGH (post-repoint, coverage artifacts resolved):
@@ -933,11 +956,11 @@ Inactive (data preserved): ngs_2026 (source_id=29, is_active=0) — model score,
 
 2) System Snapshot Output
 === DRAFTOS SYSTEM SNAPSHOT ===
-generated_utc: 2026-03-18T06:55:54.856066+00:00
+generated_utc: 2026-03-29T02:58:47.545147+00:00
 
 ## Git
 branch: main
-commit: 46f697f10c957058577b2e5b51e7ceeb82125ccb
+commit: 55f8f4eb9468769ae1eaa0b31525756a639bbc65
 status: clean
 
 ## Tables
@@ -963,6 +986,7 @@ status: clean
 - prospect_canonical_map
 - prospect_comps
 - prospect_consensus_rankings
+- prospect_measurables
 - prospect_model_outputs
 - prospect_tag_history
 - prospect_tag_recommendations
@@ -1042,6 +1066,7 @@ status: clean
 - 0045_divergence_favors_text @ 2026-03-15T23:17:09.878059+00:00
 - 0046_historical_comps_fm_seed @ 2026-03-17 02:43:51
 - 0047_prospect_comps @ 2026-03-18T06:19:36.330649+00:00
+- 0048_prospect_measurables @ 2026-03-29 02:49:06
 
 ## Active Season
 no is_active column
@@ -1070,19 +1095,39 @@ no is_active column
 - draftos\tags\evaluator.py
 - draftos\ui\__init__.py
 - draftos\ui\profile_dimensions.py
+- fix_card_v5.py
+- fix_score_grid.py
 - scripts\_diag_school_aliases.py
 - scripts\_verify_weights.py
 - scripts\_write_canonical_ref.py
-- scripts\accept_tag_recommendations_2026.py
 - scripts\accept_tag_recs_2026.py
 - scripts\apply_prospect_universe_2026.py
-- scripts\apply_review_queue_mappings_2026.py
+- scripts\archive\__init__.py
+- scripts\archive\apply_review_queue_mappings_2026.py
+- scripts\archive\autoresolve_mapping_review_queue_2026.py
+- scripts\archive\build_mapping_review_queue_2026.py
+- scripts\archive\consolidate_lb_ghost_pids_s62.py
+- scripts\archive\dedup_prospects_2026.py
+- scripts\archive\expand_school_aliases_2026.py
+- scripts\archive\export_mapping_review_queue_csv.py
+- scripts\archive\fix_calibration_divergence_2026.py
+- scripts\archive\fix_concepcion_2026.py
+- scripts\archive\fix_spm_dead_pid_repoint.py
+- scripts\archive\fix_text_styles_s66.py
+- scripts\archive\import_apex_batch_json.py
+- scripts\archive\learn_school_aliases_from_mapped_2026.py
+- scripts\archive\patch_0005_0006_soft_deprecate_nfldraftbuzz.py
+- scripts\archive\patch_0007_bootstrap_prospects_2026.py
+- scripts\archive\patch_apex_archetypes_local_2026.py
+- scripts\archive\patch_new_source_mapping_s60.py
+- scripts\archive\patch_school_canonicalization_2026.py
+- scripts\archive\patch_school_from_universe_2026.py
+- scripts\archive\repair_school_aliases_2026.py
+- scripts\archive\tag_calibration_artifacts_2026.py
 - scripts\audit_position_mismatches_2026.py
 - scripts\audit_position_overrides_2026.py
-- scripts\autoresolve_mapping_review_queue_2026.py
 - scripts\bootstrap_prospects_from_sources_2026.py
 - scripts\build_consensus_2026.py
-- scripts\build_mapping_review_queue_2026.py
 - scripts\build_model_outputs_v1_default_2026.py
 - scripts\build_prospect_universe_2026.py
 - scripts\build_snapshot_packet.py
@@ -1090,51 +1135,32 @@ no is_active column
 - scripts\compute_snapshot_coverage.py
 - scripts\compute_snapshot_metrics.py
 - scripts\compute_source_snapshot_metrics.py
-- scripts\consolidate_lb_ghost_pids_s62.py
-- scripts\dedup_prospects_2026.py
 - scripts\delete_orphan_snapshots.py
 - scripts\doctor.py
 - scripts\doctor_snapshot.py
 - scripts\end_session.py
-- scripts\evaluate_tag_triggers_2026.py
-- scripts\expand_school_aliases_2026.py
 - scripts\export_board_csv.py
 - scripts\export_confidence_summary_csv.py
-- scripts\export_mapping_review_queue_csv.py
 - scripts\export_movers_csv.py
 - scripts\export_reports_html.py
 - scripts\export_source_health_csv.py
-- scripts\fix_calibration_divergence_2026.py
-- scripts\fix_concepcion_2026.py
-- scripts\fix_spm_dead_pid_repoint.py
-- scripts\fix_text_styles_s66.py
 - scripts\generate_prospect_pdf_2026.py
-- scripts\import_apex_batch_json.py
 - scripts\ingest_combine_2026.py
 - scripts\ingest_drafttek_2026.py
 - scripts\ingest_fantasypros_2026.py
+- scripts\ingest_jfosterfilm_measurables_2026.py
 - scripts\ingest_nflcom_2026.py
 - scripts\ingest_ngs_2026.py
 - scripts\ingest_rankings_staged.py
 - scripts\ingest_ras_2026.py
-- scripts\learn_school_aliases_from_mapped_2026.py
 - scripts\log_draft_pick_2026.py
-- scripts\patch_0005_0006_soft_deprecate_nfldraftbuzz.py
-- scripts\patch_0007_bootstrap_prospects_2026.py
-- scripts\patch_apex_archetypes_local_2026.py
 - scripts\patch_name_normalization_2026.py
-- scripts\patch_new_source_mapping_s60.py
 - scripts\patch_prospect_canonicalization_2026.py
-- scripts\patch_school_canonicalization_2026.py
-- scripts\patch_school_from_universe_2026.py
 - scripts\patch_source_canonicalization_2026.py
 - scripts\publish_latest_packet.py
 - scripts\reingest_source_2026.py
-- scripts\repair_school_aliases_2026.py
 - scripts\repair_snapshot_orphans.py
-- scripts\run_apex_scoring_2026.backup_20260313_205410.py
 - scripts\run_apex_scoring_2026.py
-- scripts\run_tag_trigger_engine_2026.py
 - scripts\run_tag_triggers_2026.py
 - scripts\run_weekly_update.py
 - scripts\scrape_nfldraftbuzz_2026.py
@@ -1144,7 +1170,6 @@ no is_active column
 - scripts\seed_position_comps_batch2.py
 - scripts\snapshot_board.py
 - scripts\stage_rankings_csv.py
-- scripts\tag_calibration_artifacts_2026.py
 - scripts\take_predraft_snapshot_2026.py
 - scripts\triage_pending_tags_2026.py
 - scripts\verify_packet_manifest.py
@@ -1156,6 +1181,7 @@ no is_active column
 - draftos\apex\__init__.py
 - draftos\tags\__init__.py
 - draftos\ui\__init__.py
+- scripts\archive\__init__.py
 - scripts\doctor_snapshot.py (DEFERRED)
 - tests\__init__.py
 
