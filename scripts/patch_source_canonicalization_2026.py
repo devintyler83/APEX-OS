@@ -74,7 +74,9 @@ ALIAS_MAP: dict[int, tuple[int, str, str]] = {
     # theringer group -> theringer_2026 (25)
     26: (25, "theringer",                  "theringer_2026"),
 
-    # combine_2026 (staged from combine_2026.csv) -> combine_ranks_2026 (28)
+    # combine_2026 (source_id=31) DECOMMISSIONED Session 69.
+    # Alias mapping retained for audit integrity of existing
+    # source_canonical_map rows. Do not re-activate.
     # combine_2026 is created by ingest_rankings_staged on each pipeline run;
     # the canonical key for this source is combine_ranks_2026.
     31: (28, "combine_2026",               "combine_ranks_2026"),

@@ -1,6 +1,6 @@
 # DraftOS State Snapshot
 
-Last Updated (UTC): 2026-03-18T06:55:55.549609+00:00
+Last Updated (UTC): 2026-03-29T02:55:00.000000+00:00
 
 ---
 
@@ -9,6 +9,31 @@ Last Updated (UTC): 2026-03-18T06:55:55.549609+00:00
 - 2026 (season_id=1)
 
 ## Last Completed Milestone
+
+Session 69 (RAS re-ingest, jfosterfilm measurables pipeline, combine_2026 decommission, Migration 0048) — board current.
+
+Session 69:
+- RAS re-ingest: ingest_ras_2026.py --apply 1. 726 matched, 1135 unmatched (UDFA/FCS). RAS updated
+  with post-combine data (ras_2026.csv 2026-03-17). updated_at timestamps refreshed.
+- Migration 0048: prospect_measurables table. 27 columns. UNIQUE(prospect_id, season_id).
+  Stores jfosterfilm expanded measurables: bio, arm/wing/hand, speed/agility drills,
+  explosiveness, composite scores (ATH/SPEED/ACC/AGI/SIZE/PROD), consensus_rank.
+  meta_migrations: 0048_prospect_measurables logged.
+- ingest_jfosterfilm_measurables_2026.py: new script. 731 rows in CSV, 716 matched (97.9%),
+  15 unmatched (minor UDFA-tier players not in DB). All via exact_name_school_raw.
+  prospect_measurables: 716 rows written.
+- run_apex_scoring_2026.py: _get_measurables_context() added. Injected into web_context
+  immediately after RAS block. Graceful fallback — no-op for prospects with no measurables row.
+  Kilgore/Neal/Drones ARCHETYPE_OVERRIDES gates untouched (constraint respected).
+- combine_2026 decommission: source_id=31 was already is_active=0 (no DB change needed).
+  ingest_combine_2026.py: DECOMMISSIONED header + sys-exit in main(). Prints clean message.
+  patch_source_canonicalization_2026.py: decommission comment at lines 77-80.
+  ingest_nflcom_2026.py: doc comment updated to reference prospect_measurables pipeline.
+- Consensus rebuild: 1001 rows. Fernando Mendoza #1, Arvell Reese #2, Caleb Downs #3. Stable.
+- Divergence recompute: ALIGNED=30, APEX_HIGH=61, APEX_LOW=3, STRUCTURAL=46. Identical to S68 baseline.
+- Tag triggers: 16 new recs (6 Elite RAS, 8 Great RAS, 2 Poor RAS). All 16 auto-accepted.
+  pending=0. System tags total=249.
+- Doctor: PASSED. Active sources=16. Migrations applied through 0048.
 
 Session 68 (Visual system rebuild: DraftOS design token system, Prizm card aesthetic, prospect_comps Migration 0047) — board current.
 
@@ -690,51 +715,49 @@ Prior sessions on record: 12 (DB rebuild), 13 (weekly pipeline), 13b (school/arc
 
 ## Next Milestone (Single Target)
 
-- Session 69: RAS re-ingest (ras_2026.csv updated 2026-03-17 with post-combine data — run
-  ingest_ras_2026.py --apply 1). Then: user analyst tag UI — sidebar widget for Crush / Want /
-  Do Not Want / Off-Field Concern tag assignment directly from app. Writes source='analyst' to
-  prospect_tags table.
+- Session 70: Full APEX re-score (run_apex_scoring_2026.py --batch all --force --apply 1).
+  First re-score with measurables block live in the prompt (Session 69). Before batch:
+  spot-check one prospect with measurables data (--prospect-ids [pid]) and confirm the
+  MEASURABLES block appears in the prompt. After re-score: recompute divergence, re-run
+  tag triggers, doctor. Expect tier distribution and divergence to shift as composite
+  scores (ATH/SPEED/ACC/AGI) give the model more signal on thin prospects.
 
 ---
 
 ## Layer Status
 
-RAW CSVs: 15 raw CSVs present in data/imports/rankings/raw/2026/ (includes combine_2026.csv,
-  nflcom_2026.csv, ngs_2026.csv).
+RAW CSVs: CSVs present in data/imports/rankings/raw/2026/. combine_2026.csv REMOVED Session 69
+  (superseded by jfosterfilm measurables pipeline). nflcom_2026.csv, ngs_2026.csv present.
 
 STAGING: Staged CSVs present per source under data/imports/rankings/staged/2026/.
 
-INGEST: Operational. 31 sources (14 active canonical), source_players: 9919,
-  source_rankings: 42143.
-  analyst_grade column active on source_rankings (migration 0038). Populated for
-  bleacherreport_2026 only.
-  combine_2026.csv → combine_ranks_2026 (source_id=28): 735 rows. Also writes
-    hand_size/arm_length/wingspan to ras (migration 0039).
-  nflcom_2026.csv → nflcom_2026 (source_id=30, T2 1.0): 303 rows. NFL.com editorial big board.
-  ngs_2026.csv → ngs_2026 (source_id=29, is_active=0): 312 rows. ngs_score in grade column.
-    Not in consensus — model score, not scout ranking.
+INGEST: Operational. 33 sources (16 active canonical), source_players: 10519,
+  source_rankings: 42743.
+  combine_2026 (source_id=31): is_active=0. CSV removed Session 69. Alias retained for audit.
+  nflcom_2026 (source_id=30, T2 1.0): 303 rows. NFL.com editorial big board.
+  ngs_2026 (source_id=29, is_active=0): 312 rows. Model score — not in consensus.
+  MEASURABLES: prospect_measurables table (Migration 0048). 716 rows from jfosterfilm_2026.csv.
+    ingest_jfosterfilm_measurables_2026.py — idempotent, INSERT OR REPLACE on (prospect_id, season_id).
 
-BOOTSTRAP: Operational. prospects: 4555 total (active managed by is_active flag).
+BOOTSTRAP: Operational. prospects: 4571 total (active managed by is_active flag).
 
 UNIVERSE: Operational. data/universe/prospect_universe_2026.csv (861 players).
   Migration 0033 applied.
 
-CONSENSUS: Operational. 1005 rows (14 active sources, rebuilt Session 56 post-SPM-repoint).
-  Top: Fernando Mendoza QB 98.32 | Jeremiyah Love RB 95.80 | David Bailey EDGE 94.96.
-  D'Angelo Ponds (pid=3236): sources_covered 2->12, consensus_rank #190->#28 (SPM fix).
+CONSENSUS: Operational. 1001 rows (16 active sources, rebuilt Session 69).
+  Top: Fernando Mendoza QB #1 | Arvell Reese EDGE #2 | Caleb Downs S #3.
 
-MODEL OUTPUTS: Operational. 1003 rows (Session 42 rebuild).
+MODEL OUTPUTS: Operational.
 
-SNAPSHOTS: Operational. Latest: snapshot_id=5 (2026-03-14). rows=1007, coverage=1007,
-  confidence=1007 — PASSED (Session 43 weekly pipeline clean run).
+SNAPSHOTS: Operational. Latest: snapshot_id=6 (2026-03-18). rows=1001 — PASSED.
   Full pipeline: build_consensus → snapshot_board → compute_snapshot_metrics →
   compute_source_snapshot_metrics → compute_snapshot_coverage →
   compute_snapshot_confidence → verify_snapshot_integrity
 
-APEX: Operational. 144 v2.3 active non-cal scored + 12 calibration artifacts. 0 GEN- archetypes.
-  All 144 carry canonical v2.3 archetype names (Session 45 full re-score complete).
-  Comp-enriched prompts active (Sessions 52-54): all 144 re-scored with historical comp context.
-  Tiers (v2.3 active non-cal, post Session 54): ELITE=3, DAY1=35, DAY2=68, DAY3=36, UDFA-P=2.
+APEX: Operational. 140 v2.3 active non-cal scored + 12 calibration artifacts.
+  Measurables block live in prompt (Session 69): _get_measurables_context() injected into
+  web_context after RAS block. 716 prospects have measurables data.
+  Tiers (v2.3 active non-cal, post Session 69): ELITE=4, DAY1=36, DAY2=64, DAY3=34, UDFA-P=2.
   Divergence (current, post Session 56 SPM repoint): ALIGNED=25, APEX_HIGH=64, APEX_LOW=3,
     APEX_LOW_PVC_STRUCTURAL=52.
   Top premium APEX_HIGH (post-repoint, coverage artifacts resolved):

@@ -25,8 +25,9 @@ SEASON_ID = 1
 SOURCE_NAME = "nflcom_2026"
 SOURCE_NOTES = (
     "NFL.com Rankings 2026. 303 ranked prospects. "
-    "T2 weight (1.0). Separate from combine_ranks_2026 "
-    "(combine_2026.csv measurables + 735-player ranking). "
+    "T2 weight (1.0). Separate from combine_ranks_2026. "
+    "Measurables now via prospect_measurables table "
+    "(ingest_jfosterfilm_measurables_2026.py, Session 69). "
     "This is the NFL.com editorial big board ranking. "
     "Added Session 23b."
 )

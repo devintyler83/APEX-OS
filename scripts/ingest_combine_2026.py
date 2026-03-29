@@ -1,3 +1,9 @@
+# DECOMMISSIONED — Session 69 (2026-03-28)
+# combine_2026.csv has been removed from the filesystem.
+# Data superseded by prospect_measurables table via
+# ingest_jfosterfilm_measurables_2026.py.
+# This script is retained for audit history only.
+
 from __future__ import annotations
 
 # --- sys.path bootstrap so "python -m scripts.ingest_combine_2026" always works ---
@@ -474,6 +480,10 @@ def run_phase_b(
 # ── Main ───────────────────────────────────────────────────────────────────────
 
 def main() -> None:
+    print("DECOMMISSIONED: combine_2026.csv removed Session 69.")
+    print("Use jfosterfilm measurables pipeline instead.")
+    return
+
     ap = argparse.ArgumentParser(
         description="Ingest NFL.com combine rankings + measurables for 2026."
     )

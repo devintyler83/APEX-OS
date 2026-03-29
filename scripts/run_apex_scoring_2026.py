@@ -922,6 +922,68 @@ def _build_web_context(
     return "\n".join(lines)
 
 
+def _get_measurables_context(conn, prospect_id: int) -> str:
+    """
+    Returns a structured measurables string for the APEX prompt,
+    or empty string if no data exists for this prospect.
+    Session 69 — jfosterfilm expanded measurables pipeline.
+    """
+    row = conn.execute(
+        """
+        SELECT age, height_in, weight_lbs, arm_length, wingspan,
+               hand_size, ten_yard_split, forty_yard_dash, shuttle,
+               three_cone, vertical_jump, broad_jump,
+               prod_score, ath_score, size_score,
+               speed_score, acc_score, agi_score,
+               consensus_rank
+        FROM prospect_measurables
+        WHERE prospect_id = ? AND season_id = 1
+        """,
+        (prospect_id,),
+    ).fetchone()
+
+    if not row:
+        return ""
+
+    def fmt(val, suffix=""):
+        return f"{val}{suffix}" if val is not None else "\u2014"
+
+    height_str = ""
+    if row["height_in"]:
+        ft = row["height_in"] // 12
+        inch = row["height_in"] % 12
+        height_str = f"{ft}'{inch}\""
+
+    lines = ["MEASURABLES (jfosterfilm 2026):"]
+    lines.append(
+        f"  Build: {height_str or chr(8212)} | {fmt(row['weight_lbs'], 'lbs')} "
+        f"| Arm: {fmt(row['arm_length'], chr(34))} "
+        f"| Wing: {fmt(row['wingspan'], chr(34))} "
+        f"| Hand: {fmt(row['hand_size'], chr(34))}"
+    )
+    lines.append(
+        f"  Speed: 40yd={fmt(row['forty_yard_dash'])} "
+        f"| 10yd={fmt(row['ten_yard_split'])} "
+        f"| Shuttle={fmt(row['shuttle'])} "
+        f"| 3-Cone={fmt(row['three_cone'])}"
+    )
+    lines.append(
+        f"  Explosiveness: Vert={fmt(row['vertical_jump'], chr(34))} "
+        f"| Broad={fmt(row['broad_jump'], chr(34))}"
+    )
+    lines.append(
+        f"  Composite scores: ATH={fmt(row['ath_score'])} "
+        f"| SPEED={fmt(row['speed_score'])} "
+        f"| ACC={fmt(row['acc_score'])} "
+        f"| AGI={fmt(row['agi_score'])} "
+        f"| SIZE={fmt(row['size_score'])} "
+        f"| PROD={fmt(row['prod_score'])}"
+    )
+    if row["consensus_rank"]:
+        lines.append(f"  Consensus rank: #{row['consensus_rank']}")
+    return "\n".join(lines)
+
+
 # ---------------------------------------------------------------------------
 # Claude API call
 # ---------------------------------------------------------------------------
@@ -1216,6 +1278,11 @@ def _score_prospect(
         display_name, position, school,
         consensus["consensus_rank"], consensus["consensus_score"], ras_score,
     )
+
+    # --- Measurables block (Session 69) ---
+    measurables_block = _get_measurables_context(conn, prospect_id)
+    if measurables_block:
+        web_context = web_context + "\n\n" + measurables_block
 
     # Inject archetype direction / gate enforcement if this prospect has an override
     arch_override      = ARCHETYPE_OVERRIDES.get(prospect_id)
