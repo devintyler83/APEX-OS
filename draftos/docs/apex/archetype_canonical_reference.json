@@ -1,4 +1,13 @@
 {
+  "metadata": {
+    "file_version": "1.0",
+    "system_version": "2.3",
+    "version_note": "file_version tracks this document revision history. system_version is the APEX scoring system version this library corresponds to. v1.0 of this file = APEX v2.3. A cold session seeing file_version 1.0 and system_version 2.3 is not an alignment failure — these are different version namespaces.",
+    "created_session": 44,
+    "last_updated_session": 73,
+    "position_count": 14,
+    "archetype_count": 62
+  },
   "version": "1.0",
   "generated": "2026-03-14",
   "source": "DraftOS archetype library .docx files",

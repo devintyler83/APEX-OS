@@ -989,6 +989,29 @@ MEASURABLES_ARCHETYPE_CONTEXT: dict[str, str] = {
         "Apply forty time as a floor check only (flag if >4.75), not as a ceiling limiter."
     ),
 
+    "EDGE-4": (
+        "EVALUATION NOTE — EDGE-4 Athletic Dominator: "
+        "Primary mechanism metrics are forty-yard dash, ATH composite, "
+        "SPEED composite, and ten-yard split. "
+        "Unlike EDGE-1 and EDGE-3, athleticism IS the mechanism for "
+        "this archetype — speed and explosion metrics are genuine "
+        "ceiling indicators, not floor checks. "
+        "Apply forty time at full weight as a ceiling indicator: "
+        "sub-4.45 with elite ATH composite (≥85) reinforces the "
+        "archetype and supports DAY1+ capital. "
+        "Forty 4.46–4.55 with ATH composite 75–84: functional tools, "
+        "FM-1 risk moderate — apply one-tier capital discount. "
+        "Forty >4.55 OR ATH composite <75: FM-1 risk is high — "
+        "production is likely athleticism-generated against college "
+        "competition and may not transfer. Flag explicitly. "
+        "ARM LENGTH and WINGSPAN are secondary signals — adequate "
+        "length (≥32\") matters for point-of-attack control but does "
+        "not override a speed concern the way it does for EDGE-1/EDGE-3. "
+        "PROD composite is a positive secondary signal only when "
+        "speed metrics clear the threshold above — do not use "
+        "production to override an FM-1 athletic flag."
+    ),
+
     "CB-1": (
         "EVALUATION NOTE — CB-1 Anticipatory Lockdown: "
         "Primary mechanism metrics are AGI score (hip fluidity and transition), "

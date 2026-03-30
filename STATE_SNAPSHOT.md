@@ -1,6 +1,6 @@
 # DraftOS State Snapshot
 
-Last Updated (UTC): 2026-03-29T06:32:47.436618+00:00
+Last Updated (UTC): 2026-03-30T18:05:00.000000+00:00
 
 ---
 
@@ -9,6 +9,30 @@ Last Updated (UTC): 2026-03-29T06:32:47.436618+00:00
 - 2026 (season_id=1)
 
 ## Last Completed Milestone
+
+Session 73 (EDGE-4 measurables context fix + JSON version label + Bailey/Barham re-score) — board updated.
+
+Session 73:
+- MEASURABLES_ARCHETYPE_CONTEXT: EDGE-4 Athletic Dominator entry added to run_apex_scoring_2026.py.
+  Forty and ATH composite now correctly weighted as ceiling indicators (not floor checks) for EDGE-4.
+  Total archetypes protected: 10 (EDGE-1/2/3/4, CB-1/3, OT-2/3, S-1, ILB-3).
+- Bailey (pid=41): 83.2 DAY1 EDGE-4 → 89.2 ELITE EDGE-1 Every-Down Disruptor.
+  ELITE confirmed. Model re-classified to EDGE-1 on fresh re-score (no prior score after force-delete;
+  no ARCHETYPE_OVERRIDE). Arm 33.75", technique-primary profile drove EDGE-1 assignment.
+  Score direction correct — not suppressed. ALIGNED, rank_delta=+5.
+- Barham (pid=258): 65.8 DAY2 EDGE-4 → 63.8 DAY2 EDGE-4 Athletic Dominator.
+  Score within variance (-2.0). EDGE-4 archetype held. Forty=4.64 (>4.55) + ATH=42.3 (<75):
+  both FM-1 high-risk thresholds breached per EDGE-4 doctrine. Score appropriately limited.
+  APEX_HIGH MAJOR delta compressed: +57 → +45. Tier B confidence.
+- archetype_canonical_reference.json: metadata block added at top of root object.
+  file_version=1.0, system_version=2.3. Version ambiguity resolved — cold sessions will not
+  flag false alignment failure. Existing archetype content unchanged.
+- Divergence recomputed post re-score. ALIGNED=27, APEX_HIGH=58, APEX_LOW=5, STRUCTURAL=50.
+- Doctor: PASSED.
+- Next: Session 74 — 15-archetype MEASURABLES_ARCHETYPE_CONTEXT pass (CB-2, ILB-4,
+  QB-1 through QB-5, OT-1, OG-1, OG-3, remaining positions with active scored prospects)
+  using positional .docx files as source. Translation work only — no batch re-score until
+  complete. After Session 74: full batch re-score with complete protection layer as draft baseline.
 
 Session 71 (Full batch APEX re-score; archetype-aware measurables fix; Reese ILB-3 pipeline correction) — board current.
 
