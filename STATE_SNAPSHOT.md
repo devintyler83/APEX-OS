@@ -1,6 +1,6 @@
 # DraftOS State Snapshot
 
-Last Updated (UTC): 2026-03-30T18:03:08.705708+00:00
+Last Updated (UTC): 2026-03-30T18:22:00.000000+00:00
 
 ---
 
@@ -9,6 +9,32 @@ Last Updated (UTC): 2026-03-30T18:03:08.705708+00:00
 - 2026 (season_id=1)
 
 ## Last Completed Milestone
+
+Session 74 (MEASURABLES_ARCHETYPE_CONTEXT complete — 23 archetypes protected) — no re-score, no DB changes.
+
+Session 74:
+- MEASURABLES_ARCHETYPE_CONTEXT: 13 new entries added.
+  CB-2, CB-4, CB-5, ILB-4, QB-1 through QB-5,
+  OT-1, OT-4, OG-1, OG-3.
+- Total archetypes with mechanism-aware measurables
+  context: 23 of 62 canonical archetypes.
+- Key context rules applied:
+    QB-1/QB-4: measurables LOW-WEIGHT, processing governs
+    QB-2: forty and SPEED full weight (run threat required)
+    QB-5: measurables full weight (tools are the investment)
+    OG-1: ATH composite WARNING — inflation risk explicit
+    OG-3: AGI and ACC primary (zone mechanism)
+    CB-2: AGI primary, forty secondary (zone processor)
+    CB-4: AGI and ACC primary, SIZE not a gate
+    ILB-4: AGI and ACC primary, FM-3 watch flagged
+    OT-1: forty + AGI ceiling gates (both required)
+- Source: positional .docx library files (CB, ILB, QB,
+  OT, OG) — translation work, no new analysis.
+- Doctor: PASSED.
+- Next: Session 75 — full batch re-score (--batch all
+  --force) with complete 23-archetype protection layer.
+  Then divergence recompute, tag triggers, board review.
+  This is the scoring baseline that holds through the draft.
 
 Session 73 (EDGE-4 measurables context fix + JSON version label + Bailey/Barham re-score) — board updated.
 
@@ -795,14 +821,11 @@ Prior sessions on record: 12 (DB rebuild), 13 (weekly pipeline), 13b (school/arc
 
 ## Next Milestone (Single Target)
 
-- Session 72: Track 2 Mode C board review — divergence triage with updated full-batch scores.
-  Priority 1: STRUCTURAL audit — compare STRUCTURAL count S70 (45) vs S71 (50). Identify any
-  prospects that moved from STRUCTURAL to APEX_HIGH or ALIGNED; those are real signals.
-  Priority 2: Premium APEX_HIGH triage — use the premium signal list from Session 71 final state
-  (Jadon Canady CB +85, Treydan Stukes S +73 leading). Update divergence signal queue.
-  Priority 3: Arvell Reese MANUAL_HOLD — Landing Spot Note (Mode B) to determine which teams run
-  the scheme that unlocks ILB-3 run-first ceiling. Clear condition: scheme match confirmed for
-  ILB-3 deployment. Required before any capital recommendation above R2 Mid.
+- Session 75: Full batch re-score (--batch all --force) with complete 23-archetype protection
+  layer in place. This is the final scoring baseline before the draft.
+  After re-score: recompute divergence, re-run tag triggers + triage pending, doctor check,
+  Mode C board review (STRUCTURAL audit, premium APEX_HIGH queue, Caleb Downs archetype
+  validation pending, Reese Landing Spot Note to clear MANUAL_HOLD).
 
 ---
 
