@@ -15,9 +15,9 @@ Session 75: Full batch re-score (--batch all --force) with complete 23-archetype
 Authoritative State:
 
 1) STATE_SNAPSHOT.md
-# DraftOS State Snapshot
+# APEX OS State Snapshot
 
-Last Updated (UTC): 2026-03-30T18:18:02.527343+00:00
+Last Updated (UTC): 2026-03-31T06:12:11.783656+00:00
 
 ---
 
@@ -26,6 +26,67 @@ Last Updated (UTC): 2026-03-30T18:18:02.527343+00:00
 - 2026 (season_id=1)
 
 ## Last Completed Milestone
+
+Session 76 close (APEX OS rename complete — all display surfaces updated; export_png.py Windows asyncio fix; update_session_state scripts patched).
+
+Session 76 close:
+- APEX OS rename applied to all display surfaces across 7 files:
+    export_reports_html.py — lines 2, 836, 1071, 1188, 1219, 1255 updated; lines 367, 371, 1119 untouched
+    STATE_SNAPSHOT.md — heading line 1 updated; line 188 historical log untouched
+    app.py — lines 2, 35, 2250, 2500, 2963, 2977 updated; all CSS/docstring/comment identifiers untouched
+    open_session.py — docstring line 3 updated
+    open_session_mode1.py — docstring line 3 updated
+    open_session_mode3.py — docstring line 3 updated
+    generate_prospect_pdf_2026.py — lines 2, 1577, 1640 updated; docstrings/comments/path untouched
+- update_session_state_mode3.py and update_session_state_mode1.py: fixed false-alarm warnings in
+    update_field() and update_section() — now use re.search() pre-check instead of comparing
+    post-sub string identity. update_session_state.py (strict/raises) left unchanged.
+- export_png.py: added Windows asyncio policy guard (WindowsProactorEventLoopPolicy) to fix
+    NotImplementedError from SelectorEventLoop subprocess transport when launching Chromium.
+- Backups (.bak_apexos) retained in app/ and scripts/ for all 7 modified files.
+- No DB changes. No migrations. No scoring changes.
+
+Session 75 batch close:
+- Sports Almanac Mode 1 complete. Eight archetype overrides applied this session:
+    pid=28  Caleb Downs    S-1 → S-4 Zone-Dominant Coverage Safety (MANUAL_HOLD, Mode B pending)
+    pid=9   Ty Simpson     QB-5 → QB-4 Game Manager Elevated (APEX_LOW compresses -38→-21.8)
+    pid=309 Jalon Kilgore  S-3 → S-2 Coverage Centerfielder (DB label: S-1 Centerfielder — see note)
+    pid=13  Malik Muhammad CB-3 → CB-1 Anticipatory Lockdown (73.2 DAY1, delta +69 MAJOR)
+    pid=107 Daylen Everette CB-3 → CB-2 Outside Man-Coverage (DB label: CB-3 — see note)
+    pid=36  Davison Igbinosun CB-3 PAA → CB-2 Zone Coverage Technician (68.2 DAY2, R4 Early)
+    pid=147 Genesis Smith  S-3 → S-3 FM-5 corrected (composite drops 71.5→56.2, DAY1→DAY2)
+    pid=58  Garrett Nussmeier QB-4 → QB-3 Pocket Technician (58.7 DAY2, R5)
+- Archetype label discrepancy (API reversion):
+    Kilgore: forced S-2, DB=S-1 Centerfielder (S library prompt no distinct S-2 label)
+    Everette: forced CB-2, DB=CB-3 Press Man Corner (API reads athleticism-primary as CB-3)
+    Capital ranges and FM flags are correct for both. Recommend Mode 3 CB labeling discipline.
+- Tier distribution (FINAL S75 batch close, 140 prospects, apex_v2.3):
+    ELITE=2, DAY1=28, DAY2=71, DAY3=36, UDFA-P=3 (total=140)
+  Unchanged from pre-batch-close baseline — overrides shifted composites but not tier distribution.
+- Divergence recomputed: 140 prospects.
+    APEX_HIGH=62, ALIGNED=26, APEX_LOW=4, APEX_LOW_PVC_STRUCTURAL=48
+  Premium APEX_LOW (actionable): Genesis Smith S (delta=-36 MAJOR), Caleb Downs S (delta=-31 MAJOR),
+    TJ Parker EDGE (delta=-12 MINOR), Zakee Wheatley S (delta=-7 MINOR).
+  Simpson dropped off APEX_LOW premium list after QB-4 correction (now +8 MINOR APEX_HIGH).
+- GATE_TRACKER v1.4:
+    CLEARED: Arvell Reese MANUAL_HOLD — ILB-3 viable at Titans/Giants, Mode B confirmed S75.
+             Capital R2 Early / R1 Late Titans-Giants confirmed. Tier 1.
+    HELD:    Caleb Downs MANUAL_HOLD (Mode B zone deployment), Julian Neal CONE_GATE (7.13s open).
+- DB doctor: PASSED (Session 75 batch close).
+- Active ARCHETYPE_OVERRIDES: 15 entries
+    pid=16 Reese, pid=28 Downs, pid=29 Thieneman, pid=35 C.Johnson, pid=36 Igbinosun,
+    pid=38 McCoy, pid=42 Faulk, pid=58 Nussmeier, pid=61 Love, pid=71 Cisse, pid=72 Hood,
+    pid=80 Mesidor, pid=107 Everette, pid=109 Neal, pid=148 Ramsey, pid=309 Kilgore,
+    pid=449 Kilgore-CB, pid=1420 Drones, pid=3236 Ponds, pid=9 Simpson, pid=13 Muhammad,
+    pid=147 G.Smith
+- Next session priorities (ordered):
+    1. TJ Parker pid=27 display_name audit (carried S50)
+    2. Stukes dual entry audit (two scored S/CB rows — DB integrity check)
+    3. Canady + Domani Jackson EXCLUDED entries in GATE_TRACKER
+    4. Parse failures individual re-score: Burks, Coleman, Barber
+    5. Sports Almanac Mode 3 — CB archetype labeling discipline anchor
+    6. Sports Almanac Mode 3 — Candidate XP-8 second-position confirmation
+    7. Tier 2 evaluation queue: Taaffe, Moore, Josephs, Davis, Tucker
 
 Session 74 (MEASURABLES_ARCHETYPE_CONTEXT complete — 23 archetypes protected) — no re-score, no DB changes.
 
@@ -1064,11 +1125,11 @@ Inactive (data preserved): ngs_2026 (source_id=29, is_active=0) — model score,
 
 2) System Snapshot Output
 === DRAFTOS SYSTEM SNAPSHOT ===
-generated_utc: 2026-03-30T18:18:01.851676+00:00
+generated_utc: 2026-03-31T06:12:11.073075+00:00
 
 ## Git
 branch: main
-commit: 7aad574ee7fb31e7481086d4ead1c61d3db2e1be
+commit: bfe475273bec87a02c199cfcae76ffc01dfb40e8
 status: clean
 
 ## Tables
@@ -1210,6 +1271,7 @@ no is_active column
 - scripts\_write_canonical_ref.py
 - scripts\accept_tag_recs_2026.py
 - scripts\apply_prospect_universe_2026.py
+- scripts\archetype_defs.py
 - scripts\archive\__init__.py
 - scripts\archive\apply_review_queue_mappings_2026.py
 - scripts\archive\autoresolve_mapping_review_queue_2026.py
@@ -1234,11 +1296,13 @@ no is_active column
 - scripts\archive\tag_calibration_artifacts_2026.py
 - scripts\audit_position_mismatches_2026.py
 - scripts\audit_position_overrides_2026.py
+- scripts\audit_tjparker_display_name.py
 - scripts\bootstrap_prospects_from_sources_2026.py
 - scripts\build_consensus_2026.py
 - scripts\build_model_outputs_v1_default_2026.py
 - scripts\build_prospect_universe_2026.py
 - scripts\build_snapshot_packet.py
+- scripts\cleanup_stukes_ghost_orphans.py
 - scripts\compute_snapshot_confidence.py
 - scripts\compute_snapshot_coverage.py
 - scripts\compute_snapshot_metrics.py
@@ -1250,7 +1314,9 @@ no is_active column
 - scripts\export_board_csv.py
 - scripts\export_confidence_summary_csv.py
 - scripts\export_movers_csv.py
+- scripts\export_png.py
 - scripts\export_reports_html.py
+- scripts\export_reports_html_share.py
 - scripts\export_source_health_csv.py
 - scripts\generate_prospect_pdf_2026.py
 - scripts\ingest_combine_2026.py
@@ -1262,6 +1328,9 @@ no is_active column
 - scripts\ingest_rankings_staged.py
 - scripts\ingest_ras_2026.py
 - scripts\log_draft_pick_2026.py
+- scripts\open_session.py
+- scripts\open_session_mode1.py
+- scripts\open_session_mode3.py
 - scripts\patch_name_normalization_2026.py
 - scripts\patch_prospect_canonicalization_2026.py
 - scripts\patch_source_canonicalization_2026.py
@@ -1280,6 +1349,9 @@ no is_active column
 - scripts\stage_rankings_csv.py
 - scripts\take_predraft_snapshot_2026.py
 - scripts\triage_pending_tags_2026.py
+- scripts\update_session_state.py
+- scripts\update_session_state_mode1.py
+- scripts\update_session_state_mode3.py
 - scripts\verify_packet_manifest.py
 - scripts\verify_snapshot_integrity.py
 - tests\__init__.py
