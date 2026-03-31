@@ -1,5 +1,5 @@
 """
-DraftOS Big Board — Session 40
+APEX OS Big Board — Session 40
 Read-only Streamlit UI with divergence flags, APEX rank input, APEX scores,
 tag display, prospect detail drawer, stacking filters, and side-by-side comparison.
 No DB writes except through save_apex_rank() and clear_apex_rank(). No business logic.
@@ -25,14 +25,15 @@ from draftos.queries.apex import save_apex_rank, clear_apex_rank, get_apex_detai
 from draftos.queries.historical_comps import get_historical_comps, get_archetype_translation_rate, get_fm_reference_comps
 from draftos.queries.model_outputs import get_big_board, get_prospect_detail, get_prospect_tags_map
 from draftos.ui.profile_dimensions import get_profile_dimensions
-from scripts.generate_prospect_pdf_2026 import generate_pdf
+from datetime import datetime as _export_dt
+from scripts.export_png import export_png_bytes
 
 # Streamlit ≥ 1.35 supports on_select / selection_mode on st.dataframe
 _ON_SELECT_AVAILABLE = tuple(
     int(x) for x in st.__version__.split(".")[:2]
 ) >= (1, 35)
 
-st.set_page_config(layout="wide", page_title="DraftOS Big Board")
+st.set_page_config(layout="wide", page_title="APEX OS Big Board")
 
 
 # ---------------------------------------------------------------------------
@@ -2247,7 +2248,7 @@ def _build_detail_html(d: dict, comps: list, rate) -> str:  # rate: dict | None
         f'<span style="color:{conf_color};font-weight:700">{_e(conf)}</span>'
         f'{scored_html}</div>'
         f'<div class="watermark">'
-        f'<div><span class="brand-logo">DraftOS</span><br>'
+        f'<div><span class="brand-logo">APEX OS</span><br>'
         f'<span class="brand-version">v2.3 \u00b7 2026</span></div>'
         f'<div class="watermark-meta">{rank_str} \u00b7 {_e(pos)} \u00b7 {_e(school)}<br>'
         f'Generated {wm_date}</div></div></div>\n'
@@ -2497,7 +2498,7 @@ snapshot_date   = df["snapshot_date"].iloc[0] if "snapshot_date" in df.columns e
 total_prospects = len(df)
 apex_scored     = df["apex_composite"].notna().sum() if "apex_composite" in df.columns else 0
 
-st.title("DraftOS — 2026 Big Board")
+st.title("APEX OS — 2026 Big Board")
 st.caption(
     f"Snapshot: {snapshot_date}   |   "
     f"Total prospects: {total_prospects}   |   "
@@ -2960,7 +2961,7 @@ with st.expander("📋 Column Guide", expanded=False):
     st.markdown("""
 **How RPG and APEX Score Work Together**
 
-DraftOS uses two scores to separate player talent from draft value:
+APEX OS uses two scores to separate player talent from draft value:
 
 - **RPG (Raw Player Grade)** measures how good a player is at football — independent
   of what position they play. An elite running back and an elite cornerback with
@@ -2974,7 +2975,7 @@ DraftOS uses two scores to separate player talent from draft value:
 QB, CB, EDGE = 1.00x (premium) · WR, OT, S, IDL = 0.90x · ILB, OLB = 0.85x · OG, TE, C = 0.80x · RB = 0.70x
 
 **Example:** Jeremiyah Love has elite trait vectors → RPG ~84. But as a running back
-(PVC = 0.70), his APEX Score = ~59. This doesn't mean DraftOS thinks Love is a bad
+(PVC = 0.70), his APEX Score = ~59. This doesn't mean APEX OS thinks Love is a bad
 player. It means the NFL structurally devalues the RB position, and draft capital
 should reflect that reality.
 
@@ -3281,18 +3282,85 @@ else:
         else:
             _render_consensus_card(_pr)
 
-        # PDF export button — available for all prospects regardless of APEX coverage
-        if st.button("📄 Generate Report", key=f"pdf_{_selected_pid}"):
-            with st.spinner("Generating PDF..."):
+        # Generate Report button — PNG share card via export_png pipeline
+        if st.button("📄 Generate Report", key=f"png_{_selected_pid}"):
+            # Build prospect dict from detail record + board row.
+            # _detail is populated for APEX prospects; _pr (board row) covers all.
+            _prospect_dict = {
+                # Identity
+                "prospect_id":        _selected_pid,
+                "display_name":       _pr.get("display_name"),
+                "school_canonical":   _pr.get("school_canonical") or _pr.get("school"),
+                "position_group":     _pr.get("position_group"),
+                "snapshot_date":      _export_dt.now().strftime("%Y-%m-%d"),
+                # Scores
+                "raw_score":          _pr.get("raw_score"),
+                "apex_composite":     _pr.get("apex_composite"),
+                "pvc":                _pr.get("pvc", 1.0),
+                "apex_tier":          _pr.get("apex_tier", "DAY3"),
+                "consensus_rank":     _pr.get("consensus_rank"),
+                "ras_score":          _pr.get("ras_score"),
+                "auto_apex_delta":    _pr.get("auto_apex_delta"),
+                # APEX-only fields (None-safe)
+                "apex_archetype":     (_detail if _has_apex and _detail else {}).get("apex_archetype") or _pr.get("apex_archetype"),
+                "position_rank_label": (_detail if _has_apex and _detail else {}).get("position_rank_label") or _pr.get("position_rank_label"),
+                "eval_confidence":    (_detail if _has_apex and _detail else {}).get("eval_confidence") or _pr.get("confidence_band"),
+                "divergence_delta":   _pr.get("auto_apex_delta"),
+                "capital_base":       (_detail if _has_apex and _detail else {}).get("capital_base"),
+                "tags":               _pr.get("tag_names"),
+                "fm_codes":           [
+                    int(re.search(r"FM-(\d+)", str(f)).group(1))
+                    for f in [
+                        (_detail if _has_apex and _detail else {}).get("failure_mode_primary"),
+                        (_detail if _has_apex and _detail else {}).get("failure_mode_secondary"),
+                    ]
+                    if f and _fm_is_present(f) and re.search(r"FM-(\d+)", str(f))
+                ],
+                "fm_labels":          [
+                    str(f).strip()
+                    for f in [
+                        (_detail if _has_apex and _detail else {}).get("failure_mode_primary"),
+                        (_detail if _has_apex and _detail else {}).get("failure_mode_secondary"),
+                    ]
+                    if f and _fm_is_present(f)
+                ],
+                "signature_play":     (_detail if _has_apex and _detail else {}).get("signature_play"),
+                "strengths":          (_detail if _has_apex and _detail else {}).get("strengths"),
+                "red_flags":          (_detail if _has_apex and _detail else {}).get("red_flags"),
+                # Trait scores for position-aware headline traits
+                "v_processing":       _pr.get("v_processing"),
+                "v_athleticism":      _pr.get("v_athleticism"),
+                "v_comp_tough":       _pr.get("v_comp_tough"),
+                "v_injury":           _pr.get("v_injury"),
+                "v_scheme_vers":      _pr.get("v_scheme_vers"),
+                "v_production":       _pr.get("v_production"),
+                "v_dev_traj":         _pr.get("v_dev_traj"),
+                "v_character":        _pr.get("v_character"),
+            }
+
+            with st.spinner("Generating card..."):
                 try:
-                    pdf_path = generate_pdf(prospect_id=_selected_pid, season_id=1)
-                    with open(pdf_path, "rb") as _f:
-                        st.download_button(
-                            label="⬇️ Download One-Pager",
-                            data=_f.read(),
-                            file_name=pdf_path.name,
-                            mime="application/pdf",
-                            key=f"dl_{_selected_pid}",
+                    _png_bytes = export_png_bytes(_prospect_dict)
+                    _slug = (
+                        _pr.get("display_name", "prospect")
+                        .lower()
+                        .replace(" ", "_")
+                        .replace("'", "")
+                    )
+                    st.download_button(
+                        label="⬇️ Download Card (PNG)",
+                        data=_png_bytes,
+                        file_name=f"draftos_{_slug}_{_selected_pid}.png",
+                        mime="image/png",
+                        key=f"dl_png_{_selected_pid}",
+                    )
+                except RuntimeError as _e:
+                    if "Playwright not installed" in str(_e):
+                        st.error(
+                            "PNG export requires Playwright.\n\n"
+                            "```\npip install playwright\nplaywright install chromium\n```"
                         )
+                    else:
+                        st.error(f"Card generation failed: {_e}")
                 except Exception as _e:
-                    st.error(f"PDF generation failed: {_e}")
+                    st.error(f"Card generation failed: {_e}")

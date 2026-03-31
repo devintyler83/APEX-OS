@@ -1,5 +1,5 @@
 """
-DraftOS — HTML Export: Report Pack + Prospect Card
+APEX OS — HTML Export: Report Pack + Prospect Card
 Exports the HTML report pack (board, movers, etc.) and renders
 the Card v2 (Classified Dossier × Panini Prizm aesthetic).
 """
@@ -833,7 +833,7 @@ def html_page(prospect: dict) -> str:
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DraftOS — {e(name)}</title>
+<title>APEX OS — {e(name)}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;400;500;600;700;800;900&family=Barlow:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&display=swap" rel="stylesheet">
 <style>
@@ -1068,7 +1068,7 @@ body{{background:#060809;display:flex;align-items:center;justify-content:center;
         </div>
         <div class="watermark">
           <div class="brand-lockup">
-            <span class="brand-logo">DraftOS</span>
+            <span class="brand-logo">APEX OS</span>
             <span class="brand-version">v2.3 · 2026</span>
           </div>
           <div class="watermark-meta">{rank_str} · {e(pos)} · {e(school)}<br>Generated {wm_date}</div>
@@ -1185,7 +1185,7 @@ def main() -> None:
     for label, fname, path in pages:
         if path is None:
             body = f'<div class="missing">Missing export file for {_html.escape(label)}. Run the weekly pipeline to generate exports.</div>'
-            page = html_report_page(f"DraftOS Report: {label}", subtitle, body, nav_links)
+            page = html_report_page(f"APEX OS Report: {label}", subtitle, body, nav_links)
             write_text(reports_dir / fname, page)
             continue
 
@@ -1216,7 +1216,7 @@ def main() -> None:
 
         table_html = render_table(header, rows, chip_cols=chip_cols) if header else '<div class="missing">CSV was empty.</div>'
         body = info + table_html
-        page = html_report_page(f"DraftOS Report: {label}", subtitle, body, nav_links)
+        page = html_report_page(f"APEX OS Report: {label}", subtitle, body, nav_links)
         write_text(reports_dir / fname, page)
 
     items = []
@@ -1252,7 +1252,7 @@ def main() -> None:
         Tip: click any column header in a report table to sort.
       </div>
     """
-    index_page = html_report_page("DraftOS Report Pack", subtitle, index_body, nav_links)
+    index_page = html_report_page("APEX OS Report Pack", subtitle, index_body, nav_links)
     write_text(reports_dir / "index.html", index_page)
 
     print(f"OK: HTML reports generated: {reports_dir}")

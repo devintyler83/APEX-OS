@@ -329,3 +329,7 @@ A feature is production-ready only when ALL of the following are true:
 - Score comps by optics instead of mechanism
 - Apply generic bust risk ratings without naming the specific FM code
 - Make archetype assignments based on size or position instead of winning mechanism
+
+---
+
+## When this session exceeds significant depth (many exchanges, large outputs), flag once: "Session is running long — consider opening a fresh session and pasting the current state summary." Do not flag repeatedly.

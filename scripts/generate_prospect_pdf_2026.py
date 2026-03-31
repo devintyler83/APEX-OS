@@ -1,5 +1,5 @@
 """
-DraftOS Prospect One-Pager PDF Generator v4.
+APEX OS Prospect One-Pager PDF Generator v4.
 Playwright (Chromium) HTML → PDF. Premium dark scouting card.
 """
 from __future__ import annotations
@@ -1574,7 +1574,7 @@ body::before {{
                 align-items:flex-end">
       <span style="font-family:'Barlow Condensed',sans-serif;font-size:9pt;
                    font-weight:900;letter-spacing:0.20em;text-transform:uppercase;
-                   color:rgba(255,255,255,0.14)">DraftOS</span>
+                   color:rgba(255,255,255,0.14)">APEX OS</span>
       <span style="font-family:'Barlow Condensed',sans-serif;font-size:7pt;
                    color:rgba(255,255,255,0.12);letter-spacing:0.10em;
                    text-transform:uppercase">v2.3 · 2026</span>
@@ -1637,7 +1637,7 @@ body::before {{
   <div class="rp-footer">
     <span style="font-family:'Barlow Condensed',sans-serif;font-size:9pt;
                  font-weight:900;letter-spacing:0.20em;text-transform:uppercase;
-                 color:rgba(255,255,255,0.14)">DraftOS 2026</span>
+                 color:rgba(255,255,255,0.14)">APEX OS 2026</span>
     <div style="font-family:'Barlow Condensed',sans-serif;font-size:7pt;
                 color:rgba(255,255,255,0.28);text-align:right;line-height:1.8;
                 letter-spacing:0.04em">
