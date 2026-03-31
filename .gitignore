@@ -25,6 +25,7 @@ Thumbs.db
 # Generated exports
 exports/*.csv
 exports/reports/
+reports/
 
 # SQLite backups
 data/edge/backups/
