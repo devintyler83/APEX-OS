@@ -558,45 +558,49 @@ ARCHETYPE_OVERRIDES: dict[int, dict] = {
         },
     },
 
-    # Jalon Kilgore — S entry (pid=309). Canonical Safety entry.
-    # S64 combine gate injection — gate evaluated, S-3 archetype REINFORCED.
+    # Jalon Kilgore — S entry (pid=309). Sports Almanac Mode 1 S75.
+    # S-3 Multiplier Safety REJECTED: processing-dominant, scheme-dependent zone centerfielder.
+    # Lateral agility drag (4.32 shuttle, 45.2 agility composite) prevents man-coverage recovery.
+    # FM-6 primary (scheme-dependent), FM-3 secondary. Correct archetype: S-2 Coverage Centerfielder.
     309: {
-        "forced_archetype":   "S-3",
-        "archetype_label":    "S-3 Multiplier Safety",
+        "forced_archetype":    "S-2",
+        "archetype_label":     "S-2 Coverage Centerfielder",
         "archetype_rationale": (
-            "S64 combine gate injection. Combine results: forty=4.40s (CLEAR, speed gate passes), "
-            "20yd shuttle=4.32s (S-tier profile — consistent with elite S athleticism, NOT elite "
-            "man-coverage CB profile), vertical=37in (ELITE burst), broad=10ft-10in (ELITE), "
-            "bench=16 reps, RAS=9.67 ELITE. 3-cone NOT TESTED at combine. "
-            "GATE RESULT: S-3 REINFORCED. Athletic profile confirms elite Safety athleticism — "
-            "40yd speed is elite, explosiveness is elite, but COD profile (shuttle 4.32) is "
-            "S-tier floor, not elite slot/man-CB territory. Man coverage ceiling NOT raised. "
-            "Zone deployment remains primary confirmed mechanism. S-3 Multiplier Safety archetype "
-            "is the correct framing. FM-6 (Role Mismatch) primary: value destroyed in heavy "
-            "man-coverage schemes. FM-2 (Development Ceiling) secondary: post-snap reads still "
-            "developing. Capital: R3 base confirmed — 3-cone absent, shuttle profile does not "
-            "support R2 late upgrade. Source coverage gap (10 sources, consensus #89) reflects "
-            "CB/S normalization artifact from S62 consolidation, not quality gap."
+            "Sports Almanac Mode 1 complete S75. S-3 Multiplier Safety REJECTED. "
+            "S-3 prices full-responsibility multiplier deployment — post-snap movement versatility, "
+            "man-coverage floor, and blitz package participation. Kilgore does not clear S-3 on "
+            "lateral agility: 4.32 shuttle (S-tier floor) and 45.2 agility composite structurally "
+            "prevent man-coverage recovery against separating routes. "
+            "S-2 Coverage Centerfielder is the correct archetype: processing-dominant, zone-deployed, "
+            "scheme-dependent deep coverage. Zone production is the primary confirmed mechanism. "
+            "FM-6 Role Mismatch is primary: scheme-dependent value requires zone-heavy/two-high "
+            "deployment architecture. Commanders landing is optimal scheme fit. "
+            "FM-3 Processing Wall is secondary: scheme-complexity escalation beyond confirmed "
+            "zone-centerfielder responsibilities exposes processing floor. "
+            "Capital: R2 Late base. Source coverage gap (consensus #89) reflects CB/S normalization "
+            "artifact from S62 consolidation — not a quality discount."
         ),
         "eval_confidence":     "Tier B",
-        "capital_range":       "R3 base (combine gate evaluated S64 — R2 upgrade path closed: 3-cone not tested, shuttle S-tier)",
-        "fm_flags":            ["FM-6", "FM-2"],
-        "paa_findings": {
-            "Man_coverage_gate":     "PARTIAL — 3-cone not tested; shuttle 4.32 = S-tier floor, not elite man-CB profile",
-            "Speed_gate":            "CLEAR — forty 4.40 sub-4.50 threshold",
-            "COD_gate":              "NOT RESOLVED via 3-cone (absent); shuttle S-tier consistent with S-3",
-            "Explosiveness":         "ELITE — 37in vertical, 10ft-10in broad (top-tier burst for S)",
-            "RAS":                   "9.67 ELITE — arm 33.25in, wing 79.25in, hand 9.38in",
-            "Post_snap_adjustment":  "PARTIAL — crossfield range confirmed, scripted vs genuine ambiguous",
-            "Zone_production":       "PRIMARY confirmed mechanism",
-            "SOS_Gate":              "PASSES (SEC Power 4)",
-            "Gate_result":           "S-3 REINFORCED. Not a man-coverage ceiling upgrade.",
-        },
+        "capital_range":       "R2 Late (Commanders optimal) — R3 base all other fits",
+        "fm_flags":            ["FM-6 Role Mismatch (primary)", "FM-3 Processing Wall (secondary)"],
+        "placed_session":      75,
         "bust_warning": (
-            "FM-6 Role Mismatch primary: CB/S hybrid value requires scheme that actively deploys "
-            "multiplier. Heavy man-coverage teams destroy value. 3-cone not tested — COD "
-            "ceiling unresolved. Shuttle profile = S floor, not elite man-CB."
+            "FM-6 Role Mismatch primary: S-2 value is scheme-dependent. Zone-heavy/two-high "
+            "deployment unlocks value; man-heavy or press-dominant schemes structurally limit "
+            "to backup role. Lateral agility drag (4.32 shuttle) prevents man-coverage recovery. "
+            "FM-3 secondary: complexity escalation beyond confirmed zone responsibilities exposes floor."
         ),
+        "paa_findings": {
+            "Zone_production":       "PRIMARY confirmed mechanism — deep coverage dominant",
+            "Man_coverage_gate":     "PARTIAL — 4.32 shuttle is S-tier floor; man recovery structurally limited",
+            "Lateral_agility":       "DRAG — 4.32 shuttle + 45.2 agility composite prevent man-coverage ceiling",
+            "Speed_gate":            "CLEAR — forty 4.40 sub-4.50 threshold",
+            "Explosiveness":         "ELITE — 37in vertical, 10ft-10in broad",
+            "S3_rejected":           "Multiplier deployment (man-coverage + blitz package) requires agility Kilgore does not have",
+            "FM_primary":            "FM-6 Role Mismatch — zone-heavy/two-high deployment required",
+            "FM_secondary":          "FM-3 Processing Wall — scheme-complexity-conditional",
+            "Archetype_lock":        "S-2 Coverage Centerfielder confirmed S75",
+        },
     },
 
     # Kyron Drones — QB (pid=1420). Documentation override only — no API re-score warranted.
@@ -739,56 +743,55 @@ ARCHETYPE_OVERRIDES: dict[int, dict] = {
     # Session 5 (scoring expansion) overrides
     # ---------------------------------------------------------------------------
 
-    # Davison Igbinosun — CB (pid=36). Session 5 batch scored CB-2 Zone Architect 76.4 DAY1
-    # without PAA gate findings. CB-2 is incorrect — analyst full PAA run confirms CB-3 press
-    # dominance as primary mechanism and man coverage floor. Re-score with gate injection.
-    # Override type: PAA gate injection + capital revision. NOT a hard forced archetype —
-    # archetype_direction guides the scorer; forced_archetype is False (gate enforcement only).
+    # Davison Igbinosun — CB (pid=36). Sports Almanac Mode 1 S75.
+    # CB-3 Press Man Corner REJECTED (supersedes prior PAA override): zone-processing elite but
+    # athleticism is a structural floor (4.7/10), not a ceiling variable. Elite size does not
+    # substitute for functional athleticism. FM-2 Scheme Ghost primary (Ohio State zone
+    # architecture amplifying production). Correct archetype: CB-2 Zone Coverage Technician.
     36: {
-        "forced_archetype":    False,  # gate enforcement, not hard override
-        "archetype_direction": (
-            "Archetype: CB-3 Press Man Corner with CB-1 development pathway.\n\n"
-            "Q1 Win mechanism CONFIRMED: CB-3 press dominance — wins at the line through "
-            "length and contact timing, not spatial processing. Do NOT assign CB-2 Zone "
-            "Architect — he is not a spatial processor reading the quarterback.\n\n"
-            "Q2 Man coverage floor CONFIRMED: functional man coverage confirmed, not zone-only. "
-            "This is a genuine floor confirmation — not a CB-2 partial.\n\n"
-            "Q3 Technique trajectory CONFIRMED upward: technique is improving year-over-year. "
-            "CB-1 development pathway is FLAG-level — realistic ceiling trajectory, not "
-            "speculative. This is a ceiling expander, not a reclassification.\n\n"
-            "Q4 Scheme dependency PARTIAL: press is the primary working mechanism. "
-            "Off-coverage gap is active — technique in off-alignment lags CB-3 norm. "
-            "FM-2 Scheme Ghost is CONDITIONAL, landing-spot dependent, NOT structural. "
-            "It fires only in zone-heavy or off-coverage-dominant deployments.\n\n"
-            "SOS Gate PASSES: dual P4 confirmation (Ole Miss + Ohio State). Production held "
-            "against top-25 competition. No SOS discount applied.\n\n"
-            "Capital: R2 early to R3 top. LSM (landing spot match) is critical — "
-            "press-heavy scheme amplifies ceiling; zone-heavy scheme activates FM-2. "
-            "Eval Confidence: Tier B (Q4 off-coverage gap partially unresolved)."
+        "forced_archetype":    "CB-2",
+        "archetype_label":     "CB-2 Zone Coverage Technician",
+        "archetype_rationale": (
+            "Sports Almanac Mode 1 complete S75. CB-3 Press Man Corner REJECTED — "
+            "supersedes prior PAA override. Zone-processing is elite (8.6/10) and is the "
+            "confirmed primary win mechanism. Athleticism is a structural floor: 4.7/10 composite, "
+            "vertical jump 22.1 (bottom-5 pct at CB), broad jump 20.8 (bottom-3 pct at CB). "
+            "Elite size (height 92.2 pct, arm 89.9 pct, wingspan 88.3 pct) does not substitute "
+            "for functional athleticism — size provides contest radius, not recovery speed. "
+            "CB-3 press dominance requires functional explosion and recovery, which Igbinosun does "
+            "not demonstrate in jump metrics. CB-2 Zone Coverage Technician correctly captures the "
+            "confirmed mechanism: elite zone processing, structural athleticism floor. "
+            "FM-2 Scheme Ghost is primary: Ohio State zone architecture amplified production — "
+            "zone-heavy deployment required at NFL level to replicate college output. "
+            "FM-3 Processing Wall is secondary: athleticism floor creates scheme-dependency "
+            "that cascades if zone processing encounters NFL route complexity. "
+            "FM-6 Role Mismatch tertiary: misdeployment in press-man or off-man schemes "
+            "exposes athleticism floor directly. "
+            "Capital: R4 Early base. Steelers zone deployment is the R3 Early context ceiling — "
+            "scheme fit is the single capital lever."
+        ),
+        "eval_confidence":     "Tier B",
+        "capital_range":       "R4 Early (base) — R3 Early ceiling (Steelers zone fit only)",
+        "fm_flags":            ["FM-2 Scheme Ghost (primary)", "FM-3 Processing Wall (secondary)", "FM-6 Role Mismatch (tertiary)"],
+        "placed_session":      75,
+        "bust_warning": (
+            "FM-2 Scheme Ghost primary: zone processing is elite but Ohio State zone architecture "
+            "may be amplifying production. NFL zone-heavy deployment required — press-man or "
+            "off-man schemes expose athleticism floor immediately. "
+            "Athleticism floor (VJ 22.1 bottom-5 pct, BJ 20.8 bottom-3 pct) is structural, "
+            "not developmental. Size does not cover for explosion deficiency against NFL athletes."
         ),
         "paa_findings": {
-            "Q1_win_mechanism":       "CB-3 press dominance — CONFIRMED",
-            "Q2_man_coverage_floor":  "CONFIRMED — not zone-only",
-            "Q3_technique_trajectory": "CONFIRMED upward — CB-1 pathway FLAG",
-            "Q4_scheme_dependency":   "PARTIAL — press OK, off-coverage gap active",
-            "fm_primary":             "FM-2 Scheme Ghost — CONDITIONAL, landing spot dependent",
-            "sos_gate":               "PASSES — Ole Miss + Ohio State dual P4",
-            "archetype_lock":         "CB-3 + CB-1 development pathway — Tier B",
-            "capital_revised":        "R2 early – R3 top. LSM critical.",
+            "Zone_processing":       "ELITE — 8.6/10 confirmed primary mechanism",
+            "Athleticism":           "STRUCTURAL FLOOR — 4.7/10; VJ 22.1 (bottom-5 pct), BJ 20.8 (bottom-3 pct)",
+            "Size":                  "ELITE — height 92.2 pct, arm 89.9 pct, wing 88.3 pct; does NOT substitute for athleticism",
+            "CB3_rejected":          "Press dominance requires functional explosion; jump metrics disqualify",
+            "FM_primary":            "FM-2 Scheme Ghost — Ohio State zone architecture; zone-heavy deployment required",
+            "FM_secondary":          "FM-3 Processing Wall — athleticism floor creates scheme-dependency cascade",
+            "FM_tertiary":           "FM-6 Role Mismatch — press-man/off-man misdeployment exposes floor",
+            "Capital_ceiling":       "R3 Early (Steelers zone fit) — R4 Early base all other fits",
+            "Archetype_lock":        "CB-2 Zone Coverage Technician confirmed S75",
         },
-        "eval_confidence":  "Tier B",
-        "capital_range":    "R2 early – R3 top (LSM critical)",
-        "fm_flags":         ["FM-2 Scheme Ghost — CONDITIONAL (landing spot dependent)"],
-        "archetype_rationale": (
-            "CB-3 Press Man Corner is the analyst-confirmed primary mechanism. "
-            "CB-2 Zone Architect was produced by the batch scorer without PAA findings and "
-            "is incorrect — Igbinosun wins through press-line physical dominance, not "
-            "spatial zone processing. Man coverage floor is confirmed (Q2 CLEAR). "
-            "CB-1 development pathway is a real and trending ceiling trajectory (Q3 upward). "
-            "FM-2 is conditional only — scheme ghost activates in zone-heavy deployment, "
-            "not guaranteed. Capital: R2 early to R3 top, with LSM as the critical variable. "
-            "Do NOT score as CB-2. Score against CB-3 archetype weight table."
-        ),
     },
 
     # Julian Neal — CB (pid=109). S64 3-cone gate injection.
@@ -826,6 +829,387 @@ ARCHETYPE_OVERRIDES: dict[int, dict] = {
             "3-cone 7.13s removes man-coverage utility — heavy man scheme = floor player. "
             "Capital ceiling R3 hard gate."
         ),
+    },
+
+    # ---------------------------------------------------------------------------
+    # Session 75 overrides
+    # ---------------------------------------------------------------------------
+
+    # Malik Muhammad — CB (pid=13). Sports Almanac Mode 1 + Mode 2 S75.
+    # CB-3 Press Man Corner REJECTED: processing-primary, scheme-versatile outside corner.
+    # Elite size (arm 80.0, wing 77.4), 8.4/10 processing, 8.1/10 scheme versatility.
+    # Production (49.5) confirmed schedule-suppressed via Gardner 2022 comp — adjusted 56-62 Y1.
+    # No FM at archetype level. FM-6 contingent (slot misdeployment). Capital R2 Early.
+    13: {
+        "forced_archetype":    "CB-1",
+        "archetype_label":     "CB-1 Outside Press Cornerback",
+        "archetype_rationale": (
+            "Sports Almanac Mode 1 + Mode 2 complete S75. CB-3 Press Man Corner REJECTED. "
+            "Muhammad wins through processing-primary mechanism: elite anticipatory processing "
+            "(8.4/10) and scheme versatility (8.1/10) confirm CB-1 Outside Press Cornerback. "
+            "Elite size package (arm 80.0 pct, wingspan 77.4 pct) provides physical confirmation "
+            "of CB-1 press mechanism at the line. "
+            "Production (49.5) is confirmed schedule-suppressed — Gardner 2022 comp analysis "
+            "indicates adjusted Year 1 production of 56-62, resolving the production gap. "
+            "No failure mode at archetype level. FM-6 Role Mismatch is contingent: slot "
+            "misdeployment destroys value but is not a structural risk at all landing spots. "
+            "Capital: R2 Early. R1 Late ceiling if Texas opponent film confirms CB-1 mechanism "
+            "against elite competition."
+        ),
+        "eval_confidence":     "Tier B",
+        "capital_range":       "R2 Early — R1 Late ceiling (Texas opponent film gate)",
+        "fm_flags":            ["FM-6 Role Mismatch (contingent — slot misdeployment only)"],
+        "placed_session":      75,
+        "bust_warning": (
+            "FM-6 contingent: slot misdeployment destroys CB-1 value — outside corner mechanism "
+            "does not translate to slot. Production schedule-suppression discount confirmed resolved "
+            "via Gardner 2022 comp. R1 Late ceiling requires opponent film confirmation."
+        ),
+        "paa_findings": {
+            "Processing":            "ELITE — 8.4/10 anticipatory processing confirmed",
+            "Scheme_versatility":    "ELITE — 8.1/10 confirmed",
+            "Size":                  "ELITE — arm 80.0 pct, wing 77.4 pct; CB-1 press confirmation",
+            "Production_adjustment": "CONFIRMED schedule-suppressed — Gardner 2022 comp; adjusted 56-62 Y1",
+            "CB3_rejected":          "Processing-primary mechanism confirms CB-1, not athletic-primary CB-3",
+            "FM_contingent":         "FM-6 Role Mismatch — slot misdeployment only; not structural",
+            "Capital_ceiling":       "R1 Late (opponent film gate) — R2 Early base",
+            "Archetype_lock":        "CB-1 Outside Press Cornerback confirmed S75",
+        },
+    },
+
+    # Daylen Everette — CB (pid=107). Sports Almanac Mode 1 S75.
+    # CB-3 Press Man Corner REJECTED: athlete-first, man-coverage dominant.
+    # Athleticism 9.1/10 (elite) but processing 6.8/10 and scheme versatility 4.2/10 are dual
+    # constraints. Production (40.7) accurate — not schedule-suppressed, reflects real ceiling.
+    # FM-3 Processing Wall primary, FM-6 secondary. Capital R2 Mid.
+    107: {
+        "forced_archetype":    "CB-2",
+        "archetype_label":     "CB-2 Outside Man-Coverage Corner",
+        "archetype_rationale": (
+            "Sports Almanac Mode 1 complete S75. CB-3 Press Man Corner REJECTED. "
+            "Everette wins through athlete-first man-coverage mechanism — athleticism 9.1/10 "
+            "is elite and is the confirmed primary win driver. "
+            "Processing 6.8/10 and scheme versatility 4.2/10 are dual confirmed constraints: "
+            "CB-3 requires scheme-reading and press technique as primary mechanisms, not "
+            "athleticism as the primary driver. CB-2 Outside Man-Coverage Corner correctly "
+            "captures the athlete-led man-coverage profile. "
+            "Production (40.7) is accurate — not schedule-suppressed, reflects real ceiling. "
+            "FM-3 Processing Wall is primary: processing 6.8/10 creates scheme-complexity "
+            "ceiling at NFL pace — route combinations that require pre-break anticipation "
+            "will create exploitable windows. "
+            "FM-6 Role Mismatch is secondary: zone-heavy deployments expose the processing "
+            "constraint structurally. "
+            "Capital: R2 Mid. Miami landing suppresses FM-3 (man-coverage system); "
+            "Chiefs/Jets landing elevates both FM-3 and FM-6 risk."
+        ),
+        "eval_confidence":     "Tier B",
+        "capital_range":       "R2 Mid — Miami suppresses FM-3; Chiefs/Jets elevate risk",
+        "fm_flags":            ["FM-3 Processing Wall (primary)", "FM-6 Role Mismatch (secondary)"],
+        "placed_session":      75,
+        "bust_warning": (
+            "FM-3 Processing Wall primary: processing 6.8/10 creates exploitable windows against "
+            "route combinations requiring pre-break anticipation at NFL pace. "
+            "FM-6 secondary: zone deployments structurally expose the processing constraint. "
+            "Production (40.7) is the real ceiling — not suppressed, not expandable via scheme fix."
+        ),
+        "paa_findings": {
+            "Athleticism":           "ELITE — 9.1/10; confirmed primary win mechanism",
+            "Processing":            "CONSTRAINT — 6.8/10; pre-break anticipation limited",
+            "Scheme_versatility":    "CONSTRAINT — 4.2/10; man-coverage specialist only",
+            "Production":            "ACCURATE — 40.7; not schedule-suppressed, reflects real ceiling",
+            "CB3_rejected":          "CB-3 requires scheme-reading primary; Everette is athleticism-primary",
+            "FM_primary":            "FM-3 Processing Wall — scheme-complexity ceiling at NFL pace",
+            "FM_secondary":          "FM-6 Role Mismatch — zone deployments expose processing constraint",
+            "Capital_modifier":      "Miami (man-heavy) suppresses FM-3; Chiefs/Jets compound both",
+            "Archetype_lock":        "CB-2 Outside Man-Coverage Corner confirmed S75",
+        },
+    },
+
+    # Genesis Smith — S (pid=147). Sports Almanac Mode 1 S75.
+    # S-3 archetype confirmed correct but multiplier weights inflating composite.
+    # Coverage elite (deep zone 93, catch point 85, VJ 98.0 pct) but run defense catastrophic
+    # (tackling 14, run defense 25.4, motor 17, 20.1% missed tackle rate).
+    # FM-5 Motivation Cliff primary (effort-dependent run support). Capital R4 Late pending triage.
+    147: {
+        "forced_archetype":    "S-3",
+        "archetype_label":     "S-3 Multiplier Safety — FM-5 Active",
+        "archetype_rationale": (
+            "Sports Almanac Mode 1 complete S75. S-3 Multiplier Safety archetype is confirmed "
+            "correct but multiplier weights are inflating composite by pricing full-responsibility "
+            "contribution that tape does not support. "
+            "Coverage is elite: deep zone 93, catch point 85, vertical jump 98.0 pct (ELITE burst). "
+            "Run defense is catastrophic: tackling 14, run defense 25.4, motor/effort 17, "
+            "20.1% missed tackle rate. These are not developmental gaps — they are effort-dependent "
+            "metrics. The variance between coverage elite and run defense catastrophic is the "
+            "FM-5 Motivation Cliff signature: situation-selective effort. "
+            "FM-5 Motivation Cliff is primary: run support effort collapses in non-coverage snaps. "
+            "FM-6 Role Mismatch is secondary: multiplier deployment requires willingness to engage "
+            "run force, which tape does not confirm. "
+            "FM-3 Processing Wall is tertiary: ball-tracking in reactive situations. "
+            "Capital: R4 Late pending character triage. R4 Mid if triage confirms "
+            "situation-dependent effort (coachable) rather than structural disengagement. "
+            "Cardinals/Texans landing suppresses FM-5 and FM-6 (coverage-specialist deployment). "
+            "Seahawks compounds both failure modes."
+        ),
+        "eval_confidence":     "Tier C",
+        "capital_range":       "R4 Late (FM-5 triage pending) — R4 Mid if triage confirms situation-dependent",
+        "fm_flags":            ["FM-5 Motivation Cliff (primary)", "FM-6 Role Mismatch (secondary)", "FM-3 Processing Wall (tertiary)"],
+        "placed_session":      75,
+        "bust_warning": (
+            "FM-5 Motivation Cliff primary: 20.1% missed tackle rate + tackling 14 + motor 17 "
+            "is the effort-variance signature, not a technique gap. Situation-selective effort "
+            "at NFL level produces inconsistent run-support performance that defeats multiplier "
+            "deployment value. FM-6 secondary: multiplier requires run-force willingness tape "
+            "does not confirm. Cardinals/Texans coverage-specialist deployment is the only "
+            "landing spot that does not activate FM-5 directly."
+        ),
+        "paa_findings": {
+            "Coverage":              "ELITE — deep zone 93, catch point 85, VJ 98.0 pct",
+            "Run_defense":           "CATASTROPHIC — tackling 14, run defense 25.4, 20.1% missed tackle rate",
+            "Motor_effort":          "FLAG — motor/effort 17; effort-variance signature (FM-5)",
+            "FM5_signal":            "ACTIVE — coverage-elite vs run-catastrophic variance = Motivation Cliff",
+            "FM_primary":            "FM-5 Motivation Cliff — situation-selective effort confirmed via tape variance",
+            "FM_secondary":          "FM-6 Role Mismatch — multiplier deployment requires run-force willingness",
+            "FM_tertiary":           "FM-3 Processing Wall — ball-tracking reactive situations",
+            "Capital_gate":          "TRIAGE PENDING — R4 Late base; R4 Mid if effort is situation-dependent",
+            "Archetype_lock":        "S-3 archetype correct; multiplier weights must not price full-responsibility",
+        },
+    },
+
+    # Garrett Nussmeier — QB (pid=58). Sports Almanac Mode 1 S75.
+    # QB-4 Game Manager REJECTED: processing elite (8.8/10) but athleticism catastrophic
+    # (2.7/10 — 4.92 40-dash 24.2 pct, VJ 28.0 9.3 pct). Athleticism is an existence
+    # condition — eliminates 60-70% of NFL offensive systems from deployment consideration.
+    # Scheme versatility 2.1/10. FM-6 primary. Capital R5.
+    58: {
+        "forced_archetype":    "QB-3",
+        "archetype_label":     "QB-3 Pocket Technician",
+        "archetype_rationale": (
+            "Sports Almanac Mode 1 complete S75. QB-4 Game Manager Elevated REJECTED. "
+            "Nussmeier's processing is elite: 8.8/10 anticipatory processing, anticipation 93, "
+            "which correctly places him above QB-4. QB-3 Pocket Technician captures the confirmed "
+            "mechanism: processing-led quarterback in structure-dependent deployments. "
+            "Athleticism is catastrophic and is an existence condition, not a ceiling modifier: "
+            "2.7/10 composite, 40-yard dash 4.92s (24.2 pct), vertical jump 28.0 (9.3 pct). "
+            "Catastrophic athleticism eliminates 60-70% of NFL offensive systems from deployment "
+            "consideration — not as a ceiling suppressor but as a deployment prerequisite. "
+            "Scheme versatility 2.1/10 confirms the structure-dependency. "
+            "Deep accuracy 33 and decision-making 30 are the critical in-structure execution gaps. "
+            "FM-6 Role Mismatch is primary: structure-heavy deployment required — any system "
+            "that requires scramble extension, platform mobility, or designed quarterback movement "
+            "immediately activates FM-6. "
+            "FM-3 Processing Wall is secondary: scheme-complexity escalation beyond confirmed "
+            "comfort zone generates processing failures at NFL pace. "
+            "FM-2 Scheme Ghost is tertiary: LSU offense may be amplifying processing output. "
+            "Capital: R5. Saints landing is optimal scheme architecture fit. Vikings creates "
+            "immediate FM-6 and FM-3 compound risk. Webb at R3 is the cautionary capital comp."
+        ),
+        "eval_confidence":     "Tier B",
+        "capital_range":       "R5 — Saints optimal; Vikings compound risk; Webb R3 cautionary comp",
+        "fm_flags":            ["FM-6 Role Mismatch (primary)", "FM-3 Processing Wall (secondary)", "FM-2 Scheme Ghost (tertiary)"],
+        "placed_session":      75,
+        "bust_warning": (
+            "FM-6 Role Mismatch primary: structure-heavy deployment is a prerequisite, not a "
+            "preference. Athleticism 2.7/10 (forty 4.92s 24.2 pct, VJ 28.0 9.3 pct) is an "
+            "existence condition that eliminates the majority of NFL offensive systems. "
+            "Athleticism is not a ceiling modifier here — it is a system-compatibility gate. "
+            "FM-3 secondary: processing elite but scheme-complexity ceiling unconfirmed at "
+            "NFL complexity level. Webb at R3 is the comp — capital overpayment risk is real."
+        ),
+        "paa_findings": {
+            "Processing":              "ELITE — 8.8/10 anticipatory processing; anticipation 93",
+            "Athleticism":             "CATASTROPHIC EXISTENCE CONDITION — 2.7/10; forty 4.92s (24.2 pct); VJ 28.0 (9.3 pct)",
+            "Scheme_versatility":      "CATASTROPHIC — 2.1/10; structure-dependency confirmed",
+            "Deep_accuracy":           "CONCERN — 33; in-structure execution gap",
+            "Decision_making":         "CONCERN — 30; in-structure execution gap",
+            "QB4_rejected":            "QB-3 correct — processing elite supersedes QB-4 label; athleticism is existence condition",
+            "FM_primary":              "FM-6 Role Mismatch — structure-heavy deployment required; mobility systems activate FM-6",
+            "FM_secondary":            "FM-3 Processing Wall — scheme-complexity ceiling unconfirmed",
+            "FM_tertiary":             "FM-2 Scheme Ghost — LSU offense may amplify output",
+            "Capital_comp":            "Webb R3 = cautionary comp; Saints optimal; Vikings compound risk",
+            "Archetype_lock":          "QB-3 Pocket Technician confirmed S75",
+        },
+    },
+
+    # Ty Simpson — QB (pid=9). Sports Almanac Mode 1 S75.
+    # QB-5 Raw Projection REJECTED: Processing efficiency and scheme mastery are confirmed.
+    # Accuracy at 55th-60th percentile means defenses will not honor the arm as primary threat,
+    # inverting the QB-2 mechanism. Simpson wins through processing efficiency and mistake
+    # elimination in scheme-controlled contexts. FM-6 Role Mismatch primary.
+    # Landing-spot-conditional capital: Steelers R1 late justified; Jets/Cardinals R2;
+    # Browns R2 mid-late ceiling. Correct archetype: QB-4 Game Manager Elevated.
+    9: {
+        "forced_archetype":    "QB-4",
+        "archetype_label":     "QB-4 Game Manager Elevated",
+        "archetype_rationale": (
+            "Sports Almanac Mode 1 complete S75. QB-5 Raw Projection REJECTED — QB-5 assigns "
+            "processing as underdeveloped/unconfirmed, which is incorrect for Simpson. "
+            "QB-2 Dual-Threat Field General is also REJECTED: accuracy at 55th-60th percentile "
+            "means defenses will not honor the arm as a primary threat, structurally inverting "
+            "the QB-2 mechanism. Simpson wins through processing efficiency, scheme mastery, "
+            "and mistake elimination in controlled-context playcalling. "
+            "QB-4 Game Manager Elevated correctly captures the profile: confirmed processor, "
+            "limited arm-talent ceiling, scheme-dependent value. "
+            "FM-6 Role Mismatch is primary: QB-4 value requires a scheme architect who designs "
+            "around the manager profile — Steelers under Canada/offense-by-committee, "
+            "structure-heavy offensive systems. Expansion-franchise or high-volume arm-talent "
+            "systems destroy value. "
+            "Capital is landing-spot-conditional: Steelers scheme fit → R1 late (Pick 18-25 range) "
+            "justified. Jets / Cardinals → R2 Early ceiling. Browns → R2 Mid-Late ceiling. "
+            "No landing spot justifies R1 top-15 capital."
+        ),
+        "eval_confidence":     "Tier B",
+        "capital_range":       "R1 late (Picks 18-25) Steelers confirmed; R2 Early all other fits",
+        "fm_flags":            ["FM-6 Role Mismatch (primary)", "FM-3 Processing Wall (secondary — scheme-conditional)"],
+        "placed_session":      75,
+        "bust_warning": (
+            "FM-6 Role Mismatch primary: QB-4 value is entirely scheme-dependent. "
+            "High-volume arm-talent systems (air raid, spread-pass) expose accuracy ceiling "
+            "and generate bust outcome at any R1 capital. "
+            "Landing spot confirmation is mandatory before R1 capital is allocated. "
+            "FM-3 secondary: QB-4 Game Managers face processing wall risk when scheme complexity "
+            "escalates beyond their confirmed comfort zone."
+        ),
+        "paa_findings": {
+            "Processing_efficiency":  "CONFIRMED — scheme mastery and mistake elimination confirmed",
+            "Arm_talent":             "CONCERN — accuracy 55th-60th percentile; not a primary threat arm",
+            "QB2_mechanism":          "REJECTED — defenses do not honor arm → QB-2 inversion active",
+            "QB5_mechanism":          "REJECTED — processing is confirmed, not raw/underdeveloped",
+            "FM_primary":             "FM-6 Role Mismatch — scheme-architect required",
+            "FM_secondary":           "FM-3 Processing Wall — scheme-complexity-conditional",
+            "Capital_gate":           "LANDING_SPOT_CONDITIONAL — Steelers R1 late; all others R2",
+            "Archetype_lock":         "QB-4 Game Manager Elevated confirmed S75",
+        },
+    },
+
+    # Treydan Stukes — CB (pid=160). Sports Almanac Mode 3 S76.
+    # API returned CB-3 Press Man Corner on fresh re-score — mechanism wrong.
+    # CB-4 Slot Specialist confirmed: zone processing complete (Play Rec=73, Deep Zone=72),
+    # condensed-space technique, FM-6 Role Mismatch organizational primary.
+    # CB-5 Zone-Instinct Nickel (prior Mode 3 output) rejected: processing is complete,
+    # not developmental. CB-5 requires athleticism-complete/processing-incomplete architecture.
+    # CB-3 Press Man Corner rejected: not a press/man mechanism.
+    # CB-4 Chris Harris Jr. mechanism match. Override placed S76.
+    # Capital: R2 Mid–R3 Early, scheme-dependent. Hold wide until landing spot confirmed.
+    160: {
+        "forced_archetype": "CB-4",
+        "archetype_label":  "CB-4 Slot Specialist",
+        "archetype_rationale": (
+            "Sports Almanac Mode 3 complete S76. CB-3 Press Man Corner REJECTED — API selected "
+            "on source-priority logic, not mechanism. CB-4 Slot Specialist confirmed. "
+            "Zone processing is complete, not developmental: Play Rec=73, Deep Zone=72 both clear. "
+            "Condensed-space technique is the primary win mechanism — AGI and ACC primary, "
+            "SIZE not a gate. FM-6 Role Mismatch is organizational primary: organizations "
+            "deploying him outside at boundary as a press corner generate the bust from "
+            "scheme misread. CB-5 rejected — processing-complete/athleticism-incomplete "
+            "architecture disqualifies Raw Projection label. "
+            "Capital: R2 Mid–R3 Early, scheme-dependent. Cardinals/Colts/Steelers confirm "
+            "Day 2 Mid; all other landing spots cap at R3 ceiling until scheme is known."
+        ),
+        "eval_confidence": "Tier B",
+        "fm_flags": ["FM-6 Role Mismatch (primary)", "FM-2 Scheme Dependency (secondary)"],
+        "placed_session": 76,
+        "paa_findings": {
+            "Play_recognition":  "73 — zone processing complete, not developmental",
+            "Deep_zone":         "72 — zone coverage mechanism confirmed",
+            "Condensed_space":   "CONFIRMED — slot technique primary win mechanism",
+            "CB3_rejected":      "API error — press/man mechanism does not match film",
+            "CB5_rejected":      "Processing complete disqualifies Raw Projection label",
+            "FM_primary":        "FM-6 Role Mismatch — boundary corner deployment destroys value",
+            "FM_secondary":      "FM-2 Scheme Dependency — slot/zone deployment required",
+            "Capital_gate":      "LANDING_SPOT_CONDITIONAL — scheme confirmation required",
+            "Archetype_lock":    "CB-4 Slot Specialist confirmed S76",
+        },
+    },
+
+    # Caleb Downs — S (pid=28). Sports Almanac Mode 1 S75.
+    # S-1 Centerfielder REJECTED: Zone Coverage 91.5 elite, but Man Coverage 56.9
+    # and Press 35 are structural disqualifiers for S-1 mechanism.
+    # FM-2 Scheme Ghost primary — requires zone-heavy, two-high deployment to unlock value.
+    # Correct archetype: S-4 Zone-Dominant Coverage Safety.
+    28: {
+        "forced_archetype":    "S-4",
+        "archetype_label":     "S-4 Zone-Dominant Coverage Safety",
+        "archetype_rationale": (
+            "Sports Almanac Mode 1 complete S75. S-1 Centerfielder REJECTED. "
+            "Zone Coverage 91.5 is elite and confirms zone processing as the primary win mechanism. "
+            "Man Coverage 56.9 and Press 35 are structural disqualifiers for S-1 Centerfielder — "
+            "S-1 requires confirmed man coverage floor and multi-zone deployment. Downs does not clear. "
+            "FM-2 Scheme Ghost is primary: value is scheme-dependent; zone-heavy/two-high deployments "
+            "unlock full value; man-heavy or press-dominant schemes structurally limit him. "
+            "Consensus #3 overall is 15-20 picks above justified capital. "
+            "Composite 6.76/10 maps to R2 Early capital (Picks 33-50). Croup (Pick 38) is ceiling comp. "
+            "FM-6 secondary: landing spot mismatch destroys value at any capital above R3."
+        ),
+        "eval_confidence":     "Tier B",
+        "capital_range":       "R2 Early (Picks 33-50) — ceiling Croup (Pick 38)",
+        "fm_flags":            ["FM-2 Scheme Ghost (primary)", "FM-6 Role Mismatch (secondary)"],
+        "placed_session":      75,
+        "bust_warning": (
+            "FM-2 Scheme Ghost primary: zone-only deployment profile. Man Coverage 56.9 + Press 35 "
+            "are structural disqualifiers for press-man or bracket scheme deployment. "
+            "Man-heavy or press-dominant landing spot = significant value destruction at any capital. "
+            "Consensus #3 pricing (R1 top-5 capital) is 15-20 picks above mechanism-justified range."
+        ),
+        "paa_findings": {
+            "Zone_coverage":   "ELITE — 91.5 confirms zone processing as primary mechanism",
+            "Man_coverage":    "CONCERN — 56.9 is structural disqualifier for S-1",
+            "Press":           "CONCERN — 35 disqualifies S-1 press-coverage mechanism",
+            "FM_primary":      "FM-2 Scheme Ghost — zone-heavy/two-high deployment required",
+            "FM_secondary":    "FM-6 Role Mismatch — landing spot is critical capital modifier",
+            "Capital_gate":    "MANUAL_HOLD — Mode B Landing Spot Note required before R2 allocation",
+            "S1_rejected":     "Zone Coverage 91.5 + Man 56.9 + Press 35 disqualify S-1",
+            "Archetype_lock":  "S-4 Zone-Dominant Coverage Safety confirmed S75",
+        },
+    },
+
+    # ---------------------------------------------------------------------------
+    # Session 76 overrides (continued)
+    # ---------------------------------------------------------------------------
+
+    # Joshua Josephs — EDGE (pid=114). Sports Almanac Mode 3 S76.
+    # EDGE-3 Power-Counter Technician REJECTED: single-move hook dependency,
+    # scheme-manufactured production. FM-1 Athleticism Mirage primary (wins generated
+    # by Tennessee gap-blitz architecture, not independent hand sequences).
+    # FM-2 Scheme Ghost secondary. Correct archetype: EDGE-4 Athletic Dominator.
+    # Capital ceiling R3 Early–R3 Mid. Landing Spot Note mandatory.
+    114: {
+        "forced_archetype":    "EDGE-4",
+        "archetype_label":     "EDGE-4 Athletic Dominator",
+        "archetype_rationale": (
+            "Sports Almanac Mode 3 correction S76. EDGE-3 Power-Counter Technician REJECTED — "
+            "prior label was Sports Almanac error. Single-move hook dependency confirmed: "
+            "primary pass-rush mechanism is athletically generated via line games and stunts, "
+            "not independent hand sequences. Scheme-manufactured production: "
+            "Tennessee gap-blitz architecture amplified win totals. "
+            "FM-1 Athleticism Mirage is primary: wins manufactured by scheme rather than "
+            "confirmed independent hand technique — counters are not reliable at NFL speed. "
+            "FM-2 Scheme Ghost is secondary: gap-blitz-dependent production does not transfer "
+            "to base-front deployments. "
+            "Capital ceiling R3 Early–R3 Mid. Landing Spot Note mandatory: "
+            "Cowboys/Packers/Dolphins gap-blitz-heavy schemes only."
+        ),
+        "eval_confidence":     "Tier B",
+        "capital_range":       "R3 Early–R3 Mid",
+        "fm_flags":            ["FM-1 Athleticism Mirage (primary)", "FM-2 Scheme Ghost (secondary)"],
+        "placed_session":      76,
+        "bust_warning": (
+            "FM-1 Athleticism Mirage primary: scheme-manufactured production masks absence of "
+            "independent hand technique. NFL base-front defenders not running gap-blitz "
+            "architectures expose the single-move dependency immediately. "
+            "FM-2 Scheme Ghost secondary: gap-blitz-dependent win totals do not transfer — "
+            "NFL base defenses require hand-sequence counters Josephs has not confirmed."
+        ),
+        "paa_findings": {
+            "Pass_rush_mechanism":  "SCHEME-MANUFACTURED — line games/stunts primary; independent hand sequences unconfirmed",
+            "Counter_package":      "NOT CONFIRMED at NFL speed — single-move hook dependency",
+            "FM_primary":           "FM-1 Athleticism Mirage — athletically generated wins via scheme, not technique",
+            "FM_secondary":         "FM-2 Scheme Ghost — Tennessee gap-blitz architecture amplifying production",
+            "EDGE3_rejected":       "Power-Counter Technician requires confirmed hand-sequence counters; gate fails",
+            "Landing_spot_note":    "MANDATORY — Cowboys/Packers/Dolphins gap-blitz architectures only",
+            "Capital_ceiling":      "R3 Early–R3 Mid",
+            "Archetype_lock":       "EDGE-4 Athletic Dominator confirmed S76 Mode 3",
+        },
     },
 }
 
