@@ -660,6 +660,119 @@ body {
   color: rgba(255,255,255,0.08); text-transform: uppercase;
   pointer-events: none; z-index: 100;
 }
+
+/* ── Decision Card ─────────────────────────────────────────────────────── */
+.decision-card {
+  background: var(--ink3);
+  border: 1px solid var(--wire2);
+  border-left: 4px solid var(--cold);
+  border-radius: 0 6px 6px 0;
+  padding: 16px 18px 12px;
+  margin-bottom: 20px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0;
+}
+.dc-zones {
+  display: grid;
+  grid-template-columns: 3fr 2fr;
+  gap: 16px;
+  margin-bottom: 10px;
+}
+.dc-call-lbl {
+  font-size: 7px; font-weight: 700; letter-spacing: 0.16em;
+  text-transform: uppercase; color: var(--cold); margin-bottom: 3px;
+}
+.dc-call-text {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 16px; font-weight: 800; line-height: 1.2;
+  color: var(--text); letter-spacing: 0.01em;
+  margin-bottom: 8px;
+}
+.dc-field-lbl {
+  font-size: 7px; font-weight: 700; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--dim); margin-bottom: 2px;
+}
+.dc-field-val {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 8px;
+}
+.dc-risk-hdr {
+  font-size: 7px; font-weight: 700; letter-spacing: 0.16em;
+  text-transform: uppercase; color: var(--red); margin-bottom: 8px;
+}
+.dc-risk-note {
+  font-size: 10px; line-height: 1.55; color: var(--mid); margin-top: 8px;
+}
+.dc-strip {
+  border-top: 1px solid var(--wire);
+  padding-top: 8px;
+  display: flex; gap: 16px; align-items: center;
+  font-size: 9px; color: var(--dim);
+}
+.dc-strip-lbl {
+  font-size: 7px; font-weight: 700; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--dim); margin-right: 4px;
+}
+.dc-strip-val { font-family: 'Barlow Condensed', sans-serif; font-size: 12px; font-weight: 700; }
+.dc-sep { color: var(--wire3); font-size: 10px; }
+
+/* ── Tab navigation ─────────────────────────────────────────────────────── */
+.tab-nav {
+  display: flex; gap: 2px; margin-bottom: 16px;
+  border-bottom: 1px solid var(--wire2); padding-bottom: 0;
+}
+.tab-btn {
+  font-family: 'Barlow Condensed', sans-serif; font-size: 10px; font-weight: 700;
+  letter-spacing: 0.12em; text-transform: uppercase; color: var(--dim);
+  background: none; border: none; padding: 8px 14px 9px; cursor: pointer;
+  border-bottom: 2px solid transparent; margin-bottom: -1px;
+  transition: color 120ms ease, border-color 120ms ease;
+}
+.tab-btn:hover { color: var(--mid); }
+.tab-btn.active { color: var(--cold); border-bottom-color: var(--cold); }
+.tab-pane { display: none; }
+.tab-pane.active { display: block; }
+
+/* ── Notes placeholder ──────────────────────────────────────────────────── */
+.notes-placeholder {
+  background: var(--ink3); border: 1px solid var(--wire);
+  border-radius: 5px; padding: 16px;
+}
+.notes-lbl {
+  font-family: 'Barlow Condensed', sans-serif; font-size: 9px; font-weight: 700;
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--dim);
+  margin-bottom: 8px;
+}
+.notes-body { font-size: 11px; line-height: 1.6; color: var(--mid); }
+
+/* ── Report tab ─────────────────────────────────────────────────────────── */
+.report-block {
+  background: var(--ink3); border: 1px solid var(--wire2);
+  border-radius: 5px; padding: 16px 18px; margin-bottom: 12px;
+}
+.report-lbl {
+  font-family: 'Barlow Condensed', sans-serif; font-size: 8px; font-weight: 700;
+  letter-spacing: 0.16em; text-transform: uppercase; color: var(--dim);
+  margin-bottom: 4px;
+}
+.report-val {
+  font-family: 'Barlow Condensed', sans-serif; font-size: 16px; font-weight: 800;
+  color: var(--text); margin-bottom: 2px;
+}
+.report-sub { font-size: 10px; color: var(--mid); line-height: 1.5; }
+
+/* ── Traits tab ─────────────────────────────────────────────────────────── */
+.traits-note {
+  font-size: 10px; color: var(--dim); margin-top: 12px;
+  padding: 8px 10px; background: var(--ink3);
+  border-left: 2px solid var(--wire2); border-radius: 0 3px 3px 0;
+}
+
+/* ── Comps empty state ──────────────────────────────────────────────────── */
+.comps-empty {
+  font-size: 11px; color: var(--dim); padding: 20px 0; text-align: center;
+}
 """
 
 
@@ -1006,6 +1119,139 @@ def _build_fm_ref_html(fm_ref_comps: list, fm_labels: list | None = None, pos: s
 
 # ── Public API ────────────────────────────────────────────────────────────────
 
+def build_decision_card(d: dict, fm_codes: set) -> str:
+    """
+    Build the sticky decision summary card rendered at the top of the right content pane.
+    Returns empty string for unscored prospects (apex_composite absent or null).
+    """
+    apex_comp = d.get("apex_composite")
+    if not _v23_present(apex_comp):
+        return ""
+
+    tier         = (d.get("apex_tier") or "").strip().upper()
+    name         = d.get("display_name") or d.get("name") or "—"
+    pos          = d.get("position_group") or d.get("position") or ""
+    capital_base = d.get("capital_base") or d.get("capital_adjusted") or "—"
+    conf_raw     = d.get("eval_confidence") or d.get("confidence_band") or "—"
+    gap_label    = (d.get("gap_label") or "").strip().upper()
+    translation_risk = d.get("translation_risk")
+
+    div_delta    = d.get("divergence_delta") or d.get("auto_apex_delta")
+    try:
+        dd = int(float(div_delta)) if div_delta is not None else None
+    except (TypeError, ValueError):
+        dd = None
+
+    # ── Zone 1: Call logic ────────────────────────────────────────────────────
+    if tier == "ELITE":
+        call_text = "Priority target — commit capital above consensus"
+    elif tier == "DAY1" and dd is not None and dd > 5:
+        call_text = "Strong buy — APEX above market, investigate the gap"
+    elif tier == "DAY1":
+        call_text = "Day 1 value — execute at consensus range"
+    elif tier == "DAY2" and dd is not None and dd < -5:
+        call_text = "Monitor — APEX below market, confirm mechanism holds"
+    elif tier == "DAY2":
+        call_text = "Solid Day 2 target"
+    elif tier == "DAY3":
+        call_text = "Day 3 value — draft capital efficient at this range"
+    elif tier in ("UDFA-P", "UDFA"):
+        call_text = "Priority free agent — do not spend picks"
+    else:
+        call_text = "Evaluate — insufficient APEX data"
+
+    # Market edge sentence (only when abs(dd) > 5)
+    market_edge_html = ""
+    if dd is not None and abs(dd) > 5:
+        if dd > 5:
+            edge_sentence = f"APEX rates {abs(dd)} spots above consensus — model sees premium the market has not priced in."
+        else:
+            edge_sentence = f"APEX rates {abs(dd)} spots below consensus — model has flagged a risk not reflected in market grade."
+        market_edge_html = (
+            f'<div class="dc-field-lbl">MARKET EDGE</div>'
+            f'<div class="dc-field-val">{_e(edge_sentence)}</div>'
+        )
+
+    # ── Zone 2: FM risk block ─────────────────────────────────────────────────
+    _FC = {1: "t1", 2: "t2", 3: "t3", 4: "t4", 5: "t5", 6: "t6"}
+    fm_tags_html = ""
+    if fm_codes:
+        tags = ""
+        for code in sorted(fm_codes)[:2]:
+            label = f"FM-{code}"
+            cls   = _FC.get(code, "t1")
+            tags += f'<span class="fm-tag {cls}">{_e(label)}</span>'
+        fm_tags_html = f'<div class="fm-tags">{tags}</div>'
+    else:
+        fm_tags_html = '<div style="font-size:10px;color:var(--dim);margin-bottom:8px;">No FM flags</div>'
+
+    risk_note_html = ""
+    if _v23_present(translation_risk):
+        first_sentence = str(translation_risk).split(".")[0][:120]
+        risk_note_html = f'<div class="dc-risk-note">{_e(first_sentence)}</div>'
+
+    # ── Zone 3: Confidence strip ──────────────────────────────────────────────
+    _CONF_COLOR = {
+        "HIGH": "var(--green)", "A": "var(--green)",
+        "MEDIUM": "var(--amber)", "B": "var(--amber)",
+        "LOW": "var(--red)", "C": "var(--red)",
+    }
+    conf_key  = str(conf_raw).strip().upper()
+    conf_color = _CONF_COLOR.get(conf_key, "var(--dim)")
+    conf_disp  = _e(conf_raw) if _v23_present(conf_raw) else "—"
+
+    _GAP_COLOR = {
+        "CLEAN": "var(--green)", "SOLID": "var(--cold)",
+        "TWEENER": "var(--amber)", "COMPRESSION": "var(--amber)", "NO_FIT": "var(--red)",
+    }
+    _GAP_DISP = {
+        "CLEAN": "Clean Fit", "SOLID": "Solid Fit",
+        "TWEENER": "Tweener", "COMPRESSION": "Elite Tweener", "NO_FIT": "No Dominant Fit",
+    }
+    gap_color = _GAP_COLOR.get(gap_label, "var(--dim)")
+    gap_disp  = _GAP_DISP.get(gap_label, gap_label.title() if gap_label else "—")
+
+    score_disp = _safe_float(apex_comp)
+
+    pos_chip = f'<span style="font-size:9px;font-weight:700;letter-spacing:0.10em;text-transform:uppercase;color:var(--dim);margin-left:6px;">{_e(pos)}</span>' if pos else ""
+
+    return (
+        '<div class="decision-card">'
+        '<div class="dc-zones">'
+        # Zone 1 — Call block
+        '<div>'
+        f'<div style="margin-bottom:10px;">'
+        f'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;font-weight:700;color:var(--text);">{_e(name)}</span>'
+        f'{pos_chip}'
+        f'</div>'
+        '<div class="dc-call-lbl">CALL</div>'
+        f'<div class="dc-call-text">{_e(call_text)}</div>'
+        '<div class="dc-field-lbl">CAPITAL</div>'
+        f'<div class="dc-field-val">{_e(capital_base)}</div>'
+        f'{market_edge_html}'
+        '</div>'
+        # Zone 2 — Risk block
+        '<div>'
+        '<div class="dc-risk-hdr">INVALIDATION</div>'
+        f'{fm_tags_html}'
+        f'{risk_note_html}'
+        '</div>'
+        '</div>'
+        # Zone 3 — Confidence strip
+        '<div class="dc-strip">'
+        f'<span><span class="dc-strip-lbl">EVAL CONFIDENCE</span>'
+        f'<span class="dc-strip-val" style="color:{conf_color}">{conf_disp}</span></span>'
+        '<span class="dc-sep">·</span>'
+        f'<span><span class="dc-strip-lbl">ARCHETYPE FIT</span>'
+        f'<span class="dc-strip-val" style="color:{gap_color}">{_e(gap_disp)}</span></span>'
+        '<span class="dc-sep">·</span>'
+        f'<span><span class="dc-strip-lbl">APEX SCORE</span>'
+        f'<span class="dc-strip-val" style="color:var(--amber)">{_e(score_disp)}</span></span>'
+        '</div>'
+        '</div>'
+    )
+
+
 def build_detail_html(d: dict, comps: list, rate, fm_ref_comps: list | None = None) -> str:
     """
     Build a complete self-contained HTML string for the DraftOS prospect detail drawer.
@@ -1255,6 +1501,9 @@ def build_detail_html(d: dict, comps: list, rate, fm_ref_comps: list | None = No
             pills += f'<span class="htag {cls}">{_e(t)}</span>'
         tags_html = f'<div class="tags-row">{pills}</div>'
 
+    # Decision card — top of right content pane (APEX-scored prospects only)
+    decision_card_html = build_decision_card(d, fm_codes)
+
     # FM section
     fm_html = _build_fm_section(fm_codes, fm_labels, prospect=d)
 
@@ -1339,6 +1588,64 @@ def build_detail_html(d: dict, comps: list, rate, fm_ref_comps: list | None = No
 
     # Capital note
     cap_note_html = f'<div class="capital-note">{_e(capital_note)}</div>' if capital_note else ""
+
+    # ── Tab-specific fragments ────────────────────────────────────────────────
+
+    # TRAITS tab — positional baseline note
+    _POS_TRAIT_NOTES: dict[str, str] = {
+        "QB":   "Top weighted traits: Processing, Scheme Versatility.",
+        "CB":   "Top weighted traits: Athleticism, Competitive Toughness.",
+        "EDGE": "Top weighted traits: Athleticism, Competitive Toughness.",
+        "OT":   "Top weighted traits: Competitive Toughness, Durability.",
+        "S":    "Top weighted traits: Processing, Athleticism.",
+        "IDL":  "Top weighted traits: Competitive Toughness, Durability.",
+        "ILB":  "Top weighted traits: Processing, Athleticism.",
+        "OLB":  "Top weighted traits: Athleticism, Competitive Toughness.",
+        "WR":   "Top weighted traits: Athleticism, Production.",
+        "TE":   "Top weighted traits: Competitive Toughness, Scheme Versatility.",
+        "OG":   "Top weighted traits: Competitive Toughness, Durability.",
+        "C":    "Top weighted traits: Processing, Competitive Toughness.",
+        "RB":   "Top weighted traits: Production, Durability.",
+    }
+    _trait_note = _POS_TRAIT_NOTES.get(pos.upper(), "")
+    pos_traits_note_html = (
+        f'<div class="traits-note">{_e(_trait_note)}</div>'
+        if _trait_note else ""
+    )
+
+    # COMPS tab — merge comps + FM refs, or empty state
+    if comps_html or fm_ref_html:
+        comps_tab_html = comps_html + fm_ref_html
+    else:
+        comps_tab_html = '<div class="comps-empty">No historical comp data available for this archetype yet.</div>'
+
+    # REPORT tab — capital + confidence + pos rank + snapshot
+    _CONF_REPORT_COLOR = {
+        "A": "var(--green)", "High": "var(--green)",
+        "B": "var(--amber)", "Medium": "var(--amber)",
+        "C": "var(--red)",   "Low": "var(--red)",
+    }
+    _report_conf_color = _CONF_REPORT_COLOR.get(str(conf_raw).strip(), "var(--dim)")
+    _pos_rank_label = f"#{int(float(pos_rank))} at {pos}" if pos_rank and _v23_present(pos_rank) else "—"
+    report_tab_html = (
+        f'<div class="report-block">'
+        f'<div class="report-lbl">Draft Capital</div>'
+        f'<div class="report-val">{_e(capital_base)}</div>'
+        f'{"<div class=\'report-sub\'>" + _e(capital_note) + "</div>" if capital_note else ""}'
+        f'</div>'
+        f'<div class="report-block">'
+        f'<div class="report-lbl">Eval Confidence</div>'
+        f'<div class="report-val" style="color:{_report_conf_color}">{_e(conf_display)}</div>'
+        f'</div>'
+        f'<div class="report-block">'
+        f'<div class="report-lbl">Position Rank</div>'
+        f'<div class="report-val">{_e(_pos_rank_label)}</div>'
+        f'</div>'
+        f'<div class="report-block">'
+        f'<div class="report-lbl">Snapshot Date</div>'
+        f'<div class="report-val">{_e(wm_date)}</div>'
+        f'</div>'
+    )
 
     # ── Font URL ─────────────────────────────────────────────────────────────
     gf_url = (
@@ -1428,41 +1735,83 @@ def build_detail_html(d: dict, comps: list, rate, fm_ref_comps: list | None = No
 
     <div class="rank-ghost">{ghost_rank}</div>
 
-    <!-- Archetype -->
-    <div class="sec-divider">Archetype</div>
-    <div class="arch-section">
-      <div class="arch-header-row">
-        <div>
-          <div class="archetype-code">{_e(arch_code)}</div>
-          <div class="archetype-name">{_e(arch_label or archetype_raw)}</div>
-          {arch_def_html}
+    <!-- Tab Navigation -->
+    <nav class="tab-nav">
+      <button class="tab-btn active" data-tab="tab-summary">Summary</button>
+      <button class="tab-btn" data-tab="tab-traits">Traits</button>
+      <button class="tab-btn" data-tab="tab-risk">Risk</button>
+      <button class="tab-btn" data-tab="tab-comps">Comps</button>
+      <button class="tab-btn" data-tab="tab-notes">Notes</button>
+      <button class="tab-btn" data-tab="tab-report">Report</button>
+    </nav>
+
+    <!-- TAB: SUMMARY -->
+    <div id="tab-summary" class="tab-pane active">
+
+      {decision_card_html}
+
+      <div class="sec-divider">Archetype</div>
+      <div class="arch-section">
+        <div class="arch-header-row">
+          <div>
+            <div class="archetype-code">{_e(arch_code)}</div>
+            <div class="archetype-name">{_e(arch_label or archetype_raw)}</div>
+            {arch_def_html}
+          </div>
+          {ras_html}
         </div>
-        {ras_html}
+        {fit_row_html}
+        {tags_html}
       </div>
-      {fit_row_html}
-      {tags_html}
+
+      {divergence_panel_html}
+
+      {sig_html}
+
     </div>
 
-    <!-- FM Risk -->
-    {fm_html}
+    <!-- TAB: TRAITS -->
+    <div id="tab-traits" class="tab-pane">
 
-    <!-- Divergence -->
-    {divergence_panel_html}
+      <div class="traits-section">
+        <div class="section-header">Football Traits</div>
+        {football_html}
+      </div>
 
-    <!-- Signature Play -->
-    {sig_html}
+      <div class="traits-section">
+        <div class="section-header">System Traits</div>
+        {system_html}
+      </div>
 
-    <!-- Strengths + Red Flags -->
-    {two_col_html}
+      {pos_traits_note_html}
 
-    <!-- Translation Risk -->
-    {risk_html}
+    </div>
 
-    <!-- Historical Comps -->
-    {comps_html}
+    <!-- TAB: RISK -->
+    <div id="tab-risk" class="tab-pane">
+      {fm_html}
+      {two_col_html}
+      {risk_html}
+    </div>
 
-    <!-- FM Reference Records -->
-    {fm_ref_html}
+    <!-- TAB: COMPS -->
+    <div id="tab-comps" class="tab-pane">
+      {comps_tab_html}
+    </div>
+
+    <!-- TAB: NOTES -->
+    <div id="tab-notes" class="tab-pane">
+      <div class="notes-placeholder">
+        <div class="notes-lbl">Analyst Notes</div>
+        <div class="notes-body">Notes are added through the APEX OS pipeline.
+        This panel will display scout notes and analyst annotations when available.</div>
+      </div>
+    </div>
+
+    <!-- TAB: REPORT -->
+    <div id="tab-report" class="tab-pane">
+      {report_tab_html}
+    </div>
 
   </div>
   <!-- end content -->
@@ -1471,6 +1820,18 @@ def build_detail_html(d: dict, comps: list, rate, fm_ref_comps: list | None = No
 
 <div class="card-stamp">APEX OS · 2026 · #{prospect_id}</div>
 
+<script>
+document.querySelectorAll('.tab-btn').forEach(btn => {{
+  btn.addEventListener('click', () => {{
+    const target = btn.dataset.tab;
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(target).classList.add('active');
+  }});
+}});
+</script>
+
 </body>
 </html>"""
 
@@ -1478,37 +1839,23 @@ def build_detail_html(d: dict, comps: list, rate, fm_ref_comps: list | None = No
 def estimate_height(d: dict, comps: list, fm_ref_comps: list | None = None) -> int:
     """
     Estimate iframe height in pixels for components.html() call.
-    The drawer uses height:100vh internally, so this sets the iframe container size.
+    Tabs make height predictable — only FM and comps count adds to base.
+    Sections in hidden tabs do not contribute to visible scroll height.
     """
-    h = 900
-    if _v23_present(d.get("signature_play")):
-        h += 80
-    if _v23_present(d.get("strengths")) or _v23_present(d.get("red_flags")):
-        h += 240
-    if _v23_present(d.get("translation_risk")):
-        h += 70
-    if comps:
-        h += 180 * min(len(comps), 2)
+    h = 980
 
-    # FM section: base height for pip bar + tags; extra for compound severity block
+    # FM pip bar + tags in RISK tab can push visible height on first open
     fm_primary   = d.get("failure_mode_primary")
     fm_secondary = d.get("failure_mode_secondary")
-    fm_primary_present   = _fm_is_present(fm_primary)
-    fm_secondary_present = _fm_is_present(fm_secondary)
-    if fm_primary_present or fm_secondary_present:
+    if _fm_is_present(fm_primary) or _fm_is_present(fm_secondary):
         h += 80
-    if fm_primary_present and fm_secondary_present:
-        # Compound pattern adds severity prose block (~70px rendered height)
+    if _fm_is_present(fm_primary) and _fm_is_present(fm_secondary):
         h += 70
 
-    # FM reference records: each card ~90px
+    # Comps in COMPS tab — each comp card is tall
+    if comps:
+        h += 180 * min(len(comps), 2)
     if fm_ref_comps:
         h += 90 * min(len(fm_ref_comps), 4)
 
-    div_delta = d.get("divergence_delta") or d.get("auto_apex_delta")
-    try:
-        if div_delta is not None and abs(int(float(div_delta))) >= 3:
-            h += 120
-    except (TypeError, ValueError):
-        pass
-    return h
+    return max(980, h)

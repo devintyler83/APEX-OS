@@ -1041,6 +1041,47 @@ hr {
   text-transform: uppercase !important;
   color: rgba(255,255,255,0.38) !important;
 }
+
+/* ── Sidebar control spacing (POLISH-02) ── */
+[data-testid="stSidebar"] .stCheckbox { margin-bottom: 2px !important; }
+[data-testid="stSidebar"] .stSelectbox { margin-bottom: 6px !important; }
+[data-testid="stSidebar"] .stMultiSelect { margin-bottom: 6px !important; }
+[data-testid="stSidebar"] .stSlider { margin-bottom: 8px !important; }
+[data-testid="stSidebar"] .stNumberInput { margin-bottom: 6px !important; }
+
+[data-testid="stSidebar"] hr {
+  border-color: rgba(255,255,255,0.04) !important;
+  margin: 6px 0 !important;
+}
+
+[data-testid="stSidebar"] [data-baseweb="select"] [data-testid="stMarkdownContainer"] p,
+[data-testid="stSidebar"] [data-baseweb="select"] span {
+  font-family: 'Barlow', sans-serif !important;
+  font-size: 12px !important;
+  color: rgba(255,255,255,0.70) !important;
+}
+
+[data-testid="stSidebar"] .stCheckbox label p {
+  font-size: 11px !important;
+  color: rgba(255,255,255,0.55) !important;
+  font-family: 'Barlow', sans-serif !important;
+}
+
+/* ── Board table border suppression (POLISH-04) ── */
+[data-testid="stDataFrame"] table { border-collapse: collapse !important; }
+[data-testid="stDataFrame"] td { border: none !important; }
+[data-testid="stDataFrame"] th {
+  border-bottom: 1px solid rgba(255,255,255,0.08) !important;
+  border-top: none !important;
+  border-left: none !important;
+  border-right: none !important;
+}
+[data-testid="stDataFrame"] tbody tr {
+  border-bottom: 1px solid rgba(255,255,255,0.04) !important;
+}
+[data-testid="stDataFrame"] tbody tr:hover {
+  background-color: rgba(74,144,212,0.05) !important;
+}
 </style>
 """
 st.markdown(DRAFTOS_CSS, unsafe_allow_html=True)
@@ -1924,6 +1965,7 @@ st.caption(
     f"Total prospects: {total_prospects}   |   "
     f"APEX v2.3 scored: {apex_scored}"
 )
+st.caption("APEX OS · 2026 Draft · Session 44 · " + _export_dt.now().strftime("%b %d, %Y"))
 
 # ---------------------------------------------------------------------------
 # Sidebar filters
@@ -1935,9 +1977,13 @@ with st.sidebar:
 
     show_divergence_only = st.checkbox("Show divergence flags only (⚡)", value=False)
 
-    show_apex_only = st.checkbox("Show APEX scored only (auto-rank)", value=False)
+    show_apex_only = st.checkbox("APEX scored only", value=False)
 
-    show_apex_scored_only = st.checkbox("Show APEX scored only", value=False)
+    sort_by = st.selectbox(
+        "Sort board by",
+        ["Consensus Rank", "APEX Rank", "APEX Score"],
+        index=0,
+    )
 
     all_positions = sorted(df["position_group"].dropna().unique().tolist())
     selected_positions = st.multiselect(
@@ -2090,10 +2136,7 @@ if not show_low:
 if show_divergence_only:
     filtered = filtered[filtered["divergence_flag"] == 1]
 
-if show_apex_only:
-    filtered = filtered[filtered["auto_apex_rank"].notna()]
-
-if show_apex_scored_only and "apex_composite" in filtered.columns:
+if show_apex_only and "apex_composite" in filtered.columns:
     filtered = filtered[filtered["apex_composite"].notna()]
 
 if selected_positions:
@@ -2128,7 +2171,20 @@ if selected_tags:
     tag_mask = filtered["tag_names"].apply(_has_all_tags)
     filtered = filtered[tag_mask]
 
-filtered = filtered.sort_values("consensus_rank", ascending=True)
+if sort_by == "APEX Rank":
+    filtered = filtered.sort_values(
+        ["auto_apex_rank", "apex_composite"],
+        ascending=[True, False],
+        na_position="last",
+    )
+elif sort_by == "APEX Score":
+    filtered = filtered.sort_values(
+        "apex_composite",
+        ascending=False,
+        na_position="last",
+    )
+else:
+    filtered = filtered.sort_values("consensus_rank", ascending=True)
 filtered = filtered.head(int(top_n))
 
 # Ordered prospect_id list — aligns with display DataFrame row positions
@@ -2196,12 +2252,12 @@ if "apex_composite" in filtered.columns:
     display["APEX Score"] = filtered["apex_composite"].apply(
         lambda x: round(float(x), 1) if pd.notna(x) else None
     )
-    display["APEX Tier"]  = filtered["apex_tier"].fillna("")
-    display["Archetype"]  = filtered["apex_archetype"].fillna("-")
+    display["APEX Tier"]  = filtered["apex_tier"].fillna("—")
+    display["Archetype"]  = filtered["apex_archetype"].fillna("—")
 else:
     display["APEX Score"] = None
-    display["APEX Tier"]  = ""
-    display["Archetype"]  = "-"
+    display["APEX Tier"]  = "—"
+    display["Archetype"]  = "—"
 
 display["Tags"] = filtered["tag_names"].apply(_fmt_tags_text)
 
@@ -2280,12 +2336,26 @@ def _style_apex_tier(val: str) -> str:
     return APEX_TIER_COLORS.get(val, "")
 
 
+def _highlight_consensus_tier(row: "pd.Series") -> list:
+    """Row-level background tint for Elite and Watch consensus tier rows."""
+    tier = row.get("Consensus", "")
+    if tier == "Elite":
+        bg = "background-color: rgba(240,192,64,0.04)"
+    elif tier == "Watch":
+        bg = "background-color: rgba(224,92,92,0.03)"
+    else:
+        bg = ""
+    return [bg] * len(row)
+
+
 _NUM_COLS = ["Rank", "Score", "Sources", "Coverage", "RAS", "APEX Score"]
 _STR_COLS = ["Player", "School", "Pos", "Consensus", "Confidence", "APEX Tier",
              "Archetype", "Tags", "Snapshot", "⚡ Div", "\u0394 APEX", "RPG"]
 
 styled = (
     display.style
+    # ── Row-level tier tinting ───────────────────────────────────────────────
+    .apply(_highlight_consensus_tier, axis=1)
     # ── Alignment ──────────────────────────────────────────────────────────
     .set_properties(
         subset=[c for c in _NUM_COLS if c in display.columns],
@@ -2337,9 +2407,9 @@ styled = (
             "selector": "tbody tr td:nth-child(1)",
             "props": [
                 ("font-family", "'Barlow Condensed', sans-serif"),
-                ("font-size",   "13px"),
+                ("font-size",   "14px"),
                 ("font-weight", "700"),
-                ("color", "rgba(255,255,255,0.45)"),
+                ("color", "rgba(255,255,255,0.38)"),
             ]
         },
         {
@@ -2424,6 +2494,10 @@ with tab_bb:
                               disabled=True,
                               help="Draft capital tier — derived from APEX Score.",
                           ),
+            "\u0394 APEX": st.column_config.TextColumn(
+                              "\u0394 APEX",
+                              help="APEX rank vs consensus rank. Positive = APEX rates higher than market.",
+                          ),
         },
         use_container_width=True,
         hide_index=True,
@@ -2435,9 +2509,20 @@ with tab_bb:
         _bb_row_idx = bb_event.selection.rows[0]
         st.session_state["selected_pid"] = int(_bb_prospect_ids[_bb_row_idx])
 
-    st.caption(
-        f"Showing **{len(display)}** of {total_prospects} prospects"
-        + (f" · {len(selected_tags)} tag filter(s) active" if selected_tags else "")
+    _universe_label = "APEX Only" if show_apex_only else "Mixed"
+    _universe_color = "#5ab87a" if show_apex_only else "#e8a84a"
+    _tag_fragment   = f" &nbsp;·&nbsp; <span style='color:#7eb4e2'>{len(selected_tags)} tag filter(s) active</span>" if selected_tags else ""
+    st.markdown(
+        f"""<div style="display:flex;align-items:center;gap:18px;background:#161b22;
+border:1px solid rgba(255,255,255,0.11);border-radius:4px;padding:6px 14px;
+font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:0.08em;
+color:rgba(255,255,255,0.52);margin-top:4px;">
+<span><span style="color:{_universe_color};font-weight:700">{_universe_label}</span></span>
+<span>Sort: <span style="color:#7eb4e2">{sort_by}</span></span>
+<span>Coverage: <span style="color:#7eb4e2">{apex_scored} of {total_prospects} scored</span></span>
+<span>Showing <span style="color:#7eb4e2">{len(display)}</span> prospects</span>{_tag_fragment}
+</div>""",
+        unsafe_allow_html=True,
     )
     st.caption("💡 Click any row to load the prospect detail panel below, or use **🔍 Prospect Detail** in the sidebar.")
 
