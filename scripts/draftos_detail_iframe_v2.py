@@ -1,0 +1,1514 @@
+"""
+DraftOS — draftos_detail_iframe_v2.py
+Full prospect detail drawer HTML builder.
+
+Replaces _build_detail_html() in app.py with the reference design from
+draftos_drawer_reference.html: two-column sticky rail + scrollable content.
+
+Usage in app.py:
+    from scripts.draftos_detail_iframe_v2 import build_detail_html, estimate_height
+    ...
+    html_content = build_detail_html(d, comps_list, rate_info)
+    components.html(html_content, height=estimate_height(d, comps_list), scrolling=True)
+"""
+
+import html as _html_mod
+import math
+import re
+import sys
+import os as _os
+from datetime import datetime
+
+# Ensure the scripts directory is on sys.path so archetype_defs can be found
+# regardless of which directory app.py is launched from.
+_SCRIPTS_DIR = _os.path.dirname(_os.path.abspath(__file__))
+if _SCRIPTS_DIR not in sys.path:
+    sys.path.insert(0, _SCRIPTS_DIR)
+
+from archetype_defs import ARCHETYPE_DEFS as _ARCHETYPE_DEFS
+
+
+# ── Helpers ──────────────────────────────────────────────────────────────────
+
+def _e(s) -> str:
+    return _html_mod.escape(str(s)) if s is not None else ""
+
+
+def _safe_float(v, fmt=".1f") -> str:
+    if v is None:
+        return "—"
+    try:
+        f = float(v)
+        if math.isnan(f):
+            return "—"
+        return format(f, fmt)
+    except (TypeError, ValueError):
+        return "—"
+
+
+def _split_score(val):
+    s = _safe_float(val)
+    if s == "—":
+        return ("—", "")
+    parts = s.split(".")
+    return (parts[0], parts[1] if len(parts) > 1 else "0")
+
+
+def _v23_present(v) -> bool:
+    if v is None:
+        return False
+    if isinstance(v, float):
+        return not math.isnan(v)
+    return bool(str(v).strip())
+
+
+def _fm_is_present(v) -> bool:
+    if v is None:
+        return False
+    if isinstance(v, float):
+        return not math.isnan(v)
+    return str(v).strip().upper() not in ("", "NONE", "N/A")
+
+
+def _smart_split_bullets(text, max_items: int = 3) -> list:
+    if not text or not str(text).strip():
+        return []
+    raw = [line.strip() for line in str(text).split("\n") if line.strip()]
+    if not raw:
+        return []
+    merged = []
+    for line in raw:
+        if merged and len(line) < 50 and not merged[-1].endswith((".", "!", "?", "…")):
+            merged[-1] = merged[-1] + " " + line
+        else:
+            merged.append(line)
+    return merged[:max_items]
+
+
+def _trait_cls(v: float) -> str:
+    if v >= 8.5:
+        return "hi"
+    if v >= 7.0:
+        return "mid"
+    if v >= 5.0:
+        return "lo"
+    return "red"
+
+
+# ── Compound severity lookup ──────────────────────────────────────────────────
+
+_COMPOUND_SEVERITY: dict[frozenset, str] = {
+    frozenset([1, 3]): "Compound FM-1 + FM-3: athleticism mirage with processing deficit. Independent failure paths — either mechanism alone is a bust case. Athletic tools masked the processing limit in college; both compress simultaneously at NFL speed.",
+    frozenset([1, 4]): "Compound FM-1 + FM-4: athleticism dependency with structural fragility. The physical tools are both the mechanism and the liability — burst-dependent mechanisms stress exactly the joints and soft tissue most prone to FM-4 activation.",
+    frozenset([1, 6]): "Compound FM-1 + FM-6: athleticism mirage with role mismatch. Speed premium priced for a deployment that may not exist at NFL level. If the role narrows and the speed advantage closes, there is no secondary mechanism.",
+    frozenset([3, 4]): "Compound FM-3 + FM-4: processing wall with body breakdown risk. Highest severity compound pattern at QB. Two independent paths to catastrophic capital loss — processing failure or structural failure either one ends the outcome.",
+    frozenset([3, 5]): "Compound FM-3 + FM-5: processing deficit with motivation contingency. Development trajectory requires both cognitive improvement and sustained drive. Both are uncertain; neither compensates for the other.",
+    frozenset([3, 6]): "Compound FM-3 + FM-6: processing wall with role mismatch. Scheme demands that mask processing limits in college may not exist at the NFL level. Mismatch removes the structural support the mechanism depended on.",
+    frozenset([4, 5]): "Compound FM-4 + FM-5: structural fragility with motivation cliff. Pre-draft production environment generated both physical output and competitive drive. Injury risk in Year 1–2 is the activation trigger for FM-5.",
+    frozenset([1, 5]): "Compound FM-1 + FM-5: athleticism mirage with motivation cliff. Elite combine tools drove both the draft grade and the competitive intensity. When the tools stop generating separation, the motivational engine that ran on proving-ground context has no remaining fuel.",
+}
+
+
+# ── CSS ───────────────────────────────────────────────────────────────────────
+
+_CSS = """
+:root {
+  --ink:       #0a0c0f;
+  --ink2:      #0f1318;
+  --ink3:      #161b22;
+  --ink4:      #1c2330;
+  --ink5:      #222b38;
+  --wire:      rgba(255,255,255,0.06);
+  --wire2:     rgba(255,255,255,0.11);
+  --wire3:     rgba(255,255,255,0.20);
+  --dim:       rgba(255,255,255,0.32);
+  --mid:       rgba(255,255,255,0.55);
+  --text:      rgba(255,255,255,0.90);
+  --cold:      #7eb4e2;
+  --cold2:     #4a90d4;
+  --cold-dim:  rgba(126,180,226,0.10);
+  --cold-dim2: rgba(126,180,226,0.20);
+  --amber:     #e8a84a;
+  --amber2:    #c98828;
+  --amber-dim: rgba(232,168,74,0.13);
+  --red:       #e05c5c;
+  --red-dim:   rgba(224,92,92,0.12);
+  --green:     #5ab87a;
+  --green-dim: rgba(90,184,122,0.12);
+  --elite:     #f0c040;
+  --elite-dim: rgba(240,192,64,0.12);
+  --fm1: #e05c5c; --fm1-dim: rgba(224,92,92,0.15);
+  --fm2: #e8a84a; --fm2-dim: rgba(232,168,74,0.15);
+  --fm3: #5b9cf0; --fm3-dim: rgba(91,156,240,0.15);
+  --fm4: #e05c5c; --fm4-dim: rgba(224,92,92,0.18);
+  --fm5: #c47ae0; --fm5-dim: rgba(196,122,224,0.18);
+  --fm6: #a57ee0; --fm6-dim: rgba(165,126,224,0.15);
+  --prism-1: #7eb4e2;
+  --prism-2: #a57ee0;
+  --prism-3: #e8a84a;
+  --prism-4: #5ab87a;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  background: var(--ink);
+  font-family: 'Barlow', sans-serif;
+  color: var(--text);
+  margin: 0;
+  padding: 0;
+}
+
+/* ── DRAWER SHELL ── */
+.drawer {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  height: 100vh;
+  overflow: hidden;
+  border-left: 4px solid transparent;
+  border-image: linear-gradient(180deg, var(--prism-1), var(--prism-2), var(--prism-3), var(--prism-4)) 1;
+}
+
+/* ── LEFT RAIL ── */
+.rail {
+  background: var(--ink2);
+  border-right: 1px solid var(--wire2);
+  padding: 24px 18px 20px 22px;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow-y: auto;
+  position: relative;
+}
+
+.rail::before {
+  content: '';
+  position: absolute;
+  top: -40px; right: -60px;
+  width: 180px; height: 180px;
+  background: radial-gradient(ellipse at center, rgba(126,180,226,0.05) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+/* Position chip */
+.pos-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--cold-dim2);
+  border: 1px solid rgba(74,144,212,0.5);
+  border-radius: 3px;
+  padding: 3px 10px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.10em;
+  color: var(--cold);
+  text-transform: uppercase;
+  margin-bottom: 10px;
+  width: fit-content;
+}
+.pos-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--cold); opacity: 0.7; }
+
+/* Player name */
+.player-name {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 48px;
+  font-weight: 900;
+  line-height: 0.87;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+
+.name-slash {
+  width: 32px; height: 2px;
+  background: linear-gradient(90deg, var(--cold2), transparent);
+  margin-bottom: 10px;
+}
+
+/* Meta chips */
+.meta-row { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 16px; }
+.meta-chip {
+  font-size: 9px; font-weight: 600; color: var(--mid);
+  background: var(--wire); border: 1px solid var(--wire2);
+  border-radius: 3px; padding: 2px 7px; letter-spacing: 0.04em;
+}
+.meta-chip.hi { color: var(--cold); border-color: rgba(126,180,226,0.28); background: var(--cold-dim); }
+
+/* APEX score window */
+.apex-window {
+  background: var(--ink3);
+  border: 1px solid var(--wire2);
+  border-radius: 5px;
+  padding: 13px 13px 11px;
+  margin-bottom: 13px;
+  position: relative;
+  overflow: hidden;
+}
+.apex-window::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(126,180,226,0.04) 0%, transparent 40%, rgba(240,192,64,0.04) 100%);
+  pointer-events: none;
+}
+
+.score-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+.score-grid.unified { grid-template-columns: 1fr; }
+.score-grid.unified .score-item { text-align: center; }
+.score-grid.unified .score-val { font-size: 52px; color: var(--amber); }
+.score-grid.unified .score-decimal { font-size: 26px; }
+.score-item {}
+.score-lbl { font-size: 7px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--dim); margin-bottom: 2px; }
+.score-val {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 40px; font-weight: 800; line-height: 0.92;
+  color: var(--cold); letter-spacing: -0.01em;
+}
+.score-val.apex { color: var(--amber); }
+.score-decimal { font-size: 20px; font-weight: 600; opacity: 0.65; }
+
+/* Tier badges */
+.tier-badge { display: flex; align-items: center; justify-content: space-between; border-radius: 4px; padding: 6px 12px; margin-bottom: 6px; }
+.tier-badge.elite  { background: var(--elite-dim); border: 1px solid rgba(240,192,64,0.38); }
+.tier-badge.day1   { background: var(--cold-dim);  border: 1px solid rgba(126,180,226,0.32); }
+.tier-badge.day2   { background: var(--green-dim); border: 1px solid rgba(90,184,122,0.28); }
+.tier-badge.day3   { background: var(--wire);      border: 1px solid var(--wire2); }
+.tier-badge.udfa   { background: transparent;      border: 1px solid var(--wire); }
+
+.tier-text { font-family: 'Barlow Condensed', sans-serif; font-size: 15px; font-weight: 900; letter-spacing: 0.12em; text-transform: uppercase; }
+.tier-text.elite { color: var(--elite); }
+.tier-text.day1  { color: var(--cold); }
+.tier-text.day2  { color: var(--green); }
+.tier-text.day3  { color: var(--mid); }
+.tier-text.udfa  { color: var(--dim); }
+
+.tier-sub { font-size: 7px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
+.tier-sub.elite { color: rgba(240,192,64,0.50); }
+.tier-sub.day1  { color: rgba(126,180,226,0.45); }
+.tier-sub.day2  { color: rgba(90,184,122,0.45); }
+.tier-sub.day3  { color: var(--dim); }
+.tier-sub.udfa  { color: rgba(255,255,255,0.20); }
+
+.formula-line { font-size: 8px; color: var(--dim); font-family: 'Barlow Condensed', sans-serif; letter-spacing: 0.04em; opacity: 0.65; margin-top: 4px; }
+
+/* Trait meters */
+.traits-section { margin-bottom: 12px; }
+.section-header {
+  font-size: 7px; font-weight: 700; letter-spacing: 0.16em;
+  text-transform: uppercase; color: var(--dim); margin-bottom: 7px;
+  display: flex; align-items: center; gap: 6px;
+}
+.section-header::after { content: ''; flex: 1; height: 1px; background: var(--wire); }
+
+.trait-row { display: flex; align-items: center; gap: 7px; margin-bottom: 5px; }
+.trait-lbl { font-size: 9px; font-weight: 500; color: var(--mid); width: 64px; flex-shrink: 0; }
+.trait-track { flex: 1; height: 3px; background: var(--wire); border-radius: 1.5px; overflow: hidden; }
+.trait-fill { height: 100%; border-radius: 1.5px; }
+.trait-fill.hi  { background: var(--green); }
+.trait-fill.mid { background: var(--cold); }
+.trait-fill.lo  { background: var(--amber); }
+.trait-fill.red { background: var(--red); }
+.trait-val { font-family: 'Barlow Condensed', sans-serif; font-size: 11px; font-weight: 700; color: var(--text); width: 22px; text-align: right; }
+
+/* Confidence + Divergence */
+.conf-row { display: flex; gap: 6px; margin-bottom: 12px; }
+.conf-item { flex: 1; background: var(--ink3); border: 1px solid var(--wire); border-radius: 4px; padding: 7px 9px; }
+.conf-lbl { font-size: 7px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--dim); margin-bottom: 2px; font-weight: 700; }
+.conf-val { font-family: 'Barlow Condensed', sans-serif; font-size: 12px; font-weight: 700; color: var(--text); }
+.conf-val.green { color: var(--green); }
+.conf-val.amber { color: var(--amber); }
+.conf-val.blue  { color: var(--cold); }
+.conf-val.red   { color: var(--red); }
+.conf-val.dim   { color: var(--dim); }
+
+/* Capital */
+.capital-block { background: var(--ink3); border: 1px solid var(--wire); border-radius: 4px; padding: 9px 11px; margin-bottom: 12px; }
+.capital-lbl { font-size: 7px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--dim); margin-bottom: 3px; }
+.capital-val { font-family: 'Barlow Condensed', sans-serif; font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 2px; }
+.capital-note { font-size: 9px; color: var(--dim); line-height: 1.5; }
+
+/* Archetype fit badge */
+.fit-badge-row { margin-bottom: 12px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.fit-badge {
+  display: inline-flex; align-items: center;
+  padding: 2px 8px; border-radius: 3px;
+  font-size: 9px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+}
+
+/* Watermark */
+.watermark { margin-top: auto; padding-top: 10px; border-top: 1px solid var(--wire); display: flex; align-items: flex-end; justify-content: space-between; }
+.brand-logo { font-family: 'Barlow Condensed', sans-serif; font-size: 11px; font-weight: 900; letter-spacing: 0.20em; text-transform: uppercase; color: rgba(255,255,255,0.13); }
+.watermark-meta { font-size: 7px; color: var(--dim); text-align: right; letter-spacing: 0.04em; line-height: 1.7; }
+
+/* ── RIGHT CONTENT ── */
+.content {
+  padding: 24px 28px 36px 24px;
+  height: 100vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  position: relative;
+}
+
+.content::before {
+  content: '';
+  position: absolute; top: 0; right: 0;
+  width: 260px; height: 260px;
+  background: conic-gradient(from 200deg at 100% 0%, rgba(232,168,74,0.04) 0deg, rgba(126,180,226,0.04) 60deg, transparent 120deg);
+  pointer-events: none;
+}
+
+/* Section divider */
+.sec-divider {
+  font-size: 8px; font-weight: 700; letter-spacing: 0.18em;
+  text-transform: uppercase; color: var(--dim);
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 12px; margin-top: 4px;
+}
+.sec-divider::after { content: ''; flex: 1; height: 1px; background: var(--wire); }
+.sec-divider.cold  { color: var(--cold); }
+.sec-divider.amber { color: var(--amber); }
+.sec-divider.green { color: var(--green); }
+.sec-divider.red   { color: var(--red); }
+
+.section-gap { height: 20px; }
+
+/* Archetype */
+.arch-section { margin-bottom: 18px; }
+.arch-header-row {
+  display: flex; align-items: flex-start;
+  justify-content: space-between; gap: 16px; margin-bottom: 12px;
+}
+.archetype-code { font-family: 'Barlow Condensed', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--cold); margin-bottom: 4px; }
+.archetype-name { font-family: 'Barlow Condensed', sans-serif; font-size: 32px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.02em; color: var(--amber); line-height: 0.95; }
+
+.rank-ghost {
+  position: absolute; right: 28px; top: 0;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 100px; font-weight: 900;
+  color: rgba(255,255,255,0.022);
+  letter-spacing: -0.04em; line-height: 1;
+  pointer-events: none; user-select: none; z-index: 0;
+}
+
+.ras-block-right { text-align: right; flex-shrink: 0; }
+.ras-lbl { font-size: 7px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--dim); margin-bottom: 2px; }
+.ras-val { font-family: 'Barlow Condensed', sans-serif; font-size: 28px; font-weight: 800; color: var(--green); line-height: 1; }
+
+/* Archetype fit row */
+.fit-row {
+  background: var(--ink3); border: 1px solid var(--wire);
+  border-radius: 5px; padding: 10px 12px; margin-bottom: 10px;
+}
+.fit-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 7px; }
+.fit-lbl { font-size: 8px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--dim); }
+.fit-score { font-family: 'Barlow Condensed', sans-serif; font-size: 18px; font-weight: 800; }
+.fit-score.clean  { color: var(--green); }
+.fit-score.solid  { color: var(--cold); }
+.fit-score.tweak  { color: var(--amber); }
+.fit-score.nofit  { color: var(--red); }
+.fit-track { height: 4px; background: var(--wire); border-radius: 2px; overflow: hidden; margin-bottom: 5px; }
+.fit-fill { height: 100%; border-radius: 2px; }
+.fit-fill.clean { background: var(--green); }
+.fit-fill.solid { background: var(--cold); }
+.fit-fill.tweak { background: var(--amber); }
+.fit-fill.nofit { background: var(--red); }
+.fit-breakdown { font-size: 9px; color: var(--dim); letter-spacing: 0.02em; }
+.fit-breakdown span { color: var(--mid); }
+
+/* Tags */
+.tags-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 4px; }
+.htag { display: inline-flex; align-items: center; padding: 3px 9px; border-radius: 3px; font-size: 9px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+.htag.crush   { background: rgba(90,184,122,0.12); border: 1px solid rgba(90,184,122,0.30); color: var(--green); }
+.htag.tw      { background: rgba(126,180,226,0.10); border: 1px solid rgba(126,180,226,0.28); color: var(--cold); }
+.htag.walkOn  { background: rgba(232,168,74,0.10); border: 1px solid rgba(232,168,74,0.28); color: var(--amber); }
+.htag.schwes  { background: rgba(126,180,226,0.10); border: 1px solid rgba(126,180,226,0.28); color: var(--cold); }
+.htag.neutral { background: var(--wire); border: 1px solid var(--wire2); color: var(--mid); }
+
+/* FM Risk */
+.fm-section { margin-bottom: 18px; }
+.fm-pip-bar { display: flex; gap: 3px; margin-bottom: 8px; }
+.fm-pip { flex: 1; height: 6px; border-radius: 2px; background: var(--wire); }
+.fm-pip.p1 { background: var(--fm1); }
+.fm-pip.p2 { background: var(--fm2); }
+.fm-pip.p3 { background: var(--fm3); }
+.fm-pip.p4 { background: var(--fm4); }
+.fm-pip.p5 { background: var(--fm5); }
+.fm-pip.p6 { background: var(--fm6); }
+.fm-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+.fm-tag { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 3px; font-size: 10px; font-weight: 700; letter-spacing: 0.04em; }
+.fm-tag.t1 { background: var(--fm1-dim); border: 1px solid rgba(224,92,92,0.30);   color: #f08080; }
+.fm-tag.t2 { background: var(--fm2-dim); border: 1px solid rgba(232,168,74,0.30);  color: #f0b85a; }
+.fm-tag.t3 { background: var(--fm3-dim); border: 1px solid rgba(91,156,240,0.30);  color: #8ab8f5; }
+.fm-tag.t4 { background: var(--fm4-dim); border: 1px solid rgba(224,92,92,0.30);   color: #f08080; }
+.fm-tag.t5 { background: var(--fm5-dim); border: 1px solid rgba(196,122,224,0.30); color: #d4a5f5; }
+.fm-tag.t6 { background: var(--fm6-dim); border: 1px solid rgba(165,126,224,0.30); color: #c4a5f5; }
+
+/* FM severity note */
+.fm-severity {
+  background: var(--red-dim);
+  border: 1px solid rgba(224,92,92,0.22);
+  border-left: 3px solid var(--red);
+  border-radius: 0 4px 4px 0;
+  padding: 8px 12px;
+  font-size: 10px;
+  color: rgba(224,92,92,0.85);
+  line-height: 1.5;
+  margin-bottom: 6px;
+}
+
+/* FM definition blocks with prospect-specific failure projection */
+.fm-def-block {
+  border-radius: 0 5px 5px 0;
+  padding: 10px 14px;
+  margin-bottom: 8px;
+}
+.fm-def-name {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 10px; font-weight: 700;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  margin-bottom: 5px;
+}
+.fm-def-text {
+  font-size: 10px; line-height: 1.6; color: var(--mid);
+  margin-bottom: 4px;
+}
+.fm-def-note {
+  font-size: 10px; line-height: 1.55;
+  color: var(--text); opacity: 0.75;
+  padding-top: 5px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  margin-top: 5px;
+  font-style: italic;
+}
+
+/* Divergence panel */
+.divergence-panel {
+  background: var(--ink3);
+  border: 1px solid var(--wire2);
+  border-radius: 5px;
+  padding: 14px 16px;
+  margin-bottom: 18px;
+  position: relative; overflow: hidden;
+}
+.divergence-panel.high    { border-left: 3px solid var(--fm3); }
+.divergence-panel.low     { border-left: 3px solid var(--red); }
+.divergence-panel.aligned { border-left: 3px solid var(--wire3); }
+
+.div-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.div-delta { font-family: 'Barlow Condensed', sans-serif; font-size: 28px; font-weight: 800; line-height: 1; }
+.div-delta.high    { color: var(--fm3); }
+.div-delta.low     { color: var(--red); }
+.div-delta.aligned { color: var(--mid); }
+.div-lbl { font-size: 8px; color: var(--dim); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; margin-top: 2px; }
+.div-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 9px; border-radius: 3px;
+  font-size: 9px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+}
+.div-chip.high    { background: rgba(91,156,240,0.15); border: 1px solid rgba(91,156,240,0.30); color: #8ab8f5; }
+.div-chip.low     { background: var(--red-dim); border: 1px solid rgba(224,92,92,0.30); color: #f08080; }
+.div-chip.aligned { background: var(--wire); border: 1px solid var(--wire2); color: var(--mid); }
+.div-rationale {
+  font-size: 11px; line-height: 1.65; color: var(--mid);
+  border-top: 1px solid var(--wire); padding-top: 10px;
+}
+.div-rationale strong { color: var(--text); font-weight: 600; }
+
+/* Signature play */
+.sig-play {
+  background: var(--ink3);
+  border: 1px solid var(--wire);
+  border-left: 3px solid var(--cold2);
+  border-radius: 0 5px 5px 0;
+  padding: 12px 16px;
+  margin-bottom: 18px;
+}
+.sig-lbl { font-size: 8px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--cold); margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+.sig-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--cold2); }
+.sig-text { font-size: 12px; line-height: 1.65; color: var(--mid); font-style: italic; }
+
+/* Strengths + Red Flags */
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 18px; }
+.panel { background: var(--ink3); border: 1px solid var(--wire); border-radius: 5px; padding: 13px 13px; }
+.panel-hdr { font-size: 9px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+.panel-hdr.g { color: var(--green); }
+.panel-hdr.r { color: var(--red); }
+.ph-ind { width: 6px; height: 6px; border-radius: 1px; flex-shrink: 0; }
+.ph-ind.g { background: var(--green); }
+.ph-ind.r { background: var(--red); }
+.panel-item { font-size: 11px; line-height: 1.55; color: var(--mid); padding: 6px 0; border-top: 1px solid var(--wire); display: flex; gap: 8px; align-items: flex-start; }
+.panel-item:first-of-type { border-top: none; }
+.pi-dot { width: 3px; height: 3px; border-radius: 50%; margin-top: 6px; flex-shrink: 0; }
+.pi-dot.g { background: var(--green); }
+.pi-dot.r { background: rgba(224,92,92,0.55); }
+
+/* Translation risk */
+.risk-banner {
+  background: var(--amber-dim);
+  border: 1px solid rgba(232,168,74,0.22);
+  border-left: 3px solid var(--amber2);
+  border-radius: 0 5px 5px 0;
+  padding: 12px 16px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.risk-icon { font-size: 13px; line-height: 1.4; flex-shrink: 0; color: var(--amber); font-weight: 800; font-family: 'Barlow Condensed', sans-serif; margin-top: 1px; }
+.risk-text { font-size: 11px; line-height: 1.65; color: rgba(232,168,74,0.82); }
+
+/* Historical comps */
+.comps-section { margin-bottom: 20px; }
+.comp-card-full {
+  background: var(--ink3);
+  border: 1px solid var(--wire2);
+  border-radius: 5px;
+  padding: 15px 16px;
+  margin-bottom: 10px;
+  position: relative; overflow: hidden;
+  display: grid;
+  grid-template-columns: 3px 1fr;
+  gap: 0 14px;
+}
+.comp-card-full::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.018) 0%, transparent 50%);
+  pointer-events: none;
+}
+.comp-accent { width: 3px; border-radius: 1.5px; align-self: stretch; }
+.comp-accent.hit     { background: linear-gradient(180deg, var(--green), rgba(90,184,122,0.3)); }
+.comp-accent.partial { background: linear-gradient(180deg, var(--amber), rgba(232,168,74,0.3)); }
+.comp-accent.miss    { background: linear-gradient(180deg, var(--red), rgba(224,92,92,0.3)); }
+.comp-type-lbl { font-size: 8px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 3px; }
+.comp-type-lbl.hit     { color: var(--green); }
+.comp-type-lbl.partial { color: var(--amber); }
+.comp-type-lbl.miss    { color: var(--red); }
+.comp-name-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.comp-name { font-family: 'Barlow Condensed', sans-serif; font-size: 24px; font-weight: 900; letter-spacing: 0.01em; text-transform: uppercase; color: var(--text); line-height: 1; }
+.comp-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 8px; font-weight: 700; letter-spacing: 0.10em; text-transform: uppercase;
+  padding: 2px 7px; border-radius: 2px;
+}
+.comp-badge.hit     { background: var(--green-dim); color: var(--green); border: 1px solid rgba(90,184,122,0.25); }
+.comp-badge.partial { background: var(--amber-dim); color: var(--amber); border: 1px solid rgba(232,168,74,0.25); }
+.comp-badge.miss    { background: var(--red-dim);   color: var(--red);   border: 1px solid rgba(224,92,92,0.25); }
+.comp-badge::before { content: ''; width: 4px; height: 4px; border-radius: 50%; background: currentColor; opacity: 0.8; }
+.comp-fm-note { font-size: 9px; color: var(--dim); margin-bottom: 8px; font-style: italic; }
+.comp-fm-note span { color: #c4a5f5; font-style: normal; font-weight: 600; }
+.comp-desc { font-size: 10px; line-height: 1.65; color: var(--mid); margin-bottom: 8px; }
+.comp-year { font-size: 8px; color: rgba(255,255,255,0.20); font-family: 'Barlow Condensed', sans-serif; letter-spacing: 0.06em; }
+
+/* FM Risk Reference Records */
+.fm-ref-section { margin-bottom: 20px; }
+.fm-ref-card {
+  border: 1px solid var(--wire);
+  border-left: 3px solid var(--wire3);
+  border-radius: 0 5px 5px 0;
+  padding: 10px 14px;
+  margin-bottom: 8px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  background: var(--ink3);
+}
+.fm-ref-card.miss    { border-left-color: var(--red); }
+.fm-ref-card.partial { border-left-color: var(--amber); }
+.fm-ref-card.hit     { border-left-color: var(--green); }
+.fm-ref-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.fm-ref-outcome { font-size: 7px; font-weight: 700; letter-spacing: 0.10em; text-transform: uppercase; }
+.fm-ref-outcome.miss    { color: var(--red); }
+.fm-ref-outcome.partial { color: var(--amber); }
+.fm-ref-outcome.hit     { color: var(--green); }
+.fm-ref-name { font-family: 'Barlow Condensed', sans-serif; font-size: 18px; font-weight: 800; text-transform: uppercase; color: var(--text); line-height: 1; }
+.fm-ref-pos-fm { font-size: 9px; color: var(--dim); margin-bottom: 4px; }
+.fm-ref-pos-fm span { color: #c4a5f5; }
+.fm-ref-pattern { font-size: 9px; color: var(--mid); font-style: italic; line-height: 1.5; margin-bottom: 4px; }
+.fm-ref-excerpt { font-size: 9px; color: var(--dim); line-height: 1.5; }
+.fm-ref-meta { text-align: right; }
+.fm-ref-years { font-size: 8px; color: rgba(255,255,255,0.20); font-family: 'Barlow Condensed', sans-serif; letter-spacing: 0.06em; white-space: nowrap; }
+.fm-ref-gen { font-size: 7px; color: var(--dim); white-space: nowrap; margin-top: 2px; }
+
+/* No same-position FM ref data */
+.fm-ref-no-data {
+  background: var(--ink3);
+  border: 1px solid var(--wire);
+  border-left: 3px solid var(--wire3);
+  border-radius: 0 5px 5px 0;
+  padding: 12px 16px;
+}
+.fm-ref-no-data-lbl {
+  font-size: 9px; font-weight: 700; letter-spacing: 0.10em; text-transform: uppercase;
+  color: var(--dim); margin-bottom: 5px;
+}
+.fm-ref-no-data-text { font-size: 10px; line-height: 1.6; color: var(--dim); }
+
+/* Card stamp */
+.card-stamp {
+  position: fixed; bottom: 10px; right: 20px;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 8px; font-weight: 700; letter-spacing: 0.16em;
+  color: rgba(255,255,255,0.08); text-transform: uppercase;
+  pointer-events: none; z-index: 100;
+}
+"""
+
+
+# ── HTML fragment builders ────────────────────────────────────────────────────
+
+def _build_trait(label: str, val) -> str:
+    if val is None or (isinstance(val, float) and math.isnan(val)) or val == 0.0:
+        return (
+            f'<div class="trait-row">'
+            f'<span class="trait-lbl">{label}</span>'
+            f'<div class="trait-track"></div>'
+            f'<span class="trait-val" style="color:var(--dim)">—</span>'
+            f'</div>'
+        )
+    try:
+        v = float(val)
+    except (TypeError, ValueError):
+        v = 0.0
+    pct = min(max(v / 10.0 * 100, 0), 100)
+    cls = _trait_cls(v)
+    return (
+        f'<div class="trait-row">'
+        f'<span class="trait-lbl">{label}</span>'
+        f'<div class="trait-track"><div class="trait-fill {cls}" style="width:{pct:.0f}%"></div></div>'
+        f'<span class="trait-val">{v:.1f}</span>'
+        f'</div>'
+    )
+
+
+_FM_DEFINITIONS = {
+    1: ("FM-1: Athleticism Mirage",
+        "Physical tools produce college dominance that disappears when the athletic advantage closes at NFL speed. "
+        "The mechanism was the athleticism itself — not skill, technique, or processing. "
+        "When NFL athletes close the gap, there is nothing behind the burst or length to sustain production."),
+    2: ("FM-2: Scheme Ghost",
+        "Production is scheme-dependent. The player requires a specific structural context — "
+        "a coverage family, alignment concept, or manufactured advantage — that may not exist at the NFL level. "
+        "The player is not bad; they are specifically good in a way that may not transfer."),
+    3: ("FM-3: Processing Wall",
+        "Processing speed or anticipatory recognition is insufficient to operate at NFL decision velocity. "
+        "Physical tools execute correctly but the cognitive trigger arrives too late. "
+        "College production was enabled by athletic advantages that compressed the processing requirement — "
+        "those advantages close at NFL speed."),
+    4: ("FM-4: Body Breakdown",
+        "Physical structure — joints, soft tissue, or availability — fails to sustain the mechanism that justified capital. "
+        "The mechanism was real. The body could not deliver it at NFL volume. "
+        "FM-4 is mechanism-independent: even the best-built archetype can be destroyed by structural failure."),
+    5: ("FM-5: Motivation Cliff",
+        "Competitive drive degrades after draft capital is secured. Production was real pre-draft. "
+        "The engine that produced it was contingent on proving-ground context — "
+        "combine preparation, draft positioning, external pressure. That context disappears post-signing."),
+    6: ("FM-6: Role Mismatch",
+        "The NFL deployment context does not match the mechanism that produced college value. "
+        "The player is real. The production was real. The job they are asked to do at the NFL level "
+        "is not the job their mechanism can execute — scheme, alignment, or role requirements exceed the mechanism range."),
+}
+
+
+def _build_fm_section(fm_codes: set, fm_labels: list, prospect: dict | None = None) -> str:
+    if not fm_codes:
+        return ""
+
+    pips = "".join(
+        f'<div class="fm-pip{" p" + str(i) if i in fm_codes else ""}"></div>'
+        for i in range(1, 7)
+    )
+
+    tags = ""
+    for lbl in fm_labels:
+        m = re.search(r"FM-(\d+)", str(lbl))
+        n = m.group(1) if m else "1"
+        tags += f'<span class="fm-tag t{n}">{_e(lbl)}</span>'
+
+    # Compound severity
+    severity_html = ""
+    if len(fm_codes) == 2:
+        key = frozenset(fm_codes)
+        compound = _COMPOUND_SEVERITY.get(
+            key,
+            f"Compound FM-{min(fm_codes)} + FM-{max(fm_codes)}: independent failure paths — "
+            f"evaluate each mechanism separately. Either alone is a capital risk pattern."
+        )
+        severity_html = f'<div class="fm-severity">{_e(compound)}</div>'
+
+    # Per-FM definition blocks with prospect-specific failure projection
+    _FC = {1:"fm1",2:"fm2",3:"fm3",4:"fm4",5:"fm5",6:"fm6"}
+    def_blocks = ""
+    for code in sorted(fm_codes):
+        fm_name, fm_def = _FM_DEFINITIONS.get(code, (f"FM-{code}", ""))
+        fc = _FC.get(code, "fm1")
+        failure_note = ""
+        if prospect:
+            try:
+                pos      = (prospect.get("position_group") or "").upper()
+                proc     = prospect.get("v_processing")
+                ath      = prospect.get("v_athleticism")
+                char     = prospect.get("v_character")
+                inj      = prospect.get("v_injury")
+                sch      = prospect.get("v_scheme_vers")
+                arch_raw = prospect.get("matched_archetype") or prospect.get("apex_archetype") or ""
+                name_p   = prospect.get("display_name") or "This prospect"
+                if code == 1 and ath is not None:
+                    av = float(ath)
+                    if av >= 8.5:
+                        failure_note = (f"Athletic grade {av:.1f} is elite. The risk: if NFL athletes neutralize "
+                                        f"the physical gap, there is no confirmed secondary win mechanism to fall back on.")
+                    else:
+                        failure_note = (f"Athletic grade {av:.1f} is above average but not dominant. "
+                                        f"At NFL speed the advantage compresses — production depends on technique holding.")
+                elif code == 2 and sch is not None:
+                    sv = float(sch)
+                    if sv < 6.0:
+                        failure_note = (f"Scheme Versatility grades {sv:.1f} — below viable threshold. "
+                                        f"Landing spot is the entire evaluation. A mismatched scheme deployment ends this profile.")
+                    else:
+                        failure_note = (f"Scheme Versatility grades {sv:.1f}. Acceptable range, but FM-2 risk is structural: "
+                                        f"if the deployment context narrows post-draft, production disappears with it.")
+                elif code == 3 and proc is not None:
+                    pv = float(proc)
+                    if pv < 6.5:
+                        failure_note = (f"Processing grades {pv:.1f} — this is a hard FM-3 signal. "
+                                        f"Cognitive trigger speed is below NFL threshold at {pos}. "
+                                        f"Physical tools will not compensate when decision windows compress.")
+                    else:
+                        failure_note = (f"Processing grades {pv:.1f}. Below elite threshold for {pos}. "
+                                        f"NFL pre-snap complexity will pressure this ceiling in Year 1–2.")
+                elif code == 4 and inj is not None:
+                    iv = float(inj)
+                    if iv < 6.0:
+                        failure_note = (f"Durability grades {iv:.1f} — structural flag present. "
+                                        f"Medical scrutiny required before capital commitment. FM-4 at this level has a high activation rate.")
+                    else:
+                        failure_note = (f"Durability grades {iv:.1f}. No hard structural flag in trait data, "
+                                        f"but FM-4 activates independent of pre-draft indicators — availability history must be reviewed.")
+                elif code == 5 and char is not None:
+                    cv = float(char)
+                    if cv < 6.0:
+                        failure_note = (f"Character grades {cv:.1f} — below threshold. "
+                                        f"Competitive drive contingency is a live risk at this level. "
+                                        f"FM-5 probability is elevated; Year 2–3 production is the real evaluation.")
+                    else:
+                        failure_note = (f"Character grades {cv:.1f}. Acceptable pre-draft signal, "
+                                        f"but FM-5 is behavioral and does not fully surface in scouting data. "
+                                        f"Track closely through rookie year.")
+                elif code == 6:
+                    failure_note = (f"FM-6 at {pos} is a scheme-alignment risk. "
+                                    f"The mechanism in {arch_raw} may not survive deployment into a mismatched role. "
+                                    f"Confirm scheme fit before committing capital.")
+            except (TypeError, ValueError):
+                pass
+
+        def_blocks += (
+            f'<div class="fm-def-block" style="border-left:3px solid var(--{fc});background:var(--{fc}-dim);">'
+            f'<div class="fm-def-name" style="color:var(--{fc});">{_e(fm_name)}</div>'
+            f'<div class="fm-def-text">{_e(fm_def)}</div>'
+            + (f'<div class="fm-def-note">{_e(failure_note)}</div>' if failure_note else "")
+            + '</div>'
+        )
+
+    return (
+        f'<div class="fm-section">'
+        f'<div class="sec-divider red">Failure Mode Risk</div>'
+        f'<div class="fm-pip-bar">{pips}</div>'
+        f'<div class="fm-tags">{tags}</div>'
+        f'{severity_html}'
+        f'<div style="height:10px"></div>'
+        f'{def_blocks}'
+        f'</div>'
+    )
+
+
+def _build_divergence_panel(div_delta, narrative: str | None) -> str:
+    if div_delta is None:
+        return ""
+    try:
+        dd = int(float(div_delta))
+    except (TypeError, ValueError):
+        return ""
+
+    if abs(dd) < 3:
+        panel_cls  = "aligned"
+        delta_cls  = "aligned"
+        delta_str  = f"{dd:+d}" if dd != 0 else "0"
+        chip_cls   = "aligned"
+        chip_label = "Aligned"
+    elif dd > 0:
+        panel_cls  = "high"
+        delta_cls  = "high"
+        delta_str  = f"+{dd}"
+        chip_cls   = "high"
+        chip_label = "▲ Above Consensus"
+    else:
+        panel_cls  = "low"
+        delta_cls  = "low"
+        delta_str  = str(dd)
+        chip_cls   = "low"
+        chip_label = "▼ Below Consensus"
+
+    rationale_html = ""
+    if narrative:
+        rationale_html = f'<div class="div-rationale">{_e(narrative)}</div>'
+    elif abs(dd) >= 3:
+        # Synthesize rationale from direction and magnitude when DB field is null
+        if dd > 0:
+            if dd >= 15:
+                synth = (f"APEX rates this prospect {dd} ranks above consensus — a major divergence. "
+                         f"APEX is weighting positional value and mechanism strength more heavily than the market. "
+                         f"Consensus may be undervaluing the archetype or over-discounting a correctable weakness. "
+                         f"The divergence is worth investigating before the board locks.")
+            else:
+                synth = (f"APEX rates this prospect {dd} ranks above consensus. "
+                         f"The gap reflects APEX weighting positional scarcity and mechanism quality "
+                         f"above the market's current read. Monitor for late consensus movement toward this range.")
+        else:
+            adelta = abs(dd)
+            if adelta >= 15:
+                synth = (f"APEX rates this prospect {adelta} ranks below consensus — a major caution signal. "
+                         f"APEX has identified a mechanism risk, scheme dependency, or FM profile "
+                         f"that the market has not priced in. This divergence warrants direct scrutiny before draft weekend.")
+            else:
+                synth = (f"APEX rates this prospect {adelta} ranks below consensus. "
+                         f"The gap reflects APEX discounting a component of the market grade — "
+                         f"likely a FM risk, scheme fit concern, or positional value adjustment. "
+                         f"Review the FM section above for the specific mechanism.")
+        rationale_html = f'<div class="div-rationale">{_e(synth)}</div>'
+
+    return (
+        f'<div class="divergence-panel {panel_cls}">'
+        f'<div class="div-header">'
+        f'<div><div class="div-delta {delta_cls}">{delta_str}</div>'
+        f'<div class="div-lbl">APEX rank vs consensus rank</div></div>'
+        f'<div style="margin-left:auto"><span class="div-chip {chip_cls}">{chip_label}</span></div>'
+        f'</div>'
+        f'{rationale_html}'
+        f'</div>'
+    )
+
+
+def _build_comps_html(comps: list, archetype_raw: str, rate) -> str:
+    if not comps:
+        return ""
+
+    OC = {"HIT": "hit", "PARTIAL": "partial", "MISS": "miss"}
+    IC = {"HIT": "✓", "PARTIAL": "⚠", "MISS": "✗"}
+    LB = {"HIT": "Archetype Ceiling", "PARTIAL": "FM Risk Comp", "MISS": "Miss Pattern"}
+
+    # Translation rate % intentionally suppressed — small sample sizes (N of M)
+    # make the percentage statistically invalid and misleading to evaluators.
+
+    hit_count = 0
+    cards = ""
+    for c in comps[:2]:
+        oc      = c.get("translation_outcome", "MISS")
+        cls     = OC.get(oc, "miss")
+        icon    = IC.get(oc, "")
+        # First HIT = Archetype Ceiling (the definitive ceiling case)
+        # Subsequent HITs = Archetype Comp (additional positive evidence)
+        if oc == "HIT":
+            lbl = "Archetype Ceiling" if hit_count == 0 else "Archetype Comp"
+            hit_count += 1
+        else:
+            lbl = LB.get(oc, "")
+        fm_note = ""
+        fmc     = c.get("fm_code", "")
+        if fmc and oc in ("PARTIAL", "MISS"):
+            codes = re.findall(r"FM-\d+", str(fmc))
+            if codes:
+                fm_note = (
+                    f'<div class="comp-fm-note">FM pattern: '
+                    f'<span>{_e(", ".join(codes))}</span></div>'
+                )
+        cards += (
+            f'<div class="comp-card-full">'
+            f'<div class="comp-accent {cls}"></div>'
+            f'<div class="comp-body">'
+            f'<div class="comp-type-lbl {cls}">{icon} {_e(lbl)}</div>'
+            f'<div class="comp-name-row">'
+            f'<span class="comp-name">{_e(c.get("player_name", ""))}</span>'
+            f'<span class="comp-badge {cls}">{_e(oc.title())}</span>'
+            f'</div>'
+            f'{fm_note}'
+            f'<div class="comp-desc">{_e(c.get("outcome_summary", ""))}</div>'
+            f'<div class="comp-year">{_e(c.get("era_bracket", ""))}</div>'
+            f'</div>'
+            f'</div>'
+        )
+
+    return (
+        f'<div class="comps-section">'
+        f'<div class="sec-divider">Historical Comps</div>'
+        f'{cards}'
+        f'</div>'
+    )
+
+
+def _build_fm_ref_html(fm_ref_comps: list, fm_labels: list | None = None, pos: str = "") -> str:
+    if not fm_ref_comps:
+        # No same-position historical bust comps in DB — explain rather than show wrong-position data
+        fm_str = ", ".join(fm_labels) if fm_labels else "this failure mode"
+        pos_str = f" at {pos}" if pos else ""
+        return (
+            f'<div class="fm-ref-section">'
+            f'<div class="sec-divider red">FM Risk Reference</div>'
+            f'<div class="fm-ref-no-data">'
+            f'<div class="fm-ref-no-data-lbl">No same-position reference records</div>'
+            f'<div class="fm-ref-no-data-text">'
+            f'Historical bust comps for {_e(fm_str)}{_e(pos_str)} are not yet available in the '
+            f'reference database. Evaluate the failure mechanism directly using the FM definition above.'
+            f'</div>'
+            f'</div>'
+            f'</div>'
+        )
+
+    OC = {"HIT": "hit", "PARTIAL": "partial", "MISS": "miss"}
+    cards = ""
+    for c in fm_ref_comps[:4]:
+        oc  = str(c.get("translation_outcome", "MISS")).upper()
+        cls = OC.get(oc, "miss")
+        fm_str = c.get("fm_code", "")
+        pos_str = c.get("position_group", "")
+        pos_fm = f"{_e(pos_str)} · <span>{_e(fm_str)}</span>" if fm_str else _e(pos_str)
+        cards += (
+            f'<div class="fm-ref-card {cls}">'
+            f'<div>'
+            f'<div class="fm-ref-header"><span class="fm-ref-outcome {cls}">{_e(oc)}</span></div>'
+            f'<div class="fm-ref-name">{_e(c.get("player_name", ""))}</div>'
+            f'<div class="fm-ref-pos-fm">{pos_fm}</div>'
+            f'<div class="fm-ref-pattern">{_e(c.get("bust_mechanism", ""))}</div>'
+            f'<div class="fm-ref-excerpt">{_e(c.get("outcome_summary", ""))}</div>'
+            f'</div>'
+            f'<div class="fm-ref-meta">'
+            f'<div class="fm-ref-years">{_e(c.get("era_bracket", ""))}</div>'
+            f'</div>'
+            f'</div>'
+        )
+
+    return (
+        f'<div class="fm-ref-section">'
+        f'<div class="sec-divider red">FM Risk Reference</div>'
+        f'{cards}'
+        f'</div>'
+    )
+
+
+# ── Public API ────────────────────────────────────────────────────────────────
+
+def build_detail_html(d: dict, comps: list, rate, fm_ref_comps: list | None = None) -> str:
+    """
+    Build a complete self-contained HTML string for the DraftOS prospect detail drawer.
+    Renders as a two-column layout: sticky left rail + scrollable right content.
+
+    Args:
+        d:             Prospect detail dict (same shape as _build_detail_html in app.py).
+        comps:         List of historical comp dicts from get_historical_comps().
+        rate:          Archetype translation rate dict from get_archetype_translation_rate(), or None.
+        fm_ref_comps:  Optional list of FM reference comp dicts from get_fm_reference_comps().
+
+    Returns:
+        Complete <!DOCTYPE html> string ready to pass to components.html().
+    """
+    # ── Unpack fields ────────────────────────────────────────────────────────
+    pos             = d.get("position_group") or "?"
+    name            = d.get("display_name") or "Unknown"
+    school          = d.get("school_canonical") or "—"
+    tier            = (d.get("apex_tier") or "").strip().upper()
+    crank           = d.get("consensus_rank")
+    conf_raw        = d.get("confidence_band") or d.get("eval_confidence") or "—"
+    ras_raw         = d.get("ras_score") or d.get("ras_total")
+    raw_score       = d.get("raw_score")
+    apex_comp       = d.get("apex_composite")
+    pvc             = d.get("pvc")
+    pos_rank        = d.get("position_rank")
+    archetype_raw   = d.get("matched_archetype") or d.get("apex_archetype") or ""
+    gap_label       = (d.get("gap_label") or "").strip().upper()
+    fit_score_val   = d.get("archetype_gap")
+    fm_primary      = d.get("failure_mode_primary")
+    fm_secondary    = d.get("failure_mode_secondary")
+    signature_play  = d.get("signature_play")
+    strengths_raw   = d.get("strengths")
+    red_flags_raw   = d.get("red_flags")
+    translation_risk = d.get("translation_risk")
+    capital_base    = d.get("capital_base") or d.get("capital_adjusted") or "—"
+    capital_note    = d.get("capital_note") or ""
+    snapshot_date   = d.get("scored_at") or d.get("snapshot_date") or ""
+    div_delta       = d.get("divergence_delta") or d.get("auto_apex_delta")
+    div_narrative   = d.get("divergence_narrative")
+    prospect_id     = d.get("prospect_id") or d.get("consensus_rank") or "—"
+    tags_raw        = d.get("tags") or d.get("tag_names") or ""
+
+    # ── Derived values ───────────────────────────────────────────────────────
+    import pandas as pd
+
+    rank_str = f"#{int(crank)}" if crank is not None and _safe_float(str(crank)) != "—" else "NR"
+    try:
+        rank_num = int(float(crank)) if crank is not None else 0
+    except (TypeError, ValueError):
+        rank_num = 0
+
+    ras_str = _safe_float(ras_raw, ".2f") if ras_raw is not None else None
+    raw_int,  raw_dec  = _split_score(raw_score)
+    apex_int, apex_dec = _split_score(apex_comp)
+
+    is_unified = False
+    if pvc is not None:
+        try:
+            is_unified = abs(float(pvc) - 1.0) < 0.005
+        except (TypeError, ValueError):
+            pass
+
+    pvc_str = _safe_float(pvc, ".2f") if pvc else "—"
+
+    name_parts = name.split(" ", 1)
+    name_html  = _e(name_parts[0])
+    if len(name_parts) > 1:
+        name_html += "<br>" + _e(name_parts[1])
+
+    if archetype_raw and " " in archetype_raw:
+        arch_code, arch_label = archetype_raw.split(" ", 1)
+    else:
+        arch_code, arch_label = archetype_raw or "—", ""
+
+    # Auto-lookup archetype definition from library (caller can override via apex_archetype_def)
+    apex_archetype_def = d.get("apex_archetype_def") or _ARCHETYPE_DEFS.get(arch_code)
+    arch_def_html = (
+        f'<div class="archetype-def">{_e(apex_archetype_def)}</div>'
+        if apex_archetype_def else ""
+    )
+
+    ghost_rank = f"#{rank_num}" if rank_num > 0 else ""
+
+    TIER_MAP = {
+        "ELITE":  ("elite", "★ Elite",  "Top Tier"),
+        "DAY1":   ("day1",  "Day 1",    "Round 1"),
+        "DAY2":   ("day2",  "Day 2",    "Rounds 2–3"),
+        "DAY3":   ("day3",  "Day 3",    "Rounds 4–7"),
+        "UDFA-P": ("udfa",  "UDFA",     "Priority Free Agent"),
+        "UDFA":   ("udfa",  "UDFA",     "Free Agent"),
+    }
+    tier_cls, tier_text, tier_sub = TIER_MAP.get(tier, ("udfa", tier or "—", ""))
+
+    conf_color_cls = {
+        "Tier A": "green", "A": "green", "High": "green",
+        "Tier B": "amber", "B": "amber", "Medium": "amber",
+        "Tier C": "red",   "C": "red",   "Low": "red",
+    }.get(conf_raw, "dim")
+
+    conf_display = {
+        "A": "Tier A", "B": "Tier B", "C": "Tier C",
+    }.get(conf_raw, conf_raw)
+
+    # Divergence display
+    div_text  = "N/A"
+    div_cls   = "dim"
+    chip_cls  = "aligned"
+    try:
+        if div_delta is not None:
+            dd = int(float(div_delta))
+            if abs(dd) < 3:
+                div_text, div_cls = f"Aligned ({dd:+d})" if dd != 0 else "Aligned (0)", "dim"
+            elif dd > 0:
+                div_text, div_cls = f"APEX +{dd}", "blue"
+            else:
+                div_text, div_cls = f"APEX {dd}", "red"
+    except (TypeError, ValueError):
+        pass
+
+    # Position rank chip
+    pos_rank_chip = ""
+    if pos_rank:
+        try:
+            if int(float(pos_rank)) != int(float(crank)):
+                pos_rank_chip = (
+                    f'<span class="meta-chip hi">#{int(float(pos_rank))} at {_e(pos)}</span>'
+                )
+        except (TypeError, ValueError):
+            pass
+
+    # FM codes
+    fm_codes: set[int] = set()
+    fm_labels: list[str] = []
+    for fv in [fm_primary, fm_secondary]:
+        if _fm_is_present(fv):
+            m = re.search(r"FM-(\d+)", str(fv))
+            if m:
+                fm_codes.add(int(m.group(1)))
+            fm_labels.append(str(fv).strip())
+
+    # Watermark date
+    try:
+        wm_date = datetime.strptime(str(snapshot_date)[:10], "%Y-%m-%d").strftime("%b %d, %Y")
+    except (ValueError, TypeError):
+        wm_date = datetime.now().strftime("%b %d, %Y")
+
+    # Tags
+    _TAG_CLASSES = {
+        "CRUSH":           "crush",
+        "Two-Way Premium": "tw",
+        "Walk-On Flag":    "walkOn",
+        "Schwesinger Rule": "schwes",
+        "Schwesinger Full": "schwes",
+    }
+    _INTERNAL = frozenset({"apex_rank_2026"})
+    if tags_raw:
+        sep = "," if "," in str(tags_raw) else "|"
+        tag_list = [t.strip() for t in str(tags_raw).split(sep) if t.strip() and t.strip() not in _INTERNAL]
+    else:
+        tag_list = []
+
+    # ── Build HTML fragments ─────────────────────────────────────────────────
+
+    # Score block
+    if is_unified:
+        score_block = (
+            '<div class="score-grid unified">'
+            '<div class="score-item">'
+            '<div class="score-lbl">Player Grade · Draft Value</div>'
+            f'<div class="score-val apex">{raw_int}<span class="score-decimal">.{raw_dec}</span></div>'
+            '</div></div>'
+        )
+    else:
+        score_block = (
+            '<div class="score-grid">'
+            '<div class="score-item">'
+            '<div class="score-lbl">Player Grade</div>'
+            f'<div class="score-val">{raw_int}<span class="score-decimal">.{raw_dec}</span></div>'
+            '</div>'
+            '<div class="score-item">'
+            '<div class="score-lbl">APEX Score</div>'
+            f'<div class="score-val apex">{apex_int}<span class="score-decimal">.{apex_dec}</span></div>'
+            '</div></div>'
+        )
+
+    # RAS block
+    ras_html = ""
+    if ras_str and ras_str != "—":
+        ras_html = (
+            f'<div class="ras-block-right">'
+            f'<div class="ras-lbl">RAS Score</div>'
+            f'<div class="ras-val">{_e(ras_str)}</div>'
+            f'</div>'
+        )
+
+    # Trait bars
+    football_html = "".join([
+        _build_trait("Processing",  d.get("v_processing")),
+        _build_trait("Athleticism", d.get("v_athleticism")),
+        _build_trait("Comp. Tough", d.get("v_comp_tough")),
+        _build_trait("Durability",  d.get("v_injury")),
+    ])
+    system_html = "".join([
+        _build_trait("Scheme Vers.", d.get("v_scheme_vers")),
+        _build_trait("Production",   d.get("v_production")),
+        _build_trait("Dev. Traj.",   d.get("v_dev_traj")),
+        _build_trait("Character",    d.get("v_character")),
+    ])
+
+    # Archetype fit row
+    fit_row_html = ""
+    if gap_label and fit_score_val is not None:
+        GAP_CLS = {
+            "CLEAN": "clean", "SOLID": "solid",
+            "TWEENER": "tweak", "COMPRESSION": "solid", "NO_FIT": "nofit"
+        }
+        GAP_DISPLAY = {
+            "CLEAN": "Clean Fit", "SOLID": "Solid Fit",
+            "TWEENER": "Tweener", "COMPRESSION": "Elite Tweener", "NO_FIT": "No Dominant Fit"
+        }
+        gap_cls  = GAP_CLS.get(gap_label, "solid")
+        gap_disp = GAP_DISPLAY.get(gap_label, gap_label.title())
+        try:
+            fs = float(fit_score_val)
+            fit_pct = min(max(fs / 20.0 * 100, 0), 100)
+        except (TypeError, ValueError):
+            fs = 0.0
+            fit_pct = 0.0
+        fit_row_html = (
+            f'<div class="fit-row">'
+            f'<div class="fit-header">'
+            f'<span class="fit-lbl">Archetype Fit</span>'
+            f'<span class="fit-score {gap_cls}">{_e(gap_disp)} · {_safe_float(fit_score_val, ".1f")} pts</span>'
+            f'</div>'
+            f'<div class="fit-track"><div class="fit-fill {gap_cls}" style="width:{fit_pct:.1f}%"></div></div>'
+            f'<div class="fit-breakdown">Clean Fit &gt;15 pts · <span>Solid Fit 8–15 pts</span> · Tweener &lt;8 pts</div>'
+            f'</div>'
+        )
+
+    # Tags
+    tags_html = ""
+    if tag_list:
+        pills = ""
+        for t in tag_list:
+            cls = _TAG_CLASSES.get(t, "neutral")
+            pills += f'<span class="htag {cls}">{_e(t)}</span>'
+        tags_html = f'<div class="tags-row">{pills}</div>'
+
+    # FM section
+    fm_html = _build_fm_section(fm_codes, fm_labels, prospect=d)
+
+    # Divergence panel (only when abs(delta) >= 3)
+    divergence_panel_html = ""
+    try:
+        if div_delta is not None and abs(int(float(div_delta))) >= 3:
+            divergence_panel_html = (
+                '<div class="section-gap"></div>'
+                '<div class="sec-divider cold">APEX Divergence</div>'
+                + _build_divergence_panel(div_delta, div_narrative)
+            )
+    except (TypeError, ValueError):
+        pass
+
+    # Signature play
+    sig_html = ""
+    if _v23_present(signature_play):
+        sig_html = (
+            '<div class="section-gap"></div>'
+            '<div class="sec-divider">Signature Play</div>'
+            '<div class="sig-play">'
+            '<div class="sig-lbl"><span class="sig-dot"></span>Signature Play</div>'
+            f'<div class="sig-text">{_e(signature_play)}</div>'
+            '</div>'
+        )
+
+    # Strengths + Red Flags
+    str_items = _smart_split_bullets(strengths_raw)
+    rf_items  = _smart_split_bullets(red_flags_raw)
+
+    def _pitems(items, dc):
+        return "".join(
+            f'<div class="panel-item"><span class="pi-dot {dc}"></span>{_e(it)}</div>'
+            for it in items
+        )
+
+    two_col_html = ""
+    if str_items or rf_items:
+        sp = (
+            '<div class="panel">'
+            '<div class="panel-hdr g"><span class="ph-ind g"></span>Strengths</div>'
+            f'{_pitems(str_items, "g")}</div>'
+        ) if str_items else ""
+        rp = (
+            '<div class="panel">'
+            '<div class="panel-hdr r"><span class="ph-ind r"></span>Red Flags</div>'
+            f'{_pitems(rf_items, "r")}</div>'
+        ) if rf_items else ""
+        two_col_html = (
+            '<div class="section-gap"></div>'
+            '<div class="sec-divider">Strengths &amp; Red Flags</div>'
+            f'<div class="two-col">{sp}{rp}</div>'
+        )
+
+    # Translation risk
+    risk_html = ""
+    if _v23_present(translation_risk):
+        risk_html = (
+            '<div class="risk-banner">'
+            '<span class="risk-icon">!</span>'
+            f'<div class="risk-text">{_e(translation_risk)}</div>'
+            '</div>'
+        )
+
+    # Comps
+    comps_html = ""
+    if comps:
+        comps_html = (
+            '<div class="section-gap"></div>'
+            + _build_comps_html(comps, archetype_raw, rate)
+        )
+
+    # FM reference records — always render section when FM codes present
+    # (shows explanatory block if no same-position data rather than nothing)
+    fm_ref_html = ""
+    if fm_codes:
+        fm_ref_html = (
+            '<div class="section-gap"></div>'
+            + _build_fm_ref_html(fm_ref_comps or [], fm_labels, pos)
+        )
+
+    # Capital note
+    cap_note_html = f'<div class="capital-note">{_e(capital_note)}</div>' if capital_note else ""
+
+    # ── Font URL ─────────────────────────────────────────────────────────────
+    gf_url = (
+        "https://fonts.googleapis.com/css2?family=Barlow+Condensed"
+        ":wght@300;400;500;600;700;800;900"
+        "&family=Barlow:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&display=swap"
+    )
+
+    # ── Assemble ─────────────────────────────────────────────────────────────
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="{gf_url}" rel="stylesheet">
+<style>
+{_CSS}
+</style>
+</head>
+<body>
+
+<div class="drawer">
+
+  <!-- ═══ LEFT RAIL ═══ -->
+  <div class="rail">
+
+    <div class="pos-chip"><span class="pos-dot"></span>{_e(pos)}</div>
+
+    <div class="player-name">{name_html}</div>
+    <div class="name-slash"></div>
+
+    <div class="meta-row">
+      <span class="meta-chip">{_e(school)}</span>
+      <span class="meta-chip">Consensus {rank_str}</span>
+      {pos_rank_chip}
+    </div>
+
+    <div class="apex-window">
+      {score_block}
+      <div class="tier-badge {tier_cls}">
+        <span class="tier-text {tier_cls}">{_e(tier_text)}</span>
+        <span class="tier-sub {tier_cls}">{_e(tier_sub)}</span>
+      </div>
+      <div class="formula-line">RPG {_safe_float(raw_score)} × PVC {pvc_str} ({_e(pos)}) = APEX {_safe_float(apex_comp)}</div>
+    </div>
+
+    <div class="traits-section">
+      <div class="section-header">Football Traits</div>
+      {football_html}
+    </div>
+
+    <div class="traits-section">
+      <div class="section-header">System Traits</div>
+      {system_html}
+    </div>
+
+    <div class="conf-row">
+      <div class="conf-item">
+        <div class="conf-lbl">Confidence</div>
+        <div class="conf-val {conf_color_cls}">{_e(conf_display)}</div>
+      </div>
+      <div class="conf-item">
+        <div class="conf-lbl">Divergence</div>
+        <div class="conf-val {div_cls}">{_e(div_text)}</div>
+      </div>
+    </div>
+
+    <div class="capital-block">
+      <div class="capital-lbl">Draft Capital</div>
+      <div class="capital-val">{_e(capital_base)}</div>
+      {cap_note_html}
+    </div>
+
+    <div class="watermark">
+      <span class="brand-logo">APEX OS</span>
+      <div class="watermark-meta">
+        {rank_str} · {_e(pos)} · {_e(school)}<br>
+        {_e(wm_date)}
+      </div>
+    </div>
+
+  </div>
+  <!-- end rail -->
+
+  <!-- ═══ RIGHT CONTENT ═══ -->
+  <div class="content">
+
+    <div class="rank-ghost">{ghost_rank}</div>
+
+    <!-- Archetype -->
+    <div class="sec-divider">Archetype</div>
+    <div class="arch-section">
+      <div class="arch-header-row">
+        <div>
+          <div class="archetype-code">{_e(arch_code)}</div>
+          <div class="archetype-name">{_e(arch_label or archetype_raw)}</div>
+          {arch_def_html}
+        </div>
+        {ras_html}
+      </div>
+      {fit_row_html}
+      {tags_html}
+    </div>
+
+    <!-- FM Risk -->
+    {fm_html}
+
+    <!-- Divergence -->
+    {divergence_panel_html}
+
+    <!-- Signature Play -->
+    {sig_html}
+
+    <!-- Strengths + Red Flags -->
+    {two_col_html}
+
+    <!-- Translation Risk -->
+    {risk_html}
+
+    <!-- Historical Comps -->
+    {comps_html}
+
+    <!-- FM Reference Records -->
+    {fm_ref_html}
+
+  </div>
+  <!-- end content -->
+
+</div>
+
+<div class="card-stamp">APEX OS · 2026 · #{prospect_id}</div>
+
+</body>
+</html>"""
+
+
+def estimate_height(d: dict, comps: list, fm_ref_comps: list | None = None) -> int:
+    """
+    Estimate iframe height in pixels for components.html() call.
+    The drawer uses height:100vh internally, so this sets the iframe container size.
+    """
+    h = 900
+    if _v23_present(d.get("signature_play")):
+        h += 80
+    if _v23_present(d.get("strengths")) or _v23_present(d.get("red_flags")):
+        h += 240
+    if _v23_present(d.get("translation_risk")):
+        h += 70
+    if comps:
+        h += 180 * min(len(comps), 2)
+
+    # FM section: base height for pip bar + tags; extra for compound severity block
+    fm_primary   = d.get("failure_mode_primary")
+    fm_secondary = d.get("failure_mode_secondary")
+    fm_primary_present   = _fm_is_present(fm_primary)
+    fm_secondary_present = _fm_is_present(fm_secondary)
+    if fm_primary_present or fm_secondary_present:
+        h += 80
+    if fm_primary_present and fm_secondary_present:
+        # Compound pattern adds severity prose block (~70px rendered height)
+        h += 70
+
+    # FM reference records: each card ~90px
+    if fm_ref_comps:
+        h += 90 * min(len(fm_ref_comps), 4)
+
+    div_delta = d.get("divergence_delta") or d.get("auto_apex_delta")
+    try:
+        if div_delta is not None and abs(int(float(div_delta))) >= 3:
+            h += 120
+    except (TypeError, ValueError):
+        pass
+    return h

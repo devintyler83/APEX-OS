@@ -12,6 +12,7 @@ Usage:
 """
 
 import html as _html
+import re
 from datetime import datetime
 from pathlib import Path
 
@@ -114,8 +115,6 @@ def fm_tags_html(fm_labels: list) -> str:
         return ""
     chips = ""
     for label in fm_labels:
-        # Extract FM number from label like "FM-3 Processing Wall"
-        import re
         m = re.match(r"FM-(\d+)", str(label))
         t_class = f"t{m.group(1)}" if m else "t1"
         chips += f'<span class="fm-tag {t_class}">{e(label)}</span>'
@@ -202,6 +201,66 @@ _TRAIT_LABEL_OVERRIDES = {
     "v_dev_traj":    "Dev. Traj.",
     "v_comp_tough":  "Comp. Tough",
 }
+
+
+
+def _split_bullets(text, max_items=2):
+    """
+    Extract up to max_items bullet strings from strengths/red_flags text.
+    Handles two DB storage formats:
+      1. Newline-separated items: each line (after merging soft wraps) = one bullet
+      2. Prose paragraph: split on sentence boundaries (". Capital")
+
+    Priority: try newline split first. If that yields >= 2 items, use it.
+    Otherwise collapse to prose and split on sentence boundaries.
+    """
+    import re as _re
+    if not text or not str(text).strip():
+        return []
+
+    raw = str(text)
+
+    # ── Strategy 1: newline split with soft-wrap merging ──────────────────
+    # Merge lines that are continuations (prev line didn't end with punctuation
+    # AND this line starts lowercase or with a quote/digit after leading space)
+    lines = [ln.strip() for ln in raw.split("\n") if ln.strip()]
+    ENDERS = {".", "!", "?"}
+    merged = []
+    for ln in lines:
+        if (merged
+                and merged[-1][-1] not in ENDERS
+                and ln and (ln[0].islower() or ln[0] in ("'", "\u2019", "\u201c"))):
+            merged[-1] = merged[-1] + " " + ln
+        else:
+            merged.append(ln)
+
+    # If we got >= 2 distinct items from newlines, use them
+    if len(merged) >= 2:
+        return merged[:max_items]
+
+    # ── Strategy 2: treat as prose, split on sentence boundaries ──────────
+    prose = _re.sub(r"\s+", " ", raw).strip()
+    sentences = _re.split(r"(?<=[.!?])\s+(?=[A-Z])", prose)
+    sentences = [s.strip() for s in sentences if s.strip()]
+    if len(sentences) >= 2:
+        return sentences[:max_items]
+
+    # ── Strategy 3: em-dash fallback (single long sentence) ───────────────
+    parts = [p.strip() for p in prose.split(" \u2014 ") if p.strip()]
+    if len(parts) >= 2:
+        bullets = []
+        current = parts[0]
+        for part in parts[1:]:
+            if len(part.split()) >= 8 and current:
+                bullets.append(current)
+                current = part
+            else:
+                current = current + " \u2014 " + part
+        if current:
+            bullets.append(current)
+        return bullets[:max_items]
+
+    return [prose][:max_items]
 
 
 def headline_traits_html(prospect: dict) -> str:
@@ -376,14 +435,24 @@ def html_page(prospect: dict) -> str:
     pos_rank_label   = prospect.get("position_rank_label")
     eval_confidence  = prospect.get("eval_confidence", "")
     divergence_delta = prospect.get("divergence_delta")
-    ras_score        = prospect.get("ras_score")
+    # RAS — guard against pandas NaN float (renders as "nan" string without this)
+    _ras_raw         = prospect.get("ras_score")
+    ras_score        = None if (_ras_raw is None or (isinstance(_ras_raw, float) and __import__("math").isnan(_ras_raw))) else _ras_raw
     fm_codes         = prospect.get("fm_codes") or []
     fm_labels        = prospect.get("fm_labels") or []
     capital_base     = prospect.get("capital_base", "")
     tags_str         = prospect.get("tags", "")
     signature_play   = prospect.get("signature_play")
-    strengths_raw    = prospect.get("strengths", "")
-    red_flags_raw    = prospect.get("red_flags", "")
+    # Strengths/red flags — guard against pandas NaN float (causes "nan" prose bullet)
+    def _clean_text(v):
+        if v is None:
+            return ""
+        if isinstance(v, float):
+            import math as _math
+            return "" if _math.isnan(v) else str(v)
+        return str(v)
+    strengths_raw    = _clean_text(prospect.get("strengths", ""))
+    red_flags_raw    = _clean_text(prospect.get("red_flags", ""))
     snapshot_date    = prospect.get("snapshot_date", "")
     prospect_id      = prospect.get("prospect_id", 0)
 
@@ -472,18 +541,9 @@ def html_page(prospect: dict) -> str:
         <div class="sig-text">{e(signature_play)}</div>
       </div>"""
 
-    # Top strength (first item only)
-    strength_items = [s.strip() for s in (strengths_raw or "").split("\n") if s.strip()]
-    top_strength = strength_items[0] if strength_items else ""
-
-    # Top red flag (first item only)
-    flag_items = [s.strip() for s in (red_flags_raw or "").split("\n") if s.strip()]
-    top_flag = flag_items[0] if flag_items else ""
-
-    # Top 2 strengths
-    strength_items2 = strength_items[:2]
-    # Top 2 red flags
-    flag_items2 = flag_items[:2]
+    # Top 2 strengths / red flags — smart split handles both newline and prose formats
+    strength_items2 = _split_bullets(strengths_raw, max_items=2)
+    flag_items2     = _split_bullets(red_flags_raw,  max_items=2)
 
     sf_html = ""
     if strength_items2 or flag_items2:
@@ -529,7 +589,7 @@ def html_page(prospect: dict) -> str:
         wm_date = snapshot_date or ""
 
     # Card stamp
-    card_stamp = f"DRAFTOS · 2026 · #{int(prospect_id):04d}"
+    card_stamp = f"APEX OS · 2026 · #{int(prospect_id):04d}"
 
     # Ghost rank
     ghost_rank = f"#{consensus_rank}" if consensus_rank else ""
@@ -541,7 +601,7 @@ def html_page(prospect: dict) -> str:
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>DraftOS — {e(display_name)}</title>
+<title>APEX OS — {e(display_name)}</title>
 {font_block}
 <style>{_CSS}</style>
 </head>
@@ -571,7 +631,7 @@ def html_page(prospect: dict) -> str:
       <div class="left-bottom">
         {'<div class="capital-block"><div class="capital-lbl">Draft Capital</div><div class="capital-val">' + e(capital_base) + '</div></div>' if capital_base else ''}
         <div class="watermark">
-          <span class="brand-logo">DraftOS</span>
+          <span class="brand-logo">APEX OS</span>
           <div class="watermark-meta">{e(pos_group)} · {e(school)}<br>{wm_date}</div>
         </div>
       </div>

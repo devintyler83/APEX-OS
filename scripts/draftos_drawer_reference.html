@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>DraftOS — Detail Drawer Reference</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;400;500;600;700;800;900&family=Barlow:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&display=swap" rel="stylesheet">
+<style>
+/* ─── This file is the visual reference for the Streamlit detail drawer. ───
+   In app.py, this CSS is injected via st.markdown(<style>...</style>, unsafe_allow_html=True)
+   Components are rendered via st.markdown(html_string, unsafe_allow_html=True)
+   ─────────────────────────────────────────────────────────────────────────── */
+
+:root {
+  --ink:       #0a0c0f;
+  --ink2:      #0f1318;
+  --ink3:      #161b22;
+  --ink4:      #1c2330;
+  --ink5:      #222b38;
+  --wire:      rgba(255,255,255,0.06);
+  --wire2:     rgba(255,255,255,0.11);
+  --wire3:     rgba(255,255,255,0.20);
+  --dim:       rgba(255,255,255,0.32);
+  --mid:       rgba(255,255,255,0.55);
+  --text:      rgba(255,255,255,0.90);
+  --cold:      #7eb4e2;
+  --cold2:     #4a90d4;
+  --cold-dim:  rgba(126,180,226,0.10);
+  --cold-dim2: rgba(126,180,226,0.20);
+  --amber:     #e8a84a;
+  --amber2:    #c98828;
+  --amber-dim: rgba(232,168,74,0.13);
+  --red:       #e05c5c;
+  --red-dim:   rgba(224,92,92,0.12);
+  --green:     #5ab87a;
+  --green-dim: rgba(90,184,122,0.12);
+  --elite:     #f0c040;
+  --elite-dim: rgba(240,192,64,0.12);
+  --prism-1:   #7eb4e2;
+  --prism-2:   #a57ee0;
+  --prism-3:   #e8a84a;
+  --prism-4:   #5ab87a;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: #060809;
+  font-family: 'Barlow', sans-serif;
+  padding: 32px;
+  color: var(--text);
+}
+
+/* ═══════════════════════════════════════════════
+   DRAWER SHELL
+   In Streamlit this is st.expander or a sidebar panel
+   ─────────────────────────────────────────────── */
+.drawer {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: 0;
+  background: var(--ink);
+  border: 1px solid var(--wire2);
+  border-left: 4px solid transparent;
+  border-image: linear-gradient(180deg, var(--prism-1), var(--prism-2), var(--prism-3), var(--prism-4)) 1;
+  min-height: 100vh;
+}
+
+/* ═══════════════════════════════════════════════
+   LEFT RAIL — identity block, stays fixed
+   ─────────────────────────────────────────────── */
+.rail {
+  background: var(--ink2);
+  border-right: 1px solid var(--wire2);
+  padding: 28px 20px 24px 24px;
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+/* Position chip */
+.pos-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--cold-dim2);
+  border: 1px solid rgba(74,144,212,0.5);
+  border-radius: 3px;
+  padding: 3px 10px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.10em;
+  color: var(--cold);
+  text-transform: uppercase;
+  margin-bottom: 10px;
+  width: fit-content;
+}
+
+.pos-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--cold); opacity: 0.7; }
+
+/* Player name — large */
+.player-name {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 48px;
+  font-weight: 900;
+  line-height: 0.87;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+
+.name-slash {
+  width: 32px; height: 2px;
+  background: linear-gradient(90deg, var(--cold2), transparent);
+  margin-bottom: 10px;
+}
+
+/* Meta chips */
+.meta-row { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 18px; }
+.meta-chip {
+  font-size: 9px; font-weight: 600; color: var(--mid);
+  background: var(--wire); border: 1px solid var(--wire2);
+  border-radius: 3px; padding: 2px 7px; letter-spacing: 0.04em;
+}
+.meta-chip.hi { color: var(--cold); border-color: rgba(126,180,226,0.28); background: var(--cold-dim); }
+
+/* ─── APEX score block ─── */
+.apex-window {
+  background: var(--ink3);
+  border: 1px solid var(--wire2);
+  border-radius: 5px;
+  padding: 14px 14px 12px;
+  margin-bottom: 14px;
+  position: relative;
+  overflow: hidden;
+}
+.apex-window::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(126,180,226,0.04) 0%, transparent 40%, rgba(240,192,64,0.04) 100%);
+  pointer-events: none;
+}
+
+.score-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 10px; }
+.score-lbl { font-size: 7px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--dim); margin-bottom: 2px; }
+.score-val {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 40px; font-weight: 800; line-height: 0.92;
+  color: var(--cold); letter-spacing: -0.01em;
+}
+.score-val.apex { color: var(--amber); }
+.score-decimal { font-size: 20px; font-weight: 600; opacity: 0.65; }
+
+/* single score when RPG==APEX */
+.score-single .score-val { font-size: 52px; color: var(--amber); }
+
+/* tier badges */
+.tier-badge { display: flex; align-items: center; justify-content: space-between; border-radius: 4px; padding: 6px 12px; margin-bottom: 6px; }
+.tier-badge-elite { background: var(--elite-dim); border: 1px solid rgba(240,192,64,0.38); }
+.tier-badge-day1  { background: var(--cold-dim);  border: 1px solid rgba(126,180,226,0.32); }
+.tier-badge-day2  { background: var(--green-dim); border: 1px solid rgba(90,184,122,0.28); }
+.tier-badge-day3  { background: var(--wire);       border: 1px solid var(--wire2); }
+.tier-badge-udfa  { background: transparent;       border: 1px solid var(--wire); }
+
+.tier-text { font-family: 'Barlow Condensed', sans-serif; font-size: 15px; font-weight: 900; letter-spacing: 0.12em; text-transform: uppercase; }
+.tier-text-elite { color: var(--elite); }
+.tier-text-day1  { color: var(--cold); }
+.tier-text-day2  { color: var(--green); }
+.tier-text-day3  { color: var(--mid); }
+.tier-text-udfa  { color: var(--dim); }
+.tier-sub { font-size: 7px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
+.tier-sub-elite { color: rgba(240,192,64,0.50); }
+.tier-sub-day1  { color: rgba(126,180,226,0.45); }
+.tier-sub-day2  { color: rgba(90,184,122,0.45); }
+.tier-sub-day3  { color: var(--dim); }
+.tier-sub-udfa  { color: rgba(255,255,255,0.20); }
+.formula-line { font-size: 8px; color: var(--dim); font-family: 'Barlow Condensed', sans-serif; letter-spacing: 0.04em; opacity: 0.65; }
+
+/* ─── TRAIT METERS — both sections ─── */
+.traits-section { margin-bottom: 14px; }
+.section-header {
+  font-size: 7px; font-weight: 700; letter-spacing: 0.16em;
+  text-transform: uppercase; color: var(--dim); margin-bottom: 8px;
+  display: flex; align-items: center; gap: 6px;
+}
+.section-header::after { content: ''; flex: 1; height: 1px; background: var(--wire); }
+
+.trait-row { display: flex; align-items: center; gap: 7px; margin-bottom: 5px; }
+.trait-lbl { font-size: 9px; font-weight: 500; color: var(--mid); width: 64px; flex-shrink: 0; }
+.trait-track { flex: 1; height: 3px; background: var(--wire); border-radius: 1.5px; overflow: hidden; }
+.trait-fill { height: 100%; border-radius: 1.5px; }
+.trait-fill.hi  { background: var(--green); }
+.trait-fill.mid { background: var(--cold); }
+.trait-fill.lo  { background: var(--amber); }
+.trait-val { font-family: 'Barlow Condensed', sans-serif; font-size: 11px; font-weight: 700; color: var(--text); width: 22px; text-align: right; }
+
+/* ─── CONF / DIVERGENCE ─── */
+.conf-row { display: flex; gap: 6px; margin-bottom: 14px; }
+.conf-item { flex: 1; background: var(--ink3); border: 1px solid var(--wire); border-radius: 4px; padding: 7px 9px; }
+.conf-lbl { font-size: 7px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--dim); margin-bottom: 2px; font-weight: 700; }
+.conf-val { font-family: 'Barlow Condensed', sans-serif; font-size: 12px; font-weight: 700; color: var(--text); }
+.conf-val.green { color: var(--green); }
+.conf-val.amber { color: var(--amber); }
+.conf-val.blue  { color: var(--cold); }
+.conf-val.red   { color: var(--red); }
+
+/* ─── CAPITAL ─── */
+.capital-block { background: var(--ink3); border: 1px solid var(--wire); border-radius: 4px; padding: 9px 11px; margin-bottom: 14px; }
+.capital-lbl { font-size: 7px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--dim); margin-bottom: 3px; }
+.capital-val { font-family: 'Barlow Condensed', sans-serif; font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 2px; }
+.capital-note { font-size: 9px; color: var(--dim); line-height: 1.5; }
+
+/* ─── WATERMARK ─── */
+.watermark { margin-top: auto; padding-top: 10px; border-top: 1px solid var(--wire); display: flex; align-items: flex-end; justify-content: space-between; }
+.brand-logo { font-family: 'Barlow Condensed', sans-serif; font-size: 11px; font-weight: 900; letter-spacing: 0.20em; text-transform: uppercase; color: rgba(255,255,255,0.13); }
+.watermark-meta { font-size: 7px; color: var(--dim); text-align: right; letter-spacing: 0.04em; line-height: 1.7; }
+
+/* ═══════════════════════════════════════════════
+   RIGHT CONTENT — scrollable, full analysis
+   ─────────────────────────────────────────────── */
+.content {
+  padding: 28px 32px 40px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* SECTION DIVIDER — reused throughout */
+.sec-divider {
+  font-size: 8px; font-weight: 700; letter-spacing: 0.18em;
+  text-transform: uppercase; color: var(--dim);
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 12px; margin-top: 4px;
+}
+.sec-divider::after { content: ''; flex: 1; height: 1px; background: var(--wire); }
+.sec-divider.cold { color: var(--cold); }
+.sec-divider.amber { color: var(--amber); }
+.sec-divider.green { color: var(--green); }
+.sec-divider.red { color: var(--red); }
+
+.section-gap { height: 24px; }
+
+/* ─── ARCHETYPE SECTION ─── */
+.arch-section { margin-bottom: 20px; }
+
+.arch-header-row {
+  display: flex; align-items: flex-start;
+  justify-content: space-between; gap: 16px; margin-bottom: 14px;
+}
+
+.archetype-code { font-family: 'Barlow Condensed', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--cold); margin-bottom: 4px; }
+.archetype-name { font-family: 'Barlow Condensed', sans-serif; font-size: 32px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.02em; color: var(--amber); line-height: 0.95; }
+
+.ras-block-right { text-align: right; flex-shrink: 0; }
+.ras-lbl { font-size: 7px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--dim); margin-bottom: 2px; }
+.ras-val { font-family: 'Barlow Condensed', sans-serif; font-size: 28px; font-weight: 800; color: var(--green); line-height: 1; }
+
+/* Archetype Fit score bar */
+.fit-row {
+  background: var(--ink3);
+  border: 1px solid var(--wire);
+  border-radius: 5px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+}
+.fit-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.fit-lbl { font-size: 8px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--dim); }
+.fit-score { font-family: 'Barlow Condensed', sans-serif; font-size: 20px; font-weight: 800; }
+.fit-score.clean  { color: var(--green); }
+.fit-score.solid  { color: var(--cold); }
+.fit-score.tweak  { color: var(--amber); }
+.fit-score.nofit  { color: var(--red); }
+.fit-track { height: 4px; background: var(--wire); border-radius: 2px; overflow: hidden; margin-bottom: 6px; }
+.fit-fill { height: 100%; border-radius: 2px; }
+.fit-fill.clean { background: var(--green); }
+.fit-fill.solid { background: var(--cold); }
+.fit-fill.tweak { background: var(--amber); }
+.fit-fill.nofit { background: var(--red); }
+.fit-breakdown { font-size: 9px; color: var(--dim); letter-spacing: 0.02em; }
+.fit-breakdown span { color: var(--mid); }
+
+/* Scheme Versatility note */
+.scheme-note {
+  background: var(--ink3);
+  border: 1px solid var(--wire);
+  border-radius: 4px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+}
+.scheme-note-lbl { font-size: 7px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--dim); margin-bottom: 4px; }
+.scheme-note-val { font-size: 10px; color: var(--mid); line-height: 1.5; }
+
+/* Tags */
+.tags-row { display: flex; gap: 6px; flex-wrap: wrap; }
+.htag { display: inline-flex; align-items: center; padding: 3px 9px; border-radius: 3px; font-size: 9px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+.htag.crush   { background: rgba(90,184,122,0.12); border: 1px solid rgba(90,184,122,0.30); color: var(--green); }
+.htag.tw      { background: rgba(126,180,226,0.10); border: 1px solid rgba(126,180,226,0.28); color: var(--cold); }
+.htag.walkOn  { background: rgba(232,168,74,0.10); border: 1px solid rgba(232,168,74,0.28); color: var(--amber); }
+.htag.neutral { background: var(--wire); border: 1px solid var(--wire2); color: var(--mid); }
+
+/* ─── FM RISK SECTION ─── */
+.fm-section { margin-bottom: 20px; }
+.fm-pip-bar { display: flex; gap: 3px; margin-bottom: 8px; }
+.fm-pip { flex: 1; height: 6px; border-radius: 2px; background: var(--wire); }
+.fm-pip.p1 { background: #e05c5c; }
+.fm-pip.p2 { background: #e8a84a; }
+.fm-pip.p3 { background: #5b9cf0; }
+.fm-pip.p4 { background: #e05c5c; }
+.fm-pip.p5 { background: #c47ae0; }
+.fm-pip.p6 { background: #a57ee0; }
+.fm-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+.fm-tag { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 3px; font-size: 10px; font-weight: 700; letter-spacing: 0.04em; }
+.fm-tag.t1 { background: rgba(224,92,92,0.15); border: 1px solid rgba(224,92,92,0.30); color: #f08080; }
+.fm-tag.t2 { background: rgba(232,168,74,0.15); border: 1px solid rgba(232,168,74,0.30); color: #f0b85a; }
+.fm-tag.t3 { background: rgba(91,156,240,0.15); border: 1px solid rgba(91,156,240,0.30); color: #8ab8f5; }
+.fm-tag.t4 { background: rgba(224,92,92,0.18); border: 1px solid rgba(224,92,92,0.30); color: #f08080; }
+.fm-tag.t5 { background: rgba(196,122,224,0.18); border: 1px solid rgba(196,122,224,0.30); color: #d4a5f5; }
+.fm-tag.t6 { background: rgba(165,126,224,0.15); border: 1px solid rgba(165,126,224,0.30); color: #c4a5f5; }
+
+/* FM compound severity note */
+.fm-severity {
+  background: var(--red-dim);
+  border: 1px solid rgba(224,92,92,0.22);
+  border-left: 3px solid var(--red);
+  border-radius: 0 4px 4px 0;
+  padding: 8px 12px;
+  font-size: 10px;
+  color: rgba(224,92,92,0.85);
+  line-height: 1.5;
+}
+
+/* ─── APEX DIVERGENCE PANEL (NEW) ─── */
+.divergence-panel {
+  background: var(--ink3);
+  border: 1px solid var(--wire2);
+  border-radius: 5px;
+  padding: 16px 16px;
+  margin-bottom: 20px;
+  position: relative;
+  overflow: hidden;
+}
+.divergence-panel.high { border-left: 3px solid #5b9cf0; }
+.divergence-panel.low  { border-left: 3px solid var(--red); }
+.divergence-panel.aligned { border-left: 3px solid var(--wire3); }
+
+.div-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+
+.div-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 9px; border-radius: 3px;
+  font-size: 9px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+}
+.div-chip.high    { background: rgba(91,156,240,0.15); border: 1px solid rgba(91,156,240,0.30); color: #8ab8f5; }
+.div-chip.low     { background: var(--red-dim); border: 1px solid rgba(224,92,92,0.30); color: #f08080; }
+.div-chip.aligned { background: var(--wire); border: 1px solid var(--wire2); color: var(--mid); }
+
+.div-delta {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 28px; font-weight: 800; line-height: 1;
+}
+.div-delta.high { color: #5b9cf0; }
+.div-delta.low  { color: var(--red); }
+.div-delta.aligned { color: var(--mid); }
+
+.div-lbl { font-size: 8px; color: var(--dim); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; margin-top: 2px; }
+
+.div-rationale {
+  font-size: 11px;
+  line-height: 1.65;
+  color: var(--mid);
+  border-top: 1px solid var(--wire);
+  padding-top: 10px;
+}
+.div-rationale strong { color: var(--text); font-weight: 600; }
+
+/* ─── SIGNATURE PLAY ─── */
+.sig-play {
+  background: var(--ink3);
+  border: 1px solid var(--wire);
+  border-left: 3px solid var(--cold2);
+  border-radius: 0 5px 5px 0;
+  padding: 12px 16px;
+  margin-bottom: 20px;
+}
+.sig-lbl { font-size: 8px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--cold); margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+.sig-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--cold2); }
+.sig-text { font-size: 12px; line-height: 1.65; color: var(--mid); font-style: italic; }
+
+/* ─── STRENGTHS + RED FLAGS ─── */
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+
+.panel { background: var(--ink3); border: 1px solid var(--wire); border-radius: 5px; padding: 14px 14px; }
+.panel-hdr { font-size: 9px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+.panel-hdr.g { color: var(--green); }
+.panel-hdr.r { color: var(--red); }
+.ph-ind { width: 6px; height: 6px; border-radius: 1px; flex-shrink: 0; }
+.ph-ind.g { background: var(--green); }
+.ph-ind.r { background: var(--red); }
+.panel-item { font-size: 11px; line-height: 1.55; color: var(--mid); padding: 6px 0; border-top: 1px solid var(--wire); display: flex; gap: 8px; align-items: flex-start; }
+.panel-item:first-of-type { border-top: none; }
+.pi-dot { width: 3px; height: 3px; border-radius: 50%; margin-top: 6px; flex-shrink: 0; }
+.pi-dot.g { background: var(--green); }
+.pi-dot.r { background: rgba(224,92,92,0.55); }
+
+/* ─── TRANSLATION RISK ─── */
+.risk-banner {
+  background: var(--amber-dim);
+  border: 1px solid rgba(232,168,74,0.22);
+  border-left: 3px solid var(--amber2);
+  border-radius: 0 5px 5px 0;
+  padding: 12px 16px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.risk-icon { font-size: 13px; line-height: 1.4; flex-shrink: 0; color: var(--amber); font-weight: 800; font-family: 'Barlow Condensed', sans-serif; margin-top: 1px; }
+.risk-text { font-size: 11px; line-height: 1.65; color: rgba(232,168,74,0.82); }
+
+/* ─── SCHEME-CONDITIONAL NOTE (NEW) ─── */
+.scheme-section { margin-bottom: 20px; }
+
+.scheme-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+
+.scheme-card {
+  background: var(--ink3);
+  border: 1px solid var(--wire);
+  border-radius: 5px;
+  padding: 12px 12px;
+}
+.scheme-card-lbl { font-size: 7px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 5px; }
+.scheme-card-lbl.land    { color: var(--dim); }
+.scheme-card-lbl.ceiling { color: var(--green); }
+.scheme-card-lbl.floor   { color: var(--red); }
+.scheme-card-val { font-family: 'Barlow Condensed', sans-serif; font-size: 12px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+.scheme-card-desc { font-size: 9px; color: var(--mid); line-height: 1.5; }
+
+/* ─── HISTORICAL COMPS (EXPANDED) ─── */
+.comps-section { margin-bottom: 20px; }
+
+.comp-card-full {
+  background: var(--ink3);
+  border: 1px solid var(--wire2);
+  border-radius: 5px;
+  padding: 16px 16px;
+  margin-bottom: 10px;
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 3px 1fr;
+  gap: 0 14px;
+}
+.comp-card-full::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.018) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+.comp-accent {
+  width: 3px;
+  border-radius: 1.5px;
+  align-self: stretch;
+}
+.comp-accent.hit     { background: linear-gradient(180deg, var(--green), rgba(90,184,122,0.3)); }
+.comp-accent.partial { background: linear-gradient(180deg, var(--amber), rgba(232,168,74,0.3)); }
+.comp-accent.miss    { background: linear-gradient(180deg, var(--red), rgba(224,92,92,0.3)); }
+
+.comp-body {}
+
+.comp-type-lbl { font-size: 8px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 3px; }
+.comp-type-lbl.hit     { color: var(--green); }
+.comp-type-lbl.partial { color: var(--amber); }
+.comp-type-lbl.miss    { color: var(--red); }
+
+.comp-name-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.comp-name { font-family: 'Barlow Condensed', sans-serif; font-size: 24px; font-weight: 900; letter-spacing: 0.01em; text-transform: uppercase; color: var(--text); line-height: 1; }
+.comp-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 8px; font-weight: 700; letter-spacing: 0.10em; text-transform: uppercase;
+  padding: 2px 7px; border-radius: 2px;
+}
+.comp-badge.hit     { background: var(--green-dim); color: var(--green); border: 1px solid rgba(90,184,122,0.25); }
+.comp-badge.partial { background: var(--amber-dim); color: var(--amber); border: 1px solid rgba(232,168,74,0.25); }
+.comp-badge.miss    { background: var(--red-dim);   color: var(--red);   border: 1px solid rgba(224,92,92,0.25); }
+.comp-badge::before { content: ''; width: 4px; height: 4px; border-radius: 50%; background: currentColor; opacity: 0.8; }
+
+.comp-fm-note { font-size: 9px; color: var(--dim); margin-bottom: 8px; font-style: italic; }
+.comp-fm-note span { color: #c4a5f5; font-style: normal; font-weight: 600; }
+
+.comp-desc { font-size: 10px; line-height: 1.65; color: var(--mid); margin-bottom: 8px; }
+.comp-year { font-size: 8px; color: rgba(255,255,255,0.20); font-family: 'Barlow Condensed', sans-serif; letter-spacing: 0.06em; }
+
+/* ─── FM RISK REFERENCE RECORDS ─── */
+.fm-ref-section { margin-bottom: 20px; }
+
+.fm-ref-card {
+  border: 1px solid var(--wire);
+  border-left: 3px solid var(--wire3);
+  border-radius: 0 5px 5px 0;
+  padding: 10px 14px;
+  margin-bottom: 8px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  background: var(--ink3);
+}
+.fm-ref-card.miss   { border-left-color: var(--red); }
+.fm-ref-card.partial { border-left-color: var(--amber); }
+.fm-ref-card.hit    { border-left-color: var(--green); }
+
+.fm-ref-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.fm-ref-outcome { font-size: 7px; font-weight: 700; letter-spacing: 0.10em; text-transform: uppercase; }
+.fm-ref-outcome.miss    { color: var(--red); }
+.fm-ref-outcome.partial { color: var(--amber); }
+.fm-ref-outcome.hit     { color: var(--green); }
+.fm-ref-name { font-family: 'Barlow Condensed', sans-serif; font-size: 18px; font-weight: 800; text-transform: uppercase; color: var(--text); line-height: 1; }
+.fm-ref-pos-fm { font-size: 9px; color: var(--dim); margin-bottom: 4px; }
+.fm-ref-pos-fm span { color: #c4a5f5; }
+.fm-ref-pattern { font-size: 9px; color: var(--mid); font-style: italic; line-height: 1.5; margin-bottom: 4px; }
+.fm-ref-excerpt { font-size: 9px; color: var(--dim); line-height: 1.5; }
+.fm-ref-meta { text-align: right; }
+.fm-ref-years { font-size: 8px; color: rgba(255,255,255,0.20); font-family: 'Barlow Condensed', sans-serif; letter-spacing: 0.06em; white-space: nowrap; }
+.fm-ref-gen { font-size: 7px; color: var(--dim); white-space: nowrap; margin-top: 2px; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════
+     DRAWER LAYOUT — FULL REFERENCE
+     ═══════════════════════════════════ -->
+<div class="drawer">
+
+  <!-- ═══ LEFT RAIL ═══ -->
+  <div class="rail">
+
+    <div class="pos-chip"><span class="pos-dot"></span>QB</div>
+
+    <div class="player-name">Ty<br>Simpson</div>
+    <div class="name-slash"></div>
+
+    <div class="meta-row">
+      <span class="meta-chip">Alabama</span>
+      <span class="meta-chip">Consensus #48</span>
+      <span class="meta-chip hi">#2 at QB</span>
+    </div>
+
+    <!-- APEX score — dual when different -->
+    <div class="apex-window">
+      <div class="score-grid">
+        <div>
+          <div class="score-lbl">Player Grade</div>
+          <div class="score-val">72<span class="score-decimal">.4</span></div>
+        </div>
+        <div>
+          <div class="score-lbl">APEX Score</div>
+          <div class="score-val apex">72<span class="score-decimal">.4</span></div>
+        </div>
+      </div>
+      <div class="tier-badge tier-badge-day1">
+        <span class="tier-text tier-text-day1">Day 1</span>
+        <span class="tier-sub tier-sub-day1">Round 1</span>
+      </div>
+      <div class="formula-line">RPG 72.4 × PVC 1.00 (QB) = APEX 72.4</div>
+    </div>
+
+    <!-- Football Traits -->
+    <div class="traits-section">
+      <div class="section-header">Football Traits</div>
+      <div class="trait-row">
+        <span class="trait-lbl">Processing</span>
+        <div class="trait-track"><div class="trait-fill mid" style="width:72%"></div></div>
+        <span class="trait-val">7.2</span>
+      </div>
+      <div class="trait-row">
+        <span class="trait-lbl">Athleticism</span>
+        <div class="trait-track"><div class="trait-fill lo" style="width:58%"></div></div>
+        <span class="trait-val">5.8</span>
+      </div>
+      <div class="trait-row">
+        <span class="trait-lbl">Comp. Tough</span>
+        <div class="trait-track"><div class="trait-fill mid" style="width:76%"></div></div>
+        <span class="trait-val">7.6</span>
+      </div>
+      <div class="trait-row">
+        <span class="trait-lbl">Durability</span>
+        <div class="trait-track"><div class="trait-fill mid" style="width:82%"></div></div>
+        <span class="trait-val">8.2</span>
+      </div>
+    </div>
+
+    <!-- System Traits -->
+    <div class="traits-section">
+      <div class="section-header">System Traits</div>
+      <div class="trait-row">
+        <span class="trait-lbl">Scheme Vers.</span>
+        <div class="trait-track"><div class="trait-fill hi" style="width:84%"></div></div>
+        <span class="trait-val">8.4</span>
+      </div>
+      <div class="trait-row">
+        <span class="trait-lbl">Production</span>
+        <div class="trait-track"><div class="trait-fill lo" style="width:69%"></div></div>
+        <span class="trait-val">6.9</span>
+      </div>
+      <div class="trait-row">
+        <span class="trait-lbl">Dev. Traj.</span>
+        <div class="trait-track"><div class="trait-fill lo" style="width:68%"></div></div>
+        <span class="trait-val">6.8</span>
+      </div>
+      <div class="trait-row">
+        <span class="trait-lbl">Character</span>
+        <div class="trait-track"><div class="trait-fill mid" style="width:77%"></div></div>
+        <span class="trait-val">7.7</span>
+      </div>
+    </div>
+
+    <!-- Confidence + Divergence -->
+    <div class="conf-row">
+      <div class="conf-item">
+        <div class="conf-lbl">Confidence</div>
+        <div class="conf-val amber">Tier B</div>
+      </div>
+      <div class="conf-item">
+        <div class="conf-lbl">Divergence</div>
+        <div class="conf-val blue">APEX +7</div>
+      </div>
+    </div>
+
+    <!-- Capital -->
+    <div class="capital-block">
+      <div class="capital-lbl">Draft Capital</div>
+      <div class="capital-val">R1 late (Picks 18–25)</div>
+      <div class="capital-note">Steelers confirmed; R2 Early all other fits</div>
+    </div>
+
+    <!-- Watermark -->
+    <div class="watermark">
+      <span class="brand-logo">DraftOS</span>
+      <div class="watermark-meta">
+        #29 · QB · Alabama<br>
+        Generated Mar 31, 2026
+      </div>
+    </div>
+
+  </div>
+  <!-- end rail -->
+
+  <!-- ═══ RIGHT CONTENT ═══ -->
+  <div class="content">
+
+    <!-- ── ARCHETYPE ── -->
+    <div class="sec-divider">Archetype</div>
+    <div class="arch-section">
+      <div class="arch-header-row">
+        <div>
+          <div class="archetype-code">QB-4</div>
+          <div class="archetype-name">Game Manager<br>Elevated</div>
+        </div>
+        <div class="ras-block-right">
+          <div class="ras-lbl">RAS Score</div>
+          <div class="ras-val">6.24</div>
+        </div>
+      </div>
+
+      <div class="fit-row">
+        <div class="fit-header">
+          <span class="fit-lbl">Archetype Fit</span>
+          <span class="fit-score solid">Solid Fit · 12.3 pts</span>
+        </div>
+        <div class="fit-track"><div class="fit-fill solid" style="width:61.5%"></div></div>
+        <div class="fit-breakdown">Clean Fit &gt;15 pts · <span>Solid Fit 8–15 pts</span> · Tweener &lt;8 pts · No Fit = concern</div>
+      </div>
+
+      <div class="scheme-note">
+        <div class="scheme-note-lbl">Scheme Versatility</div>
+        <div class="scheme-note-val">Scheme Versatility 8.4/10 — mechanism is portable across West Coast, RPO, and structured dropback systems. FM-6 is the constraint: scheme must not demand improvisation or deep-structure reads.</div>
+      </div>
+
+      <div class="tags-row">
+        <span class="htag neutral">Compression Flag</span>
+        <span class="htag neutral">Development Bet</span>
+      </div>
+    </div>
+
+    <div class="section-gap"></div>
+
+    <!-- ── FM RISK ── -->
+    <div class="sec-divider red">Failure Mode Risk</div>
+    <div class="fm-section">
+      <div class="fm-pip-bar">
+        <div class="fm-pip"></div>
+        <div class="fm-pip"></div>
+        <div class="fm-pip p3"></div>
+        <div class="fm-pip"></div>
+        <div class="fm-pip"></div>
+        <div class="fm-pip p6"></div>
+      </div>
+      <div class="fm-tags">
+        <span class="fm-tag t6">FM-6 Role Mismatch</span>
+        <span class="fm-tag t3">FM-3 Processing Wall</span>
+      </div>
+      <div style="height:8px;"></div>
+      <div class="fm-severity">Compound FM-6 + FM-3 at QB — highest-risk profile for scheme-dependent failure. FM-6 activates when role demands exceed the mechanism's capability; FM-3 compounds when complexity exceeds processing speed. Both can remain dormant in correctly structured deployments.</div>
+    </div>
+
+    <div class="section-gap"></div>
+
+    <!-- ── APEX DIVERGENCE PANEL (NEW) ── -->
+    <div class="sec-divider cold">APEX Divergence</div>
+    <div class="divergence-panel high" style="margin-bottom:20px;">
+      <div class="div-header">
+        <div>
+          <div class="div-delta high">+7</div>
+          <div class="div-lbl">APEX rank vs consensus rank</div>
+        </div>
+        <div style="margin-left:auto;">
+          <span class="div-chip high">▲ Above Consensus</span>
+        </div>
+      </div>
+      <div class="div-rationale">
+        <strong>Why APEX rates Ty Simpson higher than the market:</strong> The model weights Game Manager Elevated profile higher than consensus, which undervalues the archetype's long-term viability in structured offenses. The market is pricing arm talent as the primary variable — APEX weights decision architecture and turnover suppression as equally predictive of starter longevity. QB-4 profiles with Scheme Versatility ≥8.0 translate at 50%+ hit rate vs. 28% for QBs relying on physical ceiling alone.
+      </div>
+    </div>
+
+    <!-- ── SIGNATURE PLAY ── -->
+    <div class="sec-divider">Signature Play</div>
+    <div class="sig-play">
+      <div class="sig-lbl"><span class="sig-dot"></span>Signature Play</div>
+      <div class="sig-text">Third-and-8 vs Auburn, recognizes safety rotation pre-snap and checks to slant concept for first down — the processing efficiency and scheme mastery in one decisive moment.</div>
+    </div>
+
+    <div class="section-gap"></div>
+
+    <!-- ── STRENGTHS + RED FLAGS ── -->
+    <div class="sec-divider">Strengths & Red Flags</div>
+    <div class="two-col">
+      <div class="panel">
+        <div class="panel-hdr g"><span class="ph-ind g"></span>Strengths</div>
+        <div class="panel-item"><span class="pi-dot g"></span>Pre-snap recognition identifies defensive rotations and checks to optimal plays within Alabama's RPO system — 68.2% completion rate on third down situations, 14 TDs to 3 INTs in pressure moments.</div>
+        <div class="panel-item"><span class="pi-dot g"></span>Clock management and two-minute drill execution — engineered 4 game-winning drives including Auburn comeback, never threw interception in final two minutes.</div>
+        <div class="panel-item"><span class="pi-dot g"></span>Protection recognition triggers hot routes and checkdowns before pressure arrives — sacked only 1.8% of dropbacks.</div>
+      </div>
+      <div class="panel">
+        <div class="panel-hdr r"><span class="ph-ind r"></span>Red Flags</div>
+        <div class="panel-item"><span class="pi-dot r"></span>Arm strength limitations force conservative route tree — struggles with comeback routes over 18 yards and back-shoulder fades, accuracy drops to 42% on throws requiring zip.</div>
+        <div class="panel-item"><span class="pi-dot r"></span>Processing speed slows against complex zone coverages — late reads against Michigan's pattern-match concepts led to 3 near-interceptions.</div>
+        <div class="panel-item"><span class="pi-dot r"></span>Limited mobility creates sack vulnerability when protection breaks down — recorded negative rushing yards in 4 games.</div>
+      </div>
+    </div>
+
+    <!-- ── TRANSLATION RISK ── -->
+    <div class="risk-banner">
+      <span class="risk-icon">!</span>
+      <div class="risk-text">If drafted into a high-volume passing attack that demands arm talent over processing efficiency, his accuracy ceiling and velocity limitations become fatal flaws rather than manageable constraints.</div>
+    </div>
+
+    <!-- ── SCHEME-CONDITIONAL NOTE (NEW) ── -->
+    <div class="sec-divider amber">Scheme-Conditional Outlook</div>
+    <div class="scheme-section">
+      <div class="scheme-grid">
+        <div class="scheme-card">
+          <div class="scheme-card-lbl land">Best-Fit Scheme</div>
+          <div class="scheme-card-val">West Coast / RPO</div>
+          <div class="scheme-card-desc">Structured dropback system with defined reads, short-to-intermediate emphasis, and a strong OL that protects the pocket. Steelers system is the confirmed ideal fit.</div>
+        </div>
+        <div class="scheme-card">
+          <div class="scheme-card-lbl ceiling">Ceiling Scenario</div>
+          <div class="scheme-card-val">Alex Smith Outcome</div>
+          <div class="scheme-card-desc">Elite decision speed plus turnover suppression in a scheme that hides arm limitations — long starter career, playoff-capable, never a liability.</div>
+        </div>
+        <div class="scheme-card">
+          <div class="scheme-card-lbl floor">Floor Scenario</div>
+          <div class="scheme-card-val">Nick Foles Pattern</div>
+          <div class="scheme-card-desc">FM-6 activates when role demands exceed mechanism. Production collapses when scheme asks for improvisation, deep structure reads, or throws outside the compressed window.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-gap"></div>
+
+    <!-- ── HISTORICAL COMPS (EXPANDED) ── -->
+    <div class="sec-divider">Historical Comps</div>
+    <div class="comps-section">
+
+      <div class="comp-card-full">
+        <div class="comp-accent hit"></div>
+        <div class="comp-body">
+          <div class="comp-type-lbl hit">✓ Archetype Ceiling</div>
+          <div class="comp-name-row">
+            <span class="comp-name">Alex Smith</span>
+            <span class="comp-badge hit">Hit</span>
+          </div>
+          <div class="comp-desc">QB-4 long-term hit: elite decision speed and low-turnover efficiency produced consistent winning across multiple organizations; confirmed the archetype can sustain a long career when deployed correctly. 11-year starter, 3× Pro Bowl, Super Bowl appearance.</div>
+          <div class="comp-year">2005 – 2020</div>
+        </div>
+      </div>
+
+      <div class="comp-card-full">
+        <div class="comp-accent partial"></div>
+        <div class="comp-body">
+          <div class="comp-type-lbl partial">⚠ FM Risk Comp</div>
+          <div class="comp-name-row">
+            <span class="comp-name">Nick Foles</span>
+            <span class="comp-badge partial">Partial · FM-6</span>
+          </div>
+          <div class="comp-fm-note">FM-6 pattern: <span>role mismatch activates when scheme demands exceed mechanism</span></div>
+          <div class="comp-desc">QB-4 ceiling-and-floor case: Super Bowl MVP is the archetype ceiling in perfect deployment; FM-6 appears when role demands exceed the mechanism's capability. Production collapsed in systems requiring improvisation and deep structure — Eagles Year 3, Rams deployment.</div>
+          <div class="comp-year">2012 – 2020</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ── FM RISK REFERENCE RECORDS ── -->
+    <div class="sec-divider red">FM Risk Reference</div>
+    <div class="fm-ref-section">
+
+      <div class="fm-ref-card miss">
+        <div>
+          <div class="fm-ref-header">
+            <span class="fm-ref-outcome miss">MISS</span>
+          </div>
+          <div class="fm-ref-name">Greg Robinson</div>
+          <div class="fm-ref-pos-fm">OT-1 · <span>FM-6</span></div>
+          <div class="fm-ref-pattern">Cross-position ref — FM-6 mechanism is position-independent. OT shown as highest-severity pattern.</div>
+          <div class="fm-ref-excerpt">OT-1 FM-6a scheme mismatch bust: athletic mechanism confirmed, scheme alignment between confirmed mechanism and...</div>
+        </div>
+        <div class="fm-ref-meta">
+          <div class="fm-ref-years">2014–2022</div>
+          <div class="fm-ref-gen">Generated Mar 31, 2026</div>
+        </div>
+      </div>
+
+      <div class="fm-ref-card miss">
+        <div>
+          <div class="fm-ref-header">
+            <span class="fm-ref-outcome miss">MISS</span>
+          </div>
+          <div class="fm-ref-name">Justin Blackmon</div>
+          <div class="fm-ref-pos-fm">WR-1 · <span>FM-6</span></div>
+          <div class="fm-ref-pattern">Role mismatch pattern — talent confirmed, deployment and role structure failed to harness mechanism.</div>
+          <div class="fm-ref-excerpt">Elite production at Oklahoma State; FM-6 pattern materialized in NFL when route tree and target share didn't match mechanism profile.</div>
+        </div>
+        <div class="fm-ref-meta">
+          <div class="fm-ref-years">2012–2014</div>
+          <div class="fm-ref-gen">Generated Mar 31, 2026</div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+  <!-- end content -->
+
+</div>
+
+</body>
+</html>

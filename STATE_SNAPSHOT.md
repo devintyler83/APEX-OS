@@ -1,6 +1,6 @@
 # APEX OS State Snapshot
 
-Last Updated (UTC): 2026-03-31T06:12:11.783656+00:00
+Last Updated (UTC): 2026-04-06T00:00:00.000000+00:00
 
 ---
 
@@ -10,7 +10,26 @@ Last Updated (UTC): 2026-03-31T06:12:11.783656+00:00
 
 ## Last Completed Milestone
 
-Session 76 close (APEX OS rename complete — all display surfaces updated; export_png.py Windows asyncio fix; update_session_state scripts patched).
+Session 77 close (Detail drawer refactor — extracted build_detail_html() to draftos_detail_iframe_v2.py; FM reference comps added to detail panel; sidebar CSS improvements; code quality pass).
+
+Session 77 close:
+- draftos_detail_iframe_v2.py (new): extracted _build_detail_html() and height estimation logic from
+    app.py into standalone module. Exports build_detail_html() and estimate_height().
+- app.py: _render_apex_detail() now calls build_detail_html() + estimate_height() from
+    draftos_detail_iframe_v2. FM reference comp fetching added — fetches up to 4 same-position
+    historical comps for each active FM code on the prospect (FM-1 through FM-6).
+    Position group normalization applied (OL/DL/LB/DB → constituent positions).
+- app.py: sidebar CSS additions — multiselect chips (cold blue, kills Streamlit default red),
+    filter section labels (Barlow Condensed, uppercase, dimmed).
+- app_wiring_patch.py (new): carry-over wiring patch script from prior session work.
+- draftos_drawer_reference.html (new): standalone HTML reference file for drawer layout.
+- export_reports_html_share.py: modified (details carried from prior session work).
+- Code quality pass (simplify):
+    Merged 2 duplicate connect() calls into 1 in _render_apex_detail() (archetype + FM refs share one connection).
+    Merged 2 duplicate connect() calls into 1 in _render_compare_panel().
+    Moved `import re` from inside fm_tags_html() loop to module level in export_reports_html_share.py.
+    Removed orphaned # _build_detail_html removed comment.
+- No DB changes. No migrations. No scoring changes.
 
 Session 76 close:
 - APEX OS rename applied to all display surfaces across 7 files:
@@ -882,11 +901,14 @@ Prior sessions on record: 12 (DB rebuild), 13 (weekly pipeline), 13b (school/arc
 
 ## Next Milestone (Single Target)
 
-- Session 75: Full batch re-score (--batch all --force) with complete 23-archetype protection
-  layer in place. This is the final scoring baseline before the draft.
-  After re-score: recompute divergence, re-run tag triggers + triage pending, doctor check,
-  Mode C board review (STRUCTURAL audit, premium APEX_HIGH queue, Caleb Downs archetype
-  validation pending, Reese Landing Spot Note to clear MANUAL_HOLD).
+- Session 78: Pre-draft board review. Priorities:
+  1. TJ Parker pid=27 display_name audit (carried S50)
+  2. Stukes dual entry audit (two scored S/CB rows — DB integrity check)
+  3. Canady + Domani Jackson EXCLUDED entries in GATE_TRACKER
+  4. Parse failures individual re-score: Burks, Coleman, Barber
+  5. Sports Almanac Mode 3 — CB archetype labeling discipline anchor
+  6. Sports Almanac Mode 3 — Candidate XP-8 second-position confirmation
+  7. Tier 2 evaluation queue: Taaffe, Moore, Josephs, Davis, Tucker
 
 ---
 

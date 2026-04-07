@@ -27,6 +27,7 @@ from draftos.queries.model_outputs import get_big_board, get_prospect_detail, ge
 from draftos.ui.profile_dimensions import get_profile_dimensions
 from datetime import datetime as _export_dt
 from scripts.export_png import export_png_bytes
+from scripts.draftos_detail_iframe_v2 import build_detail_html, estimate_height
 
 # Streamlit ≥ 1.35 supports on_select / selection_mode on st.dataframe
 _ON_SELECT_AVAILABLE = tuple(
@@ -1007,6 +1008,39 @@ hr {
 .fm-tag.t4 { background: var(--fm4-dim); border: 1px solid rgba(224,92,92,0.3);   color: #f08080; }
 .fm-tag.t5 { background: var(--fm5-dim); border: 1px solid rgba(196,122,224,0.3); color: #d4a0f0; }
 .fm-tag.t6 { background: var(--fm6-dim); border: 1px solid rgba(165,126,224,0.3); color: #c4a5f5; }
+
+/* ── Sidebar multiselect chips — cold blue, kills Streamlit default red ── */
+[data-testid="stSidebar"] [data-baseweb="tag"] {
+  background-color: rgba(126,180,226,0.15) !important;
+  border: 1px solid rgba(74,144,212,0.45) !important;
+  border-radius: 3px !important;
+}
+[data-testid="stSidebar"] [data-baseweb="tag"] span {
+  color: #7eb4e2 !important;
+  font-family: 'Barlow Condensed', sans-serif !important;
+  font-weight: 700 !important;
+  font-size: 11px !important;
+  letter-spacing: 0.06em !important;
+  text-transform: uppercase !important;
+}
+[data-testid="stSidebar"] [data-baseweb="tag"] [data-testid="stMultiSelectDeleteButton"] svg,
+[data-testid="stSidebar"] [data-baseweb="tag"] button svg {
+  fill: rgba(126,180,226,0.70) !important;
+}
+
+/* ── Sidebar filter section labels ── */
+[data-testid="stSidebar"] .stMultiSelect label,
+[data-testid="stSidebar"] .stSelectbox label,
+[data-testid="stSidebar"] .stSlider label,
+[data-testid="stSidebar"] .stNumberInput label,
+[data-testid="stSidebar"] .stCheckbox label {
+  font-family: 'Barlow Condensed', sans-serif !important;
+  font-size: 9px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.14em !important;
+  text-transform: uppercase !important;
+  color: rgba(255,255,255,0.38) !important;
+}
 </style>
 """
 st.markdown(DRAFTOS_CSS, unsafe_allow_html=True)
@@ -1598,679 +1632,57 @@ def _trait_bar_html(label: str, val: float | None) -> str:
 # ---------------------------------------------------------------------------
 
 def _render_apex_detail(d: dict) -> None:
-    """DraftOS Prospect Detail — iframe-isolated, full Prizm card treatment."""
+    """DraftOS Prospect Detail — iframe-isolated, full reference drawer treatment."""
 
     archetype_raw = d.get("matched_archetype") or d.get("apex_archetype") or ""
 
-    comps_list = []
-    rate_info = None
-    if archetype_raw:
-        try:
-            with connect() as _hconn:
-                comps_list = get_historical_comps(_hconn, archetype_raw, limit=3)
-                rate_info = get_archetype_translation_rate(_hconn, archetype_raw)
-        except Exception:
-            comps_list = []
-            rate_info = None
+    comps_list   = []
+    rate_info    = None
+    fm_ref_comps = []
 
-    html_content = _build_detail_html(d, comps_list, rate_info)
+    # FM reference records — collect codes before opening DB
+    fm_codes_for_ref = set()
+    for fv in [d.get("failure_mode_primary"), d.get("failure_mode_secondary")]:
+        if fv and str(fv).strip().upper() not in ("", "NONE", "N/A"):
+            m = re.search(r"FM-(\d+)", str(fv))
+            if m:
+                fm_codes_for_ref.add(int(m.group(1)))
 
-    # Height estimate
-    h = 850
-    if _v23_present(d.get("signature_play")):
-        h += 100
-    if _v23_present(d.get("strengths")) or _v23_present(d.get("red_flags")):
-        h += 280
-    if _v23_present(d.get("translation_risk")):
-        h += 80
-    if comps_list:
-        h += 200
+    try:
+        with connect() as _hconn:
+            if archetype_raw:
+                comps_list = get_historical_comps(_hconn, archetype_raw, limit=2)
+                rate_info  = get_archetype_translation_rate(_hconn, archetype_raw)
+            for code in sorted(fm_codes_for_ref):
+                fm_ref_comps.extend(get_fm_reference_comps(_hconn, fm_code=f"FM-{code}", limit=4))
+    except Exception:
+        comps_list, rate_info, fm_ref_comps = [], None, []
+
+    if fm_ref_comps:
+        # Map board-level position group labels to the set of DB position values
+        # (board normalizes OT/OG/C → "OL"; DB stores actual position on ref comps)
+        _POS_GROUP_MAP: dict[str, set[str]] = {
+            "OL": {"OT", "OG", "C", "OL"},
+            "DL": {"DT", "DE", "NT", "DL"},
+            "LB": {"ILB", "OLB", "LB", "MLB"},
+            "DB": {"CB", "S", "SS", "FS", "DB"},
+        }
+        prospect_pos = (d.get("position_group") or "").strip().upper()
+        if prospect_pos:
+            match_set = _POS_GROUP_MAP.get(prospect_pos, {prospect_pos})
+            same_pos = [
+                r for r in fm_ref_comps
+                if r.get("position_group", "").strip().upper() in match_set
+            ]
+            # Only apply filter if it yields results — otherwise pass empty list
+            # so the drawer renders the "no same-position data" explanatory block
+            fm_ref_comps = same_pos
+        fm_ref_comps = fm_ref_comps[:4]
+
+    html_content = build_detail_html(d, comps_list, rate_info, fm_ref_comps or None)
+    h = estimate_height(d, comps_list, fm_ref_comps=fm_ref_comps or None)
 
     components.html(html_content, height=h, scrolling=True)
-
-
-def _build_detail_html(d: dict, comps: list, rate) -> str:  # rate: dict | None
-
-    # Unpack
-    pos       = d.get("position_group") or "?"
-    name      = d.get("display_name") or "Unknown"
-    school    = d.get("school_canonical") or "—"
-    tier      = (d.get("apex_tier") or "").strip().upper()
-    crank     = d.get("consensus_rank")
-    conf      = d.get("confidence_band") or d.get("eval_confidence") or "—"
-    ras_raw   = d.get("ras_score") or d.get("ras_total")
-    raw_score = d.get("raw_score")
-    apex_comp = d.get("apex_composite")
-    pvc       = d.get("pvc")
-    pos_rank  = d.get("position_rank")
-
-    archetype_raw = d.get("matched_archetype") or d.get("apex_archetype") or ""
-    gap_label = (d.get("gap_label") or "").strip().upper()
-    fit_score = d.get("archetype_gap")
-    gap_display = _GAP_LABEL_DISPLAY_MAP.get(gap_label, gap_label.title() if gap_label else "")
-
-    fm_primary        = d.get("failure_mode_primary")
-    fm_secondary      = d.get("failure_mode_secondary")
-    signature_play    = d.get("signature_play")
-    strengths_raw     = d.get("strengths")
-    red_flags_raw     = d.get("red_flags")
-    translation_risk  = d.get("translation_risk")
-    capital_base      = d.get("capital_base") or d.get("capital_adjusted") or "—"
-    capital_note      = d.get("capital_note") or ""
-    snapshot_date     = d.get("scored_at") or d.get("snapshot_date") or ""
-
-    # Derived
-    rank_str = f"#{int(crank)}" if crank is not None and pd.notna(crank) else "NR"
-    rank_num = int(crank) if crank is not None and pd.notna(crank) else 0
-    ras_str  = _safe_float(ras_raw, ".2f") if ras_raw is not None and pd.notna(ras_raw) else None
-
-    raw_int,  raw_dec  = _split_score(raw_score)
-    apex_int, apex_dec = _split_score(apex_comp)
-
-    is_unified = False
-    if pvc is not None:
-        try:
-            is_unified = abs(float(pvc) - 1.0) < 0.005
-        except Exception:
-            pass
-
-    pvc_str = _safe_float(pvc, ".2f") if pvc else "—"
-
-    name_parts = name.split(" ", 1)
-    name_html  = _e(name_parts[0])
-    if len(name_parts) > 1:
-        name_html += "<br>" + _e(name_parts[1])
-
-    if archetype_raw and " " in archetype_raw:
-        arch_code, arch_label = archetype_raw.split(" ", 1)
-    else:
-        arch_code, arch_label = archetype_raw or "—", ""
-
-    ghost_rank = f"#{rank_num}" if rank_num > 0 else ""
-
-    TIER_MAP = {
-        "ELITE":  ("elite", "★ Elite", "Top Tier"),
-        "DAY1":   ("day1",  "Day 1",   "Round 1"),
-        "DAY2":   ("day2",  "Day 2",   "Rounds 2\u20133"),
-        "DAY3":   ("day3",  "Day 3",   "Rounds 4\u20137"),
-        "UDFA-P": ("udfa",  "UDFA",    "Priority Free Agent"),
-        "UDFA":   ("udfa",  "UDFA",    "Priority Free Agent"),
-    }
-    tier_cls, tier_text, tier_sub = TIER_MAP.get(tier, ("udfa", tier or "—", ""))
-
-    conf_color = {
-        "Tier A": "#5ab87a", "Tier B": "#e8a84a", "Tier C": "#e05c5c",
-        "High": "#5ab87a",   "Medium": "#e8a84a", "Low":    "#e05c5c",
-        "A": "#5ab87a",      "B": "#e8a84a",      "C":      "#e05c5c",
-    }.get(conf, "rgba(255,255,255,0.35)")
-
-    # Divergence
-    div_delta = d.get("divergence_delta") or d.get("auto_apex_delta")
-    if div_delta is None:
-        div_text, div_color = "N/A", "var(--dim)"
-    else:
-        try:
-            dd = int(float(div_delta))
-            if abs(dd) < 3:
-                div_text  = f"Aligned ({dd:+d})" if dd != 0 else "Aligned (0)"
-                div_color = "var(--dim)"
-            elif dd > 0:
-                div_text, div_color = f"APEX High +{dd}", "var(--amber)"
-            else:
-                div_text, div_color = f"APEX Low {dd}", "var(--red)"
-        except Exception:
-            div_text, div_color = "N/A", "var(--dim)"
-
-    # Position rank chip
-    pos_rank_chip = ""
-    if pos_rank and pos_rank != crank:
-        pos_rank_chip = (
-            f'<span class="meta-chip hi" style="font-size:10px;padding:4px 10px">'
-            f'#{int(pos_rank)} at {_e(pos)}</span>'
-        )
-
-    # FM codes
-    fm_codes  = set()
-    fm_labels = []
-    if _fm_is_present(fm_primary):
-        m = re.search(r"FM-(\d+)", str(fm_primary))
-        if m:
-            fm_codes.add(int(m.group(1)))
-        fm_labels.append(str(fm_primary).strip())
-    if _fm_is_present(fm_secondary):
-        m = re.search(r"FM-(\d+)", str(fm_secondary))
-        if m:
-            fm_codes.add(int(m.group(1)))
-        fm_labels.append(str(fm_secondary).strip())
-
-    # RAS block
-    ras_html = ""
-    if ras_str:
-        ras_html = (
-            '<div class="ras-block">'
-            f'<div class="ras-lbl">RAS Score</div>'
-            f'<div class="ras-val">{ras_str}</div>'
-            '</div>'
-        )
-
-    # Watermark date
-    try:
-        from datetime import datetime as _dt
-        wm_date = _dt.strptime(str(snapshot_date)[:10], "%Y-%m-%d").strftime("%b %d, %Y")
-    except Exception:
-        from datetime import datetime as _dt
-        wm_date = _dt.now().strftime("%b %d, %Y")
-
-    # Trait rows
-    def _trait(label, key):
-        val = d.get(key)
-        if val is None or (isinstance(val, float) and math.isnan(val)) or val == 0.0:
-            return (
-                f'<div class="trait-row">'
-                f'<span class="trait-lbl">{_e(label)}</span>'
-                '<div class="trait-track"></div>'
-                '<span class="trait-val" style="color:var(--dim)">—</span>'
-                '</div>'
-            )
-        try:
-            v = float(val)
-        except Exception:
-            v = 0.0
-        pct = min(max(v / 10.0 * 100, 0), 100)
-        cls = "hi" if v >= 8.5 else "mid" if v >= 7.0 else "lo" if v >= 5.0 else "red"
-        return (
-            f'<div class="trait-row">'
-            f'<span class="trait-lbl">{_e(label)}</span>'
-            f'<div class="trait-track"><div class="trait-fill {cls}" style="width:{pct:.0f}%"></div></div>'
-            f'<span class="trait-val">{v:.1f}</span>'
-            '</div>'
-        )
-
-    football_html = "".join([
-        _trait("Processing",  "v_processing"),
-        _trait("Athleticism", "v_athleticism"),
-        _trait("Comp. Tough", "v_comp_tough"),
-        _trait("Durability",  "v_injury"),
-    ])
-    system_html = "".join([
-        _trait("Scheme Vers.", "v_scheme_vers"),
-        _trait("Production",   "v_production"),
-        _trait("Dev. Traj.",   "v_dev_traj"),
-        _trait("Character",    "v_character"),
-    ])
-
-    # Score block
-    if is_unified:
-        score_block = (
-            '<div class="score-grid unified">'
-            '<div class="score-item">'
-            '<div class="score-lbl">Player Grade \u00b7 Draft Value</div>'
-            f'<div class="score-val apex">{raw_int}<span class="score-decimal">.{raw_dec}</span></div>'
-            '</div></div>'
-        )
-    else:
-        score_block = (
-            '<div class="score-grid">'
-            '<div class="score-item">'
-            '<div class="score-lbl">Player Grade</div>'
-            f'<div class="score-val">{raw_int}<span class="score-decimal">.{raw_dec}</span></div>'
-            '</div>'
-            '<div class="score-item">'
-            '<div class="score-lbl">Draft Value</div>'
-            f'<div class="score-val apex">{apex_int}<span class="score-decimal">.{apex_dec}</span></div>'
-            '</div></div>'
-        )
-
-    # FM section
-    fm_section = ""
-    if fm_codes:
-        pips = "".join(
-            f'<div class="fm-pip{" p" + str(i) if i in fm_codes else ""}"></div>'
-            for i in range(1, 7)
-        )
-        tags = " ".join(
-            '<span class="fm-tag t{n}">{label}</span>'.format(
-                n=re.search(r"FM-(\d+)", lbl).group(1) if re.search(r"FM-(\d+)", lbl) else "1",
-                label=_e(lbl),
-            )
-            for lbl in fm_labels
-        )
-        fm_section = (
-            '<div class="fm-section">'
-            '<div class="sec-lbl">Failure Mode Risk</div>'
-            f'<div class="fm-pip-bar">{pips}</div>'
-            f'<div class="fm-tags">{tags}</div>'
-            '</div>'
-        )
-
-    # Signature play
-    sig_html = ""
-    if _v23_present(signature_play):
-        sig_html = (
-            '<div class="sig-play">'
-            '<div class="sig-lbl"><span class="sig-lbl-dot"></span>Signature Play</div>'
-            f'<div class="sig-text">{_e(signature_play)}</div>'
-            '</div>'
-        )
-
-    # Strengths + Red Flags
-    str_items = _smart_split_bullets(strengths_raw)
-    rf_items  = _smart_split_bullets(red_flags_raw)
-
-    def _pitems(items, dc):
-        return "".join(
-            f'<div class="panel-item"><span class="pi-dot {dc}"></span>{_e(it)}</div>'
-            for it in items
-        )
-
-    two_col = ""
-    if str_items or rf_items:
-        sp = (
-            '<div class="panel">'
-            '<div class="panel-hdr g"><span class="ph-ind g"></span>Strengths</div>'
-            f'{_pitems(str_items, "g")}</div>'
-        ) if str_items else ""
-        rp = (
-            '<div class="panel">'
-            '<div class="panel-hdr r"><span class="ph-ind r"></span>Red Flags</div>'
-            f'{_pitems(rf_items, "r")}</div>'
-        ) if rf_items else ""
-        two_col = f'<div class="two-col">{sp}{rp}</div>'
-
-    # Translation risk
-    risk_html = ""
-    if _v23_present(translation_risk):
-        risk_html = (
-            '<div class="risk-banner">'
-            '<span class="risk-icon">!</span>'
-            f'<div class="risk-text">{_e(translation_risk)}</div>'
-            '</div>'
-        )
-
-    # Archetype fit badge (strip leading emoji from module-level display map if present)
-    fit_badge = ""
-    if gap_display:
-        FC = {
-            "CLEAN": "#5ab87a", "SOLID": "#7eb4e2",
-            "TWEENER": "#e8a84a", "COMPRESSION": "#c47ae0", "NO_FIT": "#e05c5c",
-        }
-        clean_gap = gap_display
-        if clean_gap and clean_gap[0] not in "ABCDEFGHIJKLMNOPQRSTUVWXYZ":
-            clean_gap = clean_gap.split(" ", 1)[-1] if " " in clean_gap else clean_gap
-        fc = FC.get(gap_label, "#7eb4e2")
-        fit_badge = (
-            f'<span style="display:inline-block;padding:2px 8px;border-radius:3px;'
-            f'background:{fc}1a;border:1px solid {fc}44;color:{fc};'
-            f'font-size:9px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase">'
-            f'{_e(clean_gap)}</span>'
-        )
-
-    # Comps
-    comps_html = ""
-    if comps:
-        rate_html = ""
-        if rate:
-            hp = rate.get("hit_rate_pct", 0)
-            rc = "#5ab87a" if hp >= 67 else "#e8a84a" if hp >= 40 else "#e05c5c"
-            rate_html = (
-                f'<div style="font-size:11px;color:var(--mid);margin-bottom:10px">'
-                f'{_e(archetype_raw)} translation rate: '
-                f'<span style="color:{rc};font-weight:700">{hp}% HIT</span>'
-                f' ({rate.get("hit_count", 0)} of {rate.get("total", 0)})</div>'
-            )
-
-        OC = {"HIT": "hit", "PARTIAL": "partial", "MISS": "miss"}
-        IC = {"HIT": "\u2713", "PARTIAL": "\u2691", "MISS": "\u2717"}
-        LB = {"HIT": "Archetype Ceiling", "PARTIAL": "FM Risk Comp", "MISS": "Miss Pattern"}
-
-        cards = ""
-        for c in comps[:2]:
-            oc   = c.get("translation_outcome", "MISS")
-            cls  = OC.get(oc, "miss")
-            icon = IC.get(oc, "")
-            lbl  = LB.get(oc, "")
-            fm_badge = ""
-            fmc = c.get("fm_code", "")
-            if fmc and oc in ("PARTIAL", "MISS"):
-                for code in re.findall(r"FM-\d+", fmc):
-                    fn = code.replace("FM-", "")
-                    fm_badge += (
-                        f' <span class="fm-tag t{fn}" style="font-size:8px;padding:2px 7px">{code}</span>'
-                    )
-            cards += (
-                f'<div class="comp-card {cls}">'
-                f'<div class="comp-type-lbl {cls}">{icon} {_e(lbl)}</div>'
-                f'<div class="comp-name-row">'
-                f'<div class="comp-name">{_e(c.get("player_name", ""))}</div>'
-                f'<span class="comp-badge {cls}">{oc}</span>{fm_badge}'
-                '</div>'
-                f'<div class="comp-desc">{_e(c.get("outcome_summary", ""))}</div>'
-                f'<div class="comp-year">{_e(c.get("era_bracket", ""))}</div>'
-                '</div>'
-            )
-
-        all_det = ""
-        if len(comps) > 2:
-            items = ""
-            for c in comps:
-                oc   = c.get("translation_outcome", "MISS")
-                oc_c = {"HIT": "#5ab87a", "PARTIAL": "#e8a84a", "MISS": "#e05c5c"}.get(oc, "#888")
-                items += (
-                    f'<div style="padding:6px 0;border-bottom:1px solid var(--wire)">'
-                    f'<span style="color:{oc_c};font-weight:700;'
-                    f"font-family:'Barlow Condensed',sans-serif;"
-                    f'font-size:14px;text-transform:uppercase">'
-                    f'{_e(c.get("player_name", ""))}</span> '
-                    f'<span style="color:var(--dim);font-size:11px">'
-                    f'({_e(c.get("era_bracket", ""))})</span>'
-                    f' \u2014 <span style="color:var(--mid);font-size:11px">'
-                    f'{_e(c.get("outcome_summary", ""))}</span>'
-                    '</div>'
-                )
-            all_det = (
-                '<details style="margin-top:12px">'
-                '<summary style="cursor:pointer;font-size:11px;font-weight:700;color:var(--cold);'
-                'letter-spacing:0.06em;padding:8px 12px;background:var(--ink3);'
-                'border:1px solid var(--wire);border-radius:5px;text-transform:uppercase">'
-                'All comp details</summary>'
-                f'<div style="padding:8px 12px;background:var(--ink3);border:1px solid var(--wire);'
-                f'border-top:none;border-radius:0 0 5px 5px">{items}</div>'
-                '</details>'
-            )
-
-        comps_html = (
-            '<div class="comps-section">'
-            '<div class="sec-lbl">Historical Comps</div>'
-            f'{rate_html}'
-            f'<div class="comps-row">{cards}</div>'
-            f'{all_det}'
-            '</div>'
-        )
-
-    # ── CSS ──────────────────────────────────────────────────────────────────
-    css = (
-        ":root{"
-        "--ink:#0a0c0f;--ink2:#0f1318;--ink3:#161b22;--ink4:#1c2330;--ink5:#222b38;"
-        "--wire:rgba(255,255,255,0.06);--wire2:rgba(255,255,255,0.11);--wire3:rgba(255,255,255,0.20);"
-        "--dim:rgba(255,255,255,0.32);--mid:rgba(255,255,255,0.52);--text:rgba(255,255,255,0.88);"
-        "--cold:#7eb4e2;--cold2:#4a90d4;--cold-dim:rgba(126,180,226,0.10);--cold-dim2:rgba(126,180,226,0.20);"
-        "--amber:#e8a84a;--amber2:#c98828;--amber-dim:rgba(232,168,74,0.13);"
-        "--red:#e05c5c;--red-dim:rgba(224,92,92,0.12);"
-        "--green:#5ab87a;--green-dim:rgba(90,184,122,0.12);"
-        "--elite:#f0c040;--elite-dim:rgba(240,192,64,0.12);"
-        "--fm1:#e05c5c;--fm1-dim:rgba(224,92,92,0.15);--fm2:#e8a84a;--fm2-dim:rgba(232,168,74,0.15);"
-        "--fm3:#5b9cf0;--fm3-dim:rgba(91,156,240,0.15);--fm4:#e05c5c;--fm4-dim:rgba(224,92,92,0.18);"
-        "--fm5:#c47ae0;--fm5-dim:rgba(196,122,224,0.18);--fm6:#a57ee0;--fm6-dim:rgba(165,126,224,0.15);"
-        "--prism-1:#7eb4e2;--prism-2:#a57ee0;--prism-3:#e8a84a;--prism-4:#5ab87a;"
-        "}"
-        "*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}"
-        "body{background:#0a0c0f;margin:0;padding:0;font-family:'Barlow',sans-serif}"
-        ".card{background:var(--ink);position:relative;overflow:hidden;border:1px solid var(--wire2)}"
-        ".prism-strip{position:absolute;left:0;top:0;bottom:0;width:4px;"
-        "background:linear-gradient(180deg,var(--prism-1) 0%,var(--prism-2) 30%,var(--prism-3) 60%,var(--prism-4) 100%);z-index:10}"
-        ".top-bar{height:2px;background:linear-gradient(90deg,var(--cold2) 0%,var(--cold) 35%,"
-        "rgba(126,180,226,0.3) 70%,transparent 100%);position:relative;z-index:5}"
-        ".card::after{content:'';position:absolute;inset:0;"
-        "background-image:repeating-linear-gradient(0deg,rgba(255,255,255,0.012) 0px,"
-        "rgba(255,255,255,0.012) 1px,transparent 1px,transparent 3px);pointer-events:none;z-index:2}"
-        ".card::before{content:'';position:absolute;inset:0;"
-        "background-image:linear-gradient(rgba(255,255,255,0.018) 1px,transparent 1px),"
-        "linear-gradient(90deg,rgba(255,255,255,0.018) 1px,transparent 1px);"
-        "background-size:32px 32px;pointer-events:none;z-index:1}"
-        ".layout{display:grid;grid-template-columns:280px 1fr;align-items:stretch;min-height:700px;position:relative;z-index:3}"
-        ".left{background:var(--ink2);border-right:1px solid var(--wire2);padding:28px 22px 24px 26px;"
-        "display:flex;flex-direction:column;position:relative;overflow:visible}"
-        ".left::before{content:'';position:absolute;top:-60px;right:-80px;width:220px;height:220px;"
-        "background:radial-gradient(ellipse at center,rgba(126,180,226,0.06) 0%,transparent 70%);pointer-events:none}"
-        ".identity-row{display:flex;align-items:center;gap:6px;margin-bottom:12px;flex-wrap:wrap}"
-        ".pos-chip{display:inline-flex;align-items:center;gap:6px;background:var(--cold-dim2);"
-        "border:1px solid rgba(74,144,212,0.5);border-radius:3px;padding:4px 10px;"
-        "font-size:10px;font-weight:700;letter-spacing:0.1em;color:var(--cold);text-transform:uppercase}"
-        ".pos-chip-dot{width:5px;height:5px;border-radius:50%;background:var(--cold);opacity:0.7}"
-        ".player-name{font-family:'Barlow Condensed',sans-serif;font-size:48px;font-weight:900;"
-        "line-height:0.88;letter-spacing:-0.02em;text-transform:uppercase;color:var(--text);margin-bottom:14px}"
-        ".name-slash{width:40px;height:2px;background:linear-gradient(90deg,var(--cold2),transparent);"
-        "margin-bottom:14px;margin-top:-6px}"
-        ".meta-row{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:20px}"
-        ".meta-chip{font-size:10px;font-weight:600;color:var(--mid);background:var(--wire);"
-        "border:1px solid var(--wire2);border-radius:3px;padding:2px 8px;letter-spacing:0.04em;display:inline-block}"
-        ".meta-chip.hi{color:var(--cold);border-color:rgba(126,180,226,0.28);background:var(--cold-dim)}"
-        ".apex-window{background:var(--ink3);border:1px solid var(--wire2);border-radius:6px;"
-        "padding:16px 16px 12px;margin-bottom:16px;position:relative;overflow:hidden}"
-        ".apex-window::before{content:'';position:absolute;inset:0;"
-        "background:linear-gradient(135deg,rgba(126,180,226,0.04) 0%,transparent 40%,"
-        "rgba(240,192,64,0.04) 100%);pointer-events:none}"
-        ".score-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}"
-        ".score-grid.unified{grid-template-columns:1fr}"
-        ".score-grid.unified .score-item{text-align:center}"
-        ".score-grid.unified .score-val{font-size:52px;color:var(--amber)}"
-        ".score-grid.unified .score-decimal{font-size:26px}"
-        ".score-item{text-align:center;padding:2px 0}"
-        ".score-lbl{font-size:8px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:var(--dim);margin-bottom:6px}"
-        ".score-val{font-family:'Barlow Condensed',sans-serif;font-size:42px;font-weight:800;line-height:1;color:var(--cold)}"
-        ".score-val.apex{color:var(--amber)}"
-        ".score-decimal{font-size:21px;font-weight:700;opacity:0.7}"
-        ".tier-badge{display:flex;align-items:center;justify-content:space-between;border-radius:4px;padding:7px 14px;margin-bottom:6px}"
-        ".tier-badge-text{font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase}"
-        ".tier-badge-sub{font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase}"
-        ".tier-badge.elite{background:var(--elite-dim);border:1px solid rgba(240,192,64,0.40)}"
-        ".tier-badge.elite .tier-badge-text{color:var(--elite)}"
-        ".tier-badge.elite .tier-badge-sub{color:rgba(240,192,64,0.50)}"
-        ".tier-badge.day1{background:var(--cold-dim);border:1px solid rgba(126,180,226,0.32)}"
-        ".tier-badge.day1 .tier-badge-text{color:var(--cold)}"
-        ".tier-badge.day1 .tier-badge-sub{color:rgba(126,180,226,0.50)}"
-        ".tier-badge.day2{background:var(--green-dim);border:1px solid rgba(90,184,122,0.28)}"
-        ".tier-badge.day2 .tier-badge-text{color:var(--green)}"
-        ".tier-badge.day2 .tier-badge-sub{color:rgba(90,184,122,0.50)}"
-        ".tier-badge.day3{background:var(--wire);border:1px solid var(--wire2)}"
-        ".tier-badge.day3 .tier-badge-text{color:var(--mid)}"
-        ".tier-badge.day3 .tier-badge-sub{color:var(--dim)}"
-        ".tier-badge.udfa{background:transparent;border:1px solid var(--wire)}"
-        ".tier-badge.udfa .tier-badge-text{color:var(--dim)}"
-        ".tier-badge.udfa .tier-badge-sub{color:rgba(255,255,255,0.18)}"
-        ".formula-line{font-family:'Barlow Condensed',sans-serif;font-size:10px;"
-        "color:rgba(255,255,255,0.28);letter-spacing:0.04em;text-align:center}"
-        ".traits-section{margin-bottom:14px}"
-        ".section-header{font-family:'Barlow Condensed',sans-serif;font-size:8px;font-weight:700;"
-        "letter-spacing:0.16em;text-transform:uppercase;color:var(--dim);margin-bottom:8px;"
-        "padding-bottom:4px;border-bottom:1px solid var(--wire)}"
-        ".trait-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}"
-        ".trait-lbl{font-size:10px;font-weight:500;color:var(--mid);width:70px;flex-shrink:0}"
-        ".trait-track{flex:1;height:3px;background:var(--wire);border-radius:2px;overflow:hidden}"
-        ".trait-fill{height:100%;border-radius:2px}"
-        ".trait-fill.hi{background:var(--green)}"
-        ".trait-fill.mid{background:var(--cold)}"
-        ".trait-fill.lo{background:var(--amber)}"
-        ".trait-fill.red{background:var(--red)}"
-        ".trait-val{font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;width:26px;text-align:right;color:var(--text)}"
-        ".left-footer{margin-top:auto}"
-        ".conf-box{display:flex;gap:18px;margin-bottom:12px;padding:10px 12px;"
-        "background:var(--ink3);border:1px solid var(--wire);border-radius:5px}"
-        ".conf-lbl{font-size:8px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:var(--dim);margin-bottom:2px}"
-        ".conf-val{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700}"
-        ".capital-box{padding:10px 12px;background:var(--ink3);border:1px solid var(--wire);border-radius:5px;margin-bottom:16px}"
-        ".capital-lbl{font-size:8px;font-weight:700;letter-spacing:0.16em;text-transform:uppercase;color:var(--dim);margin-bottom:4px}"
-        ".capital-val{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;color:var(--text);line-height:1;margin-bottom:6px}"
-        ".capital-note{font-size:10px;line-height:1.5;color:var(--dim)}"
-        ".eval-box{padding:8px 12px;background:var(--ink3);border:1px solid var(--wire);border-radius:5px;margin-bottom:16px;font-size:11px;color:var(--dim)}"
-        ".watermark{padding-top:12px;border-top:1px solid var(--wire);display:flex;align-items:flex-end;justify-content:space-between}"
-        ".brand-logo{font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:900;"
-        "letter-spacing:0.2em;text-transform:uppercase;color:rgba(255,255,255,0.15);line-height:1}"
-        ".brand-version{font-size:8px;color:rgba(255,255,255,0.12);letter-spacing:0.1em}"
-        ".watermark-meta{font-size:8px;color:var(--dim);text-align:right;letter-spacing:0.04em;line-height:1.7}"
-        ".right{padding:24px 28px 28px 26px;display:flex;flex-direction:column;position:relative}"
-        ".right::before{content:'';position:absolute;top:0;right:0;width:280px;height:280px;"
-        "background:conic-gradient(from 200deg at 100% 0%,rgba(232,168,74,0.04) 0deg,"
-        "rgba(126,180,226,0.04) 60deg,transparent 120deg);pointer-events:none}"
-        ".header-zone{border-bottom:1px solid var(--wire);padding-bottom:18px;margin-bottom:18px;position:relative}"
-        ".rank-ghost{position:absolute;right:0;top:-8px;font-family:'Barlow Condensed',sans-serif;"
-        "font-size:100px;font-weight:900;color:rgba(255,255,255,0.025);letter-spacing:-0.04em;"
-        "line-height:1;pointer-events:none;user-select:none}"
-        ".header-row{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:6px}"
-        ".archetype-code{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;"
-        "letter-spacing:0.18em;text-transform:uppercase;color:var(--cold);margin-bottom:4px}"
-        ".archetype-name{font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:800;"
-        "text-transform:uppercase;letter-spacing:0.02em;color:var(--amber);line-height:0.95}"
-        ".ras-block{text-align:right;flex-shrink:0}"
-        ".ras-lbl{font-size:8px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:var(--dim);margin-bottom:2px}"
-        ".ras-val{font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:800;color:var(--green);line-height:1}"
-        ".fm-section{margin-bottom:16px}"
-        ".sec-lbl{font-size:8px;font-weight:700;letter-spacing:0.16em;text-transform:uppercase;"
-        "color:var(--dim);margin-bottom:9px;display:flex;align-items:center;gap:8px}"
-        ".sec-lbl::after{content:'';flex:1;height:1px;background:var(--wire)}"
-        ".fm-pip-bar{display:flex;gap:3px;margin-bottom:9px}"
-        ".fm-pip{flex:1;height:5px;border-radius:1.5px;background:var(--wire)}"
-        ".fm-pip.p1{background:var(--fm1)}.fm-pip.p2{background:var(--fm2)}.fm-pip.p3{background:var(--fm3)}"
-        ".fm-pip.p4{background:var(--fm4)}.fm-pip.p5{background:var(--fm5)}.fm-pip.p6{background:var(--fm6)}"
-        ".fm-tags{display:flex;gap:6px;flex-wrap:wrap}"
-        ".fm-tag{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:3px;"
-        "font-size:10px;font-weight:700;letter-spacing:0.04em}"
-        ".fm-tag.t1{background:var(--fm1-dim);border:1px solid rgba(224,92,92,0.3);color:#f08080}"
-        ".fm-tag.t2{background:var(--fm2-dim);border:1px solid rgba(232,168,74,0.3);color:#f0b868}"
-        ".fm-tag.t3{background:var(--fm3-dim);border:1px solid rgba(91,156,240,0.3);color:#8ab8f5}"
-        ".fm-tag.t4{background:var(--fm4-dim);border:1px solid rgba(224,92,92,0.35);color:#f08080}"
-        ".fm-tag.t5{background:var(--fm5-dim);border:1px solid rgba(196,122,224,0.35);color:#d8a5f0}"
-        ".fm-tag.t6{background:var(--fm6-dim);border:1px solid rgba(165,126,224,0.3);color:#c4a5f5}"
-        ".sig-play{background:var(--ink3);border:1px solid var(--wire);border-left:3px solid var(--cold2);"
-        "border-radius:0 5px 5px 0;padding:12px 16px;margin-bottom:16px}"
-        ".sig-lbl{font-size:8px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;"
-        "color:var(--cold);margin-bottom:6px;display:flex;align-items:center;gap:6px}"
-        ".sig-lbl-dot{width:5px;height:5px;border-radius:50%;background:var(--cold2)}"
-        ".sig-text{font-size:11px;line-height:1.6;color:var(--mid);font-style:italic}"
-        ".two-col{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}"
-        ".panel{background:var(--ink3);border:1px solid var(--wire);border-radius:5px;padding:12px 13px}"
-        ".panel-hdr{font-size:9px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;"
-        "margin-bottom:9px;display:flex;align-items:center;gap:6px}"
-        ".panel-hdr.g{color:var(--green)}.panel-hdr.r{color:var(--red)}"
-        ".ph-ind{width:6px;height:6px;border-radius:1px;flex-shrink:0}"
-        ".ph-ind.g{background:var(--green)}.ph-ind.r{background:var(--red)}"
-        ".panel-item{font-size:10px;line-height:1.55;color:var(--mid);padding:5px 0;"
-        "border-top:1px solid var(--wire);display:flex;gap:7px;align-items:flex-start}"
-        ".panel-item:first-of-type{border-top:none}"
-        ".pi-dot{width:3px;height:3px;border-radius:50%;margin-top:5px;flex-shrink:0}"
-        ".pi-dot.g{background:var(--green)}.pi-dot.r{background:rgba(224,92,92,0.55)}"
-        ".risk-banner{background:var(--amber-dim);border:1px solid rgba(232,168,74,0.22);"
-        "border-left:3px solid var(--amber2);border-radius:0 5px 5px 0;padding:10px 14px;"
-        "display:flex;align-items:flex-start;gap:9px;margin-bottom:16px}"
-        ".risk-icon{font-size:12px;line-height:1.4;flex-shrink:0;color:var(--amber);"
-        "font-weight:800;font-family:'Barlow Condensed',sans-serif}"
-        ".risk-text{font-size:10px;line-height:1.6;color:rgba(232,168,74,0.80)}"
-        ".comps-section{margin-top:auto;padding-top:10px}"
-        ".comps-row{display:flex;gap:10px}"
-        ".comp-card{flex:1;background:var(--ink3);border:1px solid var(--wire2);border-radius:5px;"
-        "padding:14px;position:relative;overflow:hidden}"
-        ".comp-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px}"
-        ".comp-card.hit::before{background:linear-gradient(180deg,var(--green),rgba(90,184,122,0.4))}"
-        ".comp-card.partial::before{background:linear-gradient(180deg,var(--amber),rgba(232,168,74,0.4))}"
-        ".comp-card.miss::before{background:linear-gradient(180deg,var(--red),rgba(224,92,92,0.4))}"
-        ".comp-card::after{content:'';position:absolute;inset:0;"
-        "background:linear-gradient(135deg,rgba(255,255,255,0.025) 0%,transparent 50%);pointer-events:none}"
-        ".comp-type-lbl{font-size:8px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:4px}"
-        ".comp-type-lbl.hit{color:var(--green)}.comp-type-lbl.partial{color:var(--amber)}.comp-type-lbl.miss{color:var(--red)}"
-        ".comp-name-row{display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap}"
-        ".comp-name{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:900;"
-        "letter-spacing:0.01em;text-transform:uppercase;color:var(--text);line-height:1}"
-        ".comp-badge{display:inline-flex;align-items:center;gap:4px;font-size:8px;font-weight:700;"
-        "letter-spacing:0.1em;text-transform:uppercase;padding:2px 7px;border-radius:2px}"
-        ".comp-badge.hit{background:var(--green-dim);color:var(--green);border:1px solid rgba(90,184,122,0.25)}"
-        ".comp-badge.partial{background:var(--amber-dim);color:var(--amber);border:1px solid rgba(232,168,74,0.25)}"
-        ".comp-badge.miss{background:var(--red-dim);color:var(--red);border:1px solid rgba(224,92,92,0.25)}"
-        ".comp-badge::before{content:'';width:4px;height:4px;border-radius:50%;background:currentColor;opacity:0.8}"
-        ".comp-desc{font-size:9px;line-height:1.6;color:var(--dim);margin-bottom:6px}"
-        ".comp-year{font-size:8px;color:rgba(255,255,255,0.18);"
-        "font-family:'Barlow Condensed',sans-serif;letter-spacing:0.06em}"
-        ".card-stamp{position:absolute;bottom:10px;right:24px;font-family:'Barlow Condensed',sans-serif;"
-        "font-size:9px;font-weight:700;letter-spacing:0.16em;color:rgba(255,255,255,0.10);"
-        "text-transform:uppercase;z-index:4}"
-    )
-
-    cap_note_html = f'<div class="capital-note">{_e(capital_note)}</div>' if capital_note else ""
-    scored_html   = (
-        f"&nbsp;&nbsp;\u00b7&nbsp;&nbsp;Scored: {_e(str(snapshot_date)[:10])}"
-        if snapshot_date else ""
-    )
-    fit_row = ""
-    if fit_badge:
-        fit_score_span = (
-            f"&nbsp;<span style='font-size:11px;color:var(--dim)'>Fit: {_e(f'{fit_score:.1f}')} pts</span>"
-            if fit_score else ""
-        )
-        fit_row = (
-            f"<div style='display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:4px'>"
-            f"{fit_badge}{fit_score_span}</div>"
-        )
-    stamp_id = d.get("prospect_id") or d.get("consensus_rank") or "000"
-
-    gf_url = (
-        "https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;400;500;600;700;800;900"
-        "&family=Barlow:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&display=swap"
-    )
-
-    return (
-        '<!DOCTYPE html>\n<html lang="en">\n<head>\n'
-        '<meta charset="UTF-8">\n'
-        f'<link href="{gf_url}" rel="stylesheet">\n'
-        f'<style>\n{css}\n</style>\n'
-        '</head>\n<body>\n'
-        '<div class="card">\n'
-        '  <div class="prism-strip"></div>\n'
-        '  <div class="top-bar"></div>\n'
-        '  <div class="layout">\n'
-        '    <div class="left">\n'
-        f'      <div class="identity-row">'
-        f'<div class="pos-chip"><span class="pos-chip-dot"></span>{_e(pos)}</div>'
-        f'{pos_rank_chip}</div>\n'
-        f'      <div class="player-name">{name_html}</div>\n'
-        '      <div class="name-slash"></div>\n'
-        f'      <div class="meta-row">'
-        f'<span class="meta-chip">{_e(school)}</span>'
-        f'<span class="meta-chip">Consensus {rank_str}</span></div>\n'
-        f'      <div class="apex-window">{score_block}'
-        f'<div class="tier-badge {tier_cls}">'
-        f'<span class="tier-badge-text">{_e(tier_text)}</span>'
-        f'<span class="tier-badge-sub">{_e(tier_sub)}</span></div>'
-        f'<div class="formula-line">RPG {_safe_float(raw_score)} \u00d7 PVC {pvc_str}'
-        f' ({_e(pos)}) = APEX {_safe_float(apex_comp)}</div></div>\n'
-        f'      <div class="traits-section">'
-        f'<div class="section-header">Football Traits</div>{football_html}</div>\n'
-        f'      <div class="traits-section">'
-        f'<div class="section-header">System Traits</div>{system_html}</div>\n'
-        f'      <div class="left-footer">'
-        f'<div class="conf-box">'
-        f'<div><div class="conf-lbl">Confidence</div>'
-        f'<div class="conf-val" style="color:{conf_color}">{_e(conf)}</div></div>'
-        f'<div><div class="conf-lbl">Divergence</div>'
-        f'<div class="conf-val" style="color:{div_color}">{div_text}</div></div></div>'
-        f'<div class="capital-box">'
-        f'<div class="capital-lbl">Draft Capital</div>'
-        f'<div class="capital-val">{_e(capital_base)}</div>{cap_note_html}</div>'
-        f'<div class="eval-box">Eval Confidence: '
-        f'<span style="color:{conf_color};font-weight:700">{_e(conf)}</span>'
-        f'{scored_html}</div>'
-        f'<div class="watermark">'
-        f'<div><span class="brand-logo">APEX OS</span><br>'
-        f'<span class="brand-version">v2.3 \u00b7 2026</span></div>'
-        f'<div class="watermark-meta">{rank_str} \u00b7 {_e(pos)} \u00b7 {_e(school)}<br>'
-        f'Generated {wm_date}</div></div></div>\n'
-        '    </div>\n'
-        '    <div class="right">\n'
-        f'      <div class="header-zone">'
-        f'<div class="rank-ghost">{ghost_rank}</div>'
-        f'<div class="header-row">'
-        f'<div><div class="archetype-code">{_e(arch_code)}</div>'
-        f'<div class="archetype-name">{_e(arch_label or archetype_raw)}</div></div>'
-        f'{ras_html}</div>{fit_row}</div>\n'
-        f'      {fm_section}\n'
-        f'      {sig_html}\n'
-        f'      {two_col}\n'
-        f'      {risk_html}\n'
-        f'      {comps_html}\n'
-        '    </div>\n'
-        '  </div>\n'
-        f'  <div class="card-stamp">DRAFTOS \u00b7 2026 DRAFT CLASS \u00b7 #{stamp_id}</div>\n'
-        '</div>\n'
-        '</body>\n</html>'
-    )
 
 
 def _render_consensus_card(row) -> None:
@@ -2317,11 +1729,10 @@ def _render_compare_panel(name_a: str, name_b: str, board_df: pd.DataFrame) -> N
     # Load APEX detail for capital + FM fields (only for scored prospects)
     da: dict | None = None
     db: dict | None = None
-    if pd.notna(pa.get("apex_composite")):
-        with connect() as conn:
+    with connect() as conn:
+        if pd.notna(pa.get("apex_composite")):
             da = get_apex_detail(conn, prospect_id=pid_a)
-    if pd.notna(pb.get("apex_composite")):
-        with connect() as conn:
+        if pd.notna(pb.get("apex_composite")):
             db = get_apex_detail(conn, prospect_id=pid_b)
 
     def _get(detail, row, key, board_key=None, fmt=None):
@@ -2379,42 +1790,51 @@ def _render_compare_panel(name_a: str, name_b: str, board_df: pd.DataFrame) -> N
         ("Eval Confidence", _get(da, pa, "eval_confidence", "eval_confidence"),                 _get(db, pb, "eval_confidence", "eval_confidence"),                 None,   None,   None),
     ]
 
-    st.subheader("⚖️ Comparison")
-    hdr_lbl, hdr_a, hdr_b = st.columns([2, 3, 3])
-    with hdr_lbl:
-        st.markdown('<div style="font-size:11px;color:#ffffff;letter-spacing:1px">FIELD</div>', unsafe_allow_html=True)
-    with hdr_a:
-        st.markdown(f'<div style="font-size:14px;font-weight:700;color:#63B3ED">{name_a}</div>', unsafe_allow_html=True)
-    with hdr_b:
-        st.markdown(f'<div style="font-size:14px;font-weight:700;color:#68D391">{name_b}</div>', unsafe_allow_html=True)
+    # ── Compare table — APEX OS design system ───────────────────────────────
+    BC = "font-family:'Barlow Condensed',sans-serif;"
+    B  = "font-family:'Barlow',sans-serif;"
 
-    st.markdown("<hr style='border-color:#333;margin:4px 0 8px 0'>", unsafe_allow_html=True)
+    def _crow(label, va, vb, win_a=False, win_b=False):
+        lbl_s = f"{BC}font-size:8px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:rgba(255,255,255,0.28);padding:9px 16px 9px 0;vertical-align:middle;"
+        base  = f"{B}font-size:12px;color:rgba(255,255,255,0.52);padding:9px 12px;vertical-align:middle;"
+        win_s  = f"{BC}font-size:13px;font-weight:800;letter-spacing:0.02em;color:#7eb4e2;padding:9px 12px;vertical-align:middle;"
+        win_sb = f"{BC}font-size:13px;font-weight:800;letter-spacing:0.02em;color:#5ab87a;padding:9px 12px;vertical-align:middle;"
+        sa = win_s  if win_a else base
+        sb = win_sb if win_b else base
+        return (f'<tr style="border-top:1px solid rgba(255,255,255,0.05);">'
+                f'<td style="{lbl_s}">{label}</td>'
+                f'<td style="{sa}">{va}</td>'
+                f'<td style="{sb}">{vb}</td></tr>')
 
+    rows_html = ""
     for label, va, vb, direction, raw_a, raw_b in compare_rows:
-        style_a = style_b = "color:#ffffff"
+        win_a = win_b = False
         if direction and raw_a is not None and raw_b is not None:
             try:
                 fa, fb = float(raw_a), float(raw_b)
                 if direction == "high":
-                    if fa > fb:
-                        style_a = "color:#69f0ae;font-weight:700"
-                    elif fb > fa:
-                        style_b = "color:#69f0ae;font-weight:700"
+                    win_a = fa > fb; win_b = fb > fa
                 elif direction == "low":
-                    if fa < fb:
-                        style_a = "color:#69f0ae;font-weight:700"
-                    elif fb < fa:
-                        style_b = "color:#69f0ae;font-weight:700"
+                    win_a = fa < fb; win_b = fb < fa
             except Exception:
                 pass
+        rows_html += _crow(label, va, vb, win_a, win_b)
 
-        col_lbl, col_a, col_b = st.columns([2, 3, 3])
-        with col_lbl:
-            st.markdown(f'<div style="font-size:13px;color:#ffffff;padding:3px 0">{label}</div>', unsafe_allow_html=True)
-        with col_a:
-            st.markdown(f'<div style="font-size:13px;{style_a};padding:3px 0">{va}</div>', unsafe_allow_html=True)
-        with col_b:
-            st.markdown(f'<div style="font-size:13px;{style_b};padding:3px 0">{vb}</div>', unsafe_allow_html=True)
+    compare_html = (
+        f'<div style="background:#0f1318;border:1px solid rgba(255,255,255,0.11);border-radius:6px;overflow:hidden;margin-bottom:16px;">'
+        f'<div style="background:#161b22;border-bottom:2px solid rgba(126,180,226,0.25);padding:14px 16px 12px;display:flex;align-items:baseline;gap:0;">'
+        f'<div style="{BC}font-size:8px;font-weight:700;letter-spacing:0.16em;text-transform:uppercase;color:rgba(255,255,255,0.25);width:160px;flex-shrink:0;padding-top:4px;">Field</div>'
+        f'<div style="{BC}font-size:20px;font-weight:900;letter-spacing:0.02em;text-transform:uppercase;color:#7eb4e2;flex:1;">{name_a}</div>'
+        f'<div style="{BC}font-size:20px;font-weight:900;letter-spacing:0.02em;text-transform:uppercase;color:#5ab87a;flex:1;">{name_b}</div>'
+        f'</div>'
+        f'<table style="width:100%;border-collapse:collapse;">'
+        f'<colgroup><col style="width:160px"><col><col></colgroup>'
+        f'{rows_html}'
+        f'</table>'
+        f'</div>'
+    )
+    st.markdown(compare_html, unsafe_allow_html=True)
+
 
     if da is None:
         st.caption(f"APEX score pending for {name_a}.")
@@ -3299,7 +2719,7 @@ else:
                 "pvc":                _pr.get("pvc", 1.0),
                 "apex_tier":          _pr.get("apex_tier", "DAY3"),
                 "consensus_rank":     _pr.get("consensus_rank"),
-                "ras_score":          _pr.get("ras_score"),
+                "ras_score":          (_pr.get("ras_score") if pd.notna(_pr.get("ras_score") if _pr.get("ras_score") is not None else float("nan")) else None),
                 "auto_apex_delta":    _pr.get("auto_apex_delta"),
                 # APEX-only fields (None-safe)
                 "apex_archetype":     (_detail if _has_apex and _detail else {}).get("apex_archetype") or _pr.get("apex_archetype"),
@@ -3307,7 +2727,10 @@ else:
                 "eval_confidence":    (_detail if _has_apex and _detail else {}).get("eval_confidence") or _pr.get("confidence_band"),
                 "divergence_delta":   _pr.get("auto_apex_delta"),
                 "capital_base":       (_detail if _has_apex and _detail else {}).get("capital_base"),
-                "tags":               _pr.get("tag_names"),
+                "tags":               ",".join(
+                    t for t in _parse_tags(_pr.get("tag_names", ""))
+                    if t not in _INTERNAL_TAG_NAMES
+                ),
                 "fm_codes":           [
                     int(re.search(r"FM-(\d+)", str(f)).group(1))
                     for f in [
@@ -3350,7 +2773,7 @@ else:
                     st.download_button(
                         label="⬇️ Download Card (PNG)",
                         data=_png_bytes,
-                        file_name=f"draftos_{_slug}_{_selected_pid}.png",
+                        file_name=f"apexos_{_slug}_{_selected_pid}.png",
                         mime="image/png",
                         key=f"dl_png_{_selected_pid}",
                     )
