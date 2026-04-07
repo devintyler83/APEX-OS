@@ -10,7 +10,47 @@ Last Updated (UTC): 2026-04-07T02:04:24.724400+00:00
 
 ## Last Completed Milestone
 
-Session 77 close (Detail drawer refactor — extracted build_detail_html() to draftos_detail_iframe_v2.py; FM reference comps added to detail panel; sidebar CSS improvements; code quality pass).
+Session 78 close (APEX OS UI — Sprint 1–4 complete: unified filter/sort controls, metadata status bar, decision card, 6-tab detail panel, board visual hierarchy + CSS polish pass).
+
+Session 78 close:
+- app.py — Sprint 1 (Trust Cleanup):
+    Replaced two ambiguous APEX-scored checkboxes with single `show_apex_only` (filters apex_composite.notna()).
+    Added `sort_by` selectbox ("Consensus Rank" / "APEX Rank" / "APEX Score") in sidebar above position multiselect.
+    Big Board sort now conditional on sort_by selection; APEX Board tab sort unchanged.
+    Replaced st.caption metadata line with persistent HTML status bar (universe label, sort, coverage, showing count, tag filter count).
+    Unscored APEX Tier rows: fillna("—") instead of blank — disambiguation for unscored prospects.
+    Added ∆ APEX column tooltip: help="APEX rank vs consensus rank. Positive = APEX rates higher than market."
+- app.py — Sprint 4 (UI Polish):
+    Added _highlight_consensus_tier() row-level .apply() — Elite rows get gold tint, Watch rows get red tint.
+    Sidebar control spacing CSS (stCheckbox, stSelectbox, stMultiSelect, stSlider, stNumberInput margin-bottom).
+    Sidebar hr tighter, selectbox value text Barlow 12px, checkbox label 11px.
+    [data-testid="stDataFrame"] border suppression block — collapse, td border:none, th bottom-only, row dividers.
+    Version stamp st.caption below title: "APEX OS · 2026 Draft · Session 44 · {date}".
+    Rank column nth-child(1) updated to 14px/rgba(0.38).
+- draftos_detail_iframe_v2.py — Sprint 2 (Decision Card):
+    build_decision_card(d, fm_codes) function added above build_detail_html().
+    Decision card CSS block added to _CSS: .decision-card, .dc-zones, .dc-call-lbl, .dc-call-text,
+      .dc-field-lbl, .dc-field-val, .dc-risk-hdr, .dc-risk-note, .dc-strip, .dc-strip-lbl, .dc-strip-val, .dc-sep.
+    Card renders at top of right content pane for APEX-scored prospects only.
+    Three zones: Call block (tier→call text, capital, market edge), Risk block (FM tags max 2 + translation_risk first sentence), Confidence strip (eval confidence, archetype fit, APEX score).
+    Guard: returns "" when apex_composite absent/null.
+    Injected as decision_card_html computed after fm_codes build, placed before Archetype section in template.
+- draftos_detail_iframe_v2.py — Sprint 3 (Tabbed Detail Panel):
+    Flat vertical right-pane stack replaced with 6-tab panel (HTML/CSS/JS — no Streamlit tabs).
+    Tab nav: .tab-nav, .tab-btn (.active = cold blue underline), .tab-pane (display:none / .active = block).
+    TAB SUMMARY (default): decision card + archetype section + divergence panel + signature play.
+    TAB TRAITS: football trait bars + system trait bars + positional baseline note (hardcoded dict per position).
+    TAB RISK: fm_html + two_col_html + risk_html.
+    TAB COMPS: comps_html + fm_ref_html, or empty state "No historical comp data available...".
+    TAB NOTES: placeholder panel (.notes-placeholder).
+    TAB REPORT: capital block + eval confidence + position rank + snapshot date.
+    JS click handler injected before </body>.
+    estimate_height() simplified: base=980, addends only for FM count and comps; returns max(980, h).
+    New CSS classes: .tab-nav, .tab-btn, .tab-pane, .notes-placeholder, .notes-lbl, .notes-body,
+      .report-block, .report-lbl, .report-val, .report-sub, .traits-note, .comps-empty.
+- No DB changes. No migrations. No scoring changes.
+- POLISH-05 confirmed: tab labels + aria-selected CSS already present — no change needed.
+- FIX-02 confirmed: eval_confidence flows through d dict unmodified — no change needed.
 
 Session 77 close:
 - draftos_detail_iframe_v2.py (new): extracted _build_detail_html() and height estimation logic from
@@ -901,10 +941,11 @@ Prior sessions on record: 12 (DB rebuild), 13 (weekly pipeline), 13b (school/arc
 
 ## Next Milestone (Single Target)
 
-- Session 78: Pre-draft board review. Priorities:
-  1. TJ Parker pid=27 display_name audit (carried S50)
-  2. Stukes dual entry audit (two scored S/CB rows — DB integrity check)
-  3. Canady + Domani Jackson EXCLUDED entries in GATE_TRACKER
+- Session 79: Perplexity Research integration track (§7 roadmap).
+  1. Scout aggregation via Perplexity Research mode → structured CSVs
+  2. Comp database expansion via archetype queries
+  3. Pages export for shareable board snapshot
+  Or: full batch APEX re-score (all --batch all --force) pending Arvell Reese S70 gate decision.
   4. Parse failures individual re-score: Burks, Coleman, Barber
   5. Sports Almanac Mode 3 — CB archetype labeling discipline anchor
   6. Sports Almanac Mode 3 — Candidate XP-8 second-position confirmation
