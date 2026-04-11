@@ -10,14 +10,14 @@ Non-negotiables:
 - Provide run order + verification commands
 
 Goal for this chat:
-Session 79: Perplexity Research integration track (§7 roadmap).
+Session 80: Perplexity §7.1 — activate ingest_perplexity_agg_2026.py as T3 scout source
 
 Authoritative State:
 
 1) STATE_SNAPSHOT.md
 # APEX OS State Snapshot
 
-Last Updated (UTC): 2026-04-07T06:15:51.520848+00:00
+Last Updated (UTC): 2026-04-11T03:13:27.907189+00:00
 
 ---
 
@@ -26,6 +26,41 @@ Last Updated (UTC): 2026-04-07T06:15:51.520848+00:00
 - 2026 (season_id=1)
 
 ## Last Completed Milestone
+
+Session 79 close (Perplexity Comps Integration — complete. historical_comps canonical layer expanded to 314 position comps across all 13 APEX positions. DT→IDL normalization fixed in 3 locations. FM ref card rendering bug fixed.)
+
+Session 79 close:
+- historical_comps table: 314 position comps (is_fm_reference=0) + 36 FM reference rows = 350 total.
+  Coverage: all 13 APEX positions × all canonical archetypes. Zero gaps. Zero thin archetypes (≥2 comps each).
+  Seeded via: scripts/seed_perplexity_comps_2026.py (INSERT OR IGNORE — additive, preserves curated rows).
+  Source: data/imports/comps/perplexity_historical_comps_2026.csv (198 rows; 161 new inserted, 37 existing preserved).
+  DT→IDL prefix remap applied at ingest time (APEX engine labels IDL as DT; DB uses IDL).
+  Schema sufficient from migrations 0044 + 0046. No new migration. Next migration: 0049.
+- DT→IDL normalization bug — fixed in 3 locations that were each silently failing:
+  1. draftos/queries/historical_comps.py: _normalize_archetype_code() + _ARCHETYPE_PREFIX_REMAP.
+     Applied in get_historical_comps() + get_archetype_translation_rate().
+     IDL comps now correctly returned when called with DT-* matched_archetype codes from apex_scores.
+  2. scripts/run_apex_scoring_2026.py: _COMP_ARCH_REMAP + _norm_comp_arch() inside _get_comp_context().
+     Scoring prompt comp injection now correctly fetches IDL-* rows on re-score for IDL/DT prospects.
+  3. app/app.py: "DT" key added to _POS_GROUP_MAP → {"IDL","DT","DE","NT"}.
+     FM reference comp position filter now matches IDL position values when prospect position_group="DT".
+- FM reference card rendering bug fixed:
+  scripts/draftos_detail_iframe_v2.py: c.get("bust_mechanism","") → c.get("fm_mechanism","").
+  FM ref cards were rendering with blank mechanism text (wrong dict key, silent failure since Session 65).
+- New scripts delivered:
+  scripts/seed_perplexity_comps_2026.py — canonical importer. INSERT OR IGNORE. Backup before write.
+    DT→IDL remap. --apply 0/1. Accurate inserted/skipped counts via changes().
+  scripts/summarize_historical_comps_2026.py — read-only summary report (position coverage,
+    archetype detail, FM usage, FM reference library, gap report).
+- Query layer (draftos/queries/historical_comps.py) — full rewrite:
+  season_id=1 param added to all public functions. get_fm_reference_comps archetype_code param replaced
+  with position_group=None (DB-level filter). Returned dicts include position_group key aliased from
+  position column. _extract_position_prefix() helper added.
+- Importer behavior decision: INSERT OR IGNORE (not upsert).
+  Rationale: 37 overlapping rows carry richer hand-curated content (scheme_context, signature_trait,
+  peak_years, fm_mechanism, pre_draft_signal) that the CSV cannot provide. Upsert would silently
+  degrade quality. Perplexity fills 161 archetype gaps; curated rows are permanent reference.
+- No DB schema changes. No migrations. Doctor: PASSED.
 
 Session 78 close (APEX OS UI — Sprint 1–4 complete: unified filter/sort controls, metadata status bar, decision card, 6-tab detail panel, board visual hierarchy + CSS polish pass).
 
@@ -958,15 +993,10 @@ Prior sessions on record: 12 (DB rebuild), 13 (weekly pipeline), 13b (school/arc
 
 ## Next Milestone (Single Target)
 
-- Session 79: Perplexity Research integration track (§7 roadmap).
-  1. Scout aggregation via Perplexity Research mode → structured CSVs
-  2. Comp database expansion via archetype queries
-  3. Pages export for shareable board snapshot
-  Or: full batch APEX re-score (all --batch all --force) pending Arvell Reese S70 gate decision.
-  4. Parse failures individual re-score: Burks, Coleman, Barber
-  5. Sports Almanac Mode 3 — CB archetype labeling discipline anchor
-  6. Sports Almanac Mode 3 — Candidate XP-8 second-position confirmation
-  7. Tier 2 evaluation queue: Taaffe, Moore, Josephs, Davis, Tucker
+- Session 80: Perplexity §7.1 — activate ingest_perplexity_agg_2026.py as T3 scout source
+  (perplexity_agg_2026, weight=0.7). Stub already present as untracked file. Full ingest +
+  consensus rebuild + divergence recompute to include Perplexity aggregation in board math.
+  Secondary (same session if time permits): parse failures individual re-score (Burks, Coleman, Barber).
 
 ---
 
@@ -1024,14 +1054,13 @@ APEX: Operational. 140 v2.3 active non-cal scored + 12 calibration artifacts.
   Keylan Rutledge (pid=136): TOP50_POSITION_OVERRIDES OG added Session 37 (position_raw='G' fix).
   Igbinosun (pid=36): ARCHETYPE_OVERRIDES[36] added Session 39 with PAA gate findings.
   Ghost cleanup (Session 39): pid=3559, 4369 (Klare dups) is_active=0. pid=4347 (Ponds LB) is_active=0.
-  Migrations applied: 0001–0045. Next migration: 0046.
-    Migration 0040 (apex_v23_mechanism_fields): failure_mode_primary, failure_mode_secondary,
-      signature_play, translation_risk columns added to apex_scores — APPLIED. All 149 v2.3 rows populated.
-    Migration 0041 (apex_bust_warning): bust_warning column added — APPLIED.
-    Migration 0042 (views_bump_to_v23): v_board, v_divergence_board, v_position_board updated
-      model_version filter apex_v2.2 → apex_v2.3 — APPLIED.
-    Migration 0043 (views_fix_consensus_table): Views updated to JOIN prospect_consensus_rankings
-      (1007 rows) instead of stale consensus_rankings (0 rows). Column aliases corrected — APPLIED.
+  Migrations applied: 0001–0048. Next migration: 0049.
+    0044 historical_comps table. 0046 added pre_draft_signal + is_fm_reference columns.
+    0047 prospect_comps table (analyst-curated comp cards per prospect).
+    0048 prospect_measurables table (jfosterfilm expanded measurables, 716 rows).
+  historical_comps: 350 rows total (314 position comps + 36 FM refs). All 13 positions covered.
+    All canonical archetypes have ≥2 comps. Seeded via seed_perplexity_comps_2026.py (Session 79).
+    DT→IDL normalization live in query module + scoring prompt + app filter (Session 79).
   Tag trigger re-run executed post-Session 42 — 147 pending recs generated (see TAGS).
 
 TAGS: Operational. Session 24 trigger engine built and active.
@@ -1165,7 +1194,7 @@ Resolved artifacts:
 
 ## Source Registry (Active)
 
-14 active canonical sources:
+16 active canonical sources (sources_active=17 per doctor includes 1 legacy row):
 
 | ID | Key | Tier | Weight |
 |----|-----|------|--------|
@@ -1188,11 +1217,11 @@ Inactive (data preserved): ngs_2026 (source_id=29, is_active=0) — model score,
 
 2) System Snapshot Output
 === DRAFTOS SYSTEM SNAPSHOT ===
-generated_utc: 2026-04-07T06:15:50.816072+00:00
+generated_utc: 2026-04-11T03:13:26.415730+00:00
 
 ## Git
 branch: main
-commit: 810d69a69bb1fc8f05d13e6da8a3ee6c00bcde55
+commit: 653fdeca8ca5dbad766f964d85c3a6bc9bc81fcf
 status: clean
 
 ## Tables
@@ -1242,12 +1271,12 @@ status: clean
 - users
 
 ## Row Counts (key tables)
-- sources: 33
+- sources: 34
 - seasons: 1
 - prospects: 4571
-- source_players: 10519
+- source_players: 10524
 - source_player_map: 10192
-- source_rankings: 42743
+- source_rankings: 42748
 - models: 1
 - model_outputs: 0
 
@@ -1390,6 +1419,7 @@ no is_active column
 - scripts\ingest_jfosterfilm_measurables_2026.py
 - scripts\ingest_nflcom_2026.py
 - scripts\ingest_ngs_2026.py
+- scripts\ingest_perplexity_agg_2026.py
 - scripts\ingest_rankings_staged.py
 - scripts\ingest_ras_2026.py
 - scripts\log_draft_pick_2026.py
@@ -1409,9 +1439,11 @@ no is_active column
 - scripts\scrape_nfldraftbuzz_2026_playwright.py
 - scripts\seed_fm_reference_comps.py
 - scripts\seed_historical_comps.py
+- scripts\seed_perplexity_comps_2026.py
 - scripts\seed_position_comps_batch2.py
 - scripts\snapshot_board.py
 - scripts\stage_rankings_csv.py
+- scripts\summarize_historical_comps_2026.py
 - scripts\take_predraft_snapshot_2026.py
 - scripts\triage_pending_tags_2026.py
 - scripts\update_session_state.py
