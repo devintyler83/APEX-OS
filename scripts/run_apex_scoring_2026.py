@@ -1919,6 +1919,23 @@ def _derive_capital_range(apex_composite: float) -> str:
 # Historical comp context injection
 # ---------------------------------------------------------------------------
 
+# Normalise archetype prefix for DB lookup.
+# apex_scores.matched_archetype uses "DT-N"; historical_comps stores "IDL-N".
+_COMP_ARCH_REMAP: dict[str, str] = {"DT": "IDL"}
+
+
+def _norm_comp_arch(code: str | None) -> str | None:
+    """'DT-3 Two-Gap Anchor' → 'IDL-3';  'EDGE-1 ...' → 'EDGE-1';  None → None."""
+    if not code:
+        return code
+    parts = code.strip().split()
+    if not parts or "-" not in parts[0]:
+        return code
+    prefix, rest = parts[0].split("-", 1)
+    canon = _COMP_ARCH_REMAP.get(prefix.upper(), prefix.upper())
+    return f"{canon}-{rest}"
+
+
 def _get_comp_context(
     conn,
     archetype_code: str | None,
@@ -1935,9 +1952,16 @@ def _get_comp_context(
               same archetype if no fm_code)
       Slot 3: FM cross-position reference (is_fm_reference=1), only if fm_code
               set and slot 2 is empty
+
+    archetype_code is normalised through _norm_comp_arch() before querying so
+    that DT-* codes from apex_scores correctly resolve to IDL-* rows in
+    historical_comps.
     """
     if not archetype_code:
         return ""
+
+    # Normalise DT-* → IDL-* before any query
+    archetype_code = _norm_comp_arch(archetype_code)
 
     def _trunc(s: str | None, n: int) -> str:
         if not s:

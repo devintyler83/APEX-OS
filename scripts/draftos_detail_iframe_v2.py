@@ -1100,7 +1100,7 @@ def _build_fm_ref_html(fm_ref_comps: list, fm_labels: list | None = None, pos: s
             f'<div class="fm-ref-header"><span class="fm-ref-outcome {cls}">{_e(oc)}</span></div>'
             f'<div class="fm-ref-name">{_e(c.get("player_name", ""))}</div>'
             f'<div class="fm-ref-pos-fm">{pos_fm}</div>'
-            f'<div class="fm-ref-pattern">{_e(c.get("bust_mechanism", ""))}</div>'
+            f'<div class="fm-ref-pattern">{_e(c.get("fm_mechanism", ""))}</div>'
             f'<div class="fm-ref-excerpt">{_e(c.get("outcome_summary", ""))}</div>'
             f'</div>'
             f'<div class="fm-ref-meta">'

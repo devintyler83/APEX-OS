@@ -1703,10 +1703,12 @@ def _render_apex_detail(d: dict) -> None:
         # Map board-level position group labels to the set of DB position values
         # (board normalizes OT/OG/C → "OL"; DB stores actual position on ref comps)
         _POS_GROUP_MAP: dict[str, set[str]] = {
-            "OL": {"OT", "OG", "C", "OL"},
-            "DL": {"DT", "DE", "NT", "DL"},
-            "LB": {"ILB", "OLB", "LB", "MLB"},
-            "DB": {"CB", "S", "SS", "FS", "DB"},
+            "OL":   {"OT", "OG", "C", "OL"},
+            # Prospect position_group="DT"; historical_comps stores position="IDL"
+            "DT":   {"IDL", "DT", "DE", "NT"},
+            "DL":   {"IDL", "DT", "DE", "NT", "DL"},   # legacy key — keep for safety
+            "LB":   {"ILB", "OLB", "LB", "MLB"},
+            "DB":   {"CB", "S", "SS", "FS", "DB"},
         }
         prospect_pos = (d.get("position_group") or "").strip().upper()
         if prospect_pos:
