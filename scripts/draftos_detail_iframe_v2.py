@@ -773,6 +773,64 @@ body {
 .comps-empty {
   font-size: 11px; color: var(--dim); padding: 20px 0; text-align: center;
 }
+
+/* ── Scout Pad (Notes tab) ──────────────────────────────────────────────── */
+.sp-block {
+  background: var(--ink3);
+  border: 1px solid var(--wire);
+  border-radius: 4px;
+  padding: 10px 12px;
+  margin-bottom: 14px;
+}
+.sp-kv {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--wire);
+}
+.sp-kv:last-child { border-bottom: none; }
+.sp-k {
+  font-size: 7px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--dim);
+  flex-shrink: 0;
+}
+.sp-v {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  text-align: right;
+  line-height: 1.3;
+}
+.sp-market-line {
+  font-size: 10px;
+  line-height: 1.55;
+  color: var(--mid);
+  font-style: italic;
+  margin-top: 7px;
+  padding-top: 7px;
+  border-top: 1px solid var(--wire);
+}
+.sp-take-block {
+  background: rgba(232,168,74,0.06);
+  border: 1px solid rgba(232,168,74,0.18);
+  border-left: 3px solid var(--amber2);
+  border-radius: 0 5px 5px 0;
+  padding: 11px 14px;
+  margin-bottom: 14px;
+}
+.sp-take-text {
+  font-family: 'Barlow', sans-serif;
+  font-size: 12px;
+  line-height: 1.65;
+  color: rgba(255,255,255,0.78);
+  font-style: italic;
+}
 """
 
 
@@ -1117,6 +1175,301 @@ def _build_fm_ref_html(fm_ref_comps: list, fm_labels: list | None = None, pos: s
     )
 
 
+def _build_draft_day_take(
+    pos: str,
+    tier: str,
+    arch_label: str,
+    conf_raw,
+    fm_codes: set,
+    div_delta,
+) -> str | None:
+    """
+    Produce a deterministic one-sentence draft-room take.
+    Returns None if essential data is missing.
+    """
+    if not tier or tier == "—":
+        return None
+
+    _TIER_WORD = {
+        "ELITE": "Elite", "DAY1": "Day 1", "DAY2": "Day 2",
+        "DAY3": "Day 3", "UDFA-P": "Priority UDFA", "UDFA": "UDFA",
+    }
+    tier_word = _TIER_WORD.get(tier, tier)
+
+    pos_upper = (pos or "").upper()
+
+    # Divergence phrase
+    div_phrase = ""
+    try:
+        if div_delta is not None:
+            dd = int(float(div_delta))
+            if dd >= 10:
+                div_phrase = " with real APEX surplus"
+            elif dd >= 5:
+                div_phrase = " with positive APEX signal"
+            elif dd <= -10:
+                div_phrase = " — market ranks him higher than APEX"
+            elif dd <= -5:
+                div_phrase = " — mild APEX discount"
+    except (TypeError, ValueError):
+        pass
+
+    # Confidence phrase
+    _CONF_PHRASE = {
+        "A": "Tier A confidence", "Tier A": "Tier A confidence",
+        "B": "Tier B confidence", "Tier B": "Tier B confidence",
+        "C": "Tier C confidence", "Tier C": "Tier C confidence",
+    }
+    conf_phrase = _CONF_PHRASE.get(str(conf_raw).strip(), "")
+
+    # FM phrase
+    fm_phrase = ""
+    if fm_codes:
+        sorted_fms = sorted(fm_codes)
+        fm_phrase = ", ".join(f"FM-{c} watch" for c in sorted_fms[:2])
+
+    # Arch role (first 3 words max to stay terse)
+    arch_short = ""
+    if arch_label:
+        words = arch_label.strip().split()
+        arch_short = " ".join(words[:4]) if len(words) > 4 else arch_label.strip()
+
+    # Assemble: "[tier_word] [pos][div_phrase]; [arch_short], [conf_phrase][, fm_phrase]."
+    mid_parts = [p for p in [arch_short, conf_phrase, fm_phrase] if p]
+    mid = ", ".join(mid_parts)
+    sentence = f"{tier_word} {pos_upper}{div_phrase}"
+    if mid:
+        sentence += f"; {mid}"
+    sentence += "."
+    return sentence
+
+
+def _build_scout_pad(d: dict, fm_codes: set, fm_labels: list, tag_list: list) -> str:
+    """
+    Build the Scout Pad HTML for the Notes tab.
+    5 blocks: Draft Call, Market View, Risk Snapshot, Flags, Draft Day Take.
+    Returns a fallback message if no APEX data is available.
+    """
+    apex_comp   = d.get("apex_composite")
+    tier        = (d.get("apex_tier") or "").strip().upper()
+    capital     = d.get("capital_base") or d.get("capital_adjusted") or "—"
+    conf_raw    = d.get("eval_confidence") or d.get("eval_confidence_tier") or ""
+    archetype   = d.get("matched_archetype") or ""
+    crank       = d.get("consensus_rank")
+    div_delta   = d.get("divergence_delta") or d.get("auto_apex_delta")
+    fm_primary  = d.get("failure_mode_primary") or ""
+    fm_secondary= d.get("failure_mode_secondary") or ""
+    trans_risk  = d.get("translation_risk") or ""
+    pos         = (d.get("position_group") or "").strip().upper()
+
+    if not apex_comp and apex_comp != 0:
+        return (
+            '<div class="sp-block" style="text-align:center;padding:28px 16px">'
+            '<div class="sp-k" style="margin-bottom:8px">Scout Pad</div>'
+            '<div style="font-size:11px;color:var(--dim)">No APEX evaluation data available for this prospect.</div>'
+            '</div>'
+        )
+
+    # ── Derived ────────────────────────────────────────────────────────────────
+    if archetype and " " in archetype:
+        arch_code_sp, arch_label_sp = archetype.split(" ", 1)
+    else:
+        arch_code_sp, arch_label_sp = archetype or "—", ""
+
+    _TIER_WORD = {
+        "ELITE": "Elite", "DAY1": "Day 1", "DAY2": "Day 2",
+        "DAY3": "Day 3", "UDFA-P": "Priority UDFA", "UDFA": "UDFA",
+    }
+    _TIER_COLOR = {
+        "ELITE": "#f0c040", "DAY1": "#7eb4e2", "DAY2": "#5ab87a",
+        "DAY3": "#e8a84a", "UDFA-P": "#a57ee0", "UDFA": "rgba(255,255,255,0.35)",
+    }
+    tier_word  = _TIER_WORD.get(tier, tier or "—")
+    tier_color = _TIER_COLOR.get(tier, "var(--text)")
+
+    _CONF_DISPLAY = {"A": "Tier A", "B": "Tier B", "C": "Tier C"}
+    conf_display = _CONF_DISPLAY.get(str(conf_raw).strip(), str(conf_raw).strip() or "—")
+    _CONF_COLOR  = {
+        "A": "var(--green)", "Tier A": "var(--green)",
+        "B": "var(--amber)", "Tier B": "var(--amber)",
+        "C": "var(--red)",   "Tier C": "var(--red)",
+    }
+    conf_color = _CONF_COLOR.get(str(conf_raw).strip(), "var(--dim)")
+
+    # Consensus + derived APEX rank
+    try:
+        con_rank_int = int(float(crank)) if crank is not None else None
+    except (TypeError, ValueError):
+        con_rank_int = None
+    con_rank_str = f"#{con_rank_int}" if con_rank_int else "NR"
+
+    try:
+        dd = int(float(div_delta)) if div_delta is not None else None
+    except (TypeError, ValueError):
+        dd = None
+
+    apex_rank_str = "—"
+    dd_color      = "var(--dim)"
+    dd_str        = "—"
+    if con_rank_int is not None and dd is not None:
+        apex_rank_val = con_rank_int - dd
+        apex_rank_str = f"#{apex_rank_val}"
+        if dd > 0:
+            dd_color = "var(--green)"
+            dd_str   = f"+{dd}"
+        elif dd < 0:
+            dd_color = "var(--red)"
+            dd_str   = str(dd)
+        else:
+            dd_str = "0"
+
+    # Market framing line
+    market_line = ""
+    if dd is not None and abs(dd) >= 5:
+        if dd >= 15:
+            market_line = f"Scout consensus is significantly behind APEX on this prospect ({dd_str})."
+        elif dd >= 5:
+            market_line = f"APEX sees more upside here than current market consensus suggests ({dd_str})."
+        elif dd <= -15:
+            market_line = f"Market is pricing this player well above APEX valuation ({dd_str})."
+        else:
+            market_line = f"Mild APEX discount relative to scout consensus ({dd_str})."
+
+    # FM rows
+    def _fm_color(code: int) -> str:
+        return {1: "var(--amber)", 2: "var(--red)", 3: "var(--amber)",
+                4: "var(--amber)", 5: "var(--red)", 6: "var(--amber)"}.get(code, "var(--dim)")
+
+    fm_rows = ""
+    fm_pairs = [("Primary FM", fm_primary), ("Secondary FM", fm_secondary)]
+    for lbl, fv in fm_pairs:
+        if _fm_is_present(fv):
+            m = re.search(r"FM-(\d+)", str(fv))
+            code = int(m.group(1)) if m else None
+            color = _fm_color(code) if code else "var(--dim)"
+            # Show just code + first clause
+            fv_display = str(fv).strip()
+            if " — " in fv_display:
+                fv_display = fv_display.split(" — ")[0].strip()
+            fm_rows += (
+                f'<div class="sp-kv">'
+                f'<span class="sp-k">{_e(lbl)}</span>'
+                f'<span class="sp-v" style="color:{color}">{_e(fv_display)}</span>'
+                f'</div>'
+            )
+    if not fm_rows:
+        fm_rows = (
+            '<div class="sp-kv">'
+            '<span class="sp-k">FM Risk</span>'
+            '<span class="sp-v" style="color:var(--dim)">—</span>'
+            '</div>'
+        )
+
+    # Translation risk (first sentence only)
+    trans_display = "—"
+    if _v23_present(trans_risk):
+        first_sent = str(trans_risk).split(".")[0].strip()
+        trans_display = first_sent[:120] + ("…" if len(first_sent) > 120 else "")
+
+    # Tag pills (reuse .htag classes from existing CSS)
+    pills_html = ""
+    if tag_list:
+        _TAG_CLS = {
+            "CRUSH": "crush", "Two-Way Premium": "tw",
+            "Walk-On Flag": "walkOn", "Schwesinger Rule": "schwes",
+        }
+        pills = "".join(
+            f'<span class="htag {_TAG_CLS.get(t, "")}">{_e(t)}</span>'
+            for t in tag_list
+        )
+        pills_html = f'<div class="htags-row" style="margin-top:4px">{pills}</div>'
+
+    # Draft Day Take
+    take_sentence = _build_draft_day_take(pos, tier, arch_label_sp, conf_raw, fm_codes, div_delta)
+    take_html = ""
+    if take_sentence:
+        take_html = (
+            '<div class="sp-take-block">'
+            f'<div class="sp-k" style="margin-bottom:6px">Draft Day Take</div>'
+            f'<div class="sp-take-text">{_e(take_sentence)}</div>'
+            '</div>'
+        )
+
+    # ── Assemble blocks ────────────────────────────────────────────────────────
+
+    # Block 1: Draft Call
+    arch_role_display = arch_label_sp or arch_code_sp or "—"
+    block_call = (
+        '<div class="sp-block">'
+        '<div class="sp-k" style="margin-bottom:6px">Draft Call</div>'
+        f'<div class="sp-kv">'
+        f'<span class="sp-k">Tier</span>'
+        f'<span class="sp-v" style="color:{tier_color}">{_e(tier_word)}</span>'
+        f'</div>'
+        f'<div class="sp-kv">'
+        f'<span class="sp-k">Capital</span>'
+        f'<span class="sp-v">{_e(capital)}</span>'
+        f'</div>'
+        f'<div class="sp-kv">'
+        f'<span class="sp-k">Confidence</span>'
+        f'<span class="sp-v" style="color:{conf_color}">{_e(conf_display)}</span>'
+        f'</div>'
+        f'<div class="sp-kv">'
+        f'<span class="sp-k">Archetype / Role</span>'
+        f'<span class="sp-v">{_e(arch_role_display)}</span>'
+        f'</div>'
+        '</div>'
+    )
+
+    # Block 2: Market View
+    market_line_html = (
+        f'<div class="sp-market-line">{_e(market_line)}</div>'
+        if market_line else ""
+    )
+    block_market = (
+        '<div class="sp-block">'
+        '<div class="sp-k" style="margin-bottom:6px">Market View</div>'
+        f'<div class="sp-kv">'
+        f'<span class="sp-k">Consensus Rank</span>'
+        f'<span class="sp-v">{_e(con_rank_str)}</span>'
+        f'</div>'
+        f'<div class="sp-kv">'
+        f'<span class="sp-k">APEX Rank</span>'
+        f'<span class="sp-v">{_e(apex_rank_str)}</span>'
+        f'</div>'
+        f'<div class="sp-kv">'
+        f'<span class="sp-k">Δ APEX</span>'
+        f'<span class="sp-v" style="color:{dd_color}">{_e(dd_str)}</span>'
+        f'</div>'
+        f'{market_line_html}'
+        '</div>'
+    )
+
+    # Block 3: Risk Snapshot
+    block_risk = (
+        '<div class="sp-block">'
+        '<div class="sp-k" style="margin-bottom:6px">Risk Snapshot</div>'
+        f'{fm_rows}'
+        f'<div class="sp-kv">'
+        f'<span class="sp-k">Translation Risk</span>'
+        f'<span class="sp-v" style="font-size:11px;text-align:right;color:var(--mid)">{_e(trans_display)}</span>'
+        f'</div>'
+        '</div>'
+    )
+
+    # Block 4: Flags
+    block_flags = ""
+    if tag_list:
+        block_flags = (
+            '<div class="sp-block">'
+            '<div class="sp-k" style="margin-bottom:8px">Tags / Flags</div>'
+            f'{pills_html}'
+            '</div>'
+        )
+
+    return block_call + block_market + block_risk + block_flags + take_html
+
+
 # ── Public API ────────────────────────────────────────────────────────────────
 
 def build_decision_card(d: dict, fm_codes: set) -> str:
@@ -1187,8 +1540,18 @@ def build_decision_card(d: dict, fm_codes: set) -> str:
 
     risk_note_html = ""
     if _v23_present(translation_risk):
-        first_sentence = str(translation_risk).split(".")[0][:120]
-        risk_note_html = f'<div class="dc-risk-note">{_e(first_sentence)}</div>'
+        # Use the full first sentence. Only truncate on a word boundary if it
+        # is exceptionally long (>280 chars) to prevent mid-word cutoffs.
+        _tr_text = str(translation_risk).strip()
+        _first_sent = _tr_text.split(".")[0].strip()
+        if len(_first_sent) > 280:
+            _trunc = _first_sent[:280]
+            # Retreat to last word boundary
+            _last_space = _trunc.rfind(" ")
+            if _last_space > 180:
+                _trunc = _trunc[:_last_space]
+            _first_sent = _trunc + "…"
+        risk_note_html = f'<div class="dc-risk-note">{_e(_first_sent)}</div>'
 
     # ── Zone 3: Confidence strip ──────────────────────────────────────────────
     _CONF_COLOR = {
@@ -1619,6 +1982,9 @@ def build_detail_html(d: dict, comps: list, rate, fm_ref_comps: list | None = No
     else:
         comps_tab_html = '<div class="comps-empty">No historical comp data available for this archetype yet.</div>'
 
+    # NOTES tab — Scout Pad utility panel
+    notes_tab_html = _build_scout_pad(d, fm_codes, fm_labels, tag_list)
+
     # REPORT tab — capital + confidence + pos rank + snapshot
     _CONF_REPORT_COLOR = {
         "A": "var(--green)", "High": "var(--green)",
@@ -1768,6 +2134,8 @@ def build_detail_html(d: dict, comps: list, rate, fm_ref_comps: list | None = No
 
       {sig_html}
 
+      {two_col_html}
+
     </div>
 
     <!-- TAB: TRAITS -->
@@ -1790,7 +2158,6 @@ def build_detail_html(d: dict, comps: list, rate, fm_ref_comps: list | None = No
     <!-- TAB: RISK -->
     <div id="tab-risk" class="tab-pane">
       {fm_html}
-      {two_col_html}
       {risk_html}
     </div>
 
@@ -1801,11 +2168,7 @@ def build_detail_html(d: dict, comps: list, rate, fm_ref_comps: list | None = No
 
     <!-- TAB: NOTES -->
     <div id="tab-notes" class="tab-pane">
-      <div class="notes-placeholder">
-        <div class="notes-lbl">Analyst Notes</div>
-        <div class="notes-body">Notes are added through the APEX OS pipeline.
-        This panel will display scout notes and analyst annotations when available.</div>
-      </div>
+      {notes_tab_html}
     </div>
 
     <!-- TAB: REPORT -->

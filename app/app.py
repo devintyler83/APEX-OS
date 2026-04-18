@@ -1054,6 +1054,24 @@ hr {
   margin: 6px 0 !important;
 }
 
+/* ── Prospect navigation bar ── */
+.nav-bar-label {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.38);
+  text-align: center;
+  padding: 6px 0;
+  display: block;
+  line-height: 1.4;
+}
+.nav-board-tag {
+  color: rgba(126,180,226,0.70);
+  font-weight: 600;
+}
+
 [data-testid="stSidebar"] [data-baseweb="select"] [data-testid="stMarkdownContainer"] p,
 [data-testid="stSidebar"] [data-baseweb="select"] span {
   font-family: 'Barlow', sans-serif !important;
@@ -1081,6 +1099,109 @@ hr {
 }
 [data-testid="stDataFrame"] tbody tr:hover {
   background-color: rgba(74,144,212,0.05) !important;
+}
+
+/* ── APEX Alerts Banner ── */
+.alerts-wrap {
+  background: #0a0c0f;
+  border: 1px solid rgba(126,180,226,0.18);
+  border-top: 2px solid rgba(126,180,226,0.30);
+  padding: 10px 16px 12px;
+  margin: 0 0 14px 0;
+}
+.alerts-head {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #e8a84a;
+  margin-bottom: 2px;
+}
+.alerts-sub {
+  font-family: 'Barlow', sans-serif;
+  font-size: 10px;
+  font-weight: 400;
+  color: rgba(255,255,255,0.28);
+  letter-spacing: 0.04em;
+  margin-bottom: 10px;
+}
+.alerts-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.alert-card {
+  background: #0f1318;
+  border: 1px solid rgba(126,180,226,0.16);
+  border-left: 3px solid rgba(126,180,226,0.50);
+  padding: 7px 12px 7px 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 200px;
+  flex: 1 1 200px;
+  max-width: 280px;
+}
+.alert-name {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.90);
+  line-height: 1;
+  margin-bottom: 3px;
+}
+.alert-meta {
+  font-family: 'Barlow', sans-serif;
+  font-size: 10px;
+  color: rgba(255,255,255,0.38);
+  letter-spacing: 0.03em;
+  line-height: 1.4;
+}
+.alert-meta b {
+  color: rgba(255,255,255,0.52);
+  font-weight: 600;
+}
+.alert-delta {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 20px;
+  font-weight: 800;
+  color: #5ab87a;
+  letter-spacing: -0.01em;
+  line-height: 1;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+/* ── Big Board grouped HTML table ── */
+.bb-table-wrap {
+  overflow-x: auto;
+  width: 100%;
+  margin-bottom: 6px;
+}
+.bb-table {
+  border-collapse: collapse;
+  width: 100%;
+}
+.bb-data-row:hover td {
+  background-color: rgba(74,144,212,0.05) !important;
+}
+.tier-section-row td {
+  padding: 5px 10px;
+  white-space: nowrap;
+}
+.tier-section-label {
+  font-family: 'Barlow Condensed', sans-serif;
+}
+.tier-section-count {
+  font-family: 'Barlow', sans-serif;
+  font-size: 9px;
+  font-weight: 400;
+  color: rgba(255,255,255,0.28);
+  margin-left: 10px;
+  letter-spacing: 0.04em;
 }
 </style>
 """
@@ -1930,6 +2051,91 @@ def _load_active_tag_defs() -> list[dict]:
         return []
 
 
+@st.cache_data(ttl=60)
+def get_apex_alerts(season_id: int = 1, model_version: str = "apex_v2.3", limit: int = 5) -> list[dict]:
+    """
+    Return top APEX_HIGH divergence signals for premium positions.
+    Filters: season_id=1, model_version=apex_v2.3, active non-calibration prospects,
+    premium positions (QB/CB/EDGE/OT/S), sources_covered >= 5.
+    Sorted by divergence_rank_delta DESC. Returns list of dicts.
+    """
+    try:
+        with connect() as conn:
+            rows = conn.execute(
+                """
+                SELECT
+                    p.display_name,
+                    p.position_group,
+                    df.divergence_rank_delta                               AS delta,
+                    a.apex_tier,
+                    pcr.consensus_rank,
+                    CAST(pcr.consensus_rank - df.divergence_rank_delta AS INTEGER) AS apex_rank
+                FROM divergence_flags df
+                JOIN prospects p
+                    ON  p.prospect_id = df.prospect_id
+                    AND p.season_id   = df.season_id
+                JOIN prospect_consensus_rankings pcr
+                    ON  pcr.prospect_id = df.prospect_id
+                    AND pcr.season_id   = df.season_id
+                JOIN apex_scores a
+                    ON  a.prospect_id   = df.prospect_id
+                    AND a.season_id     = df.season_id
+                    AND a.model_version = df.model_version
+                WHERE df.season_id       = ?
+                  AND df.divergence_flag = 'APEX_HIGH'
+                  AND df.model_version   = ?
+                  AND p.is_active        = 1
+                  AND a.is_calibration_artifact = 0
+                  AND p.position_group IN ('QB', 'CB', 'EDGE', 'OT', 'S')
+                  AND pcr.sources_covered >= 5
+                ORDER BY df.divergence_rank_delta DESC
+                LIMIT ?
+                """,
+                (season_id, model_version, limit),
+            ).fetchall()
+            return [dict(r) for r in rows]
+    except Exception:
+        return []
+
+
+def _render_apex_alerts(alerts: list[dict]) -> None:
+    """Render the APEX Alerts horizontal banner via st.markdown. No-op if empty."""
+    if not alerts:
+        return
+
+    cards_html = ""
+    for a in alerts:
+        name     = a["display_name"]
+        pos      = a["position_group"]
+        delta    = int(a["delta"])
+        tier     = a["apex_tier"] or "—"
+        con_rank = int(a["consensus_rank"]) if a["consensus_rank"] is not None else "—"
+        apx_rank = int(a["apex_rank"])      if a["apex_rank"]      is not None else "—"
+
+        cards_html += f"""
+<div class="alert-card">
+  <div style="flex:1;min-width:0">
+    <div class="alert-name">{name}</div>
+    <div class="alert-meta">
+      <b>{pos}</b> &nbsp;·&nbsp; {tier}
+      &nbsp;·&nbsp; Consensus <b>#{con_rank}</b> &nbsp;·&nbsp; APEX <b>#{apx_rank}</b>
+    </div>
+  </div>
+  <div class="alert-delta">+{delta}</div>
+</div>"""
+
+    st.markdown(
+        f"""
+<div class="alerts-wrap">
+  <div class="alerts-head">APEX Alerts</div>
+  <div class="alerts-sub">Highest positive market inefficiencies</div>
+  <div class="alerts-row">{cards_html}
+  </div>
+</div>""",
+        unsafe_allow_html=True,
+    )
+
+
 raw = _load_board()
 
 if raw is None:
@@ -1942,6 +2148,15 @@ if not raw:
     st.stop()
 
 df = pd.DataFrame(raw)
+
+# Nav generation counter: embedding this in board widget keys forces widget
+# re-initialization (empty selection) on the rerun triggered by Prev/Next,
+# preventing stale on_select events from overwriting the nav-set selected_pid.
+if "_nav_gen" not in st.session_state:
+    st.session_state["_nav_gen"] = 0
+# _nav_just_fired is set by nav handlers and popped here on the *next* render.
+# It gates the selectbox sync so the selectbox can't stomp a nav-driven change.
+_nav_just_fired: bool = bool(st.session_state.pop("_nav_just_fired", False))
 
 # Ensure tag_names column exists (defensive fallback)
 if "tag_names" not in df.columns:
@@ -1985,6 +2200,12 @@ with st.sidebar:
         "Sort board by",
         ["Consensus Rank", "APEX Rank", "APEX Score"],
         index=0,
+    )
+
+    player_search = st.text_input(
+        "PLAYER SEARCH",
+        value="",
+        placeholder="Search player name...",
     )
 
     all_positions = sorted(df["position_group"].dropna().unique().tolist())
@@ -2089,6 +2310,7 @@ This reflects draft economics, not player talent.
     # Reset counter forces selectbox recreation (returns to index 0) on Clear
     if "detail_reset_n" not in st.session_state:
         st.session_state["detail_reset_n"] = 0
+
     _det_col_sel, _det_col_clr = st.columns([3, 1])
     with _det_col_sel:
         _detail_dropdown = st.selectbox(
@@ -2103,12 +2325,13 @@ This reflects draft economics, not player talent.
             st.session_state["selected_pid"] = None
             st.session_state["detail_reset_n"] += 1
             st.rerun()
-    if _detail_dropdown == "— select —":
-        st.session_state["selected_pid"] = None
-    else:
-        _pid_rows = df[df["display_name"] == _detail_dropdown]["prospect_id"]
-        if not _pid_rows.empty:
-            st.session_state["selected_pid"] = int(_pid_rows.iloc[0])
+    # Priority-guarded sync: nav always beats the selectbox.
+    # _nav_just_fired is set by Prev/Next handlers and popped at script top;
+    # while it is True the selectbox cannot overwrite the nav-driven pid.
+    if not _nav_just_fired and _detail_dropdown != "— select —":
+        _sel_rows = df[df["display_name"] == _detail_dropdown]["prospect_id"]
+        if not _sel_rows.empty:
+            st.session_state["selected_pid"] = int(_sel_rows.iloc[0])
 
     # --- Compare Two Prospects expander ---
     with st.expander("⚖️ Compare Two Prospects"):
@@ -2149,6 +2372,13 @@ if selected_tiers:
 
 if selected_apex_tier != "(all)" and "apex_tier" in filtered.columns:
     filtered = filtered[filtered["apex_tier"] == selected_apex_tier]
+
+if player_search.strip():
+    filtered = filtered[
+        filtered["display_name"].str.contains(
+            player_search.strip(), case=False, na=False
+        )
+    ]
 
 if school_search.strip():
     mask = filtered["school_canonical"].str.contains(
@@ -2191,6 +2421,7 @@ filtered = filtered.head(int(top_n))
 
 # Ordered prospect_id list — aligns with display DataFrame row positions
 _bb_prospect_ids: list[int] = filtered["prospect_id"].tolist()
+st.session_state["big_board_pids"] = _bb_prospect_ids
 
 # ---------------------------------------------------------------------------
 # Build display table
@@ -2425,6 +2656,77 @@ styled = (
     .hide(axis="columns", subset=["Snapshot"] if "Snapshot" in display.columns else [])
 )
 
+
+def _make_bb_styled(sub: pd.DataFrame):
+    """
+    Apply the canonical Big Board styling to any tier sub-DataFrame.
+    Mirrors the `styled` chain exactly so each tier group renders identically.
+    """
+    return (
+        sub.style
+        .apply(_highlight_consensus_tier, axis=1)
+        .set_properties(
+            subset=[c for c in _NUM_COLS if c in sub.columns],
+            **{"text-align": "right"},
+        )
+        .set_properties(
+            subset=[c for c in _STR_COLS if c in sub.columns],
+            **{"text-align": "left"},
+        )
+        .map(_style_confidence,     subset=["Confidence"])
+        .map(_style_consensus_tier, subset=["Consensus"])
+        .map(_style_divergence,     subset=["⚡ Div"])
+        .map(_style_apex_delta,     subset=["\u0394 APEX"])
+        .map(_style_apex_tier,      subset=["APEX Tier"])
+        .set_table_styles([
+            {
+                "selector": "thead tr th",
+                "props": [
+                    ("font-family", "'Barlow Condensed', sans-serif"),
+                    ("font-size",   "9px"),
+                    ("font-weight", "700"),
+                    ("letter-spacing", "0.12em"),
+                    ("text-transform", "uppercase"),
+                    ("color", "rgba(255,255,255,0.32)"),
+                    ("border-bottom", "1px solid rgba(255,255,255,0.08)"),
+                    ("padding-bottom", "6px"),
+                ],
+            },
+            {
+                "selector": "tbody tr td",
+                "props": [
+                    ("font-family", "'Barlow', sans-serif"),
+                    ("font-size",   "13px"),
+                    ("color", "rgba(255,255,255,0.80)"),
+                ],
+            },
+            {
+                "selector": "tbody tr td:nth-child(2)",
+                "props": [
+                    ("font-family", "'Barlow Condensed', sans-serif"),
+                    ("font-size",   "14px"),
+                    ("font-weight", "600"),
+                    ("color", "rgba(255,255,255,0.92)"),
+                ],
+            },
+            {
+                "selector": "tbody tr td:nth-child(1)",
+                "props": [
+                    ("font-family", "'Barlow Condensed', sans-serif"),
+                    ("font-size",   "14px"),
+                    ("font-weight", "700"),
+                    ("color", "rgba(255,255,255,0.38)"),
+                ],
+            },
+            {
+                "selector": "tbody tr:hover td",
+                "props": [("background-color", "rgba(74,144,212,0.05)")],
+            },
+        ])
+        .hide(axis="columns", subset=["Snapshot"] if "Snapshot" in sub.columns else [])
+    )
+
+
 # ---------------------------------------------------------------------------
 # Column guide (above the board)
 # ---------------------------------------------------------------------------
@@ -2477,6 +2779,202 @@ should reflect that reality.
 """)
 
 # ---------------------------------------------------------------------------
+# Big Board — grouped HTML table renderer
+# ---------------------------------------------------------------------------
+
+_BB_TIER_ORDER: list[str] = ["ELITE", "DAY1", "DAY2", "DAY3", "UDFA-P", "UDFA"]
+
+_BB_TIER_HDR: dict[str, dict] = {
+    "ELITE":  {"bg": "rgba(240,192,64,0.10)",  "color": "#f0c040",               "border": "rgba(240,192,64,0.30)"},
+    "DAY1":   {"bg": "rgba(126,180,226,0.08)", "color": "#7eb4e2",               "border": "rgba(126,180,226,0.25)"},
+    "DAY2":   {"bg": "rgba(90,184,122,0.08)",  "color": "#5ab87a",               "border": "rgba(90,184,122,0.25)"},
+    "DAY3":   {"bg": "rgba(232,168,74,0.08)",  "color": "#e8a84a",               "border": "rgba(232,168,74,0.22)"},
+    "UDFA-P": {"bg": "rgba(165,126,224,0.08)", "color": "#a57ee0",               "border": "rgba(165,126,224,0.22)"},
+    "UDFA":   {"bg": "rgba(255,255,255,0.03)", "color": "rgba(255,255,255,0.28)", "border": "rgba(255,255,255,0.10)"},
+}
+
+# (col_name, text-align, min-width)
+_BB_VISIBLE_COLS: list[tuple[str, str, str]] = [
+    ("Rank",       "right",  "42px"),
+    ("Player",     "left",   "160px"),
+    ("Pos",        "center", "40px"),
+    ("School",     "left",   "120px"),
+    ("Score",      "right",  "48px"),
+    ("Consensus",  "left",   "70px"),
+    ("Confidence", "left",   "74px"),
+    ("Sources",    "right",  "54px"),
+    ("Coverage",   "right",  "62px"),
+    ("RAS",        "right",  "42px"),
+    ("\u26a1 Div", "center", "50px"),
+    ("APEX",       "right",  "44px"),
+    ("\u0394 APEX","right",  "56px"),
+    ("RPG",        "right",  "40px"),
+    ("APEX Score", "right",  "68px"),
+    ("APEX Tier",  "center", "64px"),
+    ("Archetype",  "left",   "130px"),
+    ("Tags",       "left",   "160px"),
+]
+
+
+def _esc(s: object) -> str:
+    """Minimal HTML escape for safe inline rendering."""
+    return (
+        str(s)
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace('"', "&quot;")
+    )
+
+
+def _bb_cell_style(col: str, val: str) -> str:
+    """Return the inline CSS style string for a single Big Board data cell."""
+    if col == "Confidence":
+        base = CONFIDENCE_COLORS.get(val, "")
+        return base if base else "color:rgba(255,255,255,0.55)"
+    if col == "Consensus":
+        base = _CONSENSUS_TIER_COLORS.get(val, "")
+        return base if base else "color:rgba(255,255,255,0.55)"
+    if col == "\u26a1 Div":
+        return "color:#e8a84a;font-weight:700" if val not in ("", "—", "\u2014") else "color:rgba(255,255,255,0.22)"
+    if col == "\u0394 APEX":
+        if val in ("", "—", "\u2014"):
+            return "color:rgba(255,255,255,0.28)"
+        try:
+            n = int(val.replace("+", ""))
+        except (ValueError, AttributeError):
+            return "color:rgba(255,255,255,0.28)"
+        if n > 0:
+            return "color:#7eb4e2;font-weight:700"
+        if n < 0:
+            return "color:#e05c5c;font-weight:500"
+        return "color:rgba(255,255,255,0.35)"
+    if col == "APEX Tier":
+        raw = APEX_TIER_COLORS.get(val, "")
+        return raw if raw else "color:rgba(255,255,255,0.22)"
+    if col == "Rank":
+        return (
+            "color:rgba(255,255,255,0.38);"
+            "font-family:'Barlow Condensed',sans-serif;"
+            "font-size:14px;font-weight:700"
+        )
+    if col == "Player":
+        return (
+            "color:rgba(255,255,255,0.92);"
+            "font-family:'Barlow Condensed',sans-serif;"
+            "font-size:14px;font-weight:600"
+        )
+    if col == "Pos":
+        return (
+            "color:#7eb4e2;"
+            "font-family:'Barlow Condensed',sans-serif;"
+            "font-size:11px;font-weight:700;letter-spacing:0.08em"
+        )
+    return ""
+
+
+def _build_bb_html(disp: pd.DataFrame) -> str:
+    """
+    Render the Big Board as a grouped HTML table with APEX Tier section headers.
+    Groups are in canonical tier order; empty tiers are skipped.
+    Within each group, existing sort order from `disp` is preserved.
+    """
+    col_count = len(_BB_VISIBLE_COLS)
+
+    # ── thead ──────────────────────────────────────────────────────────────
+    th_cells = "".join(
+        f'<th style="text-align:{align};min-width:{mw};padding:6px 8px;'
+        f"font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:700;"
+        f"letter-spacing:0.12em;text-transform:uppercase;"
+        f"color:rgba(255,255,255,0.32);"
+        f'border-bottom:1px solid rgba(255,255,255,0.08);white-space:nowrap">'
+        f"{_esc(name)}</th>"
+        for name, align, mw in _BB_VISIBLE_COLS
+    )
+
+    # ── bucket rows by tier, preserving original order ─────────────────────
+    buckets: dict[str, list] = {t: [] for t in _BB_TIER_ORDER}
+    buckets["_unscored"] = []
+
+    for _, row in disp.iterrows():
+        t = str(row.get("APEX Tier", "") or "").strip()
+        if t in buckets:
+            buckets[t].append(row)
+        else:
+            buckets["_unscored"].append(row)
+
+    # ── tbody ──────────────────────────────────────────────────────────────
+    tbody_parts: list[str] = []
+
+    for tier in _BB_TIER_ORDER + ["_unscored"]:
+        rows = buckets.get(tier, [])
+        if not rows:
+            continue
+
+        # Section header — only for named tiers
+        hdr = _BB_TIER_HDR.get(tier)
+        if hdr:
+            bg, color, border = hdr["bg"], hdr["color"], hdr["border"]
+            count = len(rows)
+            noun  = "player" if count == 1 else "players"
+            tbody_parts.append(
+                f'<tr class="tier-section-row">'
+                f'<td colspan="{col_count}" class="tier-section-label" '
+                f'style="background:{bg};border-top:1px solid {border};'
+                f'border-bottom:1px solid {border};padding:5px 10px">'
+                f'<span style="color:{color};font-family:\'Barlow Condensed\',sans-serif;'
+                f'font-size:9px;font-weight:800;letter-spacing:0.20em;text-transform:uppercase">'
+                f"{_esc(tier)}</span>"
+                f'<span class="tier-section-count">'
+                f"{count} {noun}</span>"
+                f"</td></tr>"
+            )
+
+        # Data rows
+        for row in rows:
+            con_tier = str(row.get("Consensus", "") or "")
+            if con_tier == "Elite":
+                row_bg = "background-color:rgba(240,192,64,0.04)"
+            elif con_tier == "Watch":
+                row_bg = "background-color:rgba(224,92,92,0.03)"
+            else:
+                row_bg = ""
+
+            td_cells = []
+            for col_name, align, _ in _BB_VISIBLE_COLS:
+                raw = row.get(col_name)
+                if raw is None or (isinstance(raw, float) and pd.isna(raw)):
+                    cell_val = "—"
+                else:
+                    cell_val = str(raw)
+                cstyle = _bb_cell_style(col_name, cell_val)
+                td_cells.append(
+                    f'<td style="text-align:{align};padding:5px 8px;'
+                    f"border-bottom:1px solid rgba(255,255,255,0.04);"
+                    f'{cstyle}">{_esc(cell_val)}</td>'
+                )
+
+            tbody_parts.append(
+                f'<tr class="bb-data-row" style="{row_bg}">{"".join(td_cells)}</tr>'
+            )
+
+    tbody = "".join(tbody_parts)
+
+    return (
+        '<div class="bb-table-wrap">'
+        '<table class="bb-table">'
+        f"<thead><tr>{th_cells}</tr></thead>"
+        f"<tbody>{tbody}</tbody>"
+        "</table></div>"
+    )
+
+
+# ---------------------------------------------------------------------------
+# APEX Alerts Banner
+# ---------------------------------------------------------------------------
+_render_apex_alerts(get_apex_alerts())
+
+# ---------------------------------------------------------------------------
 # Tabbed boards
 # ---------------------------------------------------------------------------
 tab_bb, tab_apex = st.tabs([
@@ -2485,31 +2983,72 @@ tab_bb, tab_apex = st.tabs([
 ])
 
 with tab_bb:
-    bb_event = st.dataframe(
-        styled,
-        column_config={
-            "Score":      st.column_config.NumberColumn("Score",      format="%.1f"),
-            "RAS":        st.column_config.NumberColumn("RAS",        format="%.1f"),
-            "APEX Score": st.column_config.NumberColumn("APEX Score", format="%.1f"),
-            "APEX Tier":  st.column_config.TextColumn(
-                              "APEX Tier",
-                              disabled=True,
-                              help="Draft capital tier — derived from APEX Score.",
-                          ),
-            "\u0394 APEX": st.column_config.TextColumn(
-                              "\u0394 APEX",
-                              help="APEX rank vs consensus rank. Positive = APEX rates higher than market.",
-                          ),
-        },
-        use_container_width=True,
-        hide_index=True,
-        on_select="rerun",
-        selection_mode="single-row",
-        key="big_board_table",
-    )
-    if bb_event and bb_event.selection and bb_event.selection.rows:
-        _bb_row_idx = bb_event.selection.rows[0]
-        st.session_state["selected_pid"] = int(_bb_prospect_ids[_bb_row_idx])
+    # ── Stacked grouped render: tier header + selectable dataframe per group ──
+    _scored_tier_set = set(_BB_TIER_ORDER)
+
+    for _tier in _BB_TIER_ORDER + ["_unscored"]:
+        if _tier == "_unscored":
+            _tmask = ~display["APEX Tier"].isin(_scored_tier_set)
+        else:
+            _tmask = display["APEX Tier"] == _tier
+
+        _tsub  = display[_tmask].reset_index(drop=True)
+        if _tsub.empty:
+            continue
+
+        # Map sub-DataFrame rows back to prospect_ids via the pre-built list
+        _tier_positions = display.index[_tmask].tolist()
+        _tpids          = [_bb_prospect_ids[i] for i in _tier_positions]
+        _count          = len(_tsub)
+        _noun           = "player" if _count == 1 else "players"
+
+        # Tier section header
+        _thdr = _BB_TIER_HDR.get(_tier)
+        if _thdr:
+            _label = _tier if _tier != "_unscored" else "UNSCORED"
+            st.markdown(
+                f'<div class="tier-section-row" style="background:{_thdr["bg"]};'
+                f'border-top:1px solid {_thdr["border"]};'
+                f'border-bottom:1px solid {_thdr["border"]};'
+                f'padding:5px 12px;margin-bottom:0">'
+                f'<span style="color:{_thdr["color"]};'
+                f"font-family:'Barlow Condensed',sans-serif;"
+                f'font-size:9px;font-weight:800;letter-spacing:0.20em;text-transform:uppercase">'
+                f'{_esc(_label)}</span>'
+                f'<span class="tier-section-count">{_count} {_noun}</span>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+
+        # Per-tier selectable dataframe — height sized to show all rows without
+        # an internal scrollbar so the page-level scroll handles navigation.
+        _tier_height = (_count + 1) * 38 + 4
+        _tevent = st.dataframe(
+            _make_bb_styled(_tsub),
+            column_config={
+                "Score":       st.column_config.NumberColumn("Score",      format="%.1f"),
+                "RAS":         st.column_config.NumberColumn("RAS",        format="%.1f"),
+                "APEX Score":  st.column_config.NumberColumn("APEX Score", format="%.1f"),
+                "APEX Tier":   st.column_config.TextColumn(
+                                   "APEX Tier", disabled=True,
+                                   help="Draft capital tier — derived from APEX Score.",
+                               ),
+                "\u0394 APEX": st.column_config.TextColumn(
+                                   "\u0394 APEX",
+                                   help="APEX rank vs consensus rank. Positive = APEX rates higher than market.",
+                               ),
+            },
+            use_container_width=True,
+            hide_index=True,
+            height=_tier_height,
+            on_select="rerun",
+            selection_mode="single-row",
+            key=f"bb_tier_{_tier}_g{st.session_state['_nav_gen']}",
+        )
+        if _tevent and _tevent.selection and _tevent.selection.rows:
+            _sel_idx = _tevent.selection.rows[0]
+            st.session_state["selected_pid"] = int(_tpids[_sel_idx])
+            st.session_state["active_board"] = "bb"
 
     _universe_label = "APEX Only" if show_apex_only else "Mixed"
     _universe_color = "#5ab87a" if show_apex_only else "#e8a84a"
@@ -2526,7 +3065,7 @@ color:rgba(255,255,255,0.52);margin-top:4px;">
 </div>""",
         unsafe_allow_html=True,
     )
-    st.caption("💡 Click any row to load the prospect detail panel below, or use **🔍 Prospect Detail** in the sidebar.")
+    st.caption("💡 Click any row to load the prospect detail panel, or use **🔍 Prospect Detail** in the sidebar.")
 
     # Tagged prospects pill view
     tagged_filtered = filtered[filtered["tag_names"] != ""].copy()
@@ -2572,7 +3111,7 @@ color:rgba(255,255,255,0.52);margin-top:4px;">
 
 with tab_apex:
     if apex_scored > 0 and "apex_composite" in df.columns:
-        apex_df = df[df["apex_composite"].notna()].copy()
+        apex_df = filtered[filtered["apex_composite"].notna()].copy()
 
         apex_df = apex_df.sort_values(
             ["auto_apex_rank", "apex_composite"],
@@ -2613,6 +3152,7 @@ with tab_apex:
             ab["Tags"] = ""
 
         _apex_prospect_ids: list[int] = apex_df["prospect_id"].tolist()
+        st.session_state["apex_board_pids"] = _apex_prospect_ids
 
         ab = ab.reset_index(drop=True)
 
@@ -2669,11 +3209,12 @@ with tab_apex:
             hide_index=True,
             on_select="rerun",
             selection_mode="single-row",
-            key="apex_board_table",
+            key=f"apex_board_table_g{st.session_state['_nav_gen']}",
         )
         if ab_event and ab_event.selection and ab_event.selection.rows:
             _ab_row_idx = ab_event.selection.rows[0]
             st.session_state["selected_pid"] = int(_apex_prospect_ids[_ab_row_idx])
+            st.session_state["active_board"] = "apex"
 
         st.caption("💡 Click any row to load the prospect detail panel below.")
     else:
@@ -2750,6 +3291,67 @@ st.divider()
 st.subheader("📋 Prospect Detail")
 
 _selected_pid = st.session_state.get("selected_pid")
+
+# ── Prev / Next navigation ────────────────────────────────────────────────────
+# Uses whichever board was last clicked; falls back to Big Board.
+# No-ops when compare panel is active.
+_active_board = st.session_state.get("active_board", "bb")
+_nav_pids: list[int] = (
+    list(st.session_state.get("apex_board_pids", []))
+    if _active_board == "apex"
+    else list(st.session_state.get("big_board_pids", _bb_prospect_ids))
+)
+_nav_total = len(_nav_pids)
+
+if _nav_total > 0 and not _compare_active:
+    # Locate the selected prospect in the current nav list (-1 = not found / no selection)
+    if _selected_pid is not None and _selected_pid in _nav_pids:
+        _nav_idx = _nav_pids.index(_selected_pid)
+    else:
+        _nav_idx = -1
+
+    # Boundary flags — when idx==-1 (no selection) neither edge is reached,
+    # so both buttons stay enabled and jump to prospect #1.
+    _at_start = (_nav_idx == 0)
+    _at_end   = (_nav_idx >= 0 and _nav_idx == _nav_total - 1)
+
+    # Declare all buttons first — full widget tree rendered before any click is processed.
+    _nc1, _nc2, _nc3 = st.columns([1, 4, 1])
+    with _nc1:
+        _prev_clicked = st.button("← Prev", key="nav_prev", disabled=_at_start,
+                                  use_container_width=True)
+    with _nc2:
+        _board_tag = "APEX Board" if _active_board == "apex" else "Big Board"
+        _pos_str   = f"{_nav_idx + 1}" if _nav_idx >= 0 else "—"
+        st.markdown(
+            f'<div class="nav-bar-label">'
+            f'{_pos_str} of {_nav_total}'
+            f' &nbsp;·&nbsp; '
+            f'<span class="nav-board-tag">{_board_tag}</span>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+    with _nc3:
+        _next_clicked = st.button("Next →", key="nav_next", disabled=_at_end,
+                                  use_container_width=True)
+
+    # Act on clicks after the full widget tree is declared.
+    # Incrementing _nav_gen changes all board widget keys, forcing Streamlit
+    # to treat them as new widgets with empty selection state — this prevents
+    # stale on_select events from overwriting the nav-driven selected_pid on
+    # the next render. _nav_just_fired gates the selectbox sync for the same reason.
+    if _prev_clicked:
+        _new_idx = max(0, _nav_idx - 1) if _nav_idx > 0 else 0
+        st.session_state["selected_pid"] = _nav_pids[_new_idx]
+        st.session_state["_nav_gen"] = st.session_state.get("_nav_gen", 0) + 1
+        st.session_state["_nav_just_fired"] = True
+        st.rerun()
+    if _next_clicked:
+        _new_idx = min(_nav_total - 1, _nav_idx + 1) if _nav_idx >= 0 else 0
+        st.session_state["selected_pid"] = _nav_pids[_new_idx]
+        st.session_state["_nav_gen"] = st.session_state.get("_nav_gen", 0) + 1
+        st.session_state["_nav_just_fired"] = True
+        st.rerun()
 
 if _selected_pid is None:
     st.caption(
