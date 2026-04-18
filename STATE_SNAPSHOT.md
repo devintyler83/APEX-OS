@@ -1,6 +1,6 @@
 # APEX OS State Snapshot
 
-Last Updated (UTC): 2026-04-11T03:13:27.907189+00:00
+Last Updated (UTC): 2026-04-18T00:00:00.000000+00:00
 
 ---
 
@@ -10,7 +10,37 @@ Last Updated (UTC): 2026-04-11T03:13:27.907189+00:00
 
 ## Last Completed Milestone
 
-Session 79 close (Perplexity Comps Integration — complete. historical_comps canonical layer expanded to 314 position comps across all 13 APEX positions. DT→IDL normalization fixed in 3 locations. FM ref card rendering bug fixed.)
+Session 80 close (APEX OS UI — Scout Pad Notes tab, Strengths/Risk relayout, invalidation truncation fix, Prev/Next prospect navigation with _nav_gen fix.)
+
+Session 80 close:
+- draftos_detail_iframe_v2.py — Scout Pad Notes tab fully implemented:
+    _build_draft_day_take(): deterministic one-sentence draft call from tier/pos/arch/confidence/FM/divergence.
+    _build_scout_pad(): 5-block panel — Draft Call, Market View, Risk Snapshot, Flags, Draft Day Take.
+    notes_tab_html wired in build_detail_html() before REPORT tab fragment.
+    TAB NOTES placeholder replaced with Scout Pad HTML.
+- draftos_detail_iframe_v2.py — SUMMARY/RISK tab restructure:
+    Strengths & Red Flags (two_col_html) moved from RISK tab to SUMMARY tab (after sig_html).
+    RISK tab now: fm_html + risk_html only. No two_col_html.
+- draftos_detail_iframe_v2.py — invalidation truncation fix:
+    build_decision_card() first_sentence truncation changed from hard [:120] to word-boundary at 280 chars.
+    rfind(" ") retreat applied if truncation lands mid-word; appends "…".
+    Fixes Fernando Mendoza (and any long translation_risk text) being cut mid-word.
+- app/app.py — Prev/Next prospect navigation (full fix):
+    Task 3 (prior session): nav bar render with ← Prev / N of M · Board / Next → columns.
+      big_board_pids and apex_board_pids stored in session_state after board filters applied.
+      Board row on_select handlers set active_board="bb"/"apex".
+    Task 4 (prior session, partial): sidebar selectbox changed to on_change callback to prevent
+      unconditional overwrite. Proved insufficient — board widget selection persistence was the root cause.
+    Task 5 (this session — complete fix):
+      _nav_gen counter initialized at script top, embedded in all board widget keys
+        (bb_tier_{tier}_g{N}, apex_board_table_g{N}). Nav increment forces widget re-init with empty
+        selection on the next render — stale on_select events cannot fire.
+      _nav_just_fired flag: set by Prev/Next handlers, popped at script top on next render.
+        Gates selectbox sync so selectbox cannot overwrite nav-driven selected_pid.
+      on_change removed from sidebar selectbox; replaced with _nav_just_fired-guarded imperative sync.
+      Nav handlers: set selected_pid → increment _nav_gen → set _nav_just_fired=True → st.rerun().
+      Priority chain: nav > board row-click > selectbox.
+- No DB changes. No migrations. No scoring changes. Doctor status: unchanged (PASSED).
 
 Session 79 close:
 - historical_comps table: 314 position comps (is_fm_reference=0) + 36 FM reference rows = 350 total.
@@ -976,10 +1006,9 @@ Prior sessions on record: 12 (DB rebuild), 13 (weekly pipeline), 13b (school/arc
 
 ## Next Milestone (Single Target)
 
-- Session 80: Perplexity §7.1 — activate ingest_perplexity_agg_2026.py as T3 scout source
-  (perplexity_agg_2026, weight=0.7). Stub already present as untracked file. Full ingest +
-  consensus rebuild + divergence recompute to include Perplexity aggregation in board math.
-  Secondary (same session if time permits): parse failures individual re-score (Burks, Coleman, Barber).
+- Session 81: Full APEX batch re-score (--batch all --force). Investigate Arvell Reese (#2, pid=16)
+  ELITE→DAY1 drop (-8.8 pts, forty=4.46/ATH=86.6). Decision gate report in data/exports/s70_rescore_report.txt.
+  After re-score: rebuild pre-draft snapshot (snapshot_id=7), export apex_all_rescored_s81.json.
 
 ---
 
