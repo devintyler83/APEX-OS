@@ -81,3 +81,5 @@ surface_map.md
 # Build artifacts
 draftos.egg-info/
 output/
+scripts/draftos_detail_iframe_v2-old.py
+scripts/*.bak_mojibake
