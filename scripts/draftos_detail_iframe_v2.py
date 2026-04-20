@@ -1,5 +1,5 @@
-"""
-DraftOS — draftos_detail_iframe_v2.py
+﻿"""
+DraftOS â€” draftos_detail_iframe_v2.py
 Full prospect detail drawer HTML builder.
 
 Replaces _build_detail_html() in app.py with the reference design from
@@ -28,7 +28,7 @@ if _SCRIPTS_DIR not in sys.path:
 from archetype_defs import ARCHETYPE_DEFS as _ARCHETYPE_DEFS
 
 
-# ── Helpers ──────────────────────────────────────────────────────────────────
+# â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 def _e(s) -> str:
     return _html_mod.escape(str(s)) if s is not None else ""
@@ -36,20 +36,20 @@ def _e(s) -> str:
 
 def _safe_float(v, fmt=".1f") -> str:
     if v is None:
-        return "—"
+        return "â€”"
     try:
         f = float(v)
         if math.isnan(f):
-            return "—"
+            return "â€”"
         return format(f, fmt)
     except (TypeError, ValueError):
-        return "—"
+        return "â€”"
 
 
 def _split_score(val):
     s = _safe_float(val)
-    if s == "—":
-        return ("—", "")
+    if s == "â€”":
+        return ("â€”", "")
     parts = s.split(".")
     return (parts[0], parts[1] if len(parts) > 1 else "0")
 
@@ -78,7 +78,7 @@ def _smart_split_bullets(text, max_items: int = 3) -> list:
         return []
     merged = []
     for line in raw:
-        if merged and len(line) < 50 and not merged[-1].endswith((".", "!", "?", "…")):
+        if merged and len(line) < 50 and not merged[-1].endswith((".", "!", "?", "â€¦")):
             merged[-1] = merged[-1] + " " + line
         else:
             merged.append(line)
@@ -95,21 +95,21 @@ def _trait_cls(v: float) -> str:
     return "red"
 
 
-# ── Compound severity lookup ──────────────────────────────────────────────────
+# â”€â”€ Compound severity lookup â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 _COMPOUND_SEVERITY: dict[frozenset, str] = {
-    frozenset([1, 3]): "Compound FM-1 + FM-3: athleticism mirage with processing deficit. Independent failure paths — either mechanism alone is a bust case. Athletic tools masked the processing limit in college; both compress simultaneously at NFL speed.",
-    frozenset([1, 4]): "Compound FM-1 + FM-4: athleticism dependency with structural fragility. The physical tools are both the mechanism and the liability — burst-dependent mechanisms stress exactly the joints and soft tissue most prone to FM-4 activation.",
+    frozenset([1, 3]): "Compound FM-1 + FM-3: athleticism mirage with processing deficit. Independent failure paths â€” either mechanism alone is a bust case. Athletic tools masked the processing limit in college; both compress simultaneously at NFL speed.",
+    frozenset([1, 4]): "Compound FM-1 + FM-4: athleticism dependency with structural fragility. The physical tools are both the mechanism and the liability â€” burst-dependent mechanisms stress exactly the joints and soft tissue most prone to FM-4 activation.",
     frozenset([1, 6]): "Compound FM-1 + FM-6: athleticism mirage with role mismatch. Speed premium priced for a deployment that may not exist at NFL level. If the role narrows and the speed advantage closes, there is no secondary mechanism.",
-    frozenset([3, 4]): "Compound FM-3 + FM-4: processing wall with body breakdown risk. Highest severity compound pattern at QB. Two independent paths to catastrophic capital loss — processing failure or structural failure either one ends the outcome.",
+    frozenset([3, 4]): "Compound FM-3 + FM-4: processing wall with body breakdown risk. Highest severity compound pattern at QB. Two independent paths to catastrophic capital loss â€” processing failure or structural failure either one ends the outcome.",
     frozenset([3, 5]): "Compound FM-3 + FM-5: processing deficit with motivation contingency. Development trajectory requires both cognitive improvement and sustained drive. Both are uncertain; neither compensates for the other.",
     frozenset([3, 6]): "Compound FM-3 + FM-6: processing wall with role mismatch. Scheme demands that mask processing limits in college may not exist at the NFL level. Mismatch removes the structural support the mechanism depended on.",
-    frozenset([4, 5]): "Compound FM-4 + FM-5: structural fragility with motivation cliff. Pre-draft production environment generated both physical output and competitive drive. Injury risk in Year 1–2 is the activation trigger for FM-5.",
+    frozenset([4, 5]): "Compound FM-4 + FM-5: structural fragility with motivation cliff. Pre-draft production environment generated both physical output and competitive drive. Injury risk in Year 1â€“2 is the activation trigger for FM-5.",
     frozenset([1, 5]): "Compound FM-1 + FM-5: athleticism mirage with motivation cliff. Elite combine tools drove both the draft grade and the competitive intensity. When the tools stop generating separation, the motivational engine that ran on proving-ground context has no remaining fuel.",
 }
 
 
-# ── CSS ───────────────────────────────────────────────────────────────────────
+# â”€â”€ CSS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 _CSS = """
 :root {
@@ -164,7 +164,7 @@ body {
   padding: 0;
 }
 
-/* ── DRAWER SHELL ── */
+/* â”€â”€ DRAWER SHELL â”€â”€ */
 .drawer {
   display: grid;
   grid-template-columns: 260px 1fr;
@@ -174,7 +174,7 @@ body {
   border-image: linear-gradient(180deg, var(--prism-1), var(--prism-2), var(--prism-3), var(--prism-4)) 1;
 }
 
-/* ── LEFT RAIL ── */
+/* â”€â”€ LEFT RAIL â”€â”€ */
 .rail {
   background: var(--ink2);
   border-right: 1px solid var(--wire2);
@@ -346,7 +346,7 @@ body {
 .brand-logo { font-family: 'Barlow Condensed', sans-serif; font-size: 11px; font-weight: 900; letter-spacing: 0.20em; text-transform: uppercase; color: rgba(255,255,255,0.13); }
 .watermark-meta { font-size: 7px; color: var(--dim); text-align: right; letter-spacing: 0.04em; line-height: 1.7; }
 
-/* ── RIGHT CONTENT ── */
+/* â”€â”€ RIGHT CONTENT â”€â”€ */
 .content {
   padding: 24px 28px 36px 24px;
   height: 100vh;
@@ -661,7 +661,7 @@ body {
   pointer-events: none; z-index: 100;
 }
 
-/* ── Decision Card ─────────────────────────────────────────────────────── */
+/* â”€â”€ Decision Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .decision-card {
   background: var(--ink3);
   border: 1px solid var(--wire2);
@@ -717,7 +717,7 @@ body {
 .dc-strip-val { font-family: 'Barlow Condensed', sans-serif; font-size: 12px; font-weight: 700; }
 .dc-sep { color: var(--wire3); font-size: 10px; }
 
-/* ── Tab navigation ─────────────────────────────────────────────────────── */
+/* â”€â”€ Tab navigation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .tab-nav {
   display: flex; gap: 2px; margin-bottom: 16px;
   border-bottom: 1px solid var(--wire2); padding-bottom: 0;
@@ -734,7 +734,7 @@ body {
 .tab-pane { display: none; }
 .tab-pane.active { display: block; }
 
-/* ── Notes placeholder ──────────────────────────────────────────────────── */
+/* â”€â”€ Notes placeholder â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .notes-placeholder {
   background: var(--ink3); border: 1px solid var(--wire);
   border-radius: 5px; padding: 16px;
@@ -746,7 +746,7 @@ body {
 }
 .notes-body { font-size: 11px; line-height: 1.6; color: var(--mid); }
 
-/* ── Report tab ─────────────────────────────────────────────────────────── */
+/* â”€â”€ Report tab â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .report-block {
   background: var(--ink3); border: 1px solid var(--wire2);
   border-radius: 5px; padding: 16px 18px; margin-bottom: 12px;
@@ -762,19 +762,19 @@ body {
 }
 .report-sub { font-size: 10px; color: var(--mid); line-height: 1.5; }
 
-/* ── Traits tab ─────────────────────────────────────────────────────────── */
+/* â”€â”€ Traits tab â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .traits-note {
   font-size: 10px; color: var(--dim); margin-top: 12px;
   padding: 8px 10px; background: var(--ink3);
   border-left: 2px solid var(--wire2); border-radius: 0 3px 3px 0;
 }
 
-/* ── Comps empty state ──────────────────────────────────────────────────── */
+/* â”€â”€ Comps empty state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .comps-empty {
   font-size: 11px; color: var(--dim); padding: 20px 0; text-align: center;
 }
 
-/* ── Scout Pad (Notes tab) ──────────────────────────────────────────────── */
+/* â”€â”€ Scout Pad (Notes tab) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .sp-block {
   background: var(--ink3);
   border: 1px solid var(--wire);
@@ -834,7 +834,7 @@ body {
 """
 
 
-# ── HTML fragment builders ────────────────────────────────────────────────────
+# â”€â”€ HTML fragment builders â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 def _build_trait(label: str, val) -> str:
     if val is None or (isinstance(val, float) and math.isnan(val)) or val == 0.0:
@@ -842,7 +842,7 @@ def _build_trait(label: str, val) -> str:
             f'<div class="trait-row">'
             f'<span class="trait-lbl">{label}</span>'
             f'<div class="trait-track"></div>'
-            f'<span class="trait-val" style="color:var(--dim)">—</span>'
+            f'<span class="trait-val" style="color:var(--dim)">â€”</span>'
             f'</div>'
         )
     try:
@@ -863,29 +863,29 @@ def _build_trait(label: str, val) -> str:
 _FM_DEFINITIONS = {
     1: ("FM-1: Athleticism Mirage",
         "Physical tools produce college dominance that disappears when the athletic advantage closes at NFL speed. "
-        "The mechanism was the athleticism itself — not skill, technique, or processing. "
+        "The mechanism was the athleticism itself â€” not skill, technique, or processing. "
         "When NFL athletes close the gap, there is nothing behind the burst or length to sustain production."),
     2: ("FM-2: Scheme Ghost",
-        "Production is scheme-dependent. The player requires a specific structural context — "
-        "a coverage family, alignment concept, or manufactured advantage — that may not exist at the NFL level. "
+        "Production is scheme-dependent. The player requires a specific structural context â€” "
+        "a coverage family, alignment concept, or manufactured advantage â€” that may not exist at the NFL level. "
         "The player is not bad; they are specifically good in a way that may not transfer."),
     3: ("FM-3: Processing Wall",
         "Processing speed or anticipatory recognition is insufficient to operate at NFL decision velocity. "
         "Physical tools execute correctly but the cognitive trigger arrives too late. "
-        "College production was enabled by athletic advantages that compressed the processing requirement — "
+        "College production was enabled by athletic advantages that compressed the processing requirement â€” "
         "those advantages close at NFL speed."),
     4: ("FM-4: Body Breakdown",
-        "Physical structure — joints, soft tissue, or availability — fails to sustain the mechanism that justified capital. "
+        "Physical structure â€” joints, soft tissue, or availability â€” fails to sustain the mechanism that justified capital. "
         "The mechanism was real. The body could not deliver it at NFL volume. "
         "FM-4 is mechanism-independent: even the best-built archetype can be destroyed by structural failure."),
     5: ("FM-5: Motivation Cliff",
         "Competitive drive degrades after draft capital is secured. Production was real pre-draft. "
-        "The engine that produced it was contingent on proving-ground context — "
+        "The engine that produced it was contingent on proving-ground context â€” "
         "combine preparation, draft positioning, external pressure. That context disappears post-signing."),
     6: ("FM-6: Role Mismatch",
         "The NFL deployment context does not match the mechanism that produced college value. "
         "The player is real. The production was real. The job they are asked to do at the NFL level "
-        "is not the job their mechanism can execute — scheme, alignment, or role requirements exceed the mechanism range."),
+        "is not the job their mechanism can execute â€” scheme, alignment, or role requirements exceed the mechanism range."),
 }
 
 
@@ -910,7 +910,7 @@ def _build_fm_section(fm_codes: set, fm_labels: list, prospect: dict | None = No
         key = frozenset(fm_codes)
         compound = _COMPOUND_SEVERITY.get(
             key,
-            f"Compound FM-{min(fm_codes)} + FM-{max(fm_codes)}: independent failure paths — "
+            f"Compound FM-{min(fm_codes)} + FM-{max(fm_codes)}: independent failure paths â€” "
             f"evaluate each mechanism separately. Either alone is a capital risk pattern."
         )
         severity_html = f'<div class="fm-severity">{_e(compound)}</div>'
@@ -939,11 +939,11 @@ def _build_fm_section(fm_codes: set, fm_labels: list, prospect: dict | None = No
                                         f"the physical gap, there is no confirmed secondary win mechanism to fall back on.")
                     else:
                         failure_note = (f"Athletic grade {av:.1f} is above average but not dominant. "
-                                        f"At NFL speed the advantage compresses — production depends on technique holding.")
+                                        f"At NFL speed the advantage compresses â€” production depends on technique holding.")
                 elif code == 2 and sch is not None:
                     sv = float(sch)
                     if sv < 6.0:
-                        failure_note = (f"Scheme Versatility grades {sv:.1f} — below viable threshold. "
+                        failure_note = (f"Scheme Versatility grades {sv:.1f} â€” below viable threshold. "
                                         f"Landing spot is the entire evaluation. A mismatched scheme deployment ends this profile.")
                     else:
                         failure_note = (f"Scheme Versatility grades {sv:.1f}. Acceptable range, but FM-2 risk is structural: "
@@ -951,26 +951,26 @@ def _build_fm_section(fm_codes: set, fm_labels: list, prospect: dict | None = No
                 elif code == 3 and proc is not None:
                     pv = float(proc)
                     if pv < 6.5:
-                        failure_note = (f"Processing grades {pv:.1f} — this is a hard FM-3 signal. "
+                        failure_note = (f"Processing grades {pv:.1f} â€” this is a hard FM-3 signal. "
                                         f"Cognitive trigger speed is below NFL threshold at {pos}. "
                                         f"Physical tools will not compensate when decision windows compress.")
                     else:
                         failure_note = (f"Processing grades {pv:.1f}. Below elite threshold for {pos}. "
-                                        f"NFL pre-snap complexity will pressure this ceiling in Year 1–2.")
+                                        f"NFL pre-snap complexity will pressure this ceiling in Year 1â€“2.")
                 elif code == 4 and inj is not None:
                     iv = float(inj)
                     if iv < 6.0:
-                        failure_note = (f"Durability grades {iv:.1f} — structural flag present. "
+                        failure_note = (f"Durability grades {iv:.1f} â€” structural flag present. "
                                         f"Medical scrutiny required before capital commitment. FM-4 at this level has a high activation rate.")
                     else:
                         failure_note = (f"Durability grades {iv:.1f}. No hard structural flag in trait data, "
-                                        f"but FM-4 activates independent of pre-draft indicators — availability history must be reviewed.")
+                                        f"but FM-4 activates independent of pre-draft indicators â€” availability history must be reviewed.")
                 elif code == 5 and char is not None:
                     cv = float(char)
                     if cv < 6.0:
-                        failure_note = (f"Character grades {cv:.1f} — below threshold. "
+                        failure_note = (f"Character grades {cv:.1f} â€” below threshold. "
                                         f"Competitive drive contingency is a live risk at this level. "
-                                        f"FM-5 probability is elevated; Year 2–3 production is the real evaluation.")
+                                        f"FM-5 probability is elevated; Year 2â€“3 production is the real evaluation.")
                     else:
                         failure_note = (f"Character grades {cv:.1f}. Acceptable pre-draft signal, "
                                         f"but FM-5 is behavioral and does not fully surface in scouting data. "
@@ -1021,13 +1021,13 @@ def _build_divergence_panel(div_delta, narrative: str | None) -> str:
         delta_cls  = "high"
         delta_str  = f"+{dd}"
         chip_cls   = "high"
-        chip_label = "▲ Above Consensus"
+        chip_label = "â–² Above Consensus"
     else:
         panel_cls  = "low"
         delta_cls  = "low"
         delta_str  = str(dd)
         chip_cls   = "low"
-        chip_label = "▼ Below Consensus"
+        chip_label = "â–¼ Below Consensus"
 
     rationale_html = ""
     if narrative:
@@ -1036,7 +1036,7 @@ def _build_divergence_panel(div_delta, narrative: str | None) -> str:
         # Synthesize rationale from direction and magnitude when DB field is null
         if dd > 0:
             if dd >= 15:
-                synth = (f"APEX rates this prospect {dd} ranks above consensus — a major divergence. "
+                synth = (f"APEX rates this prospect {dd} ranks above consensus â€” a major divergence. "
                          f"APEX is weighting positional value and mechanism strength more heavily than the market. "
                          f"Consensus may be undervaluing the archetype or over-discounting a correctable weakness. "
                          f"The divergence is worth investigating before the board locks.")
@@ -1047,12 +1047,12 @@ def _build_divergence_panel(div_delta, narrative: str | None) -> str:
         else:
             adelta = abs(dd)
             if adelta >= 15:
-                synth = (f"APEX rates this prospect {adelta} ranks below consensus — a major caution signal. "
+                synth = (f"APEX rates this prospect {adelta} ranks below consensus â€” a major caution signal. "
                          f"APEX has identified a mechanism risk, scheme dependency, or FM profile "
                          f"that the market has not priced in. This divergence warrants direct scrutiny before draft weekend.")
             else:
                 synth = (f"APEX rates this prospect {adelta} ranks below consensus. "
-                         f"The gap reflects APEX discounting a component of the market grade — "
+                         f"The gap reflects APEX discounting a component of the market grade â€” "
                          f"likely a FM risk, scheme fit concern, or positional value adjustment. "
                          f"Review the FM section above for the specific mechanism.")
         rationale_html = f'<div class="div-rationale">{_e(synth)}</div>'
@@ -1074,10 +1074,10 @@ def _build_comps_html(comps: list, archetype_raw: str, rate) -> str:
         return ""
 
     OC = {"HIT": "hit", "PARTIAL": "partial", "MISS": "miss"}
-    IC = {"HIT": "✓", "PARTIAL": "⚠", "MISS": "✗"}
+    IC = {"HIT": "âœ“", "PARTIAL": "âš ", "MISS": "âœ—"}
     LB = {"HIT": "Archetype Ceiling", "PARTIAL": "FM Risk Comp", "MISS": "Miss Pattern"}
 
-    # Translation rate % intentionally suppressed — small sample sizes (N of M)
+    # Translation rate % intentionally suppressed â€” small sample sizes (N of M)
     # make the percentage statistically invalid and misleading to evaluators.
 
     hit_count = 0
@@ -1128,7 +1128,7 @@ def _build_comps_html(comps: list, archetype_raw: str, rate) -> str:
 
 def _build_fm_ref_html(fm_ref_comps: list, fm_labels: list | None = None, pos: str = "") -> str:
     if not fm_ref_comps:
-        # No same-position historical bust comps in DB — explain rather than show wrong-position data
+        # No same-position historical bust comps in DB â€” explain rather than show wrong-position data
         fm_str = ", ".join(fm_labels) if fm_labels else "this failure mode"
         pos_str = f" at {pos}" if pos else ""
         return (
@@ -1151,7 +1151,7 @@ def _build_fm_ref_html(fm_ref_comps: list, fm_labels: list | None = None, pos: s
         cls = OC.get(oc, "miss")
         fm_str = c.get("fm_code", "")
         pos_str = c.get("position_group", "")
-        pos_fm = f"{_e(pos_str)} · <span>{_e(fm_str)}</span>" if fm_str else _e(pos_str)
+        pos_fm = f"{_e(pos_str)} Â· <span>{_e(fm_str)}</span>" if fm_str else _e(pos_str)
         cards += (
             f'<div class="fm-ref-card {cls}">'
             f'<div>'
@@ -1187,7 +1187,7 @@ def _build_draft_day_take(
     Produce a deterministic one-sentence draft-room take.
     Returns None if essential data is missing.
     """
-    if not tier or tier == "—":
+    if not tier or tier == "â€”":
         return None
 
     _TIER_WORD = {
@@ -1208,9 +1208,9 @@ def _build_draft_day_take(
             elif dd >= 5:
                 div_phrase = " with positive APEX signal"
             elif dd <= -10:
-                div_phrase = " — market ranks him higher than APEX"
+                div_phrase = " â€” market ranks him higher than APEX"
             elif dd <= -5:
-                div_phrase = " — mild APEX discount"
+                div_phrase = " â€” mild APEX discount"
     except (TypeError, ValueError):
         pass
 
@@ -1252,7 +1252,7 @@ def _build_scout_pad(d: dict, fm_codes: set, fm_labels: list, tag_list: list) ->
     """
     apex_comp   = d.get("apex_composite")
     tier        = (d.get("apex_tier") or "").strip().upper()
-    capital     = d.get("capital_base") or d.get("capital_adjusted") or "—"
+    capital     = d.get("capital_base") or d.get("capital_adjusted") or "â€”"
     conf_raw    = d.get("eval_confidence") or d.get("eval_confidence_tier") or ""
     archetype   = d.get("matched_archetype") or ""
     crank       = d.get("consensus_rank")
@@ -1270,11 +1270,11 @@ def _build_scout_pad(d: dict, fm_codes: set, fm_labels: list, tag_list: list) ->
             '</div>'
         )
 
-    # ── Derived ────────────────────────────────────────────────────────────────
+    # â”€â”€ Derived â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     if archetype and " " in archetype:
         arch_code_sp, arch_label_sp = archetype.split(" ", 1)
     else:
-        arch_code_sp, arch_label_sp = archetype or "—", ""
+        arch_code_sp, arch_label_sp = archetype or "â€”", ""
 
     _TIER_WORD = {
         "ELITE": "Elite", "DAY1": "Day 1", "DAY2": "Day 2",
@@ -1284,11 +1284,11 @@ def _build_scout_pad(d: dict, fm_codes: set, fm_labels: list, tag_list: list) ->
         "ELITE": "#f0c040", "DAY1": "#7eb4e2", "DAY2": "#5ab87a",
         "DAY3": "#e8a84a", "UDFA-P": "#a57ee0", "UDFA": "rgba(255,255,255,0.35)",
     }
-    tier_word  = _TIER_WORD.get(tier, tier or "—")
+    tier_word  = _TIER_WORD.get(tier, tier or "â€”")
     tier_color = _TIER_COLOR.get(tier, "var(--text)")
 
     _CONF_DISPLAY = {"A": "Tier A", "B": "Tier B", "C": "Tier C"}
-    conf_display = _CONF_DISPLAY.get(str(conf_raw).strip(), str(conf_raw).strip() or "—")
+    conf_display = _CONF_DISPLAY.get(str(conf_raw).strip(), str(conf_raw).strip() or "â€”")
     _CONF_COLOR  = {
         "A": "var(--green)", "Tier A": "var(--green)",
         "B": "var(--amber)", "Tier B": "var(--amber)",
@@ -1308,9 +1308,9 @@ def _build_scout_pad(d: dict, fm_codes: set, fm_labels: list, tag_list: list) ->
     except (TypeError, ValueError):
         dd = None
 
-    apex_rank_str = "—"
+    apex_rank_str = "â€”"
     dd_color      = "var(--dim)"
-    dd_str        = "—"
+    dd_str        = "â€”"
     if con_rank_int is not None and dd is not None:
         apex_rank_val = con_rank_int - dd
         apex_rank_str = f"#{apex_rank_val}"
@@ -1349,8 +1349,8 @@ def _build_scout_pad(d: dict, fm_codes: set, fm_labels: list, tag_list: list) ->
             color = _fm_color(code) if code else "var(--dim)"
             # Show just code + first clause
             fv_display = str(fv).strip()
-            if " — " in fv_display:
-                fv_display = fv_display.split(" — ")[0].strip()
+            if " â€” " in fv_display:
+                fv_display = fv_display.split(" â€” ")[0].strip()
             fm_rows += (
                 f'<div class="sp-kv">'
                 f'<span class="sp-k">{_e(lbl)}</span>'
@@ -1361,15 +1361,15 @@ def _build_scout_pad(d: dict, fm_codes: set, fm_labels: list, tag_list: list) ->
         fm_rows = (
             '<div class="sp-kv">'
             '<span class="sp-k">FM Risk</span>'
-            '<span class="sp-v" style="color:var(--dim)">—</span>'
+            '<span class="sp-v" style="color:var(--dim)">â€”</span>'
             '</div>'
         )
 
     # Translation risk (first sentence only)
-    trans_display = "—"
+    trans_display = "â€”"
     if _v23_present(trans_risk):
         first_sent = str(trans_risk).split(".")[0].strip()
-        trans_display = first_sent[:120] + ("…" if len(first_sent) > 120 else "")
+        trans_display = first_sent[:120] + ("â€¦" if len(first_sent) > 120 else "")
 
     # Tag pills (reuse .htag classes from existing CSS)
     pills_html = ""
@@ -1395,10 +1395,10 @@ def _build_scout_pad(d: dict, fm_codes: set, fm_labels: list, tag_list: list) ->
             '</div>'
         )
 
-    # ── Assemble blocks ────────────────────────────────────────────────────────
+    # â”€â”€ Assemble blocks â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     # Block 1: Draft Call
-    arch_role_display = arch_label_sp or arch_code_sp or "—"
+    arch_role_display = arch_label_sp or arch_code_sp or "â€”"
     block_call = (
         '<div class="sp-block">'
         '<div class="sp-k" style="margin-bottom:6px">Draft Call</div>'
@@ -1438,7 +1438,7 @@ def _build_scout_pad(d: dict, fm_codes: set, fm_labels: list, tag_list: list) ->
         f'<span class="sp-v">{_e(apex_rank_str)}</span>'
         f'</div>'
         f'<div class="sp-kv">'
-        f'<span class="sp-k">Δ APEX</span>'
+        f'<span class="sp-k">Î” APEX</span>'
         f'<span class="sp-v" style="color:{dd_color}">{_e(dd_str)}</span>'
         f'</div>'
         f'{market_line_html}'
@@ -1470,7 +1470,7 @@ def _build_scout_pad(d: dict, fm_codes: set, fm_labels: list, tag_list: list) ->
     return block_call + block_market + block_risk + block_flags + take_html
 
 
-# ── Public API ────────────────────────────────────────────────────────────────
+# â”€â”€ Public API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 def build_decision_card(d: dict, fm_codes: set) -> str:
     """
@@ -1482,10 +1482,10 @@ def build_decision_card(d: dict, fm_codes: set) -> str:
         return ""
 
     tier         = (d.get("apex_tier") or "").strip().upper()
-    name         = d.get("display_name") or d.get("name") or "—"
+    name         = d.get("display_name") or d.get("name") or "â€”"
     pos          = d.get("position_group") or d.get("position") or ""
-    capital_base = d.get("capital_base") or d.get("capital_adjusted") or "—"
-    conf_raw     = d.get("eval_confidence") or d.get("confidence_band") or "—"
+    capital_base = d.get("capital_base") or d.get("capital_adjusted") or "â€”"
+    conf_raw     = d.get("eval_confidence") or d.get("confidence_band") or "â€”"
     gap_label    = (d.get("gap_label") or "").strip().upper()
     translation_risk = d.get("translation_risk")
 
@@ -1495,37 +1495,37 @@ def build_decision_card(d: dict, fm_codes: set) -> str:
     except (TypeError, ValueError):
         dd = None
 
-    # ── Zone 1: Call logic ────────────────────────────────────────────────────
+    # â”€â”€ Zone 1: Call logic â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     if tier == "ELITE":
-        call_text = "Priority target — commit capital above consensus"
+        call_text = "Priority target â€” commit capital above consensus"
     elif tier == "DAY1" and dd is not None and dd > 5:
-        call_text = "Strong buy — APEX above market, investigate the gap"
+        call_text = "Strong buy â€” APEX above market, investigate the gap"
     elif tier == "DAY1":
-        call_text = "Day 1 value — execute at consensus range"
+        call_text = "Day 1 value â€” execute at consensus range"
     elif tier == "DAY2" and dd is not None and dd < -5:
-        call_text = "Monitor — APEX below market, confirm mechanism holds"
+        call_text = "Monitor â€” APEX below market, confirm mechanism holds"
     elif tier == "DAY2":
         call_text = "Solid Day 2 target"
     elif tier == "DAY3":
-        call_text = "Day 3 value — draft capital efficient at this range"
+        call_text = "Day 3 value â€” draft capital efficient at this range"
     elif tier in ("UDFA-P", "UDFA"):
-        call_text = "Priority free agent — do not spend picks"
+        call_text = "Priority free agent â€” do not spend picks"
     else:
-        call_text = "Evaluate — insufficient APEX data"
+        call_text = "Evaluate â€” insufficient APEX data"
 
     # Market edge sentence (only when abs(dd) > 5)
     market_edge_html = ""
     if dd is not None and abs(dd) > 5:
         if dd > 5:
-            edge_sentence = f"APEX rates {abs(dd)} spots above consensus — model sees premium the market has not priced in."
+            edge_sentence = f"APEX rates {abs(dd)} spots above consensus â€” model sees premium the market has not priced in."
         else:
-            edge_sentence = f"APEX rates {abs(dd)} spots below consensus — model has flagged a risk not reflected in market grade."
+            edge_sentence = f"APEX rates {abs(dd)} spots below consensus â€” model has flagged a risk not reflected in market grade."
         market_edge_html = (
             f'<div class="dc-field-lbl">MARKET EDGE</div>'
             f'<div class="dc-field-val">{_e(edge_sentence)}</div>'
         )
 
-    # ── Zone 2: FM risk block ─────────────────────────────────────────────────
+    # â”€â”€ Zone 2: FM risk block â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     _FC = {1: "t1", 2: "t2", 3: "t3", 4: "t4", 5: "t5", 6: "t6"}
     fm_tags_html = ""
     if fm_codes:
@@ -1550,10 +1550,10 @@ def build_decision_card(d: dict, fm_codes: set) -> str:
             _last_space = _trunc.rfind(" ")
             if _last_space > 180:
                 _trunc = _trunc[:_last_space]
-            _first_sent = _trunc + "…"
+            _first_sent = _trunc + "â€¦"
         risk_note_html = f'<div class="dc-risk-note">{_e(_first_sent)}</div>'
 
-    # ── Zone 3: Confidence strip ──────────────────────────────────────────────
+    # â”€â”€ Zone 3: Confidence strip â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     _CONF_COLOR = {
         "HIGH": "var(--green)", "A": "var(--green)",
         "MEDIUM": "var(--amber)", "B": "var(--amber)",
@@ -1561,7 +1561,7 @@ def build_decision_card(d: dict, fm_codes: set) -> str:
     }
     conf_key  = str(conf_raw).strip().upper()
     conf_color = _CONF_COLOR.get(conf_key, "var(--dim)")
-    conf_disp  = _e(conf_raw) if _v23_present(conf_raw) else "—"
+    conf_disp  = _e(conf_raw) if _v23_present(conf_raw) else "â€”"
 
     _GAP_COLOR = {
         "CLEAN": "var(--green)", "SOLID": "var(--cold)",
@@ -1572,7 +1572,7 @@ def build_decision_card(d: dict, fm_codes: set) -> str:
         "TWEENER": "Tweener", "COMPRESSION": "Elite Tweener", "NO_FIT": "No Dominant Fit",
     }
     gap_color = _GAP_COLOR.get(gap_label, "var(--dim)")
-    gap_disp  = _GAP_DISP.get(gap_label, gap_label.title() if gap_label else "—")
+    gap_disp  = _GAP_DISP.get(gap_label, gap_label.title() if gap_label else "â€”")
 
     score_disp = _safe_float(apex_comp)
 
@@ -1581,7 +1581,7 @@ def build_decision_card(d: dict, fm_codes: set) -> str:
     return (
         '<div class="decision-card">'
         '<div class="dc-zones">'
-        # Zone 1 — Call block
+        # Zone 1 â€” Call block
         '<div>'
         f'<div style="margin-bottom:10px;">'
         f'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;font-weight:700;color:var(--text);">{_e(name)}</span>'
@@ -1593,21 +1593,21 @@ def build_decision_card(d: dict, fm_codes: set) -> str:
         f'<div class="dc-field-val">{_e(capital_base)}</div>'
         f'{market_edge_html}'
         '</div>'
-        # Zone 2 — Risk block
+        # Zone 2 â€” Risk block
         '<div>'
         '<div class="dc-risk-hdr">INVALIDATION</div>'
         f'{fm_tags_html}'
         f'{risk_note_html}'
         '</div>'
         '</div>'
-        # Zone 3 — Confidence strip
+        # Zone 3 â€” Confidence strip
         '<div class="dc-strip">'
         f'<span><span class="dc-strip-lbl">EVAL CONFIDENCE</span>'
         f'<span class="dc-strip-val" style="color:{conf_color}">{conf_disp}</span></span>'
-        '<span class="dc-sep">·</span>'
+        '<span class="dc-sep">Â·</span>'
         f'<span><span class="dc-strip-lbl">ARCHETYPE FIT</span>'
         f'<span class="dc-strip-val" style="color:{gap_color}">{_e(gap_disp)}</span></span>'
-        '<span class="dc-sep">·</span>'
+        '<span class="dc-sep">Â·</span>'
         f'<span><span class="dc-strip-lbl">APEX SCORE</span>'
         f'<span class="dc-strip-val" style="color:var(--amber)">{_e(score_disp)}</span></span>'
         '</div>'
@@ -1617,592 +1617,609 @@ def build_decision_card(d: dict, fm_codes: set) -> str:
 
 def build_detail_html(d: dict, comps: list, rate, fm_ref_comps: list | None = None) -> str:
     """
-    Build a complete self-contained HTML string for the DraftOS prospect detail drawer.
-    Renders as a two-column layout: sticky left rail + scrollable right content.
+        Build a complete self-contained HTML string for the DraftOS prospect detail drawer.
+        Renders as a two-column layout: sticky left rail + scrollable right content.
 
-    Args:
-        d:             Prospect detail dict (same shape as _build_detail_html in app.py).
-        comps:         List of historical comp dicts from get_historical_comps().
-        rate:          Archetype translation rate dict from get_archetype_translation_rate(), or None.
-        fm_ref_comps:  Optional list of FM reference comp dicts from get_fm_reference_comps().
+        Args:
+            d:             Prospect detail dict (same shape as _build_detail_html in app.py).
+            comps:         List of historical comp dicts from get_historical_comps().
+            rate:          Archetype translation rate dict from get_archetype_translation_rate(), or None.
+            fm_ref_comps:  Optional list of FM reference comp dicts from get_fm_reference_comps().
 
-    Returns:
-        Complete <!DOCTYPE html> string ready to pass to components.html().
-    """
-    # ── Unpack fields ────────────────────────────────────────────────────────
-    pos             = d.get("position_group") or "?"
-    name            = d.get("display_name") or "Unknown"
-    school          = d.get("school_canonical") or "—"
-    tier            = (d.get("apex_tier") or "").strip().upper()
-    crank           = d.get("consensus_rank")
-    conf_raw        = d.get("confidence_band") or d.get("eval_confidence") or "—"
-    ras_raw         = d.get("ras_score") or d.get("ras_total")
-    raw_score       = d.get("raw_score")
-    apex_comp       = d.get("apex_composite")
-    pvc             = d.get("pvc")
-    pos_rank        = d.get("position_rank")
-    archetype_raw   = d.get("matched_archetype") or d.get("apex_archetype") or ""
-    gap_label       = (d.get("gap_label") or "").strip().upper()
-    fit_score_val   = d.get("archetype_gap")
-    fm_primary      = d.get("failure_mode_primary")
-    fm_secondary    = d.get("failure_mode_secondary")
-    signature_play  = d.get("signature_play")
-    strengths_raw   = d.get("strengths")
-    red_flags_raw   = d.get("red_flags")
+        Returns:
+            Complete <!DOCTYPE html> string ready to pass to components.html().
+        """
+        # â”€â”€ Unpack fields â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    pos              = d.get("position_group") or "?"
+    name             = d.get("display_name") or "Unknown"
+    school           = d.get("school_canonical") or "â€”"
+    tier             = (d.get("apex_tier") or "").strip().upper()
+    crank            = d.get("consensus_rank")
+    conf_raw         = d.get("confidence_band") or d.get("eval_confidence") or "â€”"
+    ras_raw          = d.get("ras_score") or d.get("ras_total")
+    raw_score        = d.get("raw_score")
+    apex_comp        = d.get("apex_composite")
+    pvc              = d.get("pvc")
+    pos_rank         = d.get("position_rank")
+    pos_rank_label   = d.get("position_rank_label")  # NEW: from get_apex_detail
+    archetype_raw    = d.get("matched_archetype") or d.get("apex_archetype") or ""
+    gap_label        = (d.get("gap_label") or "").strip().upper()
+    fit_score_val    = d.get("archetype_gap")
+    fm_primary       = d.get("failure_mode_primary")
+    fm_secondary     = d.get("failure_mode_secondary")
+    signature_play   = d.get("signature_play")
+    strengths_raw    = d.get("strengths")
+    red_flags_raw    = d.get("red_flags")
     translation_risk = d.get("translation_risk")
-    capital_base    = d.get("capital_base") or d.get("capital_adjusted") or "—"
-    capital_note    = d.get("capital_note") or ""
-    snapshot_date   = d.get("scored_at") or d.get("snapshot_date") or ""
-    div_delta       = d.get("divergence_delta") or d.get("auto_apex_delta")
-    div_narrative   = d.get("divergence_narrative")
-    prospect_id     = d.get("prospect_id") or d.get("consensus_rank") or "—"
-    tags_raw        = d.get("tags") or d.get("tag_names") or ""
+    capital_base     = d.get("capital_base") or d.get("capital_adjusted") or "â€”"
+    capital_note     = d.get("capital_note") or ""
+    snapshot_date    = d.get("scored_at") or d.get("snapshot_date") or ""
+    div_delta        = d.get("divergence_delta") or d.get("auto_apex_delta")
+    div_narrative    = d.get("divergence_narrative")
+    prospect_id      = d.get("prospect_id") or d.get("consensus_rank") or "â€”"
+    tags_raw         = d.get("tags") or d.get("tag_names") or ""
 
-    # ── Derived values ───────────────────────────────────────────────────────
-    import pandas as pd
+        # â”€â”€ Header fields â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    if pos_rank_label:
+        pos_chip_text = pos_rank_label          # e.g. "LB #1"
+    else:
+        pos_chip_text = pos                      # fall back to just "LB"
 
-    rank_str = f"#{int(crank)}" if crank is not None and _safe_float(str(crank)) != "—" else "NR"
-    try:
-        rank_num = int(float(crank)) if crank is not None else 0
-    except (TypeError, ValueError):
-        rank_num = 0
+    meta_chips = []
+    if crank:
+        meta_chips.append(
+            f'<span class="meta-chip hi">Consensus #{_e(crank)}</span>'
+        )
+    if pos_rank_label:
+        meta_chips.append(
+            f'<span class="meta-chip">({_e(pos_rank_label)})</span>'
+        )
+    
+        # â”€â”€ Derived values â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        import pandas as pd
 
-    ras_str = _safe_float(ras_raw, ".2f") if ras_raw is not None else None
-    raw_int,  raw_dec  = _split_score(raw_score)
-    apex_int, apex_dec = _split_score(apex_comp)
-
-    is_unified = False
-    if pvc is not None:
+        rank_str = f"#{int(crank)}" if crank is not None and _safe_float(str(crank)) != "â€”" else "NR"
         try:
-            is_unified = abs(float(pvc) - 1.0) < 0.005
+            rank_num = int(float(crank)) if crank is not None else 0
+        except (TypeError, ValueError):
+            rank_num = 0
+
+        ras_str = _safe_float(ras_raw, ".2f") if ras_raw is not None else None
+        raw_int,  raw_dec  = _split_score(raw_score)
+        apex_int, apex_dec = _split_score(apex_comp)
+
+        is_unified = False
+        if pvc is not None:
+            try:
+                is_unified = abs(float(pvc) - 1.0) < 0.005
+            except (TypeError, ValueError):
+                pass
+
+        pvc_str = _safe_float(pvc, ".2f") if pvc else "â€”"
+
+        name_parts = name.split(" ", 1)
+        name_html  = _e(name_parts[0])
+        if len(name_parts) > 1:
+            name_html += "<br>" + _e(name_parts[1])
+
+        if archetype_raw and " " in archetype_raw:
+            arch_code, arch_label = archetype_raw.split(" ", 1)
+        else:
+            arch_code, arch_label = archetype_raw or "â€”", ""
+
+        # Auto-lookup archetype definition from library (caller can override via apex_archetype_def)
+        apex_archetype_def = d.get("apex_archetype_def") or _ARCHETYPE_DEFS.get(arch_code)
+        arch_def_html = (
+            f'<div class="archetype-def">{_e(apex_archetype_def)}</div>'
+            if apex_archetype_def else ""
+        )
+
+        ghost_rank = f"#{rank_num}" if rank_num > 0 else ""
+
+        TIER_MAP = {
+            "ELITE":  ("elite", "â˜… Elite",  "Top Tier"),
+            "DAY1":   ("day1",  "Day 1",    "Round 1"),
+            "DAY2":   ("day2",  "Day 2",    "Rounds 2â€“3"),
+            "DAY3":   ("day3",  "Day 3",    "Rounds 4â€“7"),
+            "UDFA-P": ("udfa",  "UDFA",     "Priority Free Agent"),
+            "UDFA":   ("udfa",  "UDFA",     "Free Agent"),
+        }
+        tier_cls, tier_text, tier_sub = TIER_MAP.get(tier, ("udfa", tier or "â€”", ""))
+
+        conf_color_cls = {
+            "Tier A": "green", "A": "green", "High": "green",
+            "Tier B": "amber", "B": "amber", "Medium": "amber",
+            "Tier C": "red",   "C": "red",   "Low": "red",
+        }.get(conf_raw, "dim")
+
+        conf_display = {
+            "A": "Tier A", "B": "Tier B", "C": "Tier C",
+        }.get(conf_raw, conf_raw)
+
+        # Divergence display
+        div_text  = "N/A"
+        div_cls   = "dim"
+        chip_cls  = "aligned"
+        try:
+            if div_delta is not None:
+                dd = int(float(div_delta))
+                if abs(dd) < 3:
+                    div_text, div_cls = f"Aligned ({dd:+d})" if dd != 0 else "Aligned (0)", "dim"
+                elif dd > 0:
+                    div_text, div_cls = f"APEX +{dd}", "blue"
+                else:
+                    div_text, div_cls = f"APEX {dd}", "red"
         except (TypeError, ValueError):
             pass
 
-    pvc_str = _safe_float(pvc, ".2f") if pvc else "—"
+        # Position rank chip
+        pos_rank_chip = ""
+        if pos_rank:
+            try:
+                if int(float(pos_rank)) != int(float(crank)):
+                    pos_rank_chip = (
+                        f'<span class="meta-chip hi">#{int(float(pos_rank))} at {_e(pos)}</span>'
+                    )
+            except (TypeError, ValueError):
+                pass
 
-    name_parts = name.split(" ", 1)
-    name_html  = _e(name_parts[0])
-    if len(name_parts) > 1:
-        name_html += "<br>" + _e(name_parts[1])
+        # FM codes
+        fm_codes: set[int] = set()
+        fm_labels: list[str] = []
+        for fv in [fm_primary, fm_secondary]:
+            if _fm_is_present(fv):
+                m = re.search(r"FM-(\d+)", str(fv))
+                if m:
+                    fm_codes.add(int(m.group(1)))
+                fm_labels.append(str(fv).strip())
 
-    if archetype_raw and " " in archetype_raw:
-        arch_code, arch_label = archetype_raw.split(" ", 1)
-    else:
-        arch_code, arch_label = archetype_raw or "—", ""
-
-    # Auto-lookup archetype definition from library (caller can override via apex_archetype_def)
-    apex_archetype_def = d.get("apex_archetype_def") or _ARCHETYPE_DEFS.get(arch_code)
-    arch_def_html = (
-        f'<div class="archetype-def">{_e(apex_archetype_def)}</div>'
-        if apex_archetype_def else ""
-    )
-
-    ghost_rank = f"#{rank_num}" if rank_num > 0 else ""
-
-    TIER_MAP = {
-        "ELITE":  ("elite", "★ Elite",  "Top Tier"),
-        "DAY1":   ("day1",  "Day 1",    "Round 1"),
-        "DAY2":   ("day2",  "Day 2",    "Rounds 2–3"),
-        "DAY3":   ("day3",  "Day 3",    "Rounds 4–7"),
-        "UDFA-P": ("udfa",  "UDFA",     "Priority Free Agent"),
-        "UDFA":   ("udfa",  "UDFA",     "Free Agent"),
-    }
-    tier_cls, tier_text, tier_sub = TIER_MAP.get(tier, ("udfa", tier or "—", ""))
-
-    conf_color_cls = {
-        "Tier A": "green", "A": "green", "High": "green",
-        "Tier B": "amber", "B": "amber", "Medium": "amber",
-        "Tier C": "red",   "C": "red",   "Low": "red",
-    }.get(conf_raw, "dim")
-
-    conf_display = {
-        "A": "Tier A", "B": "Tier B", "C": "Tier C",
-    }.get(conf_raw, conf_raw)
-
-    # Divergence display
-    div_text  = "N/A"
-    div_cls   = "dim"
-    chip_cls  = "aligned"
-    try:
-        if div_delta is not None:
-            dd = int(float(div_delta))
-            if abs(dd) < 3:
-                div_text, div_cls = f"Aligned ({dd:+d})" if dd != 0 else "Aligned (0)", "dim"
-            elif dd > 0:
-                div_text, div_cls = f"APEX +{dd}", "blue"
-            else:
-                div_text, div_cls = f"APEX {dd}", "red"
-    except (TypeError, ValueError):
-        pass
-
-    # Position rank chip
-    pos_rank_chip = ""
-    if pos_rank:
+        # Watermark date
         try:
-            if int(float(pos_rank)) != int(float(crank)):
-                pos_rank_chip = (
-                    f'<span class="meta-chip hi">#{int(float(pos_rank))} at {_e(pos)}</span>'
+            wm_date = datetime.strptime(str(snapshot_date)[:10], "%Y-%m-%d").strftime("%b %d, %Y")
+        except (ValueError, TypeError):
+            wm_date = datetime.now().strftime("%b %d, %Y")
+
+        # Tags
+        _TAG_CLASSES = {
+            "CRUSH":           "crush",
+            "Two-Way Premium": "tw",
+            "Walk-On Flag":    "walkOn",
+            "Schwesinger Rule": "schwes",
+            "Schwesinger Full": "schwes",
+        }
+        _INTERNAL = frozenset({"apex_rank_2026"})
+        if tags_raw:
+            sep = "," if "," in str(tags_raw) else "|"
+            tag_list = [t.strip() for t in str(tags_raw).split(sep) if t.strip() and t.strip() not in _INTERNAL]
+        else:
+            tag_list = []
+
+        # â”€â”€ Build HTML fragments â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+        # Score block
+        if is_unified:
+            score_block = (
+                '<div class="score-grid unified">'
+                '<div class="score-item">'
+                '<div class="score-lbl">Player Grade Â· Draft Value</div>'
+                f'<div class="score-val apex">{raw_int}<span class="score-decimal">.{raw_dec}</span></div>'
+                '</div></div>'
+            )
+        else:
+            score_block = (
+                '<div class="score-grid">'
+                '<div class="score-item">'
+                '<div class="score-lbl">Player Grade</div>'
+                f'<div class="score-val">{raw_int}<span class="score-decimal">.{raw_dec}</span></div>'
+                '</div>'
+                '<div class="score-item">'
+                '<div class="score-lbl">APEX Score</div>'
+                f'<div class="score-val apex">{apex_int}<span class="score-decimal">.{apex_dec}</span></div>'
+                '</div></div>'
+            )
+
+        # RAS block
+        ras_html = ""
+        if ras_str and ras_str != "â€”":
+            ras_html = (
+                f'<div class="ras-block-right">'
+                f'<div class="ras-lbl">RAS Score</div>'
+                f'<div class="ras-val">{_e(ras_str)}</div>'
+                f'</div>'
+            )
+
+        # Trait bars
+        football_html = "".join([
+            _build_trait("Processing",  d.get("v_processing")),
+            _build_trait("Athleticism", d.get("v_athleticism")),
+            _build_trait("Comp. Tough", d.get("v_comp_tough")),
+            _build_trait("Durability",  d.get("v_injury")),
+        ])
+        system_html = "".join([
+            _build_trait("Scheme Vers.", d.get("v_scheme_vers")),
+            _build_trait("Production",   d.get("v_production")),
+            _build_trait("Dev. Traj.",   d.get("v_dev_traj")),
+            _build_trait("Character",    d.get("v_character")),
+        ])
+
+        # Archetype fit row
+        fit_row_html = ""
+        if gap_label and fit_score_val is not None:
+            GAP_CLS = {
+                "CLEAN": "clean", "SOLID": "solid",
+                "TWEENER": "tweak", "COMPRESSION": "solid", "NO_FIT": "nofit"
+            }
+            GAP_DISPLAY = {
+                "CLEAN": "Clean Fit", "SOLID": "Solid Fit",
+                "TWEENER": "Tweener", "COMPRESSION": "Elite Tweener", "NO_FIT": "No Dominant Fit"
+            }
+            gap_cls  = GAP_CLS.get(gap_label, "solid")
+            gap_disp = GAP_DISPLAY.get(gap_label, gap_label.title())
+            try:
+                fs = float(fit_score_val)
+                fit_pct = min(max(fs / 20.0 * 100, 0), 100)
+            except (TypeError, ValueError):
+                fs = 0.0
+                fit_pct = 0.0
+            fit_row_html = (
+                f'<div class="fit-row">'
+                f'<div class="fit-header">'
+                f'<span class="fit-lbl">Archetype Fit</span>'
+                f'<span class="fit-score {gap_cls}">{_e(gap_disp)} Â· {_safe_float(fit_score_val, ".1f")} pts</span>'
+                f'</div>'
+                f'<div class="fit-track"><div class="fit-fill {gap_cls}" style="width:{fit_pct:.1f}%"></div></div>'
+                f'<div class="fit-breakdown">Clean Fit &gt;15 pts Â· <span>Solid Fit 8â€“15 pts</span> Â· Tweener &lt;8 pts</div>'
+                f'</div>'
+            )
+
+        # Tags
+        tags_html = ""
+        if tag_list:
+            pills = ""
+            for t in tag_list:
+                cls = _TAG_CLASSES.get(t, "neutral")
+                pills += f'<span class="htag {cls}">{_e(t)}</span>'
+            tags_html = f'<div class="tags-row">{pills}</div>'
+
+        # Decision card â€” top of right content pane (APEX-scored prospects only)
+        decision_card_html = build_decision_card(d, fm_codes)
+
+        # FM section
+        fm_html = _build_fm_section(fm_codes, fm_labels, prospect=d)
+
+        # Divergence panel (only when abs(delta) >= 3)
+        divergence_panel_html = ""
+        try:
+            if div_delta is not None and abs(int(float(div_delta))) >= 3:
+                divergence_panel_html = (
+                    '<div class="section-gap"></div>'
+                    '<div class="sec-divider cold">APEX Divergence</div>'
+                    + _build_divergence_panel(div_delta, div_narrative)
                 )
         except (TypeError, ValueError):
             pass
 
-    # FM codes
-    fm_codes: set[int] = set()
-    fm_labels: list[str] = []
-    for fv in [fm_primary, fm_secondary]:
-        if _fm_is_present(fv):
-            m = re.search(r"FM-(\d+)", str(fv))
-            if m:
-                fm_codes.add(int(m.group(1)))
-            fm_labels.append(str(fv).strip())
-
-    # Watermark date
-    try:
-        wm_date = datetime.strptime(str(snapshot_date)[:10], "%Y-%m-%d").strftime("%b %d, %Y")
-    except (ValueError, TypeError):
-        wm_date = datetime.now().strftime("%b %d, %Y")
-
-    # Tags
-    _TAG_CLASSES = {
-        "CRUSH":           "crush",
-        "Two-Way Premium": "tw",
-        "Walk-On Flag":    "walkOn",
-        "Schwesinger Rule": "schwes",
-        "Schwesinger Full": "schwes",
-    }
-    _INTERNAL = frozenset({"apex_rank_2026"})
-    if tags_raw:
-        sep = "," if "," in str(tags_raw) else "|"
-        tag_list = [t.strip() for t in str(tags_raw).split(sep) if t.strip() and t.strip() not in _INTERNAL]
-    else:
-        tag_list = []
-
-    # ── Build HTML fragments ─────────────────────────────────────────────────
-
-    # Score block
-    if is_unified:
-        score_block = (
-            '<div class="score-grid unified">'
-            '<div class="score-item">'
-            '<div class="score-lbl">Player Grade · Draft Value</div>'
-            f'<div class="score-val apex">{raw_int}<span class="score-decimal">.{raw_dec}</span></div>'
-            '</div></div>'
-        )
-    else:
-        score_block = (
-            '<div class="score-grid">'
-            '<div class="score-item">'
-            '<div class="score-lbl">Player Grade</div>'
-            f'<div class="score-val">{raw_int}<span class="score-decimal">.{raw_dec}</span></div>'
-            '</div>'
-            '<div class="score-item">'
-            '<div class="score-lbl">APEX Score</div>'
-            f'<div class="score-val apex">{apex_int}<span class="score-decimal">.{apex_dec}</span></div>'
-            '</div></div>'
-        )
-
-    # RAS block
-    ras_html = ""
-    if ras_str and ras_str != "—":
-        ras_html = (
-            f'<div class="ras-block-right">'
-            f'<div class="ras-lbl">RAS Score</div>'
-            f'<div class="ras-val">{_e(ras_str)}</div>'
-            f'</div>'
-        )
-
-    # Trait bars
-    football_html = "".join([
-        _build_trait("Processing",  d.get("v_processing")),
-        _build_trait("Athleticism", d.get("v_athleticism")),
-        _build_trait("Comp. Tough", d.get("v_comp_tough")),
-        _build_trait("Durability",  d.get("v_injury")),
-    ])
-    system_html = "".join([
-        _build_trait("Scheme Vers.", d.get("v_scheme_vers")),
-        _build_trait("Production",   d.get("v_production")),
-        _build_trait("Dev. Traj.",   d.get("v_dev_traj")),
-        _build_trait("Character",    d.get("v_character")),
-    ])
-
-    # Archetype fit row
-    fit_row_html = ""
-    if gap_label and fit_score_val is not None:
-        GAP_CLS = {
-            "CLEAN": "clean", "SOLID": "solid",
-            "TWEENER": "tweak", "COMPRESSION": "solid", "NO_FIT": "nofit"
-        }
-        GAP_DISPLAY = {
-            "CLEAN": "Clean Fit", "SOLID": "Solid Fit",
-            "TWEENER": "Tweener", "COMPRESSION": "Elite Tweener", "NO_FIT": "No Dominant Fit"
-        }
-        gap_cls  = GAP_CLS.get(gap_label, "solid")
-        gap_disp = GAP_DISPLAY.get(gap_label, gap_label.title())
-        try:
-            fs = float(fit_score_val)
-            fit_pct = min(max(fs / 20.0 * 100, 0), 100)
-        except (TypeError, ValueError):
-            fs = 0.0
-            fit_pct = 0.0
-        fit_row_html = (
-            f'<div class="fit-row">'
-            f'<div class="fit-header">'
-            f'<span class="fit-lbl">Archetype Fit</span>'
-            f'<span class="fit-score {gap_cls}">{_e(gap_disp)} · {_safe_float(fit_score_val, ".1f")} pts</span>'
-            f'</div>'
-            f'<div class="fit-track"><div class="fit-fill {gap_cls}" style="width:{fit_pct:.1f}%"></div></div>'
-            f'<div class="fit-breakdown">Clean Fit &gt;15 pts · <span>Solid Fit 8–15 pts</span> · Tweener &lt;8 pts</div>'
-            f'</div>'
-        )
-
-    # Tags
-    tags_html = ""
-    if tag_list:
-        pills = ""
-        for t in tag_list:
-            cls = _TAG_CLASSES.get(t, "neutral")
-            pills += f'<span class="htag {cls}">{_e(t)}</span>'
-        tags_html = f'<div class="tags-row">{pills}</div>'
-
-    # Decision card — top of right content pane (APEX-scored prospects only)
-    decision_card_html = build_decision_card(d, fm_codes)
-
-    # FM section
-    fm_html = _build_fm_section(fm_codes, fm_labels, prospect=d)
-
-    # Divergence panel (only when abs(delta) >= 3)
-    divergence_panel_html = ""
-    try:
-        if div_delta is not None and abs(int(float(div_delta))) >= 3:
-            divergence_panel_html = (
+        # Signature play
+        sig_html = ""
+        if _v23_present(signature_play):
+            sig_html = (
                 '<div class="section-gap"></div>'
-                '<div class="sec-divider cold">APEX Divergence</div>'
-                + _build_divergence_panel(div_delta, div_narrative)
+                '<div class="sec-divider">Signature Play</div>'
+                '<div class="sig-play">'
+                '<div class="sig-lbl"><span class="sig-dot"></span>Signature Play</div>'
+                f'<div class="sig-text">{_e(signature_play)}</div>'
+                '</div>'
             )
-    except (TypeError, ValueError):
-        pass
 
-    # Signature play
-    sig_html = ""
-    if _v23_present(signature_play):
-        sig_html = (
-            '<div class="section-gap"></div>'
-            '<div class="sec-divider">Signature Play</div>'
-            '<div class="sig-play">'
-            '<div class="sig-lbl"><span class="sig-dot"></span>Signature Play</div>'
-            f'<div class="sig-text">{_e(signature_play)}</div>'
-            '</div>'
+        # Strengths + Red Flags
+        str_items = _smart_split_bullets(strengths_raw)
+        rf_items  = _smart_split_bullets(red_flags_raw)
+
+        def _pitems(items, dc):
+            return "".join(
+                f'<div class="panel-item"><span class="pi-dot {dc}"></span>{_e(it)}</div>'
+                for it in items
+            )
+
+        two_col_html = ""
+        if str_items or rf_items:
+            sp = (
+                '<div class="panel">'
+                '<div class="panel-hdr g"><span class="ph-ind g"></span>Strengths</div>'
+                f'{_pitems(str_items, "g")}</div>'
+            ) if str_items else ""
+            rp = (
+                '<div class="panel">'
+                '<div class="panel-hdr r"><span class="ph-ind r"></span>Red Flags</div>'
+                f'{_pitems(rf_items, "r")}</div>'
+            ) if rf_items else ""
+            two_col_html = (
+                '<div class="section-gap"></div>'
+                '<div class="sec-divider">Strengths &amp; Red Flags</div>'
+                f'<div class="two-col">{sp}{rp}</div>'
+            )
+
+        # Translation risk
+        risk_html = ""
+        if _v23_present(translation_risk):
+            risk_html = (
+                '<div class="risk-banner">'
+                '<span class="risk-icon">!</span>'
+                f'<div class="risk-text">{_e(translation_risk)}</div>'
+                '</div>'
+            )
+
+        # Comps
+        comps_html = ""
+        if comps:
+            comps_html = (
+                '<div class="section-gap"></div>'
+                + _build_comps_html(comps, archetype_raw, rate)
+            )
+
+        # FM reference records â€” always render section when FM codes present
+        # (shows explanatory block if no same-position data rather than nothing)
+        fm_ref_html = ""
+        if fm_codes:
+            fm_ref_html = (
+                '<div class="section-gap"></div>'
+                + _build_fm_ref_html(fm_ref_comps or [], fm_labels, pos)
+            )
+
+        # Capital note
+        cap_note_html = f'<div class="capital-note">{_e(capital_note)}</div>' if capital_note else ""
+
+        # â”€â”€ Tab-specific fragments â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+        # TRAITS tab â€” positional baseline note
+        _POS_TRAIT_NOTES: dict[str, str] = {
+            "QB":   "Top weighted traits: Processing, Scheme Versatility.",
+            "CB":   "Top weighted traits: Athleticism, Competitive Toughness.",
+            "EDGE": "Top weighted traits: Athleticism, Competitive Toughness.",
+            "OT":   "Top weighted traits: Competitive Toughness, Durability.",
+            "S":    "Top weighted traits: Processing, Athleticism.",
+            "IDL":  "Top weighted traits: Competitive Toughness, Durability.",
+            "ILB":  "Top weighted traits: Processing, Athleticism.",
+            "OLB":  "Top weighted traits: Athleticism, Competitive Toughness.",
+            "WR":   "Top weighted traits: Athleticism, Production.",
+            "TE":   "Top weighted traits: Competitive Toughness, Scheme Versatility.",
+            "OG":   "Top weighted traits: Competitive Toughness, Durability.",
+            "C":    "Top weighted traits: Processing, Competitive Toughness.",
+            "RB":   "Top weighted traits: Production, Durability.",
+        }
+        _trait_note = _POS_TRAIT_NOTES.get(pos.upper(), "")
+        pos_traits_note_html = (
+            f'<div class="traits-note">{_e(_trait_note)}</div>'
+            if _trait_note else ""
         )
 
-    # Strengths + Red Flags
-    str_items = _smart_split_bullets(strengths_raw)
-    rf_items  = _smart_split_bullets(red_flags_raw)
+        # COMPS tab â€” merge comps + FM refs, or empty state
+        if comps_html or fm_ref_html:
+            comps_tab_html = comps_html + fm_ref_html
+        else:
+            comps_tab_html = '<div class="comps-empty">No historical comp data available for this archetype yet.</div>'
 
-    def _pitems(items, dc):
-        return "".join(
-            f'<div class="panel-item"><span class="pi-dot {dc}"></span>{_e(it)}</div>'
-            for it in items
+        # NOTES tab â€” Scout Pad utility panel
+        notes_tab_html = _build_scout_pad(d, fm_codes, fm_labels, tag_list)
+
+        # REPORT tab â€” capital + confidence + pos rank + snapshot
+        _CONF_REPORT_COLOR = {
+            "A": "var(--green)", "High": "var(--green)",
+            "B": "var(--amber)", "Medium": "var(--amber)",
+            "C": "var(--red)",   "Low": "var(--red)",
+        }
+        _report_conf_color = _CONF_REPORT_COLOR.get(str(conf_raw).strip(), "var(--dim)")
+        _pos_rank_label = f"#{int(float(pos_rank))} at {pos}" if pos_rank and _v23_present(pos_rank) else "â€”"
+        report_tab_html = (
+            f'<div class="report-block">'
+            f'<div class="report-lbl">Draft Capital</div>'
+            f'<div class="report-val">{_e(capital_base)}</div>'
+            f'{"<div class=\'report-sub\'>" + _e(capital_note) + "</div>" if capital_note else ""}'
+            f'</div>'
+            f'<div class="report-block">'
+            f'<div class="report-lbl">Eval Confidence</div>'
+            f'<div class="report-val" style="color:{_report_conf_color}">{_e(conf_display)}</div>'
+            f'</div>'
+            f'<div class="report-block">'
+            f'<div class="report-lbl">Position Rank</div>'
+            f'<div class="report-val">{_e(_pos_rank_label)}</div>'
+            f'</div>'
+            f'<div class="report-block">'
+            f'<div class="report-lbl">Snapshot Date</div>'
+            f'<div class="report-val">{_e(wm_date)}</div>'
+            f'</div>'
         )
 
-    two_col_html = ""
-    if str_items or rf_items:
-        sp = (
-            '<div class="panel">'
-            '<div class="panel-hdr g"><span class="ph-ind g"></span>Strengths</div>'
-            f'{_pitems(str_items, "g")}</div>'
-        ) if str_items else ""
-        rp = (
-            '<div class="panel">'
-            '<div class="panel-hdr r"><span class="ph-ind r"></span>Red Flags</div>'
-            f'{_pitems(rf_items, "r")}</div>'
-        ) if rf_items else ""
-        two_col_html = (
-            '<div class="section-gap"></div>'
-            '<div class="sec-divider">Strengths &amp; Red Flags</div>'
-            f'<div class="two-col">{sp}{rp}</div>'
+        # â”€â”€ Font URL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        gf_url = (
+            "https://fonts.googleapis.com/css2?family=Barlow+Condensed"
+            ":wght@300;400;500;600;700;800;900"
+            "&family=Barlow:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&display=swap"
         )
 
-    # Translation risk
-    risk_html = ""
-    if _v23_present(translation_risk):
-        risk_html = (
-            '<div class="risk-banner">'
-            '<span class="risk-icon">!</span>'
-            f'<div class="risk-text">{_e(translation_risk)}</div>'
-            '</div>'
-        )
+        # â”€â”€ Assemble â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        return f"""<!DOCTYPE html>
+    <html lang="en">
+    <head>
+    <meta charset="UTF-8">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="{gf_url}" rel="stylesheet">
+    <style>
+    {_CSS}
+    </style>
+    </head>
+    <body>
 
-    # Comps
-    comps_html = ""
-    if comps:
-        comps_html = (
-            '<div class="section-gap"></div>'
-            + _build_comps_html(comps, archetype_raw, rate)
-        )
+    <div class="drawer">
 
-    # FM reference records — always render section when FM codes present
-    # (shows explanatory block if no same-position data rather than nothing)
-    fm_ref_html = ""
-    if fm_codes:
-        fm_ref_html = (
-            '<div class="section-gap"></div>'
-            + _build_fm_ref_html(fm_ref_comps or [], fm_labels, pos)
-        )
+      <!-- â•â•â• LEFT RAIL â•â•â• -->
+      <div class="rail">
 
-    # Capital note
-    cap_note_html = f'<div class="capital-note">{_e(capital_note)}</div>' if capital_note else ""
+        <div class="pos-chip"><span class="pos-dot"></span>{_e(pos)}</div>
 
-    # ── Tab-specific fragments ────────────────────────────────────────────────
+        <div class="player-name">{name_html}</div>
+        <div class="name-slash"></div>
 
-    # TRAITS tab — positional baseline note
-    _POS_TRAIT_NOTES: dict[str, str] = {
-        "QB":   "Top weighted traits: Processing, Scheme Versatility.",
-        "CB":   "Top weighted traits: Athleticism, Competitive Toughness.",
-        "EDGE": "Top weighted traits: Athleticism, Competitive Toughness.",
-        "OT":   "Top weighted traits: Competitive Toughness, Durability.",
-        "S":    "Top weighted traits: Processing, Athleticism.",
-        "IDL":  "Top weighted traits: Competitive Toughness, Durability.",
-        "ILB":  "Top weighted traits: Processing, Athleticism.",
-        "OLB":  "Top weighted traits: Athleticism, Competitive Toughness.",
-        "WR":   "Top weighted traits: Athleticism, Production.",
-        "TE":   "Top weighted traits: Competitive Toughness, Scheme Versatility.",
-        "OG":   "Top weighted traits: Competitive Toughness, Durability.",
-        "C":    "Top weighted traits: Processing, Competitive Toughness.",
-        "RB":   "Top weighted traits: Production, Durability.",
-    }
-    _trait_note = _POS_TRAIT_NOTES.get(pos.upper(), "")
-    pos_traits_note_html = (
-        f'<div class="traits-note">{_e(_trait_note)}</div>'
-        if _trait_note else ""
-    )
-
-    # COMPS tab — merge comps + FM refs, or empty state
-    if comps_html or fm_ref_html:
-        comps_tab_html = comps_html + fm_ref_html
-    else:
-        comps_tab_html = '<div class="comps-empty">No historical comp data available for this archetype yet.</div>'
-
-    # NOTES tab — Scout Pad utility panel
-    notes_tab_html = _build_scout_pad(d, fm_codes, fm_labels, tag_list)
-
-    # REPORT tab — capital + confidence + pos rank + snapshot
-    _CONF_REPORT_COLOR = {
-        "A": "var(--green)", "High": "var(--green)",
-        "B": "var(--amber)", "Medium": "var(--amber)",
-        "C": "var(--red)",   "Low": "var(--red)",
-    }
-    _report_conf_color = _CONF_REPORT_COLOR.get(str(conf_raw).strip(), "var(--dim)")
-    _pos_rank_label = f"#{int(float(pos_rank))} at {pos}" if pos_rank and _v23_present(pos_rank) else "—"
-    report_tab_html = (
-        f'<div class="report-block">'
-        f'<div class="report-lbl">Draft Capital</div>'
-        f'<div class="report-val">{_e(capital_base)}</div>'
-        f'{"<div class=\'report-sub\'>" + _e(capital_note) + "</div>" if capital_note else ""}'
-        f'</div>'
-        f'<div class="report-block">'
-        f'<div class="report-lbl">Eval Confidence</div>'
-        f'<div class="report-val" style="color:{_report_conf_color}">{_e(conf_display)}</div>'
-        f'</div>'
-        f'<div class="report-block">'
-        f'<div class="report-lbl">Position Rank</div>'
-        f'<div class="report-val">{_e(_pos_rank_label)}</div>'
-        f'</div>'
-        f'<div class="report-block">'
-        f'<div class="report-lbl">Snapshot Date</div>'
-        f'<div class="report-val">{_e(wm_date)}</div>'
-        f'</div>'
-    )
-
-    # ── Font URL ─────────────────────────────────────────────────────────────
-    gf_url = (
-        "https://fonts.googleapis.com/css2?family=Barlow+Condensed"
-        ":wght@300;400;500;600;700;800;900"
-        "&family=Barlow:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&display=swap"
-    )
-
-    # ── Assemble ─────────────────────────────────────────────────────────────
-    return f"""<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="{gf_url}" rel="stylesheet">
-<style>
-{_CSS}
-</style>
-</head>
-<body>
-
-<div class="drawer">
-
-  <!-- ═══ LEFT RAIL ═══ -->
-  <div class="rail">
-
-    <div class="pos-chip"><span class="pos-dot"></span>{_e(pos)}</div>
-
-    <div class="player-name">{name_html}</div>
-    <div class="name-slash"></div>
-
-    <div class="meta-row">
-      <span class="meta-chip">{_e(school)}</span>
-      <span class="meta-chip">Consensus {rank_str}</span>
-      {pos_rank_chip}
-    </div>
-
-    <div class="apex-window">
-      {score_block}
-      <div class="tier-badge {tier_cls}">
-        <span class="tier-text {tier_cls}">{_e(tier_text)}</span>
-        <span class="tier-sub {tier_cls}">{_e(tier_sub)}</span>
-      </div>
-      <div class="formula-line">RPG {_safe_float(raw_score)} × PVC {pvc_str} ({_e(pos)}) = APEX {_safe_float(apex_comp)}</div>
-    </div>
-
-    <div class="traits-section">
-      <div class="section-header">Football Traits</div>
-      {football_html}
-    </div>
-
-    <div class="traits-section">
-      <div class="section-header">System Traits</div>
-      {system_html}
-    </div>
-
-    <div class="conf-row">
-      <div class="conf-item">
-        <div class="conf-lbl">Confidence</div>
-        <div class="conf-val {conf_color_cls}">{_e(conf_display)}</div>
-      </div>
-      <div class="conf-item">
-        <div class="conf-lbl">Divergence</div>
-        <div class="conf-val {div_cls}">{_e(div_text)}</div>
-      </div>
-    </div>
-
-    <div class="capital-block">
-      <div class="capital-lbl">Draft Capital</div>
-      <div class="capital-val">{_e(capital_base)}</div>
-      {cap_note_html}
-    </div>
-
-    <div class="watermark">
-      <span class="brand-logo">APEX OS</span>
-      <div class="watermark-meta">
-        {rank_str} · {_e(pos)} · {_e(school)}<br>
-        {_e(wm_date)}
-      </div>
-    </div>
-
-  </div>
-  <!-- end rail -->
-
-  <!-- ═══ RIGHT CONTENT ═══ -->
-  <div class="content">
-
-    <div class="rank-ghost">{ghost_rank}</div>
-
-    <!-- Tab Navigation -->
-    <nav class="tab-nav">
-      <button class="tab-btn active" data-tab="tab-summary">Summary</button>
-      <button class="tab-btn" data-tab="tab-traits">Traits</button>
-      <button class="tab-btn" data-tab="tab-risk">Risk</button>
-      <button class="tab-btn" data-tab="tab-comps">Comps</button>
-      <button class="tab-btn" data-tab="tab-notes">Notes</button>
-      <button class="tab-btn" data-tab="tab-report">Report</button>
-    </nav>
-
-    <!-- TAB: SUMMARY -->
-    <div id="tab-summary" class="tab-pane active">
-
-      {decision_card_html}
-
-      <div class="sec-divider">Archetype</div>
-      <div class="arch-section">
-        <div class="arch-header-row">
-          <div>
-            <div class="archetype-code">{_e(arch_code)}</div>
-            <div class="archetype-name">{_e(arch_label or archetype_raw)}</div>
-            {arch_def_html}
-          </div>
-          {ras_html}
+        <div class="meta-row">
+          <span class="meta-chip">{_e(school)}</span>
+          <span class="meta-chip">Consensus {rank_str}</span>
+          {pos_rank_chip}
         </div>
-        {fit_row_html}
-        {tags_html}
+
+        <div class="apex-window">
+          {score_block}
+          <div class="tier-badge {tier_cls}">
+            <span class="tier-text {tier_cls}">{_e(tier_text)}</span>
+            <span class="tier-sub {tier_cls}">{_e(tier_sub)}</span>
+          </div>
+          <div class="formula-line">RPG {_safe_float(raw_score)} Ã— PVC {pvc_str} ({_e(pos)}) = APEX {_safe_float(apex_comp)}</div>
+        </div>
+
+        <div class="traits-section">
+          <div class="section-header">Football Traits</div>
+          {football_html}
+        </div>
+
+        <div class="traits-section">
+          <div class="section-header">System Traits</div>
+          {system_html}
+        </div>
+
+        <div class="conf-row">
+          <div class="conf-item">
+            <div class="conf-lbl">Confidence</div>
+            <div class="conf-val {conf_color_cls}">{_e(conf_display)}</div>
+          </div>
+          <div class="conf-item">
+            <div class="conf-lbl">Divergence</div>
+            <div class="conf-val {div_cls}">{_e(div_text)}</div>
+          </div>
+        </div>
+
+        <div class="capital-block">
+          <div class="capital-lbl">Draft Capital</div>
+          <div class="capital-val">{_e(capital_base)}</div>
+          {cap_note_html}
+        </div>
+
+        <div class="watermark">
+          <span class="brand-logo">APEX OS</span>
+          <div class="watermark-meta">
+            {rank_str} Â· {_e(pos)} Â· {_e(school)}<br>
+            {_e(wm_date)}
+          </div>
+        </div>
+
       </div>
+      <!-- end rail -->
 
-      {divergence_panel_html}
+      <!-- â•â•â• RIGHT CONTENT â•â•â• -->
+      <div class="content">
 
-      {sig_html}
+        <div class="rank-ghost">{ghost_rank}</div>
 
-      {two_col_html}
+        <!-- Tab Navigation -->
+        <nav class="tab-nav">
+          <button class="tab-btn active" data-tab="tab-summary">Summary</button>
+          <button class="tab-btn" data-tab="tab-traits">Traits</button>
+          <button class="tab-btn" data-tab="tab-risk">Risk</button>
+          <button class="tab-btn" data-tab="tab-comps">Comps</button>
+          <button class="tab-btn" data-tab="tab-notes">Notes</button>
+          <button class="tab-btn" data-tab="tab-report">Report</button>
+        </nav>
 
-    </div>
+        <!-- TAB: SUMMARY -->
+        <div id="tab-summary" class="tab-pane active">
 
-    <!-- TAB: TRAITS -->
-    <div id="tab-traits" class="tab-pane">
+          {decision_card_html}
 
-      <div class="traits-section">
-        <div class="section-header">Football Traits</div>
-        {football_html}
+          <div class="sec-divider">Archetype</div>
+          <div class="arch-section">
+            <div class="arch-header-row">
+              <div>
+                <div class="archetype-code">{_e(arch_code)}</div>
+                <div class="archetype-name">{_e(arch_label or archetype_raw)}</div>
+                {arch_def_html}
+              </div>
+              {ras_html}
+            </div>
+            {fit_row_html}
+            {tags_html}
+          </div>
+
+          {divergence_panel_html}
+
+          {sig_html}
+
+          {two_col_html}
+
+        </div>
+
+        <!-- TAB: TRAITS -->
+        <div id="tab-traits" class="tab-pane">
+
+          <div class="traits-section">
+            <div class="section-header">Football Traits</div>
+            {football_html}
+          </div>
+
+          <div class="traits-section">
+            <div class="section-header">System Traits</div>
+            {system_html}
+          </div>
+
+          {pos_traits_note_html}
+
+        </div>
+
+        <!-- TAB: RISK -->
+        <div id="tab-risk" class="tab-pane">
+          {fm_html}
+          {risk_html}
+        </div>
+
+        <!-- TAB: COMPS -->
+        <div id="tab-comps" class="tab-pane">
+          {comps_tab_html}
+        </div>
+
+        <!-- TAB: NOTES -->
+        <div id="tab-notes" class="tab-pane">
+          {notes_tab_html}
+        </div>
+
+        <!-- TAB: REPORT -->
+        <div id="tab-report" class="tab-pane">
+          {report_tab_html}
+        </div>
+
       </div>
-
-      <div class="traits-section">
-        <div class="section-header">System Traits</div>
-        {system_html}
-      </div>
-
-      {pos_traits_note_html}
+      <!-- end content -->
 
     </div>
 
-    <!-- TAB: RISK -->
-    <div id="tab-risk" class="tab-pane">
-      {fm_html}
-      {risk_html}
-    </div>
+    <div class="card-stamp">APEX OS Â· 2026 Â· #{prospect_id}</div>
 
-    <!-- TAB: COMPS -->
-    <div id="tab-comps" class="tab-pane">
-      {comps_tab_html}
-    </div>
+    <script>
+    document.querySelectorAll('.tab-btn').forEach(btn => {{
+      btn.addEventListener('click', () => {{
+        const target = btn.dataset.tab;
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById(target).classList.add('active');
+      }});
+    }});
+    </script>
 
-    <!-- TAB: NOTES -->
-    <div id="tab-notes" class="tab-pane">
-      {notes_tab_html}
-    </div>
-
-    <!-- TAB: REPORT -->
-    <div id="tab-report" class="tab-pane">
-      {report_tab_html}
-    </div>
-
-  </div>
-  <!-- end content -->
-
-</div>
-
-<div class="card-stamp">APEX OS · 2026 · #{prospect_id}</div>
-
-<script>
-document.querySelectorAll('.tab-btn').forEach(btn => {{
-  btn.addEventListener('click', () => {{
-    const target = btn.dataset.tab;
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-    btn.classList.add('active');
-    document.getElementById(target).classList.add('active');
-  }});
-}});
-</script>
-
-</body>
-</html>"""
+    </body>
+    </html>"""
 
 
 def estimate_height(d: dict, comps: list, fm_ref_comps: list | None = None) -> int:
     """
     Estimate iframe height in pixels for components.html() call.
-    Tabs make height predictable — only FM and comps count adds to base.
+    Tabs make height predictable â€” only FM and comps count adds to base.
     Sections in hidden tabs do not contribute to visible scroll height.
     """
     h = 980
@@ -2215,7 +2232,7 @@ def estimate_height(d: dict, comps: list, fm_ref_comps: list | None = None) -> i
     if _fm_is_present(fm_primary) and _fm_is_present(fm_secondary):
         h += 70
 
-    # Comps in COMPS tab — each comp card is tall
+    # Comps in COMPS tab â€” each comp card is tall
     if comps:
         h += 180 * min(len(comps), 2)
     if fm_ref_comps:

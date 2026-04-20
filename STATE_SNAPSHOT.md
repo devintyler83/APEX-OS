@@ -1,6 +1,6 @@
 # APEX OS State Snapshot
 
-Last Updated (UTC): 2026-04-18T23:49:14.457199+00:00
+Last Updated (UTC): 2026-04-20T19:30:00.000000+00:00
 
 ---
 
@@ -10,7 +10,38 @@ Last Updated (UTC): 2026-04-18T23:49:14.457199+00:00
 
 ## Last Completed Milestone
 
-Session 80 close (APEX OS UI — Scout Pad Notes tab, Strengths/Risk relayout, invalidation truncation fix, Prev/Next prospect navigation with _nav_gen fix.)
+Session 81 close (Full batch APEX re-score — 139/139 scored, divergence recomputed, tag triggers Step 19 re-run, position_rank_label format inconsistency identified.)
+
+Session 81 close:
+- Full batch APEX re-score (--batch all --force --apply 1):
+    133/139 scored on first pass. 6 JSON parse failures (strengths/weaknesses text truncated
+    mid-string with unescaped delimiter): Monroe Freeling, Caleb Banks, Max Iheanachor,
+    Zakee Wheatley, Deion Burks, Taurean York.
+    Retry via --prospect-ids 25,75,5,100,104,49 --apply 1: 6/6 scored, 0 failed.
+    Full board: 139/139. No DB schema changes. No migrations.
+- Arvell Reese (#2, pid=16) decision gate resolved:
+    Post-rescore: ILB-3 Run-First Enforcer, raw=82.4, PVC=0.85, composite=70.0 DAY1.
+    Gap: CLEAN (18.7). Confidence: Tier A. Tags: Schwesinger Half. Capital: R2 Mid–R3 Top.
+    APEX LOW -24.88 vs consensus #2 is structural ILB PVC, not a misfire. DAY1 70.0 floor justified.
+- Divergence recomputed (139 prospects):
+    ALIGNED=30, APEX_HIGH=56, APEX_LOW=6, APEX_LOW_PVC_STRUCTURAL=47.
+    Premium APEX_LOW: Kamari Ramsey S (-39 MAJOR), Caleb Downs S (-37 MAJOR),
+    Genesis Smith S (-34 MAJOR), Carson Beck QB (-30 MODERATE),
+    Zakee Wheatley S (-25 MODERATE), Akheem Mesidor EDGE (-17 MODERATE).
+    S-position cluster (3 of 6 premium APEX_LOW) notable — positional pattern, not random noise.
+    Premium APEX_HIGH top hits: Treydan Stukes CB (+91), Jadon Canady CB (+91),
+    Nadame Tucker EDGE (+82), Malik Muhammad CB (+76).
+- Tag triggers Step 19 re-run (run_tag_triggers_2026.py --apply 1):
+    26 new recommendations written. 34 pending total.
+    Pending breakdown: Great RAS=10, Divergence Alert=6, Elite RAS=5,
+    Scheme Dependent=4, Development Bet=4, Compression Flag=4, Character Watch=1.
+    Character Watch is a newly-firing tag — 1 pending rec, unreviewed.
+- position_rank_label format inconsistency identified (not fixed):
+    apex.py:225 (contract layer): f"{pos_grp} #{pos_rank}" → e.g. "LB #1"
+    draftos_detail_iframe_v2.py:1995 (detail page): f"#{pos_rank} at {pos}" → e.g. "#1 at LB"
+    Detail page re-derives from raw locals, bypasses contract entirely.
+    Fix deferred — cosmetic, not data-integrity issue.
+- Doctor: PASSED (no structural changes this session).
 
 Session 80 close:
 - draftos_detail_iframe_v2.py — Scout Pad Notes tab fully implemented:
