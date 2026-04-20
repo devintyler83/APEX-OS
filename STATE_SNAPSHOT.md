@@ -10,6 +10,37 @@ Last Updated (UTC): 2026-04-20T20:07:12.799433+00:00
 
 ## Last Completed Milestone
 
+Session 82 close (Tag triage complete — Divergence Alerts + Dev Bets resolved; Caleb Downs S-1 archetype correction + re-score; Draft Day Take Override Mode formalized; app.py + draftos_detail_iframe_v2.py repair.)
+
+Session 82 close:
+- run_tag_triggers_2026.py: fixed column name bug (fm_primary → failure_mode_primary / fm_secondary → failure_mode_secondary). Script was crashing on Step 19. Re-run confirmed 187 recs across 115 prospects (all idempotent, 0 new writes).
+- Tag triage — Divergence Alerts (6 pending → 0 pending):
+    Accepted: Nadame Tucker EDGE (+26), Kamari Ramsey S (-39), Genesis Smith S (-34), Carson Beck QB (-30), Akheem Mesidor EDGE (-20).
+    Held (pending): Caleb Downs S (-37) — held for archetype review, resolved same session.
+- Tag triage — Development Bets (4 pending → 0 pending):
+    Accepted: Trey Zuhn LB (ILB-5, v_dev=8.0), Connor Lew OL (C-5, PVC structural), Keagen Trost OL (OT-5, FM-1/FM-3 stack), Jeremiah Wright OL (OT-5).
+- Caleb Downs (pid=28) archetype correction — S82 final determination:
+    ARCHETYPE CORRECTED: S-4 Zone-Dominant Coverage Safety → S-1 Centerfielder (Zone-Processor variant).
+    Mechanism: anticipatory zone processor; elite robber/poach; box-adjacent run fits; deep zone adequate only.
+    ZONE_COVERAGE_FLAG ACTIVE: Zone 91.5 vs Man 56.9 gap. Man/Press are constraints, not S-1 disqualifiers.
+    DIVERGENCE_VALID: consensus pricing scheme-proof S-3/S-4 hybrid; market assumption error, not model miss.
+    LANDING_SPOT_MANDATORY: Tier-A only in zone-dominant/robber/quarters structures.
+    Re-score result: raw=83.4, composite=75.1 DAY1 (up from 67.7 DAY2 under S-4), delta=-12 MINOR.
+    Divergence Alert accepted (rec_id=314). GATE_TRACKER.md updated to v2.0.
+- Draft Day Take Override Mode formalized:
+    Write path: ARCHETYPE_OVERRIDES[pid]['draft_day_take'] OR notes table (note_type='draft_day_take').
+    Read order: override dict > notes table > build_draft_day_take() generator.
+    resolve_draft_day_take() helper required in detail iframe + PDF generator (not yet implemented).
+    First live use: pid=28, note_id=2. Take stored in both locations.
+- app/app.py repairs:
+    Fixed ModuleNotFoundError: draftosqueries_team_fit → draftos.queries.team_fit (stub created).
+    Fixed ModuleNotFoundError: draftos.team_fit.evaluator → draftos.team_fitevaluator.
+    Restored truncated file from commit 60d7aaf (1951 lines → 3487 lines — 1,526 lines of rendering code were missing, causing blank "Deploy-only" page).
+    Added startup CSS guard (try/except st.exception).
+- draftos_detail_iframe_v2.py: 1,515 mojibake characters fixed (UTF-8 bytes decoded as cp1252 and saved back). Patterns: em dash, en dash, middle dot, ellipsis, box-drawing chars, triangle symbols, checkmark/warning/cross, multiplication, Greek delta. Backup saved as .bak_mojibake.
+- Pending tag state post-S82: 25 pending (Elite RAS=5, Great RAS=10, Compression Flag=4, Scheme Dependent=4, Character Watch=1, Divergence Alert=1 [Downs held]).
+- Doctor: PASSED (no schema changes, no migrations this session). Next migration: 0049.
+
 Session 81 close (Full batch APEX re-score — 139/139 scored, divergence recomputed, tag triggers Step 19 re-run, position_rank_label format inconsistency identified.)
 
 Session 81 close:
@@ -1037,11 +1068,11 @@ Prior sessions on record: 12 (DB rebuild), 13 (weekly pipeline), 13b (school/arc
 
 ## Next Milestone (Single Target)
 
-- Session 82: Triage 34 pending tag recs (accept_tag_recs_2026.py --list, then triage).
-  Priority: Character Watch (1, new), Divergence Alert (6 -- premium APEX_LOW: S cluster + Beck + Mesidor),
-  Great RAS (10), Elite RAS (5). After triage: rebuild pre-draft snapshot (snapshot_id=7),
-  export apex_scores_all_s81.json, fix position_rank_label format inconsistency
-  in draftos_detail_iframe_v2.py (contract: "LB #1" vs detail page: "#1 at LB").
+- Session 83: Complete remaining 25 pending tag recs (Elite RAS=5, Great RAS=10, Compression=4,
+  Scheme Dependent=4, Character Watch=1 [Genesis Smith], Divergence Alert=1 [Caleb Downs -- held]).
+  Then: rebuild pre-draft snapshot (snapshot_id=7), export apex_scores_all_s82.json.
+  Deferred: resolve_draft_day_take() helper in draftos_detail_iframe_v2.py + PDF generator.
+  Deferred: position_rank_label format inconsistency (contract "LB #1" vs detail "#1 at LB").
 
 ---
 
