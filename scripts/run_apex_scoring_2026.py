@@ -1122,45 +1122,53 @@ ARCHETYPE_OVERRIDES: dict[int, dict] = {
         },
     },
 
-    # Caleb Downs — S (pid=28). Sports Almanac Mode 1 S75.
-    # S-1 Centerfielder REJECTED: Zone Coverage 91.5 elite, but Man Coverage 56.9
-    # and Press 35 are structural disqualifiers for S-1 mechanism.
-    # FM-2 Scheme Ghost primary — requires zone-heavy, two-high deployment to unlock value.
-    # Correct archetype: S-4 Zone-Dominant Coverage Safety.
+    # Caleb Downs — S (pid=28). ARCHETYPE CORRECTED S82: S-4 -> S-1 Centerfielder (Zone-Processor variant).
+    # ZONE_COVERAGE_FLAG ACTIVE: Zone 91.5 vs Man 56.9 gap. Man/Press constraints are real but
+    # do not disqualify S-1 when primary mechanism is zone-processing/robber, not man rep.
+    # DIVERGENCE_VALID: market pricing scheme-proof S-3/S-4 hybrid; data shows zone processor.
+    # LANDING_SPOT_MANDATORY: FM-2 primary, FM-6 secondary. Tier-A only in zone-dominant structures.
     28: {
-        "forced_archetype":    "S-4",
-        "archetype_label":     "S-4 Zone-Dominant Coverage Safety",
+        "forced_archetype":    "S-1",
+        "archetype_label":     "S-1 Centerfielder",
         "archetype_rationale": (
-            "Sports Almanac Mode 1 complete S75. S-1 Centerfielder REJECTED. "
-            "Zone Coverage 91.5 is elite and confirms zone processing as the primary win mechanism. "
-            "Man Coverage 56.9 and Press 35 are structural disqualifiers for S-1 Centerfielder — "
-            "S-1 requires confirmed man coverage floor and multi-zone deployment. Downs does not clear. "
-            "FM-2 Scheme Ghost is primary: value is scheme-dependent; zone-heavy/two-high deployments "
-            "unlock full value; man-heavy or press-dominant schemes structurally limit him. "
-            "Consensus #3 overall is 15-20 picks above justified capital. "
-            "Composite 6.76/10 maps to R2 Early capital (Picks 33-50). Croup (Pick 38) is ceiling comp. "
-            "FM-6 secondary: landing spot mismatch destroys value at any capital above R3."
+            "ARCHETYPE CORRECTED S82: S-4 -> S-1 Centerfielder (Zone-Processor variant). "
+            "Mechanism: anticipatory zone processor at intermediate depths; elite robber/poach; "
+            "box-adjacent run fits genuine; deep zone adequate only. "
+            "ZONE_COVERAGE_FLAG ACTIVE -- Zone 91.5 vs Man 56.9 gap (delta=34.6). "
+            "Man 56.9 and Press 35 are real constraints: not a coverage safety, not a slot man solution. "
+            "S-1 assignment reflects zone-processing as primary win mechanism, not scheme-proof versatility. "
+            "DIVERGENCE_VALID -- consensus #3 is pricing scheme-proof S-3/S-4 hybrid; ratings show "
+            "zone processor with real man-coverage limitation. Market assumption error, not model miss. "
+            "FM-2 Scheme Ghost primary: value unlocked only in zone-dominant/two-high/robber structures. "
+            "FM-6 secondary: landing spot mismatch destroys value at top-5 capital in man-heavy systems. "
+            "LANDING_SPOT_MANDATORY -- Tier-A only in confirmed zone-dominant deployment."
         ),
         "eval_confidence":     "Tier B",
-        "capital_range":       "R2 Early (Picks 33-50) — ceiling Croup (Pick 38)",
+        "capital_range":       "R1 Late / R2 Early -- scheme-confirmed landing spot required",
         "fm_flags":            ["FM-2 Scheme Ghost (primary)", "FM-6 Role Mismatch (secondary)"],
-        "placed_session":      75,
+        "placed_session":      82,
         "bust_warning": (
-            "FM-2 Scheme Ghost primary: zone-only deployment profile. Man Coverage 56.9 + Press 35 "
-            "are structural disqualifiers for press-man or bracket scheme deployment. "
-            "Man-heavy or press-dominant landing spot = significant value destruction at any capital. "
-            "Consensus #3 pricing (R1 top-5 capital) is 15-20 picks above mechanism-justified range."
+            "ZONE_COVERAGE_FLAG ACTIVE: Zone 91.5 / Man 56.9 / Press 35. "
+            "Not a scheme-proof safety -- man-heavy or press-dominant landing spot structurally limits value. "
+            "Top-5 consensus capital only justified in confirmed zone-dominant, robber/quarters deployment. "
+            "FM-6 risk is real: role mismatch in Cover-1/man-heavy systems destroys capital return."
         ),
         "paa_findings": {
-            "Zone_coverage":   "ELITE — 91.5 confirms zone processing as primary mechanism",
-            "Man_coverage":    "CONCERN — 56.9 is structural disqualifier for S-1",
-            "Press":           "CONCERN — 35 disqualifies S-1 press-coverage mechanism",
-            "FM_primary":      "FM-2 Scheme Ghost — zone-heavy/two-high deployment required",
-            "FM_secondary":    "FM-6 Role Mismatch — landing spot is critical capital modifier",
-            "Capital_gate":    "MANUAL_HOLD — Mode B Landing Spot Note required before R2 allocation",
-            "S1_rejected":     "Zone Coverage 91.5 + Man 56.9 + Press 35 disqualify S-1",
-            "Archetype_lock":  "S-4 Zone-Dominant Coverage Safety confirmed S75",
+            "Zone_coverage":      "ELITE -- 91.5 confirms zone processing as primary win mechanism",
+            "Man_coverage":       "CONSTRAINT -- 56.9; not a coverage safety or slot man solution",
+            "Press":              "CONSTRAINT -- 35; disqualifies press-man deployment",
+            "Zone_coverage_flag": "ACTIVE -- Zone 91.5 vs Man 56.9 gap; zone-processor variant only",
+            "FM_primary":         "FM-2 Scheme Ghost -- zone-heavy/two-high/robber deployment required",
+            "FM_secondary":       "FM-6 Role Mismatch -- landing spot is critical capital modifier",
+            "Divergence_status":  "DIVERGENCE_VALID -- market pricing man-coverage versatility not in ratings",
+            "Capital_gate":       "LANDING_SPOT_MANDATORY -- Tier-A only in zone-dominant structures",
+            "Archetype_lock":     "S-1 Centerfielder (Zone-Processor variant) confirmed S82",
         },
+        "draft_day_take": (
+            "S-1 zone processor with elite robber instincts and real man-coverage limits; "
+            "we'll pay late-1/early-2 in confirmed zone-dominant structures, but top-5 "
+            "'scheme-proof' pricing ignores FM-2/FM-6 risk."
+        ),
     },
 
     # ---------------------------------------------------------------------------

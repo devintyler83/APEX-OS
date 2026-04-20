@@ -28,6 +28,12 @@ from draftos.ui.profile_dimensions import get_profile_dimensions
 from datetime import datetime as _export_dt
 from scripts.export_png import export_png_bytes
 from scripts.draftos_detail_iframe_v2 import build_detail_html, estimate_height
+from draftos.queries.team_fit import (
+    get_team_fit_pilot_teams,
+    get_team_fit_context,
+    resolve_team_fit_pick,
+)
+from draftos.team_fitevaluator import evaluate_team_fit
 
 # Streamlit ≥ 1.35 supports on_select / selection_mode on st.dataframe
 _ON_SELECT_AVAILABLE = tuple(
@@ -1205,7 +1211,10 @@ hr {
 }
 </style>
 """
-st.markdown(DRAFTOS_CSS, unsafe_allow_html=True)
+try:
+    st.markdown(DRAFTOS_CSS, unsafe_allow_html=True)
+except Exception as _css_err:
+    st.exception(_css_err)
 
 # ---------------------------------------------------------------------------
 # Tag display maps
