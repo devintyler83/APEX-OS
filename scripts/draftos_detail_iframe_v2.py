@@ -1688,7 +1688,7 @@ def build_decision_card(d: dict, fm_codes: set) -> str:
     )
 
 
-def build_detail_html(d: dict, comps: list, rate, fm_ref_comps: list | None = None) -> str:
+def build_detail_html(d: dict, comps: list, rate, fm_ref_comps: list | None = None, team_fit_result: dict | None = None) -> str:
     """
         Build a complete self-contained HTML string for the DraftOS prospect detail drawer.
         Renders as a two-column layout: sticky left rail + scrollable right content.
@@ -2075,6 +2075,9 @@ def build_detail_html(d: dict, comps: list, rate, fm_ref_comps: list | None = No
         # NOTES tab — Scout Pad utility panel
         notes_tab_html = _build_scout_pad(d, fm_codes, fm_labels, tag_list)
 
+        # FIT tab — Team Fit result panel
+        fit_tab_html = buildteamfithtml(team_fit_result)
+
         # REPORT tab — capital + confidence + pos rank + snapshot
         _CONF_REPORT_COLOR = {
             "A": "var(--green)", "High": "var(--green)",
@@ -2197,6 +2200,7 @@ def build_detail_html(d: dict, comps: list, rate, fm_ref_comps: list | None = No
           <button class="tab-btn" data-tab="tab-traits">Traits</button>
           <button class="tab-btn" data-tab="tab-risk">Risk</button>
           <button class="tab-btn" data-tab="tab-comps">Comps</button>
+          <button class="tab-btn" data-tab="tab-fit">Fit</button>
           <button class="tab-btn" data-tab="tab-notes">Notes</button>
           <button class="tab-btn" data-tab="tab-report">Report</button>
         </nav>
@@ -2256,6 +2260,11 @@ def build_detail_html(d: dict, comps: list, rate, fm_ref_comps: list | None = No
           {comps_tab_html}
         </div>
 
+        <!-- TAB: FIT -->
+        <div id="tab-fit" class="tab-pane">
+          {fit_tab_html}
+        </div>
+
         <!-- TAB: NOTES -->
         <div id="tab-notes" class="tab-pane">
           {notes_tab_html}
@@ -2289,7 +2298,7 @@ def build_detail_html(d: dict, comps: list, rate, fm_ref_comps: list | None = No
     </html>"""
 
 
-def estimate_height(d: dict, comps: list, fm_ref_comps: list | None = None) -> int:
+def estimate_height(d: dict, comps: list, fm_ref_comps: list | None = None, team_fit_result: dict | None = None) -> int:
     """
     Estimate iframe height in pixels for components.html() call.
     Tabs make height predictable — only FM and comps count adds to base.
@@ -2310,5 +2319,9 @@ def estimate_height(d: dict, comps: list, fm_ref_comps: list | None = None) -> i
         h += 180 * min(len(comps), 2)
     if fm_ref_comps:
         h += 90 * min(len(fm_ref_comps), 4)
+
+    # FIT tab — fixed layout, adds ~280px when result is present
+    if team_fit_result:
+        h += 280
 
     return max(980, h)

@@ -1806,6 +1806,7 @@ def _render_apex_detail(d: dict) -> None:
     """DraftOS Prospect Detail — iframe-isolated, full reference drawer treatment."""
 
     archetype_raw = d.get("matched_archetype") or d.get("apex_archetype") or ""
+    prospect_id   = d.get("prospect_id") or 0
 
     comps_list   = []
     rate_info    = None
@@ -1818,6 +1819,63 @@ def _render_apex_detail(d: dict) -> None:
             m = re.search(r"FM-(\d+)", str(fv))
             if m:
                 fm_codes_for_ref.add(int(m.group(1)))
+
+    # ── Team Fit controls (keyed to selected_pid to prevent stale widget state) ──
+    team_fit_result: dict | None = None
+    try:
+        with connect() as _tconn:
+            _pilot_teams = get_team_fit_pilot_teams(_tconn)
+    except Exception:
+        _pilot_teams = []
+
+    if _pilot_teams:
+        _team_options    = {t["team_name"]: t["team_id"] for t in _pilot_teams}
+        _team_names      = ["— select team —"] + list(_team_options.keys())
+        _fit_col1, _fit_col2 = st.columns([3, 1])
+        with _fit_col1:
+            _selected_team_name = st.selectbox(
+                "Team Fit",
+                options=_team_names,
+                index=0,
+                key=f"team_fit_select_{prospect_id}",
+                label_visibility="collapsed",
+            )
+        with _fit_col2:
+            _pick_override = st.number_input(
+                "Pick",
+                min_value=0,
+                max_value=257,
+                value=0,
+                step=1,
+                key=f"team_fit_pick_{prospect_id}",
+                help="Pick override (0 = use team default)",
+            )
+
+        if _selected_team_name != "— select team —":
+            _team_code = _team_options[_selected_team_name]
+            try:
+                with connect() as _fconn:
+                    _team_ctx = get_team_fit_context(_fconn, _team_code)
+                if _team_ctx:
+                    _pick = resolve_team_fit_pick(_team_ctx, int(_pick_override))
+                    _player_ctx = {
+                        "prospect_id":     prospect_id,
+                        "display_name":    d.get("display_name"),
+                        "position_group":  d.get("position_group"),
+                        "matched_archetype": archetype_raw,
+                        "active_fm_codes": [
+                            str(fv).split()[0]
+                            for fv in [d.get("failure_mode_primary"), d.get("failure_mode_secondary")]
+                            if fv and str(fv).strip().upper() not in ("", "NONE", "N/A")
+                        ],
+                        "capital_range":   d.get("capital_base") or d.get("capital_adjusted"),
+                        "apex_tier":       d.get("apex_tier"),
+                        "eval_confidence": d.get("eval_confidence"),
+                        "divergence_rank_delta": d.get("auto_apex_delta"),
+                    }
+                    team_fit_result = evaluate_team_fit(_player_ctx, _team_ctx, _pick)
+            except Exception:
+                team_fit_result = None
 
     try:
         with connect() as _hconn:
@@ -1852,8 +1910,8 @@ def _render_apex_detail(d: dict) -> None:
             fm_ref_comps = same_pos
         fm_ref_comps = fm_ref_comps[:4]
 
-    html_content = build_detail_html(d, comps_list, rate_info, fm_ref_comps or None)
-    h = estimate_height(d, comps_list, fm_ref_comps=fm_ref_comps or None)
+    html_content = build_detail_html(d, comps_list, rate_info, fm_ref_comps or None, team_fit_result)
+    h = estimate_height(d, comps_list, fm_ref_comps=fm_ref_comps or None, team_fit_result=team_fit_result)
 
     components.html(html_content, height=h, scrolling=True)
 

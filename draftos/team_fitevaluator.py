@@ -90,7 +90,14 @@ def evaluate_team_fit(player_ctx: dict[str, Any], team_ctx: dict[str, Any], pick
     capital_range = player_ctx.get("capital_range")
     active_fm = _safe_list(player_ctx.get("active_fm_codes"))
     apex_tier = player_ctx.get("apex_tier")
-    eval_conf = player_ctx.get("eval_confidence") or 0.0
+    _eval_conf_raw = player_ctx.get("eval_confidence") or 0.0
+    _EVAL_CONF_MAP = {"Tier A": 8.0, "Tier B": 5.0, "Tier C": 2.0}
+    eval_conf = _EVAL_CONF_MAP.get(str(_eval_conf_raw), None)
+    if eval_conf is None:
+        try:
+            eval_conf = float(_eval_conf_raw)
+        except (ValueError, TypeError):
+            eval_conf = 0.0
 
     team_id = team_ctx.get("team_id") or ""
     team_name = team_ctx.get("team_name") or team_id
