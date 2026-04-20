@@ -10,14 +10,14 @@ Non-negotiables:
 - Provide run order + verification commands
 
 Goal for this chat:
-Session 82: Triage 34 pending tag recs (accept_tag_recs_2026.py --list → triage).
+Session 82: Triage 34 pending tag recs (accept_tag_recs_2026.py --list, then triage).
 
 Authoritative State:
 
 1) STATE_SNAPSHOT.md
 # APEX OS State Snapshot
 
-Last Updated (UTC): 2026-04-20T20:06:37.137125+00:00
+Last Updated (UTC): 2026-04-20T20:07:12.799433+00:00
 
 ---
 
@@ -1054,8 +1054,8 @@ Prior sessions on record: 12 (DB rebuild), 13 (weekly pipeline), 13b (school/arc
 
 ## Next Milestone (Single Target)
 
-- Session 82: Triage 34 pending tag recs (accept_tag_recs_2026.py --list → triage).
-  Priority: Character Watch (1, new), Divergence Alert (6 — premium APEX_LOW: S cluster + Beck + Mesidor),
+- Session 82: Triage 34 pending tag recs (accept_tag_recs_2026.py --list, then triage).
+  Priority: Character Watch (1, new), Divergence Alert (6 -- premium APEX_LOW: S cluster + Beck + Mesidor),
   Great RAS (10), Elite RAS (5). After triage: rebuild pre-draft snapshot (snapshot_id=7),
   export apex_scores_all_s81.json, fix position_rank_label format inconsistency
   in draftos_detail_iframe_v2.py (contract: "LB #1" vs detail page: "#1 at LB").
@@ -1279,11 +1279,11 @@ Inactive (data preserved): ngs_2026 (source_id=29, is_active=0) — model score,
 
 2) System Snapshot Output
 === DRAFTOS SYSTEM SNAPSHOT ===
-generated_utc: 2026-04-20T20:06:36.452519+00:00
+generated_utc: 2026-04-20T20:07:12.122153+00:00
 
 ## Git
 branch: main
-commit: 27f46d4d10a37f1cc4b06965f6ba9d2a523b7061
+commit: 121cc376c6374a6406397a492cecbe78d5580cd4
 status: clean
 
 ## Tables
