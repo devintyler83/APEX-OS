@@ -32,7 +32,7 @@ CREATE INDEX IF NOT EXISTS idx_team_draft_context_season
 CREATE INDEX IF NOT EXISTS idx_team_draft_context_active
     ON team_draft_context (is_active);
 
-INSERT OR IGNORE INTO metamigrations (name, applied_at)
+INSERT OR IGNORE INTO meta_migrations (name, applied_at)
 VALUES ('0049teamdraftcontext', CURRENT_TIMESTAMP);
 
 COMMIT;
