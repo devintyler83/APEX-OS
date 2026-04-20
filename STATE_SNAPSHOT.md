@@ -10,6 +10,24 @@ Last Updated (UTC): 2026-04-20T22:46:24.517655+00:00
 
 ## Last Completed Milestone
 
+Session 84 close (Pending tag triage complete — 24 recs auto-accepted (Great RAS=10, Elite RAS=5, Compression Flag=4, Scheme Dependent=4, Character Watch=1); resolve_draft_day_take() helper remains implemented but not wired into Scout Pad/PDF; export_reports_html_share.py deferred — Windows path bug on /tmp/test_card.html.)
+
+Session 84 close:
+- Doctor: PASSED. No schema changes. No migrations this session.
+- Mode 3 boot: PASSED.
+- Pending tag triage: triage_pending_tags_2026.py --apply 1 ran clean.
+    24 recs auto-accepted (0 dismissed, 0 left pending).
+    Breakdown: Great RAS=10, Elite RAS=5, Compression Flag=4, Scheme Dependent=4, Character Watch=1.
+    Backup written: draftos.sqlite.backup.20260420T225141Z.
+- resolve_draft_day_take() helper: implemented in prior session but NOT yet wired into
+    build_detail_html() (draftos_detail_iframe_v2.py) or PDF generator. Prior wiring attempt
+    reverted to preserve green UI. Deferred to S85.
+- export_reports_html_share.py: hit Windows path bug — script references /tmp/test_card.html
+    (Unix path), fails on win32. Deferred to S85 for test harness path fix.
+- Next session priority (S85):
+    1. Wire resolve_draft_day_take() into build_detail_html() + PDF at correct scope.
+    2. Fix export_reports_html_share.py test harness path (/tmp → tempfile.mkstemp or platform-aware path).
+
 Session 83 close (Migration 0049 applied; team_draft_context seeded (8 pilot teams); team_fit query layer + evaluator validated end-to-end; eval_confidence Tier label bug fixed in team_fitevaluator.py.)
 
 Session 83 close:

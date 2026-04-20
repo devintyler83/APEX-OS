@@ -1317,6 +1317,109 @@ def _build_draft_day_take(
     return sentence
 
 
+def resolve_draft_day_take(
+    pid: int,
+    archetype_overrides: dict | None,
+    conn,
+) -> str:
+    """
+    Canonical read for Draft Day Take.
+
+    Priority:
+      1) ARCHETYPE_OVERRIDES[pid]['draft_day_take']
+      2) notes table, latest note_type='draft_day_take'
+      3) _build_draft_day_take(...) generator from APEX fields
+
+    Returns a plain string (may be empty but never None).
+    """
+    # 1) in-memory override
+    if archetype_overrides is not None:
+        ov = archetype_overrides.get(pid)
+        if ov:
+            val = ov.get("draft_day_take")
+            if isinstance(val, str) and val.strip():
+                return val.strip()
+
+    # 2) notes table lookup
+    # Import lazily to avoid circulars if needed
+    from draftos.queries import notes as q_notes  # adjust path if different
+
+    try:
+        notes = q_notes.get_notes_for_prospect(
+            conn,
+            prospect_id=pid,
+            season_id=1,               # 2026 baseline
+            note_type="draft_day_take"
+        )
+    except Exception:
+        notes = []
+
+    if notes:
+        # assume newest-first; if not, sort here
+        note_text = (notes[0].get("note_text") or "").strip()
+        if note_text:
+            return note_text
+
+    # 3) generator fallback using fields from the detail dict
+    cur = conn.cursor()
+    row = cur.execute(
+        """
+        SELECT
+            position_group,
+            apex_tier,
+            matched_archetype,
+            eval_confidence,
+            failure_mode_primary,
+            failure_mode_secondary,
+            divergence_delta,
+            auto_apex_delta
+        FROM apexscores
+        WHERE prospect_id = ? AND season_id = 1
+        """,
+        (pid,),
+    ).fetchone()
+
+    if not row:
+        return ""
+
+    (
+        pos,
+        tier,
+        arch_label,
+        conf_raw,
+        fm_primary,
+        fm_secondary,
+        div_delta,
+        auto_delta,
+    ) = row
+
+    fm_codes: set[int] = set()
+    for fm in (fm_primary, fm_secondary):
+        if not fm:
+            continue
+        m = re.search(r"FM-(\d+)", str(fm))
+        if m:
+            try:
+                fm_codes.add(int(m.group(1)))
+            except ValueError:
+                pass
+
+    # use whichever divergence field is populated, same as _build_scout_pad
+    div_val = div_delta if div_delta is not None else auto_delta
+
+    sentence = _build_draft_day_take(
+        pos=pos or "",
+        tier=(tier or "").strip().upper(),
+        arch_label=arch_label or "",
+        conf_raw=conf_raw,
+        fm_codes=fm_codes,
+        div_delta=div_val,
+    )
+    if isinstance(sentence, str) and sentence.strip():
+        return sentence.strip()
+    return ""
+
+
 def _build_scout_pad(d: dict, fm_codes: set, fm_labels: list, tag_list: list) -> str:
     """
     Build the Scout Pad HTML for the Notes tab.
@@ -1457,8 +1560,20 @@ def _build_scout_pad(d: dict, fm_codes: set, fm_labels: list, tag_list: list) ->
         )
         pills_html = f'<div class="htags-row" style="margin-top:4px">{pills}</div>'
 
-    # Draft Day Take
+      # Draft Day Take
+    pid = d.get("prospect_id")
+
+        # Draft Day Take
     take_sentence = _build_draft_day_take(pos, tier, arch_label_sp, conf_raw, fm_codes, div_delta)
+    take_html = ""
+    if take_sentence:
+        take_html = (
+            '<div class="sp-take-block">'
+            f'<div class="sp-k" style="margin-bottom:6px">Draft Day Take</div>'
+            f'<div class="sp-take-text">{_e(take_sentence)}</div>'
+            '</div>'
+        )
+
     take_html = ""
     if take_sentence:
         take_html = (
