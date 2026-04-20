@@ -10,6 +10,16 @@ Last Updated (UTC): 2026-04-20T22:10:28.430239+00:00
 
 ## Last Completed Milestone
 
+Session 83 close (Migration 0049 applied; team_draft_context seeded (8 pilot teams); team_fit query layer + evaluator validated end-to-end; eval_confidence Tier label bug fixed in team_fitevaluator.py.)
+
+Session 83 close:
+- Migration 0049 (team_draft_context): applied. Table already existed with composite PK (team_id, season_id) from prior session — no id autoincrement column. CREATE TABLE IF NOT EXISTS silently preserved the existing schema. Migration SQL updated to document the actual schema accurately.
+- seed_team_draft_context_2026.py: new script (renamed from seedteamdraftcontext2026.py). Fixed SELECT id → SELECT team_id to match actual composite PK. Seeded 8 pilot teams: KC, PHI, BAL, MIA, DET, GB, NYJ, CLE. All 8 inserted, verification passed (8 active rows season_id=1).
+- get_team_fit_pilot_teams() + get_team_fit_context(): both returning correct data. JSON fields (premium_needs, depth_chart_pressure, draft_capital) deserialized to native Python objects.
+- evaluate_team_fit() eval_confidence bug fixed (team_fitevaluator.py:93): eval_confidence is always 'Tier A/B/C' in apex_scores, never a float. Evaluator was calling float('Tier B') and crashing. Fix: normalize tier label at read site via _EVAL_CONF_MAP (Tier A→8.0, Tier B→5.0, Tier C→2.0), feeding existing 0.45+(x*0.05) confidence formula (A→0.85, B→0.70, C→0.55).
+- End-to-end test confirmed: evaluate_team_fit(Anthony Hill LB / BAL / pick 27) → verdict=Poor fit, confidence=0.70, fm_activated=[FM-3, FM-4].
+- Doctor: PASSED. No new migrations beyond 0049.
+
 Session 82 close (Tag triage complete — Divergence Alerts + Dev Bets resolved; Caleb Downs S-1 archetype correction + re-score; Draft Day Take Override Mode formalized; app.py + draftos_detail_iframe_v2.py repair.)
 
 Session 82 close:
@@ -1068,11 +1078,12 @@ Prior sessions on record: 12 (DB rebuild), 13 (weekly pipeline), 13b (school/arc
 
 ## Next Milestone (Single Target)
 
-- Session 83: Complete remaining 25 pending tag recs (Elite RAS=5, Great RAS=10, Compression=4,
+- Session 84: Complete remaining 25 pending tag recs (Elite RAS=5, Great RAS=10, Compression=4,
   Scheme Dependent=4, Character Watch=1 [Genesis Smith], Divergence Alert=1 [Caleb Downs -- held]).
-  Then: rebuild pre-draft snapshot (snapshot_id=7), export apex_scores_all_s82.json.
+  Then: rebuild pre-draft snapshot (snapshot_id=7), export apex_scores_all_s83.json.
   Deferred: resolve_draft_day_take() helper in draftos_detail_iframe_v2.py + PDF generator.
   Deferred: position_rank_label format inconsistency (contract "LB #1" vs detail "#1 at LB").
+  Deferred: full team_fit surface integration (app.py pick-fit panel, detail iframe team context block).
 
 ---
 
