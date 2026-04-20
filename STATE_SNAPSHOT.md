@@ -1037,9 +1037,11 @@ Prior sessions on record: 12 (DB rebuild), 13 (weekly pipeline), 13b (school/arc
 
 ## Next Milestone (Single Target)
 
-- Session 81: Full APEX batch re-score (--batch all --force). Investigate Arvell Reese (#2, pid=16)
-  ELITE→DAY1 drop (-8.8 pts, forty=4.46/ATH=86.6). Decision gate report in data/exports/s70_rescore_report.txt.
-  After re-score: rebuild pre-draft snapshot (snapshot_id=7), export apex_all_rescored_s81.json.
+- Session 82: Triage 34 pending tag recs (accept_tag_recs_2026.py --list → triage).
+  Priority: Character Watch (1, new), Divergence Alert (6 — premium APEX_LOW: S cluster + Beck + Mesidor),
+  Great RAS (10), Elite RAS (5). After triage: rebuild pre-draft snapshot (snapshot_id=7),
+  export apex_scores_all_s81.json, fix position_rank_label format inconsistency
+  in draftos_detail_iframe_v2.py (contract: "LB #1" vs detail page: "#1 at LB").
 
 ---
 
