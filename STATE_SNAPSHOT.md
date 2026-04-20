@@ -1,6 +1,6 @@
 # APEX OS State Snapshot
 
-Last Updated (UTC): 2026-04-20T20:05:48.874031+00:00
+Last Updated (UTC): 2026-04-20T20:06:37.137125+00:00
 
 ---
 
@@ -1037,8 +1037,8 @@ Prior sessions on record: 12 (DB rebuild), 13 (weekly pipeline), 13b (school/arc
 
 ## Next Milestone (Single Target)
 
-- Session 82: Triage 34 pending tag recs (accept_tag_recs_2026.py --list → triage).
-  Priority: Character Watch (1, new), Divergence Alert (6 — premium APEX_LOW: S cluster + Beck + Mesidor),
+- Session 82: Triage 34 pending tag recs (accept_tag_recs_2026.py --list, then triage).
+  Priority: Character Watch (1, new), Divergence Alert (6 -- premium APEX_LOW: S cluster + Beck + Mesidor),
   Great RAS (10), Elite RAS (5). After triage: rebuild pre-draft snapshot (snapshot_id=7),
   export apex_scores_all_s81.json, fix position_rank_label format inconsistency
   in draftos_detail_iframe_v2.py (contract: "LB #1" vs detail page: "#1 at LB").
