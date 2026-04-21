@@ -1,6 +1,6 @@
 # APEX OS State Snapshot
 
-Last Updated (UTC): 2026-04-21T00:46:01.113436+00:00
+Last Updated (UTC): 2026-04-21T03:30:00.000000+00:00
 
 ---
 
@@ -9,6 +9,60 @@ Last Updated (UTC): 2026-04-21T00:46:01.113436+00:00
 - 2026 (season_id=1)
 
 ## Last Completed Milestone
+
+Session 87 close (Team Fit panel rebuilt to decision-grade; all 32 teams in dropdown; board show_low default fixed; staleness threshold corrected.)
+
+Session 87 close:
+- No DB writes. No schema changes. No migrations. Next migration: 0050.
+- Doctor: PASSED (assumed clean — no schema/data changes this session).
+
+Board fix (boards showing no players):
+- Root cause: snapshot 7 had all sources as health_chip='Stale' (38 days old vs 7-day default).
+  Stale penalty in confidence formula collapsed all scores to <=18.7, all bands='Low'.
+  App default show_low=False hid all 997 rows.
+- Fix 1: app/app.py show_low checkbox default changed to True (line 2263).
+- Fix 2: source metrics re-run with --stale-days 60; confidence recomputed.
+  Result: Medium=53, Low=944, max score=68.9. Board now visible.
+
+Team Fit — 32-team dropdown (draftos/queries/team_fit.py):
+- Added _NFL_32_TEAMS: canonical list of all 32 teams with team_id, team_name, short_label,
+  conference, division. Organized by division.
+- Added get_all_32_teams(conn, season_id): queries DB for seeded teams, annotates each entry
+  with has_context=True/False. Returns all 32 regardless of DB seed state.
+- app/app.py: import changed from get_team_fit_pilot_teams to get_all_32_teams.
+  Removed pilot_teams guard — Team Fit UI always renders.
+  No-context stub path: unseeded teams get {"_no_context": True, ...} passed to render layer.
+
+Team Fit panel — decision-grade rebuild (scripts/draftos_detail_iframe_v2.py):
+- New helper functions added (replaces old _FIT_VERDICT_COLORS / _action_tag block):
+  _si(v): safe int conversion
+  _decision_banner(verdict, pick, lo, hi, fm_activated, raw_fm_risk): 6-label top banner
+    Labels: Draftable for this team / Draftable only at value / Role-dependent fit /
+            Risky fit / Avoid at current price / Not a fit for this team
+  _fo_summary(team_name, verdict, role, ...): one-sentence FO summary (role + value + risk clause)
+  _fmt_value_range_football(lo, hi): pick range → football-native round language
+    e.g. "Round 1 mid-late", "Late Round 1 / Round 2", "Round 2 early"
+  _short_role(role): compact role label for chip display
+  _main_risk_chip(fm_activated, fm_suppressed): primary risk chip text + color
+  _action_tag(verdict, pick, lo, hi, fm_activated): 6-label recommendation set
+    Labels: Target confidently / Target at value / Target only in protected role /
+            Proceed cautiously / Avoid at current price / Do not target for this team
+  Interpretation helpers retained: _interp_grade, _interp_fm_risk, _interp_confidence
+- buildteamfithtml() fully rebuilt — 9-block decision-grade panel hierarchy:
+  Block 1: Decision Banner — large colored label + team/pick header + one-sentence FO summary
+  Block 2: Decision Strip — 4 chips: Decision / Best Role / Best Value / Main Risk
+  Block 3: Fit Conditions — "Works if" (green) / "Breaks if" (red) side-by-side
+  Block 4: Why It Works — full bullet list
+  Block 5: Why It Could Fail — full bullet list
+  Block 6: FM Risk Detail — activated (red ▲) / suppressed (green ▼) FM breakdown
+  Block 7: Draft Decision — action tag + mechanism-grade sentence, left-bordered
+  Block 8: Support Metrics — deployment/pick_fit/fm_risk/confidence pushed to secondary grid
+  Block 9: Score Guide — interpretation key
+  Numeric scores no longer lead. Banner and decision chips are the primary read surface.
+- estimate_height for evaluated team fit: 480 → 700 (panel is taller with new blocks)
+- Null-safety contract maintained: no Python None/nan/null artifacts reach HTML output.
+- All 3 panel states clean: prompt (no team) / no-context stub / full evaluated result.
+- Smoke test: 13/13 assertions pass across 5 test cases.
 
 Session 86 close (Export-only session — generated apex_scores_all_s85.json export script; no DB writes, no schema changes, no migrations.)
 
