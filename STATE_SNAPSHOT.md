@@ -1,6 +1,6 @@
 # APEX OS State Snapshot
 
-Last Updated (UTC): 2026-04-21T03:22:50.615657+00:00
+Last Updated (UTC): 2026-04-21T05:30:00.000000+00:00
 
 ---
 
@@ -9,6 +9,57 @@ Last Updated (UTC): 2026-04-21T03:22:50.615657+00:00
 - 2026 (season_id=1)
 
 ## Last Completed Milestone
+
+Session 89 close (Full APEX v2.3 batch re-score (all 139); Arvell Reese ILB-3 gate reaffirmed; Jacob Rodriguez ILB-1 archetype correction seeded.)
+
+Session 89 close:
+- No schema changes. No migrations. Next migration: 0050.
+- Doctor: PASSED (pre and post session).
+
+Full APEX v2.3 batch re-score (--batch all --force):
+- 132 scored directly; 7 JSON parse failures recovered via individual retries.
+  Retried pids: 3236 (D'Angelo Ponds), 75 (Caleb Banks), 74 (Keith Abney),
+  97 (Caleb Tiernan), 30 (Ted Hurst), 134 (Isaiah World), 95 (Trey Zuhn).
+  All 7 written successfully.
+- Final scored universe: 139 active non-calibration prospects at apex_v2.3.
+
+Tier distribution (S89):
+  ELITE=3, DAY1=34, DAY2=74, DAY3=37, UDFA-P=2 (total=150 incl. calibration;
+  active non-cal = 139 + 1 Rodriguez partial = 140 expected).
+
+Divergence (S89):
+  ALIGNED=25, APEX_HIGH=61, APEX_LOW=5, APEX_LOW_PVC_STRUCTURAL=48.
+
+Tag triggers (S89):
+  4 new recs fired; all 4 accepted via triage_pending_tags_2026.py --apply 1.
+  New accepts: Gracen Halton (DT, Compression Flag), Derrick Moore (EDGE, Divergence Alert),
+  Garrett Nussmeier (QB, Divergence Alert), Jalen Farmer (OL, Scheme Dependent).
+  Pending = 0.
+
+Arvell Reese (pid=16) S89 gate check:
+  S89 state: ILB-3 Run-First Enforcer | raw=82.3 | PVC=0.85 | composite=70.0 | DAY1 |
+  FM-6 primary | FM-3 secondary | Tier A | R2 Mid-R3 Top | APEX_LOW_PVC_STRUCTURAL | delta=-31.
+  Verdict: Structural ILB APEX_LOW REAFFIRMED. Archetype, PVC, tier, confidence, and
+  capital all unchanged from S81 baseline. No override changes. Delta=-31 explained
+  entirely by 0.85 ILB PVC + FM-6 deployment constraint vs consensus #2.
+
+Jacob Rodriguez (pid=19) -- Sports Almanac Mode 1 archetype correction:
+  Archetype corrected: ILB-2 Coverage Eraser -> ILB-1 Green Dot Anchor.
+  Seed script: scripts/seed_rodriguez_s89.py (idempotent; do not re-run without dropping rows).
+  Writes applied (all via seed_rodriguez_s89.py --apply 1):
+    apex_scores (apex_id=283): raw 71.8->76.5, composite 61.0->65.0, DAY2, FM-6 primary,
+      FM-2 secondary, capital R3 Early, v_scheme_vers hard-capped 5.0 (PAA Q3 FAILED).
+    notes (4 rows): paa_trace, divergence_analysis, landing_spot_flag, validation_trigger.
+    override_log (1 row): archetype_correction, magnitude=4.0.
+    prospect_comps (3 rows): Demario Davis (hit/primary), Bobby Wagner (hit/ceiling),
+      Deion Jones (miss/bust).
+    divergence_flags (div_id=7160): composite 61->65, capital R4->R3 Early, mag MINOR->MODERATE.
+  PAA status: PARTIAL (Q1 CLEAR, Q2 CLEAR w/ caveat, Q3 FAILED, Q4 FM-6 elevated).
+  Divergence: APEX_LOW_PVC_STRUCTURAL, MODERATE, 1.5 rounds vs consensus R2 Early.
+  Capital: R3 Early base / R2 Late upside (landing-spot conditional).
+  Post-draft trigger: Year 1 snap share >=55% confirms FM-6 overstated.
+  ACTION REQUIRED next session: add pid=19 to ARCHETYPE_OVERRIDES in
+    run_apex_scoring_2026.py before any future --batch all re-score.
 
 Session 88 close (Detail UI 9-phase polish + readability/alignment cleanup pass; RAS semantic coloring bug fixed on Big Board.)
 
@@ -1236,12 +1287,14 @@ Prior sessions on record: 12 (DB rebuild), 13 (weekly pipeline), 13b (school/arc
 
 ## Next Milestone (Single Target)
 
-- Session 89: Full batch APEX re-score (--batch all --force). Investigate Arvell Reese (#2, pid=16)
-  ELITE→DAY1 drop (-8.8 pts, forty=4.46/ATH=86.6). If drop justified, accept and run full batch.
-  After re-score: rebuild pre-draft snapshot (snapshot_id=7) via full pipeline chain.
-  Deferred: position_rank_label format inconsistency (contract "LB #1" vs detail "#1 at LB").
-  Deferred from S85: full team_fit surface integration (app.py pick-fit panel, detail iframe team context block).
-  Note: resolve_draft_day_take() WIRED AND CLOSED S85. Tag triage COMPLETE S84.
+- Session 90: Add pid=19 (Jacob Rodriguez) to ARCHETYPE_OVERRIDES in run_apex_scoring_2026.py
+  (ILB-1 Green Dot Anchor; prevents ILB-2 regression on any future --batch all run).
+  Then rebuild pre-draft snapshot (snapshot_id=7) via full pipeline chain using S89 scores.
+  Pipeline: build_consensus -> snapshot_board -> compute_snapshot_metrics ->
+  compute_source_snapshot_metrics -> compute_snapshot_coverage ->
+  compute_snapshot_confidence -> verify_snapshot_integrity.
+  Deferred: position_rank_label format inconsistency ("LB #1" vs "#1 at LB").
+  Deferred: full team_fit surface integration (app.py pick-fit panel, detail iframe).
 
 ---
 
@@ -1275,19 +1328,24 @@ SNAPSHOTS: Operational. Latest: snapshot_id=6 (2026-03-18). rows=1001 — PASSED
   compute_source_snapshot_metrics → compute_snapshot_coverage →
   compute_snapshot_confidence → verify_snapshot_integrity
 
-APEX: Operational. 140 v2.3 active non-cal scored + 12 calibration artifacts.
+APEX: Operational. 139 v2.3 active non-cal scored + 12 calibration artifacts.
   Archetype-aware measurables context live (Session 71): MEASURABLES_ARCHETYPE_CONTEXT dict,
   9 archetypes mapped. _get_measurables_context() updated with archetype_code parameter.
   716 prospects have measurables data.
-  Tiers (v2.3 active non-cal, post Session 71 full batch re-score):
-    ELITE=1, DAY1=36, DAY2=67, DAY3=33, UDFA-P=3
-    Only ELITE: Fernando Mendoza (QB, 87.3). Caleb Downs dropped to 79.6 DAY1.
-  Divergence (post Session 71 full batch):
-    APEX_HIGH=58, ALIGNED=27, APEX_LOW=5, APEX_LOW_PVC_STRUCTURAL=50.
-  Top premium APEX_HIGH signals (full batch, S71):
-    Jadon Canady CB (+85), Treydan Stukes S (+73), Daylen Everette CB (+62),
-    Chandler Rivers CB (+61), Jaishawn Barham EDGE (+57), Anthony Lucas EDGE (+56).
-  Arvell Reese (pid=16): ILB-3 Run-First Enforcer, 68.5 DAY2. MANUAL_HOLD in GATE_TRACKER.md.
+  Tiers (v2.3 active non-cal, post S89 full batch re-score):
+    ELITE=3, DAY1=34, DAY2=74, DAY3=37, UDFA-P=2 (total active non-cal rows=150 in DB;
+    139 from batch + calibration; Rodriguez seed row apex_id=283 included in total).
+  Divergence (post S89 full batch):
+    ALIGNED=25, APEX_HIGH=61, APEX_LOW=5, APEX_LOW_PVC_STRUCTURAL=48.
+  Arvell Reese (pid=16): ILB-3 Run-First Enforcer, raw=82.3 composite=70.0 DAY1 Tier A.
+    S89 gate: APEX_LOW_PVC_STRUCTURAL REAFFIRMED. Structural ILB PVC. No override changes.
+  Jacob Rodriguez (pid=19): ILB-1 Green Dot Anchor (S89 Almanac correction from ILB-2).
+    raw=76.5 composite=65.0 DAY2 Tier B. FM-6 primary / FM-2 secondary.
+    Capital: R3 Early base / R2 Late upside (landing-spot conditional).
+    PAA PARTIAL. Notes: paa_trace, divergence_analysis, landing_spot_flag, validation_trigger.
+    Comps: Demario Davis (hit) / Bobby Wagner (ceiling) / Deion Jones (bust).
+    ACTION REQUIRED S90: add pid=19 to ARCHETYPE_OVERRIDES before next --batch all.
+  Latest backup: data/exports/apex_all_rescored_s89.json (139 records).
   Latest backup: data/apex_all_rescored_s71_20260329T063036Z.json (140 records).
   Igbinosun (pid=36): CB-3 Press Man Corner 68.4 DAY2, Tier B, FM-2 CONDITIONAL, R2 early–R3 top.
     PAA gate injection applied Session 39. Prior score (CB-2 76.4) corrected. Delta: +23 MODERATE.
