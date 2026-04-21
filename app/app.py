@@ -34,6 +34,22 @@ from draftos.queries.team_fit import (
     resolve_team_fit_pick,
 )
 from draftos.team_fitevaluator import evaluate_team_fit
+from draftos.queries.draft_mode import (
+    get_all_teams as dm_get_all_teams,
+    get_team_context as dm_get_team_context,
+    get_drafted_count as dm_get_drafted_count,
+    get_next_pick_suggestion as dm_get_next_pick,
+    get_drafted_picks as dm_get_drafted_picks,
+    get_drafted_picks_since as dm_get_drafted_picks_since,
+    get_team_last_pick as dm_get_team_last_pick,
+    search_available_prospects as dm_search_prospects,
+    get_remaining_board as dm_get_remaining_board,
+    get_team_fits as dm_get_team_fits,
+    get_value_plays as dm_get_value_plays,
+    get_pick_window_targets as dm_get_pick_window,
+    mark_prospect_drafted as dm_mark_drafted,
+    derive_round as dm_derive_round,
+)
 
 # Streamlit ≥ 1.35 supports on_select / selection_mode on st.dataframe
 _ON_SELECT_AVAILABLE = tuple(
@@ -2309,7 +2325,7 @@ st.caption("APEX OS · 2026 Draft · Session 44 · " + _export_dt.now().strftime
 with st.sidebar:
     st.header("Filters")
 
-    show_low = st.checkbox("Show Low confidence", value=False)
+    show_low = st.checkbox("Show Low confidence", value=True)
 
     show_divergence_only = st.checkbox("Show divergence flags only (⚡)", value=False)
 
@@ -2476,6 +2492,11 @@ This reflects draft economics, not player talent.
         if clear_compare:
             st.session_state.pop("compare_a", None)
             st.session_state.pop("compare_b", None)
+
+    st.divider()
+    draft_mode_on = st.checkbox(
+        "Draft Mode (operator)", value=False, key="draft_mode_on"
+    )
 
 # ---------------------------------------------------------------------------
 # Apply filters
@@ -3664,3 +3685,498 @@ else:
                         st.error(f"Card generation failed: {_e}")
                 except Exception as _e:
                     st.error(f"Card generation failed: {_e}")
+
+# ---------------------------------------------------------------------------
+# Draft Mode — Full Operator UI (toggle "Draft Mode (operator)" in sidebar)
+# ---------------------------------------------------------------------------
+# Architecture:
+#   Read path : draftos.queries.draft_mode → v_draft_targets_remaining_2026 ONLY
+#               No direct reads from forbidden upstream tables.
+#   Write path: draftos.queries.draft_mode.mark_prospect_drafted()
+#               → drafted_picks_2026 only. Backup before write.
+#   Sections  : Draft Control | Remaining Board | Team Companion
+# ---------------------------------------------------------------------------
+
+if st.session_state.get("draft_mode_on", False):
+
+    st.divider()
+
+    # ── Status bar ───────────────────────────────────────────────────────────
+    _dm_teams = dm_get_all_teams()
+    _dm_picks_n = dm_get_drafted_count()
+
+    if not _dm_teams:
+        st.error("No teams found in team_draft_context. Run build_team_context_2026.py first.")
+        st.stop()
+
+    _dm_status_c1, _dm_status_c2, _dm_status_c3 = st.columns([2, 1, 3])
+    with _dm_status_c1:
+        st.markdown("### Draft Mode — Operator")
+    with _dm_status_c2:
+        st.metric("Picks recorded", _dm_picks_n)
+    with _dm_status_c3:
+        st.caption(
+            "Read path: `v_draft_targets_remaining_2026`.  "
+            "Undo picks: `python -m scripts.reset_drafted_2026 --apply 1`"
+        )
+
+    # ── 3-section tabs ───────────────────────────────────────────────────────
+    _dm_tab_ctrl, _dm_tab_board, _dm_tab_team = st.tabs(
+        ["Draft Control", "Remaining Board", "Team Companion"]
+    )
+
+    # ════════════════════════════════════════════════════════════════════════
+    # TAB 1 — DRAFT CONTROL
+    # ════════════════════════════════════════════════════════════════════════
+    with _dm_tab_ctrl:
+        _ctrl_left, _ctrl_right = st.columns([2, 3])
+
+        with _ctrl_left:
+            st.markdown("##### Record a Pick")
+
+            # ── Player search (outside form: triggers immediate rerender) ──
+            _dm_search = st.text_input(
+                "Search player name",
+                value=st.session_state.get("dm_ctrl_search_val", ""),
+                placeholder="e.g. Mendoza, Bailey, Travis...",
+                key="dm_ctrl_search",
+            )
+            st.session_state["dm_ctrl_search_val"] = _dm_search
+
+            _dm_avail = dm_search_prospects(_dm_search, limit=80)
+
+            if not _dm_avail:
+                st.caption("No available prospects match that search.")
+                _dm_selected_pid = None
+                _dm_selected_name = None
+                _dm_selected_pos = None
+            else:
+                _dm_opts = {
+                    f"{p['display_name']}  ({p['position_group']})  #{p['consensus_rank']}": p
+                    for p in _dm_avail
+                }
+                _dm_opts_labels = ["— select player —"] + list(_dm_opts.keys())
+                _dm_sel_label = st.selectbox(
+                    "Available prospects",
+                    options=_dm_opts_labels,
+                    key="dm_ctrl_player_sel",
+                )
+
+                if _dm_sel_label != "— select player —" and _dm_sel_label in _dm_opts:
+                    _dm_sel_p = _dm_opts[_dm_sel_label]
+                    _dm_selected_pid  = _dm_sel_p["prospect_id"]
+                    _dm_selected_name = _dm_sel_p["display_name"]
+                    _dm_selected_pos  = _dm_sel_p["position_group"]
+                    st.info(
+                        f"**{_dm_selected_name}** ({_dm_selected_pos})  "
+                        f"· Consensus #{_dm_sel_p['consensus_rank']}  "
+                        f"· pid={_dm_selected_pid}"
+                    )
+                else:
+                    _dm_selected_pid  = None
+                    _dm_selected_name = None
+                    _dm_selected_pos  = None
+
+            st.markdown("---")
+
+            # ── Pick form ─────────────────────────────────────────────────
+            _dm_next_pick = dm_get_next_pick()
+            _dm_auto_round = dm_derive_round(_dm_next_pick)
+
+            _dm_f_c1, _dm_f_c2 = st.columns(2)
+            with _dm_f_c1:
+                _dm_pick_in = st.number_input(
+                    "Pick #", min_value=1, max_value=300,
+                    value=_dm_next_pick, step=1, key="dm_ctrl_pick"
+                )
+            with _dm_f_c2:
+                _dm_auto_round = dm_derive_round(int(_dm_pick_in))
+                st.text_input(
+                    "Round (auto)",
+                    value=f"R{_dm_auto_round}",
+                    disabled=True,
+                    key="dm_ctrl_round_display",
+                )
+
+            _dm_team_in = st.selectbox(
+                "Drafting team", options=_dm_teams,
+                index=_dm_teams.index("SF") if "SF" in _dm_teams else 0,
+                key="dm_ctrl_team",
+            )
+            _dm_note_in = st.text_input(
+                "Note (optional)", value="", key="dm_ctrl_note",
+                placeholder="e.g. traded up, value pick..."
+            )
+
+            _dm_can_submit = _dm_selected_pid is not None
+            _dm_submit_btn = st.button(
+                f"Mark as Drafted  ➜  {'Pick #' + str(int(_dm_pick_in)) if _dm_can_submit else '(select a player first)'}",
+                type="primary" if _dm_can_submit else "secondary",
+                disabled=not _dm_can_submit,
+                key="dm_ctrl_submit",
+            )
+
+            if _dm_submit_btn and _dm_can_submit:
+                _dm_result = dm_mark_drafted(
+                    prospect_id=_dm_selected_pid,
+                    pick_number=int(_dm_pick_in),
+                    round_number=_dm_auto_round,
+                    team=_dm_team_in,
+                    note=_dm_note_in.strip() or None,
+                    source="ui",
+                )
+                if _dm_result.startswith("OK"):
+                    st.success(f"{_dm_result} — {_dm_selected_name} ({_dm_selected_pos}) → {_dm_team_in}")
+                    # Clear the search so next pick starts fresh
+                    st.session_state["dm_ctrl_search_val"] = ""
+                    st.rerun()
+                else:
+                    st.error(_dm_result)
+
+        with _ctrl_right:
+            st.markdown("##### Recent Picks")
+            _dm_recent = dm_get_drafted_picks(limit=15)
+            if not _dm_recent:
+                st.info("No picks recorded yet.")
+            else:
+                _dm_recent_rows = []
+                for _r in _dm_recent:
+                    _dm_recent_rows.append({
+                        "Pick":    f"#{_r['pick_number']}" + (f" R{_r['round_number']}" if _r["round_number"] else ""),
+                        "Team":    _r["drafting_team"] or "—",
+                        "Player":  _r["display_name"] or f"pid={_r['prospect_id']}",
+                        "Pos":     _r["position_group"] or "?",
+                        "Time":    (_r["drafted_at"] or "")[:16].replace("T", " "),
+                        "Note":    (_r["note"] or "")[:30],
+                    })
+                st.dataframe(
+                    pd.DataFrame(_dm_recent_rows),
+                    use_container_width=True,
+                    hide_index=True,
+                )
+                st.caption(
+                    "To remove a pick: `python -m scripts.reset_drafted_2026 --pick-number N --apply 1`"
+                )
+
+    # ════════════════════════════════════════════════════════════════════════
+    # TAB 2 — REMAINING BOARD
+    # ════════════════════════════════════════════════════════════════════════
+    with _dm_tab_board:
+        st.markdown("##### Global Remaining Board")
+        st.caption(
+            "One row per prospect · source: `v_draft_targets_remaining_2026` · "
+            "Best Tier = best fit across all 32 teams"
+        )
+
+        # Filter controls
+        _board_fc1, _board_fc2, _board_fc3, _board_fc4, _board_fc5 = st.columns(5)
+
+        _all_pos = ["CB", "EDGE", "OL", "QB", "RB", "S", "TE", "WR", "DT"]
+        with _board_fc1:
+            _board_pos = st.multiselect(
+                "Position", options=_all_pos, default=[], key="dm_board_pos"
+            )
+        with _board_fc2:
+            _board_tier = st.selectbox(
+                "Min tier",
+                options=["All", "STRONG+", "VIABLE+"],
+                index=0,
+                key="dm_board_tier",
+                help="STRONG+ = IDEAL or STRONG only. VIABLE+ = all three tiers."
+            )
+        with _board_fc3:
+            _board_div = st.selectbox(
+                "Divergence",
+                options=["All", "APEX_HIGH", "ALIGNED", "APEX_LOW", "APEX_LOW_PVC_STRUCTURAL"],
+                index=0,
+                key="dm_board_div",
+            )
+        with _board_fc4:
+            _board_sort = st.selectbox(
+                "Sort by",
+                options=["Consensus Rank", "APEX Rank", "Best Fit Score"],
+                index=0,
+                key="dm_board_sort",
+            )
+        with _board_fc5:
+            _board_limit = st.slider("Show rows", 20, 174, 60, step=10, key="dm_board_limit")
+
+        _board_pos_filter   = _board_pos if _board_pos else None
+        _board_tier_filter  = (
+            "STRONG" if _board_tier == "STRONG+" else
+            "VIABLE" if _board_tier == "VIABLE+" else
+            None
+        )
+        _board_div_filter   = None if _board_div == "All" else _board_div
+        _board_sort_key     = (
+            "apex" if _board_sort == "APEX Rank" else
+            "fit"  if _board_sort == "Best Fit Score" else
+            "consensus"
+        )
+
+        _board_rows = dm_get_remaining_board(
+            position_filter=_board_pos_filter,
+            tier_filter=_board_tier_filter,
+            div_filter=_board_div_filter,
+            sort_by=_board_sort_key,
+            limit=_board_limit,
+        )
+
+        if not _board_rows:
+            st.info("No prospects match the current filters.")
+        else:
+            _board_df = pd.DataFrame(_board_rows)
+
+            # Divergence flag coloring helper
+            def _dm_div_badge(flag: str | None) -> str:
+                if flag == "APEX_HIGH":               return "🔼 APEX_HIGH"
+                if flag == "APEX_LOW":                return "🔽 APEX_LOW"
+                if flag == "APEX_LOW_PVC_STRUCTURAL": return "⬇ PVC-STRUCTURAL"
+                return "— aligned"
+
+            _board_df["Div"] = _board_df["divergence_flag"].apply(_dm_div_badge)
+            _board_df["Mag"] = _board_df["divergence_magnitude"].fillna("—")
+            _board_df["FM"]  = _board_df["failure_mode_primary"].str[:20].fillna("—")
+
+            _board_display = _board_df[[
+                "display_name", "position_group", "consensus_rank", "apex_rank",
+                "best_fit_tier", "best_fit_score", "team_fit_count",
+                "capital_adjusted", "Div", "Mag", "FM",
+            ]].rename(columns={
+                "display_name":   "Name",
+                "position_group": "Pos",
+                "consensus_rank": "Con#",
+                "apex_rank":      "Apex#",
+                "best_fit_tier":  "Best Tier",
+                "best_fit_score": "Score",
+                "team_fit_count": "#Teams",
+                "capital_adjusted":"Capital",
+                "Div":            "Divergence",
+                "Mag":            "Mag",
+                "FM":             "FM Primary",
+            })
+
+            st.dataframe(
+                _board_display,
+                use_container_width=True,
+                hide_index=True,
+                column_config={
+                    "Con#":    st.column_config.NumberColumn(format="%d"),
+                    "Apex#":   st.column_config.NumberColumn(format="%d"),
+                    "Score":   st.column_config.NumberColumn(format="%.1f"),
+                    "#Teams":  st.column_config.NumberColumn(format="%d"),
+                },
+            )
+            st.caption(
+                f"Showing {len(_board_rows)} of 174 available prospects · "
+                f"Score = best fit_score across 32 teams"
+            )
+
+    # ════════════════════════════════════════════════════════════════════════
+    # TAB 3 — TEAM COMPANION
+    # ════════════════════════════════════════════════════════════════════════
+    with _dm_tab_team:
+
+        # ── Team selector ────────────────────────────────────────────────────
+        _tc_teams_with_default = _dm_teams.copy()
+        _tc_default_idx = _tc_teams_with_default.index("SF") if "SF" in _tc_teams_with_default else 0
+        _tc_team = st.selectbox(
+            "Companion team",
+            options=_tc_teams_with_default,
+            index=_tc_default_idx,
+            key="dm_tc_team",
+        )
+
+        _tc_ctx = dm_get_team_context(_tc_team)
+        if _tc_ctx is None:
+            st.error(f"No context found for {_tc_team}.")
+        else:
+            # ── Team context header ──────────────────────────────────────────
+            _tc_h1, _tc_h2, _tc_h3 = st.columns(3)
+            with _tc_h1:
+                premium_needs = [
+                    n["position"] for n in _tc_ctx["needs"] if n["tier"] == "PREMIUM"
+                ]
+                secondary_needs = [
+                    n["position"] for n in _tc_ctx["needs"] if n["tier"] == "SECONDARY"
+                ]
+                st.markdown(
+                    f"**{_tc_ctx['team_name']}**  \n"
+                    f"Scheme: {_tc_ctx['scheme_family']} / {_tc_ctx['defense_structure']}  \n"
+                    f"Coverage: {_tc_ctx['coverage_bias']}"
+                )
+            with _tc_h2:
+                st.markdown(
+                    f"**Needs**  \n"
+                    f"Premium: {', '.join(premium_needs) or '—'}  \n"
+                    f"Secondary: {', '.join(secondary_needs) or '—'}"
+                )
+            with _tc_h3:
+                # Remaining draft capital
+                remaining = _tc_ctx["remaining_picks"]
+                recorded  = _tc_ctx["recorded_picks"]
+                cap_lines = []
+                for k, v in sorted(_tc_ctx["draft_capital"].items()):
+                    status = "✓ used" if v in recorded else f"Pick #{v}"
+                    cap_lines.append(f"**{k}**: {status}")
+                st.markdown("**Draft Capital**  \n" + "  \n".join(cap_lines))
+
+            st.markdown("---")
+
+            # ── Position filter shared across sub-sections ───────────────────
+            _tc_pos_opts = ["CB", "EDGE", "OL", "QB", "RB", "S", "TE", "WR", "DT"]
+            _tc_c1, _tc_c2 = st.columns([2, 4])
+            with _tc_c1:
+                _tc_pos_filter = st.multiselect(
+                    "Filter positions (applies to all sub-sections)",
+                    options=_tc_pos_opts,
+                    default=[],
+                    key="dm_tc_pos_filter",
+                )
+            with _tc_c2:
+                _tc_limit = st.slider(
+                    "Rows per section", 5, 30, 12, key="dm_tc_limit"
+                )
+
+            _tc_pos = _tc_pos_filter if _tc_pos_filter else None
+
+            # ── Sub-section 1: Top Fits ──────────────────────────────────────
+            with st.expander(f"Top Fits — {_tc_team}", expanded=True):
+                _tc_fits = dm_get_team_fits(_tc_team, position_filter=_tc_pos, limit=_tc_limit)
+                if not _tc_fits:
+                    st.info("No remaining fits for this team / position filter.")
+                else:
+                    _tc_fits_rows = []
+                    for _f in _tc_fits:
+                        _tc_fits_rows.append({
+                            "Name":    _f["display_name"] or "—",
+                            "Pos":     _f["position_group"] or "—",
+                            "Tier":    _f["fit_tier"] or "—",
+                            "Band":    _f["fit_band"] or "—",
+                            "Score":   round(_f["fit_score"] or 0, 1),
+                            "Con#":    _f["consensus_rank"],
+                            "Apex#":   _f["apex_rank"],
+                            "Capital": (_f["capital_adjusted"] or "—")[:18],
+                            "Why For": (_f["why_for"] or "—")[:50],
+                        })
+                    st.dataframe(
+                        pd.DataFrame(_tc_fits_rows),
+                        use_container_width=True,
+                        hide_index=True,
+                        column_config={
+                            "Score": st.column_config.NumberColumn(format="%.1f"),
+                            "Con#":  st.column_config.NumberColumn(format="%d"),
+                            "Apex#": st.column_config.NumberColumn(format="%d"),
+                        },
+                    )
+
+            # ── Sub-section 2: Value Plays (APEX_HIGH) ───────────────────────
+            with st.expander(f"Value Plays — APEX_HIGH for {_tc_team}", expanded=False):
+                st.caption(
+                    "Prospects where the APEX model rates significantly higher than consensus. "
+                    "APEX_HIGH = model sees more than market. Filtered to this team's fit rows."
+                )
+                _tc_vp = dm_get_value_plays(_tc_team, limit=_tc_limit)
+                if _tc_pos:
+                    _tc_vp = [v for v in _tc_vp if v.get("position_group") in _tc_pos]
+                if not _tc_vp:
+                    st.info("No APEX_HIGH prospects remain for this team / position filter.")
+                else:
+                    _tc_vp_rows = []
+                    for _v in _tc_vp:
+                        _tc_vp_rows.append({
+                            "Name":    _v["display_name"] or "—",
+                            "Pos":     _v["position_group"] or "—",
+                            "APEX#":   _v["apex_rank"],
+                            "Con#":    _v["consensus_rank"],
+                            "Mag":     _v["divergence_magnitude"] or "—",
+                            "Tier":    _v.get("fit_tier") or "—",
+                            "Score":   round(_v.get("fit_score") or 0, 1),
+                            "Capital": (_v["capital_adjusted"] or "—")[:18],
+                            "FM":      (_v["failure_mode_primary"] or "—")[:22],
+                        })
+                    st.dataframe(
+                        pd.DataFrame(_tc_vp_rows),
+                        use_container_width=True,
+                        hide_index=True,
+                        column_config={
+                            "APEX#": st.column_config.NumberColumn(format="%d"),
+                            "Con#":  st.column_config.NumberColumn(format="%d"),
+                            "Score": st.column_config.NumberColumn(format="%.1f"),
+                        },
+                    )
+
+            # ── Sub-section 3: Pick Window ───────────────────────────────────
+            with st.expander(f"Pick Window — {_tc_team} upcoming picks", expanded=False):
+                _tc_remaining_picks = list(_tc_ctx["remaining_picks"].values())
+                if not _tc_remaining_picks:
+                    st.info("All of this team's known picks have been recorded, or none in draft_capital.")
+                else:
+                    _tc_next_pick_nums = sorted(_tc_remaining_picks)[:3]  # up to 3 upcoming picks
+                    st.caption(
+                        f"Remaining picks: {', '.join(['#' + str(p) for p in _tc_next_pick_nums])}  |  "
+                        f"Showing prospects whose capital_adjusted matches the pick round(s)"
+                    )
+                    _tc_pw = dm_get_pick_window(
+                        _tc_team, pick_numbers=_tc_next_pick_nums, limit=_tc_limit
+                    )
+                    if _tc_pos:
+                        _tc_pw = [p for p in _tc_pw if p.get("position_group") in _tc_pos]
+                    if not _tc_pw:
+                        st.info("No prospects with matching capital range for these picks.")
+                    else:
+                        _tc_pw_rows = []
+                        for _p in _tc_pw:
+                            _tc_pw_rows.append({
+                                "Name":    _p["display_name"] or "—",
+                                "Pos":     _p["position_group"] or "—",
+                                "Tier":    _p["fit_tier"] or "—",
+                                "Score":   round(_p["fit_score"] or 0, 1),
+                                "Con#":    _p["consensus_rank"],
+                                "Capital": (_p["capital_adjusted"] or "—")[:20],
+                                "Div":     _p.get("divergence_flag") or "—",
+                                "Why For": (_p.get("why_for") or "—")[:45],
+                            })
+                        st.dataframe(
+                            pd.DataFrame(_tc_pw_rows),
+                            use_container_width=True,
+                            hide_index=True,
+                            column_config={
+                                "Score": st.column_config.NumberColumn(format="%.1f"),
+                                "Con#":  st.column_config.NumberColumn(format="%d"),
+                            },
+                        )
+
+            # ── Sub-section 4: Recently Off Board ───────────────────────────
+            with st.expander(f"Recently Off Board — since {_tc_team}'s last pick", expanded=False):
+                _tc_last_pick = dm_get_team_last_pick(_tc_team)
+                if _tc_last_pick == 0:
+                    st.caption(
+                        f"{_tc_team} has no recorded picks. Showing all picks on board."
+                    )
+                    _tc_since = 0
+                else:
+                    st.caption(
+                        f"{_tc_team} last picked at #{_tc_last_pick}. "
+                        f"Showing everything drafted since then."
+                    )
+                    _tc_since = _tc_last_pick
+
+                _tc_removed = dm_get_drafted_picks_since(_tc_since)
+                if not _tc_removed:
+                    st.info("No picks recorded since this team's last selection.")
+                else:
+                    _tc_removed_rows = []
+                    for _rr in _tc_removed:
+                        _tc_removed_rows.append({
+                            "Pick":    f"#{_rr['pick_number']}" + (f" R{_rr['round_number']}" if _rr.get("round_number") else ""),
+                            "Team":    _rr["drafting_team"] or "—",
+                            "Player":  _rr["display_name"] or f"pid={_rr['prospect_id']}",
+                            "Pos":     _rr["position_group"] or "?",
+                            "Time":    (_rr["drafted_at"] or "")[:16].replace("T", " "),
+                        })
+                    st.dataframe(
+                        pd.DataFrame(_tc_removed_rows),
+                        use_container_width=True,
+                        hide_index=True,
+                    )
