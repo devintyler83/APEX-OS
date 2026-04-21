@@ -1219,6 +1219,68 @@ ARCHETYPE_OVERRIDES: dict[int, dict] = {
             "Archetype_lock":       "EDGE-4 Athletic Dominator confirmed S76 Mode 3",
         },
     },
+
+    # ---------------------------------------------------------------------------
+    # Session 89 overrides
+    # ---------------------------------------------------------------------------
+
+    # Jacob Rodriguez — ILB (pid=19). Archetype corrected S89: ILB-2 Coverage Eraser -> ILB-1 Green Dot Anchor.
+    # DB writes applied S89 via seed_rodriguez_s89.py --apply 1. Do NOT re-run seed script.
+    # This ARCHETYPE_OVERRIDES entry protects the correction on all future --batch all re-scores.
+    # PAA status: PARTIAL (Q1 CLEAR, Q2 CLEAR w/ caveat, Q3 FAILED, Q4 FM-6 elevated).
+    # v_scheme_vers hard-capped at 5.0 — PAA Q3 FAILED; scheme versatility gate does not clear.
+    # Capital: R3 Early base / R2 Late upside (landing-spot conditional: green-dot/command-structure schemes).
+    19: {
+        "forced_archetype":    "ILB-1",
+        "archetype_label":     "ILB-1 Green Dot Anchor",
+        "archetype_rationale": (
+            "Archetype corrected S89 (ILB-2 Coverage Eraser REJECTED). "
+            "Rodriguez's primary win mechanism is pre-snap command and gap-sound run defense — "
+            "the Green Dot Anchor profile. ILB-2 Coverage Eraser was incorrect: it prices "
+            "man-coverage floor and post-snap disguise as primary mechanisms, which Rodriguez "
+            "does not confirm. ILB-1 Green Dot Anchor correctly captures the profile: "
+            "pre-snap identification, play-call execution, and gap discipline are the "
+            "confirmed primary mechanisms. "
+            "PAA Q3 FAILED: scheme versatility gate does not clear — v_scheme_vers hard-capped "
+            "at 5.0. Rodriguez reads base-formation run fits at a high level but does not "
+            "demonstrate confirmed adaptability across scheme families at the NFL complexity level. "
+            "PAA Q4 FM-6 elevated: Green Dot deployment requires organizational commitment to "
+            "a command structure — wrong scheme family activates FM-6 Role Mismatch immediately. "
+            "FM-6 is primary: scheme-dependent value requires gap-sound, two-level run-defense "
+            "architecture with explicit green-dot responsibility. "
+            "FM-2 is secondary: scheme-ghost risk if deployed in zone-heavy coverage schemes "
+            "where pre-snap command responsibility is reduced or transferred. "
+            "Capital: R3 Early base. R2 Late upside is landing-spot-conditional — requires "
+            "confirmed green-dot/command-structure deployment (Ravens, Steelers, Commanders "
+            "run-first architecture as optimal fits). "
+            "Demario Davis (hit/primary), Bobby Wagner (hit/ceiling), Deion Jones (miss/bust) "
+            "are the prospect comps seeded S89."
+        ),
+        "eval_confidence":     "Tier B",
+        "capital_range":       "R3 Early base — R2 Late upside (green-dot/command-structure landing only)",
+        "fm_flags":            ["FM-6 Role Mismatch (primary)", "FM-2 Scheme Ghost (secondary)"],
+        "v_scheme_vers_cap":   5.0,
+        "placed_session":      89,
+        "bust_warning": (
+            "FM-6 Role Mismatch primary: Green Dot Anchor value is entirely deployment-dependent. "
+            "Organizations that do not allocate green-dot/command responsibility reduce Rodriguez "
+            "to a volume tackler — FM-6 activates regardless of physical performance. "
+            "FM-2 Scheme Ghost secondary: zone-heavy deployments that remove pre-snap command "
+            "responsibility expose the scheme-versatility gap (PAA Q3 FAILED). "
+            "v_scheme_vers hard-capped at 5.0 — do NOT allow API to score above this value."
+        ),
+        "paa_findings": {
+            "Q1":                  "CLEAR — pre-snap identification and gap discipline confirmed at starter level",
+            "Q2":                  "CLEAR w/ caveat — run-defense mechanism confirmed; man-coverage floor present but not dominant",
+            "Q3":                  "FAILED — scheme versatility gate does not clear; v_scheme_vers hard-capped 5.0",
+            "Q4":                  "FM-6 ELEVATED — Green Dot deployment requires organizational command structure commitment",
+            "FM_primary":          "FM-6 Role Mismatch — scheme-dependent value; green-dot/command deployment mandatory",
+            "FM_secondary":        "FM-2 Scheme Ghost — zone-heavy deployment exposes scheme-versatility gap",
+            "Comps_seeded_S89":    "Demario Davis (hit/primary), Bobby Wagner (hit/ceiling), Deion Jones (miss/bust)",
+            "Capital_gate":        "LANDING_SPOT_CONDITIONAL — R2 Late only in confirmed green-dot architecture",
+            "Archetype_lock":      "ILB-1 Green Dot Anchor confirmed S89 (ILB-2 Coverage Eraser REJECTED)",
+        },
+    },
 }
 
 # ---------------------------------------------------------------------------

@@ -1,0 +1,301 @@
+consensus_rank,display_name,position_group,apex_composite,apex_tier,matched_archetype,failure_mode_primary,eval_confidence,capital_base,capital_adjusted,divergence_flag,divergence_rank_delta
+1,"Fernando Mendoza",QB,86.2,ELITE,"QB-1 Field General","FM-4 Body Breakdown","Tier A","R1 Picks 1-10","R1 Picks 1-10",ALIGNED,-1
+2,"Arvell Reese",LB,70.0,DAY1,"ILB-3 Run-First Enforcer","FM-6 Role Mismatch","Tier A","R2 Mid–R3 Top","R2 Mid–R3 Top",APEX_LOW_PVC_STRUCTURAL,-31
+3,"Caleb Downs",S,76.6,DAY1,"S-1 Centerfielder","FM-2 Scheme Ghost","Tier B","R1 Late / R2 Early -- scheme-confirmed landing spot required","R1 Late / R2 Early -- scheme-confirmed landing spot required",APEX_LOW,-10
+4,"Jeremiyah Love",RB,61.5,DAY2,"RB-1 Elite Workhorse","FM-6 Role Mismatch","Tier A","R2 top | Floor: R2 late | Ceiling: R1 late (thin-class market)","R2 top | Floor: R2 late | Ceiling: R1 late (thin-class market)",APEX_LOW_PVC_STRUCTURAL,-82
+5,"Rueben Bain",EDGE,78.4,DAY1,"EDGE-4 Athletic Dominator","FM-1 Athleticism Mirage","Tier B","R2 Top","R2 Top",ALIGNED,-2
+6,"David Bailey",EDGE,88.7,ELITE,"EDGE-1 Every-Down Disruptor","FM-1 Athleticism Mirage","Tier A","R1 Picks 1-10","R1 Picks 1-10",ALIGNED,5
+7,"Carnell Tate",WR,73.9,DAY1,"WR-1 Route Technician","FM-3 Processing Wall","Tier A","R2 Mid–R3 Top","R2 Mid–R3 Top",APEX_LOW_PVC_STRUCTURAL,-12
+8,"Sonny Styles",LB,74.3,DAY1,"ILB-2 Coverage Eraser","FM-3 Processing Wall","Tier A","R2 Top","R2 Top",APEX_LOW_PVC_STRUCTURAL,-9
+9,"Francis Mauigoa",OL,67.4,DAY2,"OG-1 Complete Interior Anchor","FM-6 Role Mismatch","Tier A",R3,R3,APEX_LOW_PVC_STRUCTURAL,-32
+10,"Spencer Fano",OL,76.9,DAY1,"OT-1 Elite Athletic Anchor","FM-6 Role Mismatch","Tier A","R2 Top","R2 Top",ALIGNED,-1
+11,"Mansoor Delane",CB,78.4,DAY1,"CB-3 Press Man Corner","FM-1 Athleticism Mirage","Tier B","R2 Top","R2 Top",ALIGNED,2
+12,"Kenyon Sadiq",TE,66.2,DAY2,"TE-2 Mismatch Creator","FM-3 Processing Wall","Tier A",R3,R3,APEX_LOW_PVC_STRUCTURAL,-37
+13,"Jordyn Tyson",WR,75.3,DAY1,"WR-6 Complete Outside Weapon","FM-1 Athleticism Mirage","Tier B","R2 Top","R2 Top",ALIGNED,-2
+14,"Avieon Terrell",CB,78.4,DAY1,"CB-1 Anticipatory Lockdown","FM-1 Athleticism Mirage","Tier A","R2 Top","R2 Top",APEX_HIGH,6
+15,"Jermod Mccoy",CB,81.6,DAY1,"CB-1 Anticipatory Lockdown","FM-4 Body Breakdown","Tier B","R1 Picks 12-22","R1 Picks 12-22",APEX_HIGH,12
+16,"Monroe Freeling",OL,74.8,DAY1,"OT-1 Elite Athletic Anchor","FM-6 Role Mismatch","Tier A","R2 Top","R2 Top",ALIGNED,0
+17,"Olaivavega Ioane",OL,65.4,DAY2,"OG-1 Complete Interior Anchor","FM-6 Role Mismatch","Tier A",R3,R3,APEX_LOW_PVC_STRUCTURAL,-39
+18,"Denzel Boston",WR,66.4,DAY2,"WR-6 Complete Outside Weapon","FM-2 Scheme Ghost","Tier B",R3,R3,APEX_LOW_PVC_STRUCTURAL,-29
+19,"Dillon Thieneman",S,76.7,DAY1,"S-3 Multiplier Safety","FM-6 Role Mismatch","Tier B","R2 Top","R2 Top",APEX_HIGH,7
+20,"Kadyn Proctor",OL,65.9,DAY2,"OT-5 Raw Projection","FM-3 Processing Wall","Tier B",R3,R3,APEX_LOW_PVC_STRUCTURAL,-33
+21,"Cashius Howell",EDGE,74.2,DAY1,"EDGE-3 Power-Counter Technician","FM-4 Body Breakdown","Tier B","R2 Top","R2 Top",ALIGNED,3
+22,"Akheem Mesidor",EDGE,71.4,DAY1,"EDGE-4 Athletic Dominator","FM-1 Athleticism Mirage","Tier B","R2 Mid–R3 Top","R2 Mid–R3 Top",ALIGNED,-4
+23,"Cj Allen",LB,66.7,DAY2,"ILB-2 Coverage Eraser","FM-4 Body Breakdown","Tier B",R3,R3,APEX_LOW_PVC_STRUCTURAL,-23
+24,"Keldric Faulk",EDGE,79.3,DAY1,"EDGE-3 Power-Counter Technician","FM-4 Body Breakdown","Tier A","R2 Top","R2 Top",APEX_HIGH,18
+25,"Caleb Lomu",OL,73.9,DAY1,"OT-1 Elite Athletic Anchor","FM-4 Body Breakdown","Tier A","R2 Mid–R3 Top","R2 Mid–R3 Top",ALIGNED,5
+26,"KC Concepcion",WR,67.1,DAY2,"WR-5 Slot Architect","FM-2 Scheme Ghost","Tier B",R3,R3,APEX_LOW_PVC_STRUCTURAL,-17
+27,"Kayden Mcdonald",DT,69.7,DAY2,"DT-2 Versatile Disruptor","FM-5 Motivation Cliff","Tier B","R2 Mid–R3 Top","R2 Mid–R3 Top",APEX_LOW_PVC_STRUCTURAL,-8
+28,"Peter Woods",DT,71.4,DAY1,"DT-2 Versatile Disruptor","FM-4 Body Breakdown","Tier A","R2 Mid–R3 Top","R2 Mid–R3 Top",ALIGNED,3
+29,"Ty Simpson",QB,70.8,DAY1,"QB-4 Game Manager Elevated","FM-6 Role Mismatch","Tier B","R1 late (Picks 18-25) Steelers confirmed; R2 Early all other fits","R1 late (Picks 18-25) Steelers confirmed; R2 Early all other fits",ALIGNED,0
+30,"Chris Johnson",CB,79.6,DAY1,"CB-2 Zone Architect","FM-3 Processing Wall","Tier B","R1 Picks 22-32 / Top R2","R1 Picks 22-32 / Top R2",APEX_HIGH,25
+31,"D'Angelo Ponds",CB,76.4,DAY1,"CB-3 Press Man Corner","FM-3 Processing Wall","Tier B","R2 Top","R2 Top",APEX_HIGH,17
+32,"Colton Hood",CB,81.4,DAY1,"CB-3 Press Man Corner","FM-1 Athleticism Mirage","Tier A","R1 Picks 16-25","R1 Picks 16-25",APEX_HIGH,28
+33,"Makai Lemon",WR,64.1,DAY2,"WR-3 YAC Weapon","FM-6 Role Mismatch","Tier B",R3,R3,APEX_LOW_PVC_STRUCTURAL,-33
+34,"Brandon Cisse",CB,73.1,DAY1,"CB-3 Press Man Corner","FM-1 Athleticism Mirage","Tier B","R1 Picks 25-32 / Top R2","R1 Picks 25-32 / Top R2",APEX_HIGH,12
+35,"Caleb Banks",DT,66.4,DAY2,"DT-1 Interior Wrecker","FM-3 Processing Wall","Tier A",R3,R3,APEX_LOW_PVC_STRUCTURAL,-13
+36,"Germie Bernard",WR,66.1,DAY2,"WR-1 Route Technician","FM-1 Athleticism Mirage","Tier B",R3,R3,APEX_LOW_PVC_STRUCTURAL,-16
+37,"Blake Miller",OL,73.3,DAY1,"OT-1 Elite Athletic Anchor","FM-4 Body Breakdown","Tier A","R2 Mid–R3 Top","R2 Mid–R3 Top",APEX_HIGH,16
+38,"R Mason Thomas",EDGE,71.2,DAY1,"EDGE-3 Power-Counter Technician","FM-4 Body Breakdown","Tier B","R2 Mid–R3 Top","R2 Mid–R3 Top",APEX_HIGH,10
+39,"Emmanuel Pregnon",OL,62.8,DAY2,"OT-2 Technician","FM-1 Athleticism Mirage","Tier B",R3,R3,APEX_LOW_PVC_STRUCTURAL,-32
+40,"Chase Bisontis",OL,64.1,DAY2,"OT-5 Raw Projection","FM-3 Processing Wall","Tier B",R3,R3,APEX_LOW_PVC_STRUCTURAL,-24
+41,"Zachariah Branch",WR,70.6,DAY1,"WR-3 YAC Weapon","FM-6 Role Mismatch","Tier B","R2 Mid–R3 Top","R2 Mid–R3 Top",APEX_HIGH,11
+42,"Omar Cooper",LB,61.5,DAY2,"ILB-2 Coverage Eraser","FM-4 Body Breakdown","Tier B",R4,R4,APEX_LOW_PVC_STRUCTURAL,-43
+43,"TJ Parker",EDGE,69.1,DAY2,"EDGE-4 Athletic Dominator","FM-1 Athleticism Mirage","Tier B","R2 Mid–R3 Top","R2 Mid–R3 Top",ALIGNED,5
+44,"Jadarian Price",RB,49.8,DAY3,"RB-2 Receiving Specialist","FM-6 Role Mismatch","Tier B","R7–UDFA","R7–UDFA",APEX_LOW_PVC_STRUCTURAL,-152
+45,"Keith Abney",CB,70.4,DAY1,"CB-4 Slot Specialist","FM-6 Role Mismatch","Tier B","R2 Mid–R3 Top","R2 Mid–R3 Top",APEX_HIGH,14
+46,"Chris Brazzell",WR,63.7,DAY2,"WR-4 Contested Catch Specialist","FM-6 Role Mismatch","Tier B",R3,R3,APEX_LOW_PVC_STRUCTURAL,-23
+47,"Anthony Hill",LB,67.1,DAY2,"ILB-2 Coverage Eraser","FM-4 Body Breakdown","Tier A",R3,R3,ALIGNED,5
+48,"Gennings Dunker",OL,58.2,DAY2,"OT-2 Technician","FM-1 Athleticism Mirage","Tier A",R4,R4,APEX_LOW_PVC_STRUCTURAL,-64
+49,"Gabe Jacas",EDGE,71.8,DAY1,"EDGE-3 Power-Counter Technician","FM-3 Processing Wall","Tier B","R2 Mid–R3 Top","R2 Mid–R3 Top",APEX_HIGH,25
+50,"Josiah Trotter",LB,65.7,DAY2,"ILB-2 Coverage Eraser","FM-4 Body Breakdown","Tier B",R3,R3,ALIGNED,-5
+51,"Malachi Fields",WR,62.8,DAY2,"WR-4 Contested Catch Specialist","FM-6 Role Mismatch","Tier B",R3,R3,APEX_LOW_PVC_STRUCTURAL,-21
+52,"Max Iheanachor",LB,55.3,DAY2,"ILB-5 Raw Projection","FM-3 Processing Wall","Tier B","R5–R6","R5–R6",APEX_LOW_PVC_STRUCTURAL,-85
+53,"Zakee Wheatley",S,60.7,DAY2,"S-3 Multiplier Safety","FM-3 Processing Wall","Tier B",R4,R4,APEX_LOW,-38
+54,"Lee Hunter",LB,52.8,DAY3,"ILB-3 Run-First Enforcer","FM-6 Role Mismatch","Tier B","R5–R6","R5–R6",APEX_LOW_PVC_STRUCTURAL,-101
+55,"Christen Miller",DT,60.5,DAY2,"DT-3 Two-Gap Anchor","FM-3 Processing Wall","Tier B",R4,R4,APEX_LOW_PVC_STRUCTURAL,-39
+56,"Jake Golday",LB,63.9,DAY2,"ILB-2 Coverage Eraser","FM-3 Processing Wall","Tier B",R3,R3,APEX_LOW_PVC_STRUCTURAL,-11
+57,"Chris Bell",WR,64.1,DAY2,"WR-4 Contested Catch Specialist","FM-6 Role Mismatch","Tier B",R3,R3,APEX_LOW_PVC_STRUCTURAL,-8
+58,"Zion Young",LB,57.3,DAY2,"ILB-3 Run-First Enforcer","FM-6 Role Mismatch","Tier B",R4,R4,APEX_LOW_PVC_STRUCTURAL,-64
+59,"Antonio Williams",WR,62.2,DAY2,"WR-2 Vertical Separator","FM-3 Processing Wall","Tier B",R3,R3,APEX_LOW_PVC_STRUCTURAL,-21
+60,"Genesis Smith",S,57.1,DAY2,"S-3 Multiplier Safety","FM-5 Motivation Cliff","Tier C","R4 Late (FM-5 triage pending) — R4 Mid if triage confirms situation-dependent","R4 Late (FM-5 triage pending) — R4 Mid if triage confirms situation-dependent",APEX_LOW,-64
+61,"Joshua Josephs",EDGE,65.4,DAY2,"EDGE-4 Athletic Dominator","FM-1 Athleticism Mirage","Tier B","R3 Early–R3 Mid","R3 Early–R3 Mid",ALIGNED,4
+62,"Keylan Rutledge",OL,57.0,DAY2,"OG-3 Athletic Zone Mauler","FM-2 Scheme Ghost","Tier B",R4,R4,APEX_LOW_PVC_STRUCTURAL,-64
+63,"Jacob Rodriguez",LB,65.0,DAY2,"ILB-1 Green Dot Anchor","FM-6 Role Mismatch","Tier B","R3 Early","R3 Early / R2 Late (landing-spot conditional)",ALIGNED,2
+64,"Devin Moore",CB,69.2,DAY2,"CB-2 Zone Architect","FM-2 Scheme Ghost","Tier B","R2 Mid–R3 Top","R2 Mid–R3 Top",APEX_HIGH,28
+65,"Derrick Moore",EDGE,59.1,DAY2,"EDGE-4 Athletic Dominator","FM-1 Athleticism Mirage","Tier B",R4,R4,APEX_LOW,-38
+66,"Julian Neal",CB,68.2,DAY2,"CB-2 Zone Architect","FM-2 Scheme Ghost","Tier B","R3 top (3-cone gate fired S64 — R2 ceiling closed)","R3 top (3-cone gate fired S64 — R2 ceiling closed)",APEX_HIGH,26
+67,"Elijah Sarratt",WR,66.1,DAY2,"WR-1 Route Technician","FM-1 Athleticism Mirage","Tier B",R3,R3,APEX_HIGH,16
+68,"Michael Trigg",TE,51.8,DAY3,"TE-5 Raw Projection","FM-3 Processing Wall","Tier B","R5–R6","R5–R6",APEX_LOW_PVC_STRUCTURAL,-102
+69,"Deion Burks",WR,56.9,DAY2,"WR-2 Vertical Separator","FM-3 Processing Wall","Tier B",R4,R4,APEX_LOW_PVC_STRUCTURAL,-58
+70,"Caleb Tiernan",OL,62.6,DAY2,"OT-1 Elite Athletic Anchor","FM-3 Processing Wall","Tier B",R3,R3,APEX_LOW_PVC_STRUCTURAL,-6
+71,"Eli Stowers",LB,60.7,DAY2,"ILB-2 Coverage Eraser","FM-3 Processing Wall","Tier B",R4,R4,APEX_LOW_PVC_STRUCTURAL,-19
+72,"Romello Height",EDGE,66.1,DAY2,"EDGE-4 Athletic Dominator","FM-1 Athleticism Mirage","Tier B",R3,R3,APEX_HIGH,22
+73,"Kyle Louis",LB,61.9,DAY2,"ILB-2 Coverage Eraser","FM-4 Body Breakdown","Tier B",R4,R4,APEX_LOW_PVC_STRUCTURAL,-9
+74,"Domonique Orange",DT,65.1,DAY2,"DT-3 Two-Gap Anchor","FM-3 Processing Wall","Tier B",R3,R3,APEX_HIGH,15
+75,"Aj Haulcy",S,60.4,DAY2,"S-2 Box Enforcer","FM-6 Role Mismatch","Tier B",R4,R4,APEX_LOW,-21
+76,"Makai Lemon",WR,62.8,DAY2,"WR-3 YAC Weapon","FM-1 Athleticism Mirage","Tier B",R3,R3,ALIGNED,1
+77,"Davison Igbinosun",CB,61.8,DAY2,"CB-2 Zone Architect","FM-2 Scheme Ghost","Tier B","R4 Early (base) — R3 Early ceiling (Steelers zone fit only)","R4 Early (base) — R3 Early ceiling (Steelers zone fit only)",APEX_LOW,-6
+78,"Skyler Bell",WR,62.5,DAY2,"WR-2 Vertical Separator","FM-3 Processing Wall","Tier B",R3,R3,ALIGNED,0
+79,"Jonah Coleman",RB,50.3,DAY3,"RB-1 Elite Workhorse","FM-4 Body Breakdown","Tier B","R5–R6","R5–R6",APEX_LOW_PVC_STRUCTURAL,-110
+80,"Deontae Lawson",LB,56.4,DAY2,"ILB-3 Run-First Enforcer","FM-6 Role Mismatch","Tier B",R4,R4,APEX_LOW_PVC_STRUCTURAL,-50
+81,"Kaytron Allen",RB,47.2,DAY3,"RB-1 Elite Workhorse","FM-4 Body Breakdown","Tier B","R7–UDFA","R7–UDFA",APEX_LOW_PVC_STRUCTURAL,-143
+82,"Keionte Scott",CB,71.4,DAY1,"CB-4 Slot Specialist","FM-6 Role Mismatch","Tier B","R2 Mid–R3 Top","R2 Mid–R3 Top",APEX_HIGH,55
+83,"Chandler Rivers",CB,65.8,DAY2,"CB-4 Slot Specialist","FM-6 Role Mismatch","Tier B",R3,R3,APEX_HIGH,29
+84,"Emmanuel Mcneil-warren",S,60.5,DAY2,"S-5 Raw Projection","FM-3 Processing Wall","Tier B",R4,R4,APEX_LOW,-11
+85,"Kamari Ramsey",S,65.1,DAY2,"S-3 Multiplier Safety","FM-2 Scheme Ghost","Tier B",R3,R3,APEX_HIGH,25
+86,"Malik Muhammad",CB,77.2,DAY1,"CB-1 Anticipatory Lockdown","FM-6 Role Mismatch","Tier B","R2 Early — R1 Late ceiling (Texas opponent film gate)","R2 Early — R1 Late ceiling (Texas opponent film gate)",APEX_HIGH,76
+87,"Darrell Jackson",DT,58.2,DAY2,"DT-3 Two-Gap Anchor","FM-3 Processing Wall","Tier B",R4,R4,APEX_LOW_PVC_STRUCTURAL,-26
+88,"Connor Lew",OL,50.6,DAY3,"C-5 Projection Athlete","FM-3 Processing Wall","Tier C","R5–R6","R5–R6",APEX_LOW_PVC_STRUCTURAL,-97
+89,"Jalon Kilgore",S,62.8,DAY2,"S-2 Box Enforcer","FM-6 Role Mismatch","Tier B","R2 Late (Commanders optimal) — R3 base all other fits","R2 Late (Commanders optimal) — R3 base all other fits",APEX_HIGH,15
+90,"Daylen Everette",CB,70.2,DAY1,"CB-3 Press Man Corner","FM-3 Processing Wall","Tier B","R2 Mid — Miami suppresses FM-3; Chiefs/Jets elevate risk","R2 Mid — Miami suppresses FM-3; Chiefs/Jets elevate risk",APEX_HIGH,58
+91,"Emmett Johnson",RB,45.3,DAY3,"RB-3 Explosive Playmaker","FM-6 Role Mismatch","Tier B","R7–UDFA","R7–UDFA",APEX_LOW_PVC_STRUCTURAL,-150
+92,"Billy Schrauth",OL,54.6,DAY3,"OT-4 Chess Piece","FM-6 Role Mismatch","Tier B","R5–R6","R5–R6",APEX_LOW_PVC_STRUCTURAL,-48
+93,"Austin Barber",OL,50.2,DAY3,"OT-5 Raw Projection","FM-3 Processing Wall","Tier C","R5–R6","R5–R6",APEX_LOW_PVC_STRUCTURAL,-97
+94,"Brenen Thompson",WR,55.2,DAY2,"WR-2 Vertical Separator","FM-3 Processing Wall","Tier B","R5–R6","R5–R6",APEX_LOW_PVC_STRUCTURAL,-44
+95,"Sam Hecht",LB,55.4,DAY2,"ILB-3 Run-First Enforcer","FM-6 Role Mismatch","Tier B","R5–R6","R5–R6",APEX_LOW_PVC_STRUCTURAL,-41
+96,"Carson Beck",QB,58.2,DAY2,"QB-6 System-Elevated Starter","FM-2 Scheme Ghost","Tier B",R4,R4,APEX_LOW,-18
+97,"Gracen Halton",DT,60.1,DAY2,"DT-4 Hybrid Penetrator-Anchor","FM-6 Role Mismatch","Tier B",R4,R4,ALIGNED,-2
+98,"Jalen Farmer",OL,46.5,DAY3,"OT-5 Raw Projection","FM-3 Processing Wall","Tier C","R7–UDFA","R7–UDFA",APEX_LOW_PVC_STRUCTURAL,-134
+99,"Garrett Nussmeier",QB,48.7,DAY3,"QB-3 Pocket Technician","FM-6 Role Mismatch","Tier B","R5 — Saints optimal; Vikings compound risk; Webb R3 cautionary comp","R5 — Saints optimal; Vikings compound risk; Webb R3 cautionary comp",APEX_LOW,-116
+100,"Bud Clark",LB,56.8,DAY2,"ILB-2 Coverage Eraser","FM-3 Processing Wall","Tier B",R4,R4,APEX_LOW_PVC_STRUCTURAL,-28
+101,"Ted Hurst",TE,47.8,DAY3,"TE-2 Mismatch Creator","FM-3 Processing Wall","Tier C","R7–UDFA","R7–UDFA",APEX_LOW_PVC_STRUCTURAL,-115
+102,"Brian Parker",OL,52.3,DAY3,"OT-5 Raw Projection","FM-3 Processing Wall","Tier C","R5–R6","R5–R6",APEX_LOW_PVC_STRUCTURAL,-63
+103,"Max Klare",TE,49.1,DAY3,"TE-5 Raw Projection","FM-3 Processing Wall","Tier B","R7–UDFA","R7–UDFA",APEX_LOW_PVC_STRUCTURAL,-105
+104,"Jack Endries",LB,50.8,DAY3,"ILB-5 Raw Projection","FM-3 Processing Wall","Tier B","R5–R6","R5–R6",APEX_LOW_PVC_STRUCTURAL,-76
+105,"Treydan Stukes",CB,72.4,DAY1,"CB-4 Slot Specialist","FM-6 Role Mismatch","Tier B","R2 Mid–R3 Top","R2 Mid–R3 Top",APEX_HIGH,82
+106,"Mike Washington",LB,54.3,DAY3,"ILB-5 Raw Projection","FM-3 Processing Wall","Tier B","R5–R6","R5–R6",APEX_LOW_PVC_STRUCTURAL,-36
+107,"Taurean York",LB,53.4,DAY3,"ILB-3 Run-First Enforcer","FM-6 Role Mismatch","Tier B","R5–R6","R5–R6",APEX_LOW_PVC_STRUCTURAL,-43
+108,"Tacario Davis",CB,60.1,DAY2,"CB-5 Raw Projection","FM-3 Processing Wall","Tier B",R4,R4,APEX_HIGH,10
+109,"Jaishawn Barham",EDGE,61.8,DAY2,"EDGE-4 Athletic Dominator","FM-1 Athleticism Mirage","Tier B",R4,R4,APEX_HIGH,25
+110,"Malachi Lawrence",EDGE,68.2,DAY2,"EDGE-4 Athletic Dominator","FM-3 Processing Wall","Tier B","R2 Mid–R3 Top","R2 Mid–R3 Top",APEX_HIGH,71
+111,"Demond Claiborne",RB,43.5,DAY3,"RB-3 Explosive Playmaker","FM-4 Body Breakdown","Tier B","R7–UDFA","R7–UDFA",APEX_LOW_PVC_STRUCTURAL,-145
+112,"Dontay Corleone",DT,57.8,DAY2,"DT-3 Two-Gap Anchor","FM-1 Athleticism Mirage","Tier B",R4,R4,APEX_LOW_PVC_STRUCTURAL,-7
+113,"Keyron Crawford",EDGE,60.4,DAY2,"EDGE-5 Hybrid Tweener Rusher","FM-6 Role Mismatch","Tier B",R4,R4,APEX_HIGH,16
+114,"Jake Slaughter",LB,53.7,DAY3,"ILB-5 Raw Projection","FM-3 Processing Wall","Tier B","R5–R6","R5–R6",APEX_LOW_PVC_STRUCTURAL,-32
+115,"Dallen Bentley",TE,49.1,DAY3,"TE-5 Raw Projection","FM-3 Processing Wall","Tier B","R7–UDFA","R7–UDFA",APEX_LOW_PVC_STRUCTURAL,-94
+116,"Isaiah World",OL,46.7,DAY3,"OT-3 Power Mauler","FM-1 Athleticism Mirage","Tier B","R7–UDFA","R7–UDFA",APEX_LOW_PVC_STRUCTURAL,-115
+117,"Hezekiah Masses",CB,57.8,DAY2,"CB-4 Slot Specialist","FM-6 Role Mismatch","Tier B",R4,R4,ALIGNED,-1
+118,"Chris Mcclellan",DT,54.1,DAY3,"DT-3 Two-Gap Anchor","FM-3 Processing Wall","Tier B","R5–R6","R5–R6",APEX_LOW_PVC_STRUCTURAL,-27
+119,"Justin Joly",TE,41.9,DAY3,"TE-5 Raw Projection","FM-3 Processing Wall","Tier C","R7–UDFA","R7–UDFA",APEX_LOW_PVC_STRUCTURAL,-153
+120,"Will Lee",LB,53.6,DAY3,"ILB-5 Raw Projection","FM-3 Processing Wall","Tier B","R5–R6","R5–R6",APEX_LOW_PVC_STRUCTURAL,-29
+121,"Dametrious Crownover",OL,47.5,DAY3,"OT-5 Raw Projection","FM-3 Processing Wall","Tier B","R7–UDFA","R7–UDFA",APEX_LOW_PVC_STRUCTURAL,-97
+122,"Kevin Coleman",WR,59.7,DAY2,"WR-5 Slot Architect","FM-6 Role Mismatch","Tier B",R4,R4,APEX_HIGH,22
+123,"Oscar Delp",TE,49.1,DAY3,"TE-5 Raw Projection","FM-3 Processing Wall","Tier B","R7–UDFA","R7–UDFA",APEX_LOW_PVC_STRUCTURAL,-87
+124,"Joe Royer",LB,54.5,DAY3,"ILB-3 Run-First Enforcer","FM-6 Role Mismatch","Tier B","R5–R6","R5–R6",APEX_LOW_PVC_STRUCTURAL,-17
+125,"Lt Overton",EDGE,51.4,DAY3,"EDGE-5 Hybrid Tweener Rusher","FM-6 Role Mismatch","Tier B","R5–R6","R5–R6",APEX_LOW,-49
+126,"Markel Bell",OL,45.9,DAY3,"OT-5 Raw Projection","FM-3 Processing Wall","Tier C","R7–UDFA","R7–UDFA",APEX_LOW_PVC_STRUCTURAL,-111
+127,"Domani Jackson",CB,58.4,DAY2,"CB-5 Raw Projection","FM-3 Processing Wall","Tier B",R4,R4,APEX_HIGH,17
+128,"Drew Shelton",LB,49.9,DAY3,"ILB-5 Raw Projection","FM-3 Processing Wall","Tier C","R7–UDFA","R7–UDFA",APEX_LOW_PVC_STRUCTURAL,-65
+129,"Michael Taaffe",S,53.7,DAY3,"S-4 Coverage Safety","FM-4 Body Breakdown","Tier B","R5–R6","R5–R6",APEX_LOW,-19
+130,"Rayshaun Benny",DT,52.5,DAY3,"DT-3 Two-Gap Anchor","FM-1 Athleticism Mirage","Tier B","R5–R6","R5–R6",APEX_LOW_PVC_STRUCTURAL,-32
+131,"Bryce Lance",WR,56.5,DAY2,"WR-2 Vertical Separator","FM-3 Processing Wall","Tier B",R4,R4,ALIGNED,2
+132,"Cyrus Allen",WR,61.4,DAY2,"WR-5 Slot Architect","FM-6 Role Mismatch","Tier B",R4,R4,APEX_HIGH,44
+133,"Anthony Lucas",EDGE,53.1,DAY3,"EDGE-5 Hybrid Tweener Rusher","FM-6 Role Mismatch","Tier C","R5–R6","R5–R6",APEX_LOW,-19
+134,"Ephesians Prysock",CB,69.2,DAY2,"CB-3 Press Man Corner","FM-3 Processing Wall","Tier B","R2 Mid–R3 Top","R2 Mid–R3 Top",APEX_HIGH,97
+135,"Jakobe Thomas",S,49.3,DAY3,"S-5 Raw Projection","FM-3 Processing Wall","Tier B","R7–UDFA","R7–UDFA",APEX_LOW,-69
+136,"Nadame Tucker",EDGE,62.4,DAY2,"EDGE-5 Hybrid Tweener Rusher","FM-6 Role Mismatch","Tier B",R3,R3,APEX_HIGH,57
+137,"Tanner Koziol",TE,46.5,DAY3,"TE-5 Raw Projection","FM-3 Processing Wall","Tier C","R7–UDFA","R7–UDFA",APEX_LOW_PVC_STRUCTURAL,-96
+138,"Caden Curry",EDGE,38.4,UDFA-P,"EDGE-5 Hybrid Tweener Rusher","FM-6 Role Mismatch","Tier B","R7–UDFA","R7–UDFA",APEX_LOW,-148
+139,"Cade Klubnik",EDGE,43.8,DAY3,"EDGE-5 Hybrid Tweener Rusher","FM-6 Role Mismatch","Tier B","R7–UDFA","R7–UDFA",APEX_LOW,-112
+140,"Jude Bowry",EDGE,51.7,DAY3,"EDGE-4 Athletic Dominator","FM-3 Processing Wall","Tier C","R5–R6","R5–R6",APEX_LOW,-32
+141,"Reggie Virgil",WR,58.7,DAY2,"WR-5 Slot Architect","FM-2 Scheme Ghost","Tier B",R4,R4,APEX_HIGH,34
+142,"Nicholas Singleton",RB,43.0,DAY3,"RB-3 Explosive Playmaker","FM-4 Body Breakdown","Tier B","R7–UDFA","R7–UDFA",APEX_LOW_PVC_STRUCTURAL,-120
+143,"Jc Davis",OL,41.7,DAY3,"OT-5 Raw Projection","FM-3 Processing Wall","Tier B","R7–UDFA","R7–UDFA",APEX_LOW_PVC_STRUCTURAL,-133
+144,"Omar Cooper",WR,60.7,DAY2,"WR-1 Route Technician","FM-1 Athleticism Mirage","Tier B",R4,R4,APEX_HIGH,52
+145,"Eli Raridon",LB,50.8,DAY3,"ILB-5 Raw Projection","FM-3 Processing Wall","Tier B","R5–R6","R5–R6",APEX_LOW_PVC_STRUCTURAL,-34
+146,"Pat Coogan",LB,44.3,DAY3,"ILB-5 Raw Projection","FM-3 Processing Wall","Tier B","R7–UDFA","R7–UDFA",APEX_LOW_PVC_STRUCTURAL,-103
+147,"Le'Veon Moss",RB,46.5,DAY3,"RB-1 Elite Workhorse","FM-1 Athleticism Mirage","Tier B","R7–UDFA","R7–UDFA",APEX_LOW_PVC_STRUCTURAL,-87
+148,"Zion Young",EDGE,58.8,DAY2,"EDGE-5 Hybrid Tweener Rusher","FM-6 Role Mismatch","Tier C",R4,R4,APEX_HIGH,42
+149,"Josh Cameron",LB,46.1,DAY3,"ILB-3 Run-First Enforcer","FM-6 Role Mismatch","Tier C","R7–UDFA","R7–UDFA",APEX_LOW_PVC_STRUCTURAL,-87
+150,"Josh Cuevas",LB,50.4,DAY3,"ILB-5 Raw Projection","FM-3 Processing Wall","Tier B","R5–R6","R5–R6",APEX_LOW_PVC_STRUCTURAL,-37
+151,"Logan Jones",OL,56.1,DAY2,"OT-4 Chess Piece","FM-6 Role Mismatch","Tier B",R4,R4,APEX_HIGH,19
+152,"Lee Hunter",DT,43.0,DAY3,"DT-5 Pass Rush Specialist","FM-6 Role Mismatch","Tier C","R7–UDFA","R7–UDFA",APEX_LOW_PVC_STRUCTURAL,-113
+153,"Lander Barton",LB,52.8,DAY3,"ILB-5 Raw Projection","FM-3 Processing Wall","Tier B","R5–R6","R5–R6",ALIGNED,-3
+154,"Tyreak Sapp",EDGE,51.2,DAY3,"EDGE-5 Hybrid Tweener Rusher","FM-6 Role Mismatch","Tier B","R5–R6","R5–R6",APEX_LOW,-21
+155,"Albert Regis",DT,54.2,DAY3,"DT-3 Two-Gap Anchor","FM-2 Scheme Ghost","Tier B","R5–R6","R5–R6",APEX_HIGH,12
+156,"Kage Casey",LB,34.6,UDFA-P,"ILB-5 Raw Projection","FM-3 Processing Wall","Tier C","R7–UDFA","R7–UDFA",APEX_LOW_PVC_STRUCTURAL,-139
+157,"Beau Stephens",LB,54.1,DAY3,"ILB-3 Run-First Enforcer","FM-1 Athleticism Mirage","Tier B","R5–R6","R5–R6",APEX_HIGH,13
+158,"Harold Perkins",LB,56.4,DAY2,"ILB-5 Raw Projection","FM-3 Processing Wall","Tier B",R4,R4,APEX_HIGH,27
+159,"Tim Keenan",LB,36.4,UDFA-P,"ILB-5 Raw Projection","FM-1 Athleticism Mirage","Tier C","R7–UDFA","R7–UDFA",APEX_LOW_PVC_STRUCTURAL,-133
+160,"Keagen Trost",OL,43.0,DAY3,"OT-5 Raw Projection","FM-3 Processing Wall","Tier C","R7–UDFA","R7–UDFA",APEX_LOW_PVC_STRUCTURAL,-103
+161,"Aamil Wagner",OL,41.4,DAY3,"OT-5 Raw Projection","FM-3 Processing Wall","Tier B","R7–UDFA","R7–UDFA",APEX_LOW_PVC_STRUCTURAL,-116
+162,"Nate Boerkircher",TE,42.6,DAY3,"TE-5 Raw Projection","FM-3 Processing Wall","Tier C","R7–UDFA","R7–UDFA",APEX_LOW_PVC_STRUCTURAL,-106
+163,"Seth Mcgowan",LB,50.3,DAY3,"ILB-5 Raw Projection","FM-3 Processing Wall","Tier B","R5–R6","R5–R6",APEX_LOW_PVC_STRUCTURAL,-25
+164,"Aiden Fisher",LB,49.8,DAY3,"ILB-3 Run-First Enforcer","FM-3 Processing Wall","Tier C","R7–UDFA","R7–UDFA",APEX_LOW_PVC_STRUCTURAL,-33
+165,"Trey Zuhn",LB,48.8,DAY3,"ILB-5 Raw Projection","FM-3 Processing Wall","Tier C","R7–UDFA","R7–UDFA",APEX_LOW_PVC_STRUCTURAL,-46
+166,"Max Klare",TE,43.4,DAY3,"TE-5 Raw Projection","FM-3 Processing Wall","Tier C","R7–UDFA","R7–UDFA",APEX_LOW_PVC_STRUCTURAL,-92
+167,"Matt Gulbin",LB,36.3,UDFA-P,"ILB-3 Run-First Enforcer","FM-3 Processing Wall","Tier B","R7–UDFA","R7–UDFA",APEX_LOW_PVC_STRUCTURAL,-127
+168,"Thaddeus Dixon",CB,57.2,DAY2,"CB-5 Raw Projection","FM-3 Processing Wall","Tier B",R4,R4,APEX_HIGH,45
+169,"Red Murdock",EDGE,61.4,DAY2,"EDGE-5 Hybrid Tweener Rusher","FM-6 Role Mismatch","Tier B",R4,R4,APEX_HIGH,82
+170,"Taylen Green",QB,63.2,DAY2,"QB-2 Dual-Threat Architect","FM-3 Processing Wall","Tier B",R3,R3,APEX_HIGH,100
+171,"Parker Brailsford",OL,59.0,DAY2,"OG-5 Versatile Chess Piece","FM-3 Processing Wall","Tier B",R4,R4,APEX_HIGH,66
+172,"Sam Roush",LB,50.7,DAY3,"ILB-5 Raw Projection","FM-3 Processing Wall","Tier C","R5–R6","R5–R6",APEX_LOW_PVC_STRUCTURAL,-11
+173,"Connor Lew",LB,49.9,DAY3,"ILB-3 Run-First Enforcer","FM-3 Processing Wall","Tier B","R7–UDFA","R7–UDFA",APEX_LOW_PVC_STRUCTURAL,-22
+174,"Dani Dennis-sutton",EDGE,67.1,DAY2,"EDGE-4 Athletic Dominator","FM-3 Processing Wall","Tier B",R3,R3,APEX_HIGH,129
+175,"Eric Rivers",LB,55.8,DAY2,"ILB-2 Coverage Eraser","FM-4 Body Breakdown","Tier B","R5–R6","R5–R6",APEX_HIGH,40
+176,"Mikail Kamara",EDGE,45.1,DAY3,"EDGE-5 Hybrid Tweener Rusher","FM-1 Athleticism Mirage","Tier B","R7–UDFA","R7–UDFA",APEX_LOW,-67
+177,"Louis Moore",S,50.2,DAY3,"S-5 Raw Projection","FM-3 Processing Wall","Tier B","R5–R6","R5–R6",APEX_LOW,-14
+178,"Jadon Canady",CB,62.8,DAY2,"CB-5 Raw Projection","FM-3 Processing Wall","Tier B",R3,R3,APEX_HIGH,105
+179,"Max Iheanachor",OL,38.5,UDFA-P,"OT-5 Raw Projection","FM-3 Processing Wall","Tier B","R7–UDFA","R7–UDFA",APEX_LOW_PVC_STRUCTURAL,-106
+180,"Jeremiah Wright",OL,34.6,UDFA-P,"OT-5 Raw Projection","FM-3 Processing Wall","Tier B","R7–UDFA","R7–UDFA",APEX_LOW_PVC_STRUCTURAL,-116
+181,"Eric Mcalister",LB,44.7,DAY3,"ILB-5 Raw Projection","FM-3 Processing Wall","Tier C","R7–UDFA","R7–UDFA",APEX_LOW_PVC_STRUCTURAL,-65
+182,"Bryce Boettcher",LB,47.4,DAY3,"ILB-5 Raw Projection","FM-3 Processing Wall","Tier C","R7–UDFA","R7–UDFA",APEX_LOW_PVC_STRUCTURAL,-39
+183,"Vj Payne",S,53.0,DAY3,"S-5 Raw Projection","FM-3 Processing Wall","Tier B","R5–R6","R5–R6",APEX_HIGH,30
+184,"Marlin Klein",TE,50.5,DAY3,"TE-5 Raw Projection","FM-3 Processing Wall","Tier B","R5–R6","R5–R6",ALIGNED,-2
+185,"Justin Jefferson",LB,49.9,DAY3,"ILB-5 Raw Projection","FM-3 Processing Wall","Tier B","R7–UDFA","R7–UDFA",APEX_LOW_PVC_STRUCTURAL,-9
+186,"Drew Allar",LB,41.7,DAY3,"ILB-5 Raw Projection","FM-3 Processing Wall","Tier C","R7–UDFA","R7–UDFA",APEX_LOW_PVC_STRUCTURAL,-89
+187,"Cj Daniels",WR,53.7,DAY3,"WR-1 Route Technician","FM-1 Athleticism Mirage","Tier C","R5–R6","R5–R6",APEX_HIGH,40
+188,"Ted Hurst",WR,55.9,DAY2,"WR-1 Route Technician","FM-1 Athleticism Mirage","Tier C","R5–R6","R5–R6",APEX_HIGH,54
+189,"Kamari Ramsey",S,57.1,DAY2,"S-3 Multiplier Safety","FM-6 Role Mismatch","Tier B",R4,R4,APEX_HIGH,64
+190,"Logan Jones",LB,49.8,DAY3,"ILB-3 Run-First Enforcer","FM-3 Processing Wall","Tier B","R7–UDFA","R7–UDFA",APEX_LOW_PVC_STRUCTURAL,-8
+191,"Justin Joly",TE,43.0,DAY3,"TE-5 Raw Projection","FM-3 Processing Wall","Tier C","R7–UDFA","R7–UDFA",APEX_LOW_PVC_STRUCTURAL,-75
+192,"Cole Payton",LB,57.4,DAY2,"ILB-5 Raw Projection","FM-3 Processing Wall","Tier B",R4,R4,APEX_HIGH,71
+193,"Tyler Onyedim",DT,49.4,DAY3,"DT-3 Two-Gap Anchor","FM-3 Processing Wall","Tier B","R7–UDFA","R7–UDFA",APEX_LOW_PVC_STRUCTURAL,-9
+194,"Kendrick Law",WR,55.9,DAY2,"WR-2 Vertical Separator","FM-3 Processing Wall","Tier B","R5–R6","R5–R6",APEX_HIGH,61
+195,"Mason Reiger",EDGE,64.8,DAY2,"EDGE-4 Athletic Dominator","FM-3 Processing Wall","Tier C",R3,R3,APEX_HIGH,133
+196,"Charles Demmings",CB,64.2,DAY2,"CB-5 Raw Projection","FM-3 Processing Wall","Tier C",R3,R3,APEX_HIGH,133
+197,"Zane Durant",LB,52.0,DAY3,"ILB-5 Raw Projection","FM-3 Processing Wall","Tier B","R5–R6","R5–R6",APEX_HIGH,28
+198,"Carver Willis",OL,50.7,DAY3,"OG-5 Versatile Chess Piece","FM-1 Athleticism Mirage","Tier B","R5–R6","R5–R6",APEX_HIGH,14
+199,"Demonte Capehart",DT,62.5,DAY2,"DT-4 Hybrid Penetrator-Anchor","FM-3 Processing Wall","Tier B",R3,R3,APEX_HIGH,122
+200,"Dj Campbell",OL,47.3,DAY3,"OT-5 Raw Projection","FM-3 Processing Wall","Tier B","R7–UDFA","R7–UDFA",APEX_LOW_PVC_STRUCTURAL,-23
+201,"Devon Marshall",CB,65.4,DAY2,"CB-4 Slot Specialist","FM-6 Role Mismatch","Tier B",R3,R3,APEX_HIGH,143
+202,"Keyshaun Elliott",LB,53.0,DAY3,"ILB-5 Raw Projection","FM-3 Processing Wall","Tier B","R5–R6","R5–R6",APEX_HIGH,48
+203,"Brent Austin",CB,58.4,DAY2,"CB-4 Slot Specialist","FM-1 Athleticism Mirage","Tier B",R4,R4,APEX_HIGH,92
+204,"Roman Hemby",RB,39.1,UDFA-P,"RB-5 Raw Projection","FM-6 Role Mismatch","Tier B","R7–UDFA","R7–UDFA",APEX_LOW_PVC_STRUCTURAL,-80
+205,"Aaron Graves",DT,49.3,DAY3,"DT-3 Two-Gap Anchor","FM-1 Athleticism Mirage","Tier B","R7–UDFA","R7–UDFA",ALIGNED,0
+206,"Max Llewellyn",LB,49.4,DAY3,"ILB-5 Raw Projection","FM-3 Processing Wall","Tier B","R7–UDFA","R7–UDFA",ALIGNED,5
+207,"Eli Stowers",TE,41.4,DAY3,"TE-5 Raw Projection","FM-3 Processing Wall","Tier C","R7–UDFA","R7–UDFA",APEX_LOW_PVC_STRUCTURAL,-71
+208,"Garrett Nussmeier",QB,52.3,DAY3,"QB-6 System-Elevated Starter","FM-2 Scheme Ghost","Tier B","R5–R6","R5–R6",APEX_HIGH,41
+209,"Jalen Huskey",S,52.3,DAY3,"S-5 Raw Projection","FM-3 Processing Wall","Tier B","R5–R6","R5–R6",APEX_HIGH,43
+210,"Will Lee",CB,54.8,DAY3,"CB-4 Slot Specialist","FM-6 Role Mismatch","Tier C","R5–R6","R5–R6",APEX_HIGH,71
+211,"Caleb Douglas",WR,46.9,DAY3,"WR-2 Vertical Separator","FM-3 Processing Wall","Tier C","R7–UDFA","R7–UDFA",APEX_LOW_PVC_STRUCTURAL,-18
+212,"Bishop Fitzgerald",S,50.2,DAY3,"S-5 Raw Projection","FM-3 Processing Wall","Tier B","R5–R6","R5–R6",APEX_HIGH,20
+213,"Logan Fano",EDGE,69.8,DAY2,"EDGE-4 Athletic Dominator","FM-3 Processing Wall","Tier B","R2 Mid–R3 Top","R2 Mid–R3 Top",APEX_HIGH,179
+214,"Mike Washington",RB,30.6,UDFA-P,"RB-5 Raw Projection","FM-3 Processing Wall","Tier C","R7–UDFA","R7–UDFA",APEX_LOW_PVC_STRUCTURAL,-86
+215,"Nick Barrett",LB,36.4,UDFA-P,"ILB-5 Raw Projection","FM-3 Processing Wall","Tier C","R7–UDFA","R7–UDFA",APEX_LOW_PVC_STRUCTURAL,-78
+216,"Ja'Kobi Lane",WR,60.7,DAY2,"WR-2 Vertical Separator","FM-6 Role Mismatch","Tier B",R4,R4,APEX_HIGH,123
+217,"Jaeden Roberts",OL,45.9,DAY3,"OT-5 Raw Projection","FM-3 Processing Wall","Tier B","R7–UDFA","R7–UDFA",APEX_LOW_PVC_STRUCTURAL,-21
+218,"Xavier Nwankpa",S,52.8,DAY3,"S-5 Raw Projection","FM-3 Processing Wall","Tier B","R5–R6","R5–R6",APEX_HIGH,60
+219,"Eli Raridon",TE,47.0,DAY3,"TE-5 Raw Projection","FM-3 Processing Wall","Tier B","R7–UDFA","R7–UDFA",APEX_LOW_PVC_STRUCTURAL,-9
+220,"Chase Roberts",WR,59.5,DAY2,"WR-1 Route Technician","FM-1 Athleticism Mirage","Tier B",R4,R4,APEX_HIGH,119
+221,"Tj Hall",CB,59.4,DAY2,"CB-2 Zone Architect","FM-1 Athleticism Mirage","Tier B",R4,R4,APEX_HIGH,119
+222,"Robert Henry",RB,33.7,UDFA-P,"RB-5 Raw Projection","FM-1 Athleticism Mirage","Tier B","R7–UDFA","R7–UDFA",APEX_LOW_PVC_STRUCTURAL,-76
+223,"Dae'Quan Wright",TE,43.4,DAY3,"TE-5 Raw Projection","FM-3 Processing Wall","Tier C","R7–UDFA","R7–UDFA",APEX_LOW_PVC_STRUCTURAL,-36
+224,"John Michael Gyllenborg",LB,45.6,DAY3,"ILB-5 Raw Projection","FM-3 Processing Wall","Tier C","R7–UDFA","R7–UDFA",APEX_LOW_PVC_STRUCTURAL,-16
+225,"Sawyer Robertson",QB,62.1,DAY2,"QB-4 Game Manager Elevated","FM-2 Scheme Ghost","Tier B",R3,R3,APEX_HIGH,144
+226,"J'Mari Taylor",RB,34.1,UDFA-P,"RB-5 Raw Projection","FM-1 Athleticism Mirage","Tier C","R7–UDFA","R7–UDFA",APEX_LOW_PVC_STRUCTURAL,-71
+227,"LT Overton",EDGE,59.1,DAY2,"EDGE-5 Hybrid Tweener Rusher","FM-6 Role Mismatch","Tier B",R4,R4,APEX_HIGH,123
+228,"Colbie Young",WR,51.1,DAY3,"WR-4 Contested Catch Specialist","FM-5 Motivation Cliff","Tier B","R5–R6","R5–R6",APEX_HIGH,51
+229,"Trey Moore",EDGE,63.8,DAY2,"EDGE-4 Athletic Dominator","FM-3 Processing Wall","Tier B",R3,R3,APEX_HIGH,161
+230,"Malachi Lawrence",EDGE,58.7,DAY2,"EDGE-4 Athletic Dominator","FM-3 Processing Wall","Tier C",R4,R4,APEX_HIGH,121
+231,"Owen Heinecke",LB,48.8,DAY3,"ILB-5 Raw Projection","FM-3 Processing Wall","Tier C","R7–UDFA","R7–UDFA",APEX_HIGH,19
+232,"Desmond Reid",RB,40.9,DAY3,"RB-5 Raw Projection","FM-4 Body Breakdown","Tier B","R7–UDFA","R7–UDFA",APEX_LOW_PVC_STRUCTURAL,-50
+233,"Vincent Anthony",EDGE,52.3,DAY3,"EDGE-5 Hybrid Tweener Rusher","FM-6 Role Mismatch","Tier B","R5–R6","R5–R6",APEX_HIGH,69
+234,"Kaden Wetjen",WR,46.9,DAY3,"WR-3 YAC Weapon","FM-6 Role Mismatch","Tier B","R7–UDFA","R7–UDFA",ALIGNED,4
+235,"Malik Benson",WR,51.1,DAY3,"WR-2 Vertical Separator","FM-3 Processing Wall","Tier B","R5–R6","R5–R6",APEX_HIGH,59
+236,"Dalton Johnson",S,44.4,DAY3,"S-5 Raw Projection","FM-3 Processing Wall","Tier B","R7–UDFA","R7–UDFA",APEX_LOW,-12
+237,"Isaiah Nwokobia",S,50.8,DAY3,"S-5 Raw Projection","FM-3 Processing Wall","Tier B","R5–R6","R5–R6",APEX_HIGH,56
+238,"Trinidad Chambliss",QB,37.4,UDFA-P,"QB-6 System-Elevated Starter","FM-2 Scheme Ghost","Tier C","R7–UDFA","R7–UDFA",APEX_LOW,-51
+239,"Jaydn Ott",RB,47.0,DAY3,"RB-2 Receiving Specialist","FM-4 Body Breakdown","Tier B","R7–UDFA","R7–UDFA",APEX_HIGH,12
+240,"Lewis Bond",WR,52.8,DAY3,"WR-1 Route Technician","FM-1 Athleticism Mirage","Tier B","R5–R6","R5–R6",APEX_HIGH,81
+241,"Quintayvious Hutchins",EDGE,52.1,DAY3,"EDGE-5 Hybrid Tweener Rusher","FM-1 Athleticism Mirage","Tier B","R5–R6","R5–R6",APEX_HIGH,73
+242,"Keionte Scott",S,49.2,DAY3,"S-5 Raw Projection","FM-3 Processing Wall","Tier C","R7–UDFA","R7–UDFA",APEX_HIGH,36
+243,"Akheem Mesidor",EDGE,43.7,DAY3,"ILB-3 Run-First Enforcer","FM-3 Processing Wall","Tier B","R7–UDFA","R7–UDFA",APEX_LOW,-11
+244,"Kendal Daniels",LB,47.4,DAY3,"ILB-5 Raw Projection","FM-3 Processing Wall","Tier B","R7–UDFA","R7–UDFA",APEX_HIGH,22
+245,"Jimmy Rolder",LB,45.8,DAY3,"ILB-5 Raw Projection","FM-3 Processing Wall","Tier C","R7–UDFA","R7–UDFA",APEX_HIGH,6
+246,"Nolan Rucci",OL,37.0,UDFA-P,"OT-5 Raw Projection","FM-1 Athleticism Mirage","Tier B","R7–UDFA","R7–UDFA",APEX_LOW_PVC_STRUCTURAL,-45
+247,"Jalen Stroman",S,44.7,DAY3,"S-5 Raw Projection","FM-3 Processing Wall","Tier C","R7–UDFA","R7–UDFA",ALIGNED,0
+248,"Peter Woods",DT,47.1,DAY3,"ILB-5 Raw Projection","FM-3 Processing Wall","Tier C","R7–UDFA","R7–UDFA",APEX_HIGH,22
+249,"Riley Nowakowski",TE,44.1,DAY3,"TE-5 Raw Projection","FM-3 Processing Wall","Tier C","R7–UDFA","R7–UDFA",ALIGNED,-1
+250,"Vinny Anthony",WR,47.5,DAY3,"WR-1 Route Technician","FM-1 Athleticism Mirage","Tier B","R7–UDFA","R7–UDFA",APEX_HIGH,31
+251,"George Gumbs",EDGE,58.1,DAY2,"EDGE-4 Athletic Dominator","FM-3 Processing Wall","Tier B",R4,R4,APEX_HIGH,134
+252,"Diego Pavia",QB,58.7,DAY2,"QB-2 Dual-Threat Architect","FM-3 Processing Wall","Tier B",R4,R4,APEX_HIGH,144
+253,"Kaelon Black",RB,43.5,DAY3,"RB-5 Raw Projection","FM-4 Body Breakdown","Tier C","R7–UDFA","R7–UDFA",ALIGNED,-2
+254,"Kage Casey",OL,43.3,DAY3,"OG-4 Technician","FM-1 Athleticism Mirage","Tier B","R7–UDFA","R7–UDFA",APEX_LOW_PVC_STRUCTURAL,-7
+255,"Wesley Williams",EDGE,44.8,DAY3,"EDGE-5 Hybrid Tweener Rusher","FM-6 Role Mismatch","Tier B","R7–UDFA","R7–UDFA",APEX_HIGH,10
+256,"Eli Heidenreich",LB,57.6,DAY2,"ILB-2 Coverage Eraser","FM-3 Processing Wall","Tier C",R4,R4,APEX_HIGH,136
+257,"Andre Fuller",CB,61.4,DAY2,"CB-5 Raw Projection","FM-3 Processing Wall","Tier C",R4,R4,APEX_HIGH,168
+258,"Drew Allar",QB,58.2,DAY2,"QB-5 Raw Projection","FM-3 Processing Wall","Tier B",R4,R4,APEX_HIGH,142
+259,"Logan Taylor",OL,49.4,DAY3,"OT-5 Raw Projection","FM-3 Processing Wall","Tier B","R7–UDFA","R7–UDFA",APEX_HIGH,56
+260,"Jaishawn Barham",LB,45.2,DAY3,"ILB-5 Raw Projection","FM-3 Processing Wall","Tier B","R7–UDFA","R7–UDFA",APEX_HIGH,18
+261,"Zavion Thomas",WR,49.2,DAY3,"WR-3 YAC Weapon","FM-3 Processing Wall","Tier B","R7–UDFA","R7–UDFA",APEX_HIGH,54
+262,"Ethan Burke",EDGE,38.4,UDFA-P,"EDGE-5 Hybrid Tweener Rusher","FM-3 Processing Wall","Tier B","R7–UDFA","R7–UDFA",APEX_LOW,-25
+263,"Jager Burton",OL,42.2,DAY3,"OT-5 Raw Projection","FM-3 Processing Wall","Tier B","R7–UDFA","R7–UDFA",APEX_LOW_PVC_STRUCTURAL,-8
+264,"Jack Endries",TE,43.3,DAY3,"TE-5 Raw Projection","FM-3 Processing Wall","Tier C","R7–UDFA","R7–UDFA",ALIGNED,4
+265,"Aaron Anderson",WR,44.8,DAY3,"WR-5 Slot Architect","FM-1 Athleticism Mirage","Tier C","R7–UDFA","R7–UDFA",APEX_HIGH,21
+266,"Trey Moore",LB,49.6,DAY3,"ILB-5 Raw Projection","FM-3 Processing Wall","Tier B","R7–UDFA","R7–UDFA",APEX_HIGH,66
+267,"Jeff Caldwell",LB,49.6,DAY3,"ILB-5 Raw Projection","FM-3 Processing Wall","Tier B","R7–UDFA","R7–UDFA",APEX_HIGH,68
+268,"Micah Morris",OL,43.0,DAY3,"OT-5 Raw Projection","FM-3 Processing Wall","Tier C","R7–UDFA","R7–UDFA",ALIGNED,4
+269,"Cameron Ball",DT,52.6,DAY3,"DT-3 Two-Gap Anchor","FM-1 Athleticism Mirage","Tier B","R5–R6","R5–R6",APEX_HIGH,109
+270,"Bishop Fitzgerald",S,48.8,DAY3,"S-5 Raw Projection","FM-3 Processing Wall","Tier B","R7–UDFA","R7–UDFA",APEX_HIGH,57
+271,"Parker Brailsford",LB,47.1,DAY3,"ILB-5 Raw Projection","FM-3 Processing Wall","Tier C","R7–UDFA","R7–UDFA",APEX_HIGH,46
+272,"Kaleb Proctor",DT,52.8,DAY3,"DT-1 Interior Wrecker","FM-3 Processing Wall","Tier C","R5–R6","R5–R6",APEX_HIGH,115
+273,"Eric Gentry",LB,42.2,DAY3,"ILB-5 Raw Projection","FM-3 Processing Wall","Tier B","R7–UDFA","R7–UDFA",ALIGNED,4
+274,"Rahsul Faison",RB,38.3,UDFA-P,"RB-5 Raw Projection","FM-3 Processing Wall","Tier C","R7–UDFA","R7–UDFA",APEX_LOW_PVC_STRUCTURAL,-14
+275,"De'Zhaun Stribling",WR,51.5,DAY3,"WR-2 Vertical Separator","FM-3 Processing Wall","Tier B","R5–R6","R5–R6",APEX_HIGH,102
+276,"Miles Kitselman",TE,41.1,DAY3,"TE-5 Raw Projection","FM-3 Processing Wall","Tier B","R7–UDFA","R7–UDFA",ALIGNED,-3
+277,"Brian Parker",LB,48.8,DAY3,"ILB-5 Raw Projection","FM-3 Processing Wall","Tier B","R7–UDFA","R7–UDFA",APEX_HIGH,63
+278,"Landon Robinson",DT,67.1,DAY2,"DT-4 Hybrid Penetrator-Anchor","FM-6 Role Mismatch","Tier C",R3,R3,APEX_HIGH,234
+279,"Collin Wright",CB,53.4,DAY3,"CB-5 Raw Projection","FM-3 Processing Wall","Tier C","R5–R6","R5–R6",APEX_HIGH,128
+280,"Josh Cuevas",TE,41.9,DAY3,"TE-5 Raw Projection","FM-3 Processing Wall","Tier C","R7–UDFA","R7–UDFA",APEX_HIGH,6
+281,"Fernando Carmona",OL,41.9,DAY3,"OT-5 Raw Projection","FM-3 Processing Wall","Tier C","R7–UDFA","R7–UDFA",APEX_HIGH,8
+282,"VJ Payne",S,43.8,DAY3,"S-5 Raw Projection","FM-3 Processing Wall","Tier C","R7–UDFA","R7–UDFA",APEX_HIGH,30
+283,"Harold Perkins",LB,52.5,DAY3,"ILB-5 Raw Projection","FM-3 Processing Wall","Tier B","R5–R6","R5–R6",APEX_HIGH,120
+284,"Peter Woods",LB,41.1,DAY3,"ILB-5 Raw Projection","FM-3 Processing Wall","Tier C","R7–UDFA","R7–UDFA",ALIGNED,3
+285,"Josh Cameron",WR,47.5,DAY3,"WR-1 Route Technician","FM-1 Athleticism Mirage","Tier C","R7–UDFA","R7–UDFA",APEX_HIGH,65
+286,"Brandon Cleveland",DT,42.8,DAY3,"DT-3 Two-Gap Anchor","FM-6 Role Mismatch","Tier C","R7–UDFA","R7–UDFA",APEX_HIGH,19
+287,"Bud Clark",S,40.8,DAY3,"S-5 Raw Projection","FM-3 Processing Wall","Tier C","R7–UDFA","R7–UDFA",ALIGNED,4
+288,"Peter Woods",EDGE,51.8,DAY3,"EDGE-4 Athletic Dominator","FM-3 Processing Wall","Tier B","R5–R6","R5–R6",APEX_HIGH,117
+289,"Caleb Banks",LB,32.6,UDFA-P,"ILB-5 Raw Projection","FM-3 Processing Wall","Tier C","R7–UDFA","R7–UDFA",APEX_LOW_PVC_STRUCTURAL,-10
+290,"Eric Mcalister",WR,50.8,DAY3,"WR-5 Slot Architect","FM-1 Athleticism Mirage","Tier C","R5–R6","R5–R6",APEX_HIGH,108
+291,"Luke Altmyer",LB,37.1,UDFA-P,"ILB-5 Raw Projection","FM-3 Processing Wall","Tier C","R7–UDFA","R7–UDFA",ALIGNED,1
+292,"Febechi Nwaiwu",OL,43.4,DAY3,"OT-5 Raw Projection","FM-3 Processing Wall","Tier C","R7–UDFA","R7–UDFA",APEX_HIGH,35
+293,"Dillon Bell",WR,58.2,DAY2,"WR-3 YAC Weapon","FM-2 Scheme Ghost","Tier B",R4,R4,APEX_HIGH,178
+294,"Isaiah Smith",EDGE,46.3,DAY3,"EDGE-5 Hybrid Tweener Rusher","FM-1 Athleticism Mirage","Tier C","R7–UDFA","R7–UDFA",APEX_HIGH,59
+295,"Kayden Mcdonald",LB,41.1,DAY3,"ILB-5 Raw Projection","FM-3 Processing Wall","Tier C","R7–UDFA","R7–UDFA",APEX_HIGH,15
+296,"Beau Stephens",OL,51.0,DAY3,"OG-4 Technician","FM-1 Athleticism Mirage","Tier B","R5–R6","R5–R6",APEX_HIGH,118
+297,"Cole Wisniewski",LB,43.7,DAY3,"ILB-5 Raw Projection","FM-3 Processing Wall","Tier C","R7–UDFA","R7–UDFA",APEX_HIGH,44
+298,"Jeff Caldwell",WR,52.6,DAY3,"WR-2 Vertical Separator","FM-3 Processing Wall","Tier C","R5–R6","R5–R6",APEX_HIGH,137
+299,"Christen Miller",LB,42.2,DAY3,"ILB-3 Run-First Enforcer","FM-3 Processing Wall","Tier C","R7–UDFA","R7–UDFA",APEX_HIGH,29
+300,"Cade Klubnik",QB,47.6,DAY3,"QB-6 System-Elevated Starter","FM-2 Scheme Ghost","Tier B","R7–UDFA","R7–UDFA",APEX_HIGH,83
