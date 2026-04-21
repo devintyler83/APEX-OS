@@ -124,8 +124,15 @@ def get_player_team_fit_context(
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Signal view helpers — backed by v_team_prospect_fit_signal_2026 (Migration 0051)
+# Signal view helpers — backed by v_team_prospect_fit_signal_2026
+#   Migration 0051: view created, covering indexes added.
+#   Migration 0052: fit_band column added (CASE on fit_score, never NULL).
+#
 # View is pre-filtered to season_id=1, fit_tier IN ('IDEAL','STRONG','VIABLE').
+# Every row carries a fit_band computed from fit_score:
+#   'A' fit_score >= 80   true target hits
+#   'B' fit_score >= 70   solid, context-dependent
+#   'C' fit_score >= 60   fallback options
 # ──────────────────────────────────────────────────────────────────────────────
 
 # Tier quality order, highest to lowest, matching the view's allowed set.
@@ -164,8 +171,9 @@ def get_team_fit_signal_for_team(
     """
     Return all signal-tier prospect fits for a given team, ordered by fit_score DESC.
 
-    Backed by v_team_prospect_fit_signal_2026 (Migration 0051).
+    Backed by v_team_prospect_fit_signal_2026 (Migrations 0051–0052).
     The view is pre-filtered to season_id=1 and fit_tier IN ('IDEAL','STRONG','VIABLE').
+    Each returned dict includes fit_band ('A'/'B'/'C') derived from fit_score.
 
     Args:
         conn:      sqlite3 connection with row_factory = sqlite3.Row.
@@ -176,7 +184,8 @@ def get_team_fit_signal_for_team(
                    view's baked-in season_id=1 filter or the result will be empty.
 
     Returns:
-        List of dicts, each containing all view columns. Empty list if no matches.
+        List of dicts ordered by fit_score DESC, each containing all 21 view columns
+        including fit_band. Empty list if no matches.
     """
     tiers = _tiers_at_or_above(min_tier)
     placeholders = ",".join("?" * len(tiers))
@@ -203,8 +212,9 @@ def get_team_fit_signal_for_prospect(
     """
     Return all signal-tier team fits for a given prospect, ordered by fit_score DESC.
 
-    Backed by v_team_prospect_fit_signal_2026 (Migration 0051).
+    Backed by v_team_prospect_fit_signal_2026 (Migrations 0051–0052).
     The view is pre-filtered to season_id=1 and fit_tier IN ('IDEAL','STRONG','VIABLE').
+    Each returned dict includes fit_band ('A'/'B'/'C') derived from fit_score.
 
     Args:
         conn:        sqlite3 connection with row_factory = sqlite3.Row.
@@ -215,7 +225,8 @@ def get_team_fit_signal_for_prospect(
                      view's baked-in season_id=1 filter or the result will be empty.
 
     Returns:
-        List of dicts, each containing all view columns. Empty list if no matches.
+        List of dicts ordered by fit_score DESC, each containing all 21 view columns
+        including fit_band. Empty list if no matches.
     """
     tiers = _tiers_at_or_above(min_tier)
     placeholders = ",".join("?" * len(tiers))
