@@ -41,22 +41,35 @@ def get_team_draft_context(conn, season_id: int, team_id: str) -> dict[str, Any]
         return None
 
     return {
-        "team_id": row["team_id"],
-        "team_name": row["team_name"],
-        "development_timeline": row["development_timeline"],
-        "risk_tolerance": row["risk_tolerance"],
+        "team_id":                row["team_id"],
+        "team_name":              row["team_name"],
+        "development_timeline":   row["development_timeline"],
+        "risk_tolerance":         row["risk_tolerance"],
         "primary_offense_family": row["primary_offense_family"],
         "primary_defense_family": row["primary_defense_family"],
-        "coverage_bias": row["coverage_bias"],
-        "man_rate_tolerance": row["man_rate_tolerance"],
-        "premium_needs": _loads(row["premium_needs_json"], []),
-        "depth_chart_pressure": _loads(row["depth_chart_pressure_json"], {}),
-        "draft_capital": _loads(row["draft_capital_json"], {}),
-        "notes": row["notes"],
+        "coverage_bias":          row["coverage_bias"],
+        "man_rate_tolerance":     row["man_rate_tolerance"],
+        "premium_needs":          _loads(row["premium_needs_json"], []),
+        "depth_chart_pressure":   _loads(row["depth_chart_pressure_json"], {}),
+        "draft_capital":          _loads(row["draft_capital_json"], {}),
+        "notes":                  row["notes"],
     }
 
 
-def get_player_team_fit_context(conn, prospect_id: int, season_id: int, model_version: str = "apex_v2.3") -> dict[str, Any] | None:
+def get_player_team_fit_context(
+    conn,
+    prospect_id: int,
+    season_id: int,
+    model_version: str = "apex_v2.3",
+) -> dict[str, Any] | None:
+    """
+    Return prospect context dict shaped for evaluate_team_fit().
+
+    Fixed: uses correct apex_scores column names:
+      failure_mode_primary   (was: failuremodeprimary)
+      failure_mode_secondary (was: failuremodesecondary)
+      capital_adjusted       (was: capitalrange — column does not exist)
+    """
     row = conn.execute(
         """
         SELECT
@@ -64,23 +77,23 @@ def get_player_team_fit_context(conn, prospect_id: int, season_id: int, model_ve
             p.display_name,
             p.position_group,
             a.matched_archetype,
-            a.failuremodeprimary,
-            a.failuremodesecondary,
-            a.capitalrange,
+            a.failure_mode_primary,
+            a.failure_mode_secondary,
+            a.capital_adjusted,
             a.apex_tier,
             a.eval_confidence,
             d.divergence_rank_delta
         FROM prospects p
         JOIN apex_scores a
           ON a.prospect_id = p.prospect_id
-         AND a.season_id = p.season_id
+         AND a.season_id   = p.season_id
         LEFT JOIN divergence_flags d
-          ON d.prospect_id = p.prospect_id
-         AND d.season_id = p.season_id
+          ON d.prospect_id   = p.prospect_id
+         AND d.season_id     = p.season_id
          AND d.model_version = a.model_version
         WHERE p.prospect_id = ?
-          AND p.season_id = ?
-          AND p.is_active = 1
+          AND p.season_id   = ?
+          AND p.is_active   = 1
           AND a.model_version = ?
           AND (a.is_calibration_artifact = 0 OR a.is_calibration_artifact IS NULL)
         """,
@@ -90,17 +103,21 @@ def get_player_team_fit_context(conn, prospect_id: int, season_id: int, model_ve
     if not row:
         return None
 
-    fms = [x for x in [row["failuremodeprimary"], row["failuremodesecondary"]] if x]
-    fms = [x.split()[0] for x in fms]
+    # Extract FM codes ("FM-4 Body Breakdown" → "FM-4")
+    fms = [
+        x.split()[0]
+        for x in [row["failure_mode_primary"], row["failure_mode_secondary"]]
+        if x
+    ]
 
     return {
-        "prospect_id": row["prospect_id"],
-        "display_name": row["display_name"],
-        "position_group": row["position_group"],
-        "matched_archetype": row["matched_archetype"],
-        "active_fm_codes": fms,
-        "capital_range": row["capitalrange"],
-        "apex_tier": row["apex_tier"],
-        "eval_confidence": row["eval_confidence"],
+        "prospect_id":           row["prospect_id"],
+        "display_name":          row["display_name"],
+        "position_group":        row["position_group"],
+        "matched_archetype":     row["matched_archetype"],
+        "active_fm_codes":       fms,
+        "capital_range":         row["capital_adjusted"],
+        "apex_tier":             row["apex_tier"],
+        "eval_confidence":       row["eval_confidence"],
         "divergence_rank_delta": row["divergence_rank_delta"],
     }
