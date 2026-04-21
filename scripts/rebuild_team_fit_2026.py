@@ -184,8 +184,6 @@ def _load_prospects(conn) -> list[dict]:
     """
     Load all 300 active, non-calibration APEX v2.3 prospects.
     Uses correct apex_scores column names (failure_mode_primary / capital_adjusted).
-    NOTE: draftosqueriesteamfit.get_player_team_fit_context() uses stale column
-    names (failuremodeprimary, capitalrange) — do NOT call that function here.
     """
     rows = conn.execute(
         """
@@ -240,44 +238,77 @@ def _load_prospects(conn) -> list[dict]:
     return prospects
 
 
+_PRESSURE_LABEL: dict[int, str] = {}  # built lazily via _pressure_label()
+
+def _pressure_label(score: int) -> str:
+    """Convert numeric pressure_score (0-100) back to text label for the evaluator."""
+    if score >= 70:
+        return "high"
+    if score >= 45:
+        return "medium"
+    return "low"
+
+
 def _load_teams(conn) -> dict[str, dict]:
     """
-    Load all 32 active team contexts from team_draft_context, including
-    the scheme_family column added in the expand-to-32 seed pass.
-    Returns a dict keyed by team_id.
+    Load all 32 team contexts from v_team_fit_context_2026 (Migration 0054).
+
+    The view assembles the evaluator-ready payload from:
+      - team_context_snapshots (scheme_family, capital_profile, etc.)
+      - team_needs_2026        (PREMIUM/SECONDARY needs as ordered JSON)
+      - team_depth_pressure_2026 (pressure per position_group as JSON)
+      - team_draft_context     (LEFT JOIN for primary_defense_family, coverage_bias,
+                                man_rate_tolerance, draft_capital_json, team_name)
+
+    Prerequisite: seed_team_context_normalized_2026.py --apply 1 must have run.
+    Falls back gracefully to empty lists/dicts if the normalized tables are not yet
+    populated (view returns NULL JSON columns → parsed as empty collections).
     """
+    view_exists = conn.execute(
+        "SELECT COUNT(*) FROM sqlite_master WHERE type='view' "
+        "AND name='v_team_fit_context_2026'"
+    ).fetchone()[0]
+    if not view_exists:
+        print("ERROR: v_team_fit_context_2026 not found. "
+              "Run migration 0054_team_context_normalized.sql first.")
+        sys.exit(1)
+
     rows = conn.execute(
-        """
-        SELECT
-            team_id, team_name,
-            development_timeline, risk_tolerance,
-            primary_offense_family, primary_defense_family,
-            coverage_bias, man_rate_tolerance,
-            premium_needs_json, depth_chart_pressure_json,
-            draft_capital_json, scheme_family, notes
-        FROM team_draft_context
-        WHERE season_id = ? AND is_active = 1
-        ORDER BY team_id
-        """,
+        "SELECT * FROM v_team_fit_context_2026 WHERE season_id = ? ORDER BY team_id",
         (SEASON_ID,),
     ).fetchall()
 
+    if not rows:
+        print("ERROR: v_team_fit_context_2026 returned 0 rows. "
+              "Run seed_team_context_normalized_2026 --apply 1 first.")
+        sys.exit(1)
+
     teams = {}
     for r in rows:
+        # Parse needs_json → premium_needs list (PREMIUM tier only, ordered by rank)
+        needs_raw = _loads(r["needs_json"], [])
+        premium_needs = [n["position"] for n in needs_raw if n.get("tier") == "PREMIUM"]
+
+        # Parse depth_pressure_json → {position_group: "high"/"medium"/"low"} dict
+        depth_raw = _loads(r["depth_pressure_json"], [])
+        depth_chart_pressure = {
+            d["position_group"]: _pressure_label(d["pressure"])
+            for d in depth_raw
+        }
+
         teams[r["team_id"]] = {
             "team_id":                r["team_id"],
             "team_name":              r["team_name"],
             "development_timeline":   r["development_timeline"],
             "risk_tolerance":         r["risk_tolerance"],
-            "primary_offense_family": r["primary_offense_family"],
             "primary_defense_family": r["primary_defense_family"],
             "coverage_bias":          r["coverage_bias"],
             "man_rate_tolerance":     r["man_rate_tolerance"],
-            "premium_needs":          _loads(r["premium_needs_json"], []),
-            "depth_chart_pressure":   _loads(r["depth_chart_pressure_json"], {}),
+            "premium_needs":          premium_needs,
+            "depth_chart_pressure":   depth_chart_pressure,
             "draft_capital":          _loads(r["draft_capital_json"], {}),
             "scheme_family":          r["scheme_family"],
-            "notes":                  r["notes"],
+            "play_style_notes":       r["play_style_notes"],
         }
     return teams
 
@@ -337,10 +368,15 @@ def _run(apply: bool) -> None:
         prospects = _load_prospects(conn)
         teams     = _load_teams(conn)
 
-        print(f"Prospects loaded : {len(prospects)}")
-        print(f"Teams loaded     : {len(teams)}")
-        print(f"Rows to compute  : {len(prospects) * len(teams)}")
-        print(f"Mode             : {'APPLY' if apply else 'DRY RUN'}")
+        teams_with_needs    = sum(1 for t in teams.values() if t["premium_needs"])
+        teams_with_pressure = sum(1 for t in teams.values() if t["depth_chart_pressure"])
+        print(f"Prospects loaded                    : {len(prospects)}")
+        print(f"Teams loaded                        : {len(teams)}")
+        print(f"Teams with premium_needs populated  : {teams_with_needs}/{len(teams)}")
+        print(f"Teams with depth_pressure populated : {teams_with_pressure}/{len(teams)}")
+        print(f"Rows to compute                     : {len(prospects) * len(teams)}")
+        print(f"Mode                                : {'APPLY' if apply else 'DRY RUN'}")
+        print(f"Context source                      : v_team_fit_context_2026")
         print()
 
         if len(prospects) == 0:
