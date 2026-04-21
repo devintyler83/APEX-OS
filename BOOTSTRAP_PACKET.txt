@@ -17,7 +17,7 @@ Authoritative State:
 1) STATE_SNAPSHOT.md
 # APEX OS State Snapshot
 
-Last Updated (UTC): 2026-04-20T23:54:51.929016+00:00
+Last Updated (UTC): 2026-04-21T00:22:01.090637+00:00
 
 ---
 
@@ -1339,11 +1339,11 @@ Inactive (data preserved): ngs_2026 (source_id=29, is_active=0) — model score,
 
 2) System Snapshot Output
 === DRAFTOS SYSTEM SNAPSHOT ===
-generated_utc: 2026-04-20T23:54:51.241044+00:00
+generated_utc: 2026-04-21T00:22:00.374819+00:00
 
 ## Git
 branch: main
-commit: 45bc38d9bca44ad87bea3f62b7a4fd0f7eb8b03a
+commit: 590504ced484eb7bac3f788ea89881c065ee4d8a
 status: clean
 
 ## Tables
