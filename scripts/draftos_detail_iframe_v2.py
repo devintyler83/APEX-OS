@@ -627,8 +627,8 @@ def buildteamfithtml(fit: dict | None) -> str:
 
     def bullets(items: list[str], empty_msg: str) -> str:
         if not items:
-            return f"<div class='report-sub' style='color:var(--dim);'>{empty_msg}</div>"
-        return "".join(f"<div class='report-sub'>• {x}</div>" for x in items)
+            return f"<div class='report-sub' style='color:var(--dim);font-size:13px;'>{empty_msg}</div>"
+        return "".join(f"<div class='report-sub' style='font-size:13px;'>• {x}</div>" for x in items)
 
     # ── FM Risk Detail block inner HTML ────────────────────────────────────────
     if fm_activated or fm_suppressed:
@@ -668,7 +668,7 @@ def buildteamfithtml(fit: dict | None) -> str:
                   letter-spacing:-0.01em; line-height:1.2; margin-bottom:8px;">
         {banner_label}
       </div>
-      <div style="font-size:10px; color:var(--mid); line-height:1.5;">
+      <div style="font-size:13px; color:var(--mid); line-height:1.5;">
         {fo_summary}
       </div>
     </div>
@@ -729,7 +729,7 @@ def buildteamfithtml(fit: dict | None) -> str:
                     text-transform:uppercase; color:#5ab87a; margin-bottom:4px;">
           Works if
         </div>
-        <div style="font-size:9px; color:var(--mid); line-height:1.4;">{works_if}</div>
+        <div style="font-size:13px; color:var(--mid); line-height:1.4;">{works_if}</div>
       </div>
       <div style="padding:8px 10px; background:rgba(224,92,92,0.07);
                   border:1px solid rgba(224,92,92,0.18); border-radius:4px;">
@@ -737,7 +737,7 @@ def buildteamfithtml(fit: dict | None) -> str:
                     text-transform:uppercase; color:#e05c5c; margin-bottom:4px;">
           Breaks if
         </div>
-        <div style="font-size:9px; color:var(--mid); line-height:1.4;">{breaks_if}</div>
+        <div style="font-size:13px; color:var(--mid); line-height:1.4;">{breaks_if}</div>
       </div>
     </div>
 
@@ -1057,14 +1057,14 @@ body {
 .section-header::after { content: ''; flex: 1; height: 1px; background: var(--wire); }
 
 .trait-row { display: flex; align-items: center; gap: 7px; margin-bottom: 5px; }
-.trait-lbl { font-size: 9px; font-weight: 500; color: var(--mid); width: 64px; flex-shrink: 0; }
+.trait-lbl { font-size: 11px; font-weight: 500; color: var(--mid); width: 64px; flex-shrink: 0; }
 .trait-track { flex: 1; height: 3px; background: var(--wire); border-radius: 1.5px; overflow: hidden; }
 .trait-fill { height: 100%; border-radius: 1.5px; }
 .trait-fill.hi  { background: var(--green); }
 .trait-fill.mid { background: var(--cold); }
 .trait-fill.lo  { background: var(--amber); }
 .trait-fill.red { background: var(--red); }
-.trait-val { font-family: 'Barlow Condensed', sans-serif; font-size: 11px; font-weight: 700; color: var(--text); width: 22px; text-align: right; }
+.trait-val { font-family: 'Barlow Condensed', sans-serif; font-size: 13px; font-weight: 700; color: var(--text); width: 22px; text-align: right; }
 
 /* Confidence + Divergence */
 .conf-row { display: flex; gap: 6px; margin-bottom: 12px; }
@@ -1227,11 +1227,11 @@ body {
   margin-bottom: 5px;
 }
 .fm-def-text {
-  font-size: 10px; line-height: 1.6; color: var(--mid);
+  font-size: 13px; line-height: 1.6; color: var(--mid);
   margin-bottom: 4px;
 }
 .fm-def-note {
-  font-size: 10px; line-height: 1.55;
+  font-size: 13px; line-height: 1.55;
   color: var(--text); opacity: 0.75;
   padding-top: 5px;
   border-top: 1px solid rgba(255,255,255,0.06);
@@ -1267,7 +1267,7 @@ body {
 .div-chip.low     { background: var(--red-dim); border: 1px solid rgba(224,92,92,0.30); color: #f08080; }
 .div-chip.aligned { background: var(--wire); border: 1px solid var(--wire2); color: var(--mid); }
 .div-rationale {
-  font-size: 11px; line-height: 1.65; color: var(--mid);
+  font-size: 13px; line-height: 1.65; color: var(--mid);
   border-top: 1px solid var(--wire); padding-top: 10px;
 }
 .div-rationale strong { color: var(--text); font-weight: 600; }
@@ -1283,7 +1283,7 @@ body {
 }
 .sig-lbl { font-size: 8px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--cold); margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
 .sig-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--cold2); }
-.sig-text { font-size: 12px; line-height: 1.65; color: var(--mid); font-style: italic; }
+.sig-text { font-size: 13px; line-height: 1.65; color: var(--mid); font-style: italic; }
 
 /* Strengths + Red Flags */
 .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 18px; }
@@ -1294,7 +1294,7 @@ body {
 .ph-ind { width: 6px; height: 6px; border-radius: 1px; flex-shrink: 0; }
 .ph-ind.g { background: var(--green); }
 .ph-ind.r { background: var(--red); }
-.panel-item { font-size: 11px; line-height: 1.55; color: var(--mid); padding: 6px 0; border-top: 1px solid var(--wire); display: flex; gap: 8px; align-items: flex-start; }
+.panel-item { font-size: 13px; line-height: 1.55; color: var(--mid); padding: 6px 0; border-top: 1px solid var(--wire); display: flex; gap: 8px; align-items: flex-start; }
 .panel-item:first-of-type { border-top: none; }
 .pi-dot { width: 3px; height: 3px; border-radius: 50%; margin-top: 6px; flex-shrink: 0; }
 .pi-dot.g { background: var(--green); }
@@ -1313,7 +1313,7 @@ body {
   margin-bottom: 18px;
 }
 .risk-icon { font-size: 13px; line-height: 1.4; flex-shrink: 0; color: var(--amber); font-weight: 800; font-family: 'Barlow Condensed', sans-serif; margin-top: 1px; }
-.risk-text { font-size: 11px; line-height: 1.65; color: rgba(232,168,74,0.82); }
+.risk-text { font-size: 13px; line-height: 1.65; color: rgba(232,168,74,0.82); }
 
 /* Historical comps */
 .comps-section { margin-bottom: 20px; }
@@ -1355,7 +1355,7 @@ body {
 .comp-badge::before { content: ''; width: 4px; height: 4px; border-radius: 50%; background: currentColor; opacity: 0.8; }
 .comp-fm-note { font-size: 9px; color: var(--dim); margin-bottom: 8px; font-style: italic; }
 .comp-fm-note span { color: #c4a5f5; font-style: normal; font-weight: 600; }
-.comp-desc { font-size: 10px; line-height: 1.65; color: var(--mid); margin-bottom: 8px; }
+.comp-desc { font-size: 13px; line-height: 1.65; color: var(--mid); margin-bottom: 8px; }
 .comp-year { font-size: 8px; color: rgba(255,255,255,0.20); font-family: 'Barlow Condensed', sans-serif; letter-spacing: 0.06em; }
 
 /* FM Risk Reference Records */
@@ -1382,8 +1382,8 @@ body {
 .fm-ref-name { font-family: 'Barlow Condensed', sans-serif; font-size: 18px; font-weight: 800; text-transform: uppercase; color: var(--text); line-height: 1; }
 .fm-ref-pos-fm { font-size: 9px; color: var(--dim); margin-bottom: 4px; }
 .fm-ref-pos-fm span { color: #c4a5f5; }
-.fm-ref-pattern { font-size: 9px; color: var(--mid); font-style: italic; line-height: 1.5; margin-bottom: 4px; }
-.fm-ref-excerpt { font-size: 9px; color: var(--dim); line-height: 1.5; }
+.fm-ref-pattern { font-size: 12px; color: var(--mid); font-style: italic; line-height: 1.5; margin-bottom: 4px; }
+.fm-ref-excerpt { font-size: 12px; color: var(--dim); line-height: 1.5; }
 .fm-ref-meta { text-align: right; }
 .fm-ref-years { font-size: 8px; color: rgba(255,255,255,0.20); font-family: 'Barlow Condensed', sans-serif; letter-spacing: 0.06em; white-space: nowrap; }
 .fm-ref-gen { font-size: 7px; color: var(--dim); white-space: nowrap; margin-top: 2px; }
@@ -1452,7 +1452,7 @@ body {
   text-transform: uppercase; color: var(--red); margin-bottom: 8px;
 }
 .dc-risk-note {
-  font-size: 10px; line-height: 1.55; color: var(--mid); margin-top: 8px;
+  font-size: 13px; line-height: 1.55; color: var(--mid); margin-top: 8px;
 }
 .dc-strip {
   border-top: 1px solid var(--wire);
@@ -1464,7 +1464,7 @@ body {
   font-size: 7px; font-weight: 700; letter-spacing: 0.12em;
   text-transform: uppercase; color: var(--dim); margin-right: 4px;
 }
-.dc-strip-val { font-family: 'Barlow Condensed', sans-serif; font-size: 12px; font-weight: 700; }
+.dc-strip-val { font-family: 'Barlow Condensed', sans-serif; font-size: 13px; font-weight: 700; }
 .dc-sep { color: var(--wire3); font-size: 10px; }
 
 /* ── Tab navigation ─────────────────────────────────────────────────────── */
@@ -1510,11 +1510,11 @@ body {
   font-family: 'Barlow Condensed', sans-serif; font-size: 16px; font-weight: 800;
   color: var(--text); margin-bottom: 2px;
 }
-.report-sub { font-size: 10px; color: var(--mid); line-height: 1.5; }
+.report-sub { font-size: 13px; color: var(--mid); line-height: 1.5; }
 
 /* ── Traits tab ─────────────────────────────────────────────────────────── */
 .traits-note {
-  font-size: 10px; color: var(--dim); margin-top: 12px;
+  font-size: 13px; color: var(--dim); margin-top: 12px;
   padding: 8px 10px; background: var(--ink3);
   border-left: 2px solid var(--wire2); border-radius: 0 3px 3px 0;
 }
@@ -1558,7 +1558,7 @@ body {
   line-height: 1.3;
 }
 .sp-market-line {
-  font-size: 10px;
+  font-size: 13px;
   line-height: 1.55;
   color: var(--mid);
   font-style: italic;
@@ -1576,11 +1576,113 @@ body {
 }
 .sp-take-text {
   font-family: 'Barlow', sans-serif;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.65;
   color: rgba(255,255,255,0.78);
   font-style: italic;
 }
+
+/* ── Detail Hero Card ── */
+.detail-hero-card {
+  background: var(--ink3);
+  border: 1px solid var(--wire2);
+  border-radius: 6px;
+  padding: 16px 18px;
+  margin-bottom: 14px;
+}
+
+/* ── Detail Section ── */
+.detail-section {
+  background: var(--ink3);
+  border: 1px solid var(--wire);
+  border-radius: 5px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+}
+.detail-section-header {
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--dim);
+  margin-bottom: 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--wire);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ── Stat Chips (Summary tab 3-chip row) ── */
+.stat-chip-row { display: flex; gap: 8px; margin-bottom: 14px; }
+.detail-stat-chip {
+  flex: 1;
+  padding: 10px 12px;
+  background: var(--ink4);
+  border: 1px solid var(--wire2);
+  border-radius: 5px;
+}
+.detail-stat-chip-lbl {
+  font-size: 7px; font-weight: 700; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--dim); margin-bottom: 4px;
+}
+.detail-stat-chip-val {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 15px; font-weight: 800; line-height: 1.2;
+}
+
+/* ── Insight Card ── */
+.insight-card {
+  background: var(--ink3);
+  border: 1px solid var(--wire2);
+  border-left: 3px solid var(--cold2);
+  border-radius: 0 5px 5px 0;
+  padding: 12px 16px;
+  margin-bottom: 10px;
+}
+.insight-card.amber { border-left-color: var(--amber2); }
+.insight-card.green { border-left-color: var(--green); }
+.insight-card.red   { border-left-color: var(--red); }
+.insight-hdr {
+  font-size: 8px; font-weight: 700; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--dim); margin-bottom: 6px;
+}
+.insight-body {
+  font-size: 13px; line-height: 1.65; color: var(--mid);
+}
+
+/* ── Insight Split (works-if / breaks-if) ── */
+.insight-split { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+.insight-split-cell { padding: 10px 12px; border-radius: 5px; }
+.insight-split-cell.green {
+  background: rgba(90,184,122,0.07);
+  border: 1px solid rgba(90,184,122,0.20);
+}
+.insight-split-cell.red {
+  background: rgba(224,92,92,0.07);
+  border: 1px solid rgba(224,92,92,0.20);
+}
+.insight-split-lbl {
+  font-size: 7px; font-weight: 700; letter-spacing: 0.12em;
+  text-transform: uppercase; margin-bottom: 5px;
+}
+.insight-split-lbl.green { color: var(--green); }
+.insight-split-lbl.red   { color: var(--red); }
+.insight-split-body { font-size: 13px; color: var(--mid); line-height: 1.5; }
+
+/* ── Support Info ── */
+.support-info {
+  background: var(--ink3);
+  border: 1px solid var(--wire);
+  border-radius: 4px;
+  padding: 10px 14px;
+  margin-bottom: 10px;
+}
+.support-info-lbl {
+  font-size: 7px; font-weight: 700; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--dim); margin-bottom: 6px;
+}
+.support-info-body { font-size: 13px; color: var(--mid); line-height: 1.55; }
 """
 
 
@@ -2244,22 +2346,15 @@ def _build_scout_pad(d: dict, fm_codes: set, fm_labels: list, tag_list: list) ->
         d.get("draft_day_take_resolved")
         or _build_draft_day_take(pos, tier, arch_label_sp, conf_raw, fm_codes, div_delta)
     )
-    take_html = ""
-    if take_sentence:
-        take_html = (
-            '<div class="sp-take-block">'
-            f'<div class="sp-k" style="margin-bottom:6px">Draft Day Take</div>'
-            f'<div class="sp-take-text">{_e(take_sentence)}</div>'
-            '</div>'
-        )
+    # take_sentence rendered below as insight-card (take_insight_html)
 
     # ── Assemble blocks ────────────────────────────────────────────────────────
 
     # Block 1: Draft Call
     arch_role_display = arch_label_sp or arch_code_sp or "—"
     block_call = (
-        '<div class="sp-block">'
-        '<div class="sp-k" style="margin-bottom:6px">Draft Call</div>'
+        '<div class="detail-section">'
+        '<div class="detail-section-header">Draft Call</div>'
         f'<div class="sp-kv">'
         f'<span class="sp-k">Tier</span>'
         f'<span class="sp-v" style="color:{tier_color}">{_e(tier_word)}</span>'
@@ -2285,8 +2380,8 @@ def _build_scout_pad(d: dict, fm_codes: set, fm_labels: list, tag_list: list) ->
         if market_line else ""
     )
     block_market = (
-        '<div class="sp-block">'
-        '<div class="sp-k" style="margin-bottom:6px">Market View</div>'
+        '<div class="detail-section">'
+        '<div class="detail-section-header">Market View</div>'
         f'<div class="sp-kv">'
         f'<span class="sp-k">Consensus Rank</span>'
         f'<span class="sp-v">{_e(con_rank_str)}</span>'
@@ -2305,12 +2400,12 @@ def _build_scout_pad(d: dict, fm_codes: set, fm_labels: list, tag_list: list) ->
 
     # Block 3: Risk Snapshot
     block_risk = (
-        '<div class="sp-block">'
-        '<div class="sp-k" style="margin-bottom:6px">Risk Snapshot</div>'
+        '<div class="detail-section">'
+        '<div class="detail-section-header">Risk Snapshot</div>'
         f'{fm_rows}'
         f'<div class="sp-kv">'
         f'<span class="sp-k">Translation Risk</span>'
-        f'<span class="sp-v" style="font-size:11px;text-align:right;color:var(--mid)">{_e(trans_display)}</span>'
+        f'<span class="sp-v" style="font-size:13px;text-align:right;color:var(--mid)">{_e(trans_display)}</span>'
         f'</div>'
         '</div>'
     )
@@ -2319,13 +2414,134 @@ def _build_scout_pad(d: dict, fm_codes: set, fm_labels: list, tag_list: list) ->
     block_flags = ""
     if tag_list:
         block_flags = (
-            '<div class="sp-block">'
-            '<div class="sp-k" style="margin-bottom:8px">Tags / Flags</div>'
+            '<div class="detail-section">'
+            '<div class="detail-section-header">Tags / Flags</div>'
             f'{pills_html}'
             '</div>'
         )
 
-    return block_call + block_market + block_risk + block_flags + take_html
+    # Draft Day Take — use insight-card
+    take_insight_html = ""
+    if take_sentence:
+        take_insight_html = (
+            '<div class="insight-card amber">'
+            '<div class="insight-hdr">Draft Day Take</div>'
+            f'<div class="insight-body" style="font-style:italic;">{_e(take_sentence)}</div>'
+            '</div>'
+        )
+
+    return block_call + block_market + block_risk + block_flags + take_insight_html
+
+
+# ── New Phase-5/7 helper functions ───────────────────────────────────────────
+
+def _build_risk_hero(fm_codes: set, fm_labels: list, translation_risk, name: str, pos: str) -> str:
+    """Risk tab hero card: FM severity headline + translation risk first sentence."""
+    if not fm_codes:
+        if not _v23_present(translation_risk):
+            return (
+                '<div class="detail-hero-card">'
+                '<div class="insight-hdr">Risk Profile</div>'
+                '<div class="insight-body" style="color:var(--dim)">No active failure modes flagged for this prospect.</div>'
+                '</div>'
+            )
+        return (
+            '<div class="detail-hero-card">'
+            '<div class="insight-hdr">Risk Profile</div>'
+            f'<div class="insight-body">{_e(str(translation_risk).split(".")[0].strip())}.</div>'
+            '</div>'
+        )
+
+    fm_count = len(fm_codes)
+    if fm_count >= 2:
+        severity_word = "Compound FM Risk"
+        severity_color = "var(--red)"
+    else:
+        fc = next(iter(fm_codes))
+        severity_word = "Active FM Risk"
+        severity_color = f"var(--fm{fc})"
+
+    fm_labels_str = " · ".join(fm_labels[:2])
+    trans_first = ""
+    if _v23_present(translation_risk):
+        trans_first = str(translation_risk).split(".")[0].strip()
+
+    return (
+        f'<div class="detail-hero-card">'
+        f'<div style="font-size:8px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:var(--dim);margin-bottom:6px;">Risk Profile — {_e(name)} · {_e(pos)}</div>'
+        f'<div style="font-size:20px;font-weight:800;color:{severity_color};line-height:1.2;margin-bottom:6px;">{severity_word}</div>'
+        f'<div style="font-size:13px;color:var(--mid);margin-bottom:{"8px" if trans_first else "0"};">{_e(fm_labels_str)}</div>'
+        + (f'<div style="font-size:13px;line-height:1.65;color:var(--mid);border-top:1px solid var(--wire);padding-top:8px;">{_e(trans_first)}.</div>' if trans_first else '')
+        + '</div>'
+    )
+
+
+def _build_top_traits_card(d: dict, pos: str, pos_note: str) -> str:
+    """Traits tab: highlight the 1–2 top-weighted traits for the position."""
+    _POS_TOP: dict[str, list[str]] = {
+        "QB":   ["v_processing", "v_scheme_vers"],
+        "CB":   ["v_athleticism", "v_comp_tough"],
+        "EDGE": ["v_athleticism", "v_comp_tough"],
+        "OT":   ["v_comp_tough", "v_injury"],
+        "S":    ["v_processing", "v_athleticism"],
+        "IDL":  ["v_comp_tough", "v_injury"],
+        "ILB":  ["v_processing", "v_athleticism"],
+        "OLB":  ["v_athleticism", "v_comp_tough"],
+        "WR":   ["v_athleticism", "v_production"],
+        "TE":   ["v_comp_tough", "v_scheme_vers"],
+        "OG":   ["v_comp_tough", "v_injury"],
+        "C":    ["v_processing", "v_comp_tough"],
+        "RB":   ["v_production", "v_injury"],
+    }
+    _TRAIT_LABELS: dict[str, str] = {
+        "v_processing":   "Processing",
+        "v_athleticism":  "Athleticism",
+        "v_comp_tough":   "Comp. Toughness",
+        "v_injury":       "Durability",
+        "v_scheme_vers":  "Scheme Versatility",
+        "v_production":   "Production",
+        "v_dev_traj":     "Dev. Trajectory",
+        "v_character":    "Character",
+    }
+    top_keys = _POS_TOP.get(pos.upper(), [])
+    if not top_keys:
+        return ""
+
+    _COLOR_MAP = {"hi": "var(--green)", "mid": "var(--cold)", "lo": "var(--amber)", "red": "var(--red)"}
+    chips = ""
+    for k in top_keys:
+        v = d.get(k)
+        if v is None or (isinstance(v, float) and math.isnan(v)):
+            continue
+        try:
+            fv = float(v)
+        except (TypeError, ValueError):
+            continue
+        cls = _trait_cls(fv)
+        color = _COLOR_MAP.get(cls, "var(--text)")
+        label = _TRAIT_LABELS.get(k, k)
+        chips += (
+            f'<div style="flex:1;padding:10px 12px;background:var(--ink4);border-radius:5px;border-top:2px solid {color};">'
+            f'<div style="font-size:7px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--dim);margin-bottom:4px;">{_e(label)}</div>'
+            f'<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:26px;font-weight:800;color:{color};line-height:1;">{fv:.1f}</div>'
+            f'<div style="font-size:11px;color:var(--dim);margin-top:2px;">Key trait for {_e(pos)}</div>'
+            f'</div>'
+        )
+
+    if not chips:
+        return ""
+
+    note_html = (
+        f'<div style="font-size:13px;color:var(--dim);margin-top:10px;padding-top:8px;border-top:1px solid var(--wire);">{_e(pos_note)}</div>'
+        if pos_note else ""
+    )
+    return (
+        f'<div class="detail-section" style="margin-bottom:16px;">'
+        f'<div class="detail-section-header">Key Position Traits</div>'
+        f'<div style="display:flex;gap:8px;">{chips}</div>'
+        f'{note_html}'
+        f'</div>'
+    )
 
 
 # ── Public API ────────────────────────────────────────────────────────────────
@@ -2742,34 +2958,71 @@ def build_detail_html(d: dict, comps: list, rate, fm_ref_comps: list | None = No
         # Decision card — top of right content pane (APEX-scored prospects only)
         decision_card_html = build_decision_card(d, fm_codes)
 
+        # Summary tab 3-chip stat row: Capital / Archetype Fit / Eval Confidence
+        _GAP_CHIP_COLOR = {
+            "CLEAN": "var(--green)", "SOLID": "var(--cold)",
+            "TWEENER": "var(--amber)", "COMPRESSION": "var(--amber)", "NO_FIT": "var(--red)",
+        }
+        _GAP_CHIP_DISP = {
+            "CLEAN": "Clean Fit", "SOLID": "Solid Fit",
+            "TWEENER": "Tweener", "COMPRESSION": "Elite Tweener", "NO_FIT": "No Dominant Fit",
+        }
+        _CONF_CHIP_COLOR = {
+            "A": "var(--green)", "Tier A": "var(--green)", "High": "var(--green)",
+            "B": "var(--amber)", "Tier B": "var(--amber)", "Medium": "var(--amber)",
+            "C": "var(--red)",   "Tier C": "var(--red)",   "Low": "var(--red)",
+        }
+        _cap_chip_val  = _e(capital_base) if capital_base and capital_base != "—" else "—"
+        _gap_chip_color = _GAP_CHIP_COLOR.get(gap_label, "var(--dim)")
+        _gap_chip_disp  = _GAP_CHIP_DISP.get(gap_label, gap_label.title() if gap_label else "—")
+        _conf_chip_color = _CONF_CHIP_COLOR.get(str(conf_raw).strip(), "var(--dim)")
+        _conf_chip_disp  = conf_display if conf_display else "—"
+        stat_chip_row_html = (
+            '<div class="stat-chip-row">'
+            f'<div class="detail-stat-chip">'
+            f'<div class="detail-stat-chip-lbl">Draft Capital</div>'
+            f'<div class="detail-stat-chip-val" style="color:var(--text);">{_cap_chip_val}</div>'
+            f'</div>'
+            f'<div class="detail-stat-chip">'
+            f'<div class="detail-stat-chip-lbl">Archetype Fit</div>'
+            f'<div class="detail-stat-chip-val" style="color:{_gap_chip_color};">{_gap_chip_disp}</div>'
+            f'</div>'
+            f'<div class="detail-stat-chip">'
+            f'<div class="detail-stat-chip-lbl">Eval Confidence</div>'
+            f'<div class="detail-stat-chip-val" style="color:{_conf_chip_color};">{_conf_chip_disp}</div>'
+            f'</div>'
+            '</div>'
+        ) if _v23_present(apex_comp) else ""
+
         # FM section
         fm_html = _build_fm_section(fm_codes, fm_labels, prospect=d)
 
-        # Divergence panel (only when abs(delta) >= 3)
+        # Divergence panel (only when abs(delta) >= 3) — wrapped in insight-card
         divergence_panel_html = ""
         try:
             if div_delta is not None and abs(int(float(div_delta))) >= 3:
+                _div_raw = _build_divergence_panel(div_delta, div_narrative)
                 divergence_panel_html = (
                     '<div class="section-gap"></div>'
                     '<div class="sec-divider cold">APEX Divergence</div>'
-                    + _build_divergence_panel(div_delta, div_narrative)
+                    + _div_raw
                 )
         except (TypeError, ValueError):
             pass
 
-        # Signature play
+        # Signature play — insight-card
         sig_html = ""
         if _v23_present(signature_play):
             sig_html = (
                 '<div class="section-gap"></div>'
                 '<div class="sec-divider">Signature Play</div>'
-                '<div class="sig-play">'
-                '<div class="sig-lbl"><span class="sig-dot"></span>Signature Play</div>'
-                f'<div class="sig-text">{_e(signature_play)}</div>'
+                '<div class="insight-card amber">'
+                '<div class="insight-hdr">Signature Play</div>'
+                f'<div class="insight-body" style="font-style:italic;">{_e(signature_play)}</div>'
                 '</div>'
             )
 
-        # Strengths + Red Flags
+        # Strengths + Red Flags — insight-split layout
         str_items = _smart_split_bullets(strengths_raw)
         rf_items  = _smart_split_bullets(red_flags_raw)
 
@@ -2872,6 +3125,7 @@ def build_detail_html(d: dict, comps: list, rate, fm_ref_comps: list | None = No
         _report_conf_color = _CONF_REPORT_COLOR.get(str(conf_raw).strip(), "var(--dim)")
         _pos_rank_label = f"#{int(float(pos_rank))} at {pos}" if pos_rank and _v23_present(pos_rank) else "—"
         report_tab_html = (
+            f'<div class="sec-divider" style="margin-bottom:16px;">Report Contents</div>'
             f'<div class="report-block">'
             f'<div class="report-lbl">Draft Capital</div>'
             f'<div class="report-val">{_e(capital_base)}</div>'
@@ -2995,6 +3249,8 @@ def build_detail_html(d: dict, comps: list, rate, fm_ref_comps: list | None = No
 
           {decision_card_html}
 
+          {stat_chip_row_html}
+
           <div class="sec-divider">Archetype</div>
           <div class="arch-section">
             <div class="arch-header-row">
@@ -3020,6 +3276,8 @@ def build_detail_html(d: dict, comps: list, rate, fm_ref_comps: list | None = No
         <!-- TAB: TRAITS -->
         <div id="tab-traits" class="tab-pane">
 
+          {_build_top_traits_card(d, pos, _trait_note)}
+
           <div class="traits-section">
             <div class="section-header">Football Traits</div>
             {football_html}
@@ -3036,6 +3294,7 @@ def build_detail_html(d: dict, comps: list, rate, fm_ref_comps: list | None = No
 
         <!-- TAB: RISK -->
         <div id="tab-risk" class="tab-pane">
+          {_build_risk_hero(fm_codes, fm_labels, translation_risk, name, pos)}
           {fm_html}
           {risk_html}
         </div>

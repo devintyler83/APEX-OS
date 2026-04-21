@@ -1209,6 +1209,34 @@ hr {
   margin-left: 10px;
   letter-spacing: 0.04em;
 }
+
+/* ── Board selection bar ── */
+.board-selection-bar {
+  padding: 7px 14px;
+  background: rgba(74,144,212,0.08);
+  border: 1px solid rgba(74,144,212,0.25);
+  border-radius: 5px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.board-selection-bar__label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(126,180,226,0.65);
+}
+.board-selection-bar__name {
+  font-size: 14px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.90);
+}
+.board-selection-bar__meta {
+  font-size: 12px;
+  color: rgba(255,255,255,0.45);
+}
 </style>
 """
 try:
@@ -3448,6 +3476,34 @@ else:
     else:
         _pr = _prospect_row.iloc[0]
         _has_apex = pd.notna(_pr.get("apex_composite"))
+
+        # Selected-prospect indicator banner
+        _sel_name  = _pr.get("display_name") or _pr.get("name") or "Prospect"
+        _sel_pos   = _pr.get("position_group") or _pr.get("position") or ""
+        _sel_crank = _pr.get("consensus_rank")
+        _sel_tier  = (str(_pr.get("apex_tier") or "")).strip().upper()
+        _TIER_COLORS_BANNER = {
+            "ELITE": "#f0c040", "DAY1": "#7eb4e2", "DAY2": "#5ab87a",
+            "DAY3": "rgba(255,255,255,0.55)", "UDFA-P": "#a57ee0", "UDFA": "rgba(255,255,255,0.35)",
+        }
+        _tier_color_banner = _TIER_COLORS_BANNER.get(_sel_tier, "rgba(255,255,255,0.45)")
+        _rank_badge = f" · #{int(_sel_crank)}" if _sel_crank else ""
+        _tier_badge_html = (
+            f' <span style="font-size:11px;font-weight:700;color:{_tier_color_banner};">{_sel_tier}</span>'
+            if _sel_tier else ""
+        )
+        st.markdown(
+            f"""<div style="padding:7px 14px;background:rgba(74,144,212,0.08);
+                border:1px solid rgba(74,144,212,0.25);border-radius:5px;margin-bottom:8px;
+                display:flex;align-items:center;gap:10px;">
+              <span style="font-size:11px;font-weight:700;letter-spacing:0.06em;
+                           text-transform:uppercase;color:rgba(126,180,226,0.65);">Selected</span>
+              <span style="font-size:14px;font-weight:700;color:rgba(255,255,255,0.90);">{_sel_name}</span>
+              <span style="font-size:12px;color:rgba(255,255,255,0.45);">{_sel_pos}{_rank_badge}</span>
+              {_tier_badge_html}
+            </div>""",
+            unsafe_allow_html=True,
+        )
 
         if _has_apex:
             with connect() as conn:
