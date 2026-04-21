@@ -10,14 +10,14 @@ Non-negotiables:
 - Provide run order + verification commands
 
 Goal for this chat:
-Session 93: Rebuild pre-draft snapshot (snapshot_id=7) via full pipeline chain using S90
+Session 94: Draft night operations. Use Draft Mode UI (sidebar "Draft Mode (operator)"
 
 Authoritative State:
 
 1) STATE_SNAPSHOT.md
 # APEX OS State Snapshot
 
-Last Updated (UTC): 2026-04-21T18:06:09.204738+00:00
+Last Updated (UTC): 2026-04-21T18:08:22.815115+00:00
 
 ---
 
@@ -26,6 +26,53 @@ Last Updated (UTC): 2026-04-21T18:06:09.204738+00:00
 - 2026 (season_id=1)
 
 ## Last Completed Milestone
+
+Session 93 close (Draft Mode spine + full operator UI + snapshot_id=7 rebuild + board blank fix.)
+
+Session 93 close:
+- Migration 0055 applied: drafted_picks_2026 event table + v_draft_targets_remaining_2026 view.
+  drafted_picks_2026: season_id, pick_number, round_number, drafting_team, prospect_id,
+    drafted_at, draft_session_label, source, note. UNIQUE on (season_id, pick_number) and
+    (season_id, prospect_id). Zero rows — clean state pre-draft.
+  v_draft_targets_remaining_2026: all 28 columns from v_draft_targets_2026 filtered via
+    NOT EXISTS against drafted_picks_2026. Reactive — auto-updates as picks are recorded.
+- Scripts created (all idempotent, --apply 0/1 pattern):
+    scripts/mark_drafted_2026.py — records single drafted player with 3 validations +
+      DB backup. Reads only through v_draft_targets_2026.
+    scripts/reset_drafted_2026.py — deletes rows from drafted_picks_2026. Supports
+      --team and --pick-number filters. Ambiguous column bug fixed (dp. qualification).
+    scripts/get_team_board_2026.py — read-only; reads v_draft_targets_remaining_2026.
+      --team, --limit, --positions filters. Ordered fit_tier/fit_band/fit_score/consensus_rank.
+    scripts/validate_reactive_board_2026.py — 7 non-destructive checks: table/view exist,
+      no duplicate prospect_id or pick_number, remaining≤total, FK integrity on both sides.
+- Query layer: draftos/queries/draft_mode.py (14+ functions).
+    All reads through v_draft_targets_remaining_2026 or direct operational tables.
+    Forbidden upstream tables never referenced.
+    Key functions: derive_round, get_all_teams, get_team_context, search_available_prospects,
+      get_remaining_board, get_value_plays, get_pick_window_targets, mark_prospect_drafted,
+      get_drafted_picks, get_drafted_picks_since, get_team_fits, get_drafted_count.
+    Bug fixed: get_value_plays() team_id path was missing r.divergence_flag in SELECT.
+- Draft Mode UI: app/app.py 3-section tabbed operator panel (gated by sidebar checkbox).
+    Draft Control tab: prospect search → pick# / round / team / note → Mark as Drafted.
+      Auto-suggest pick# via dm_get_next_pick(). Round derived via dm_derive_round(), disabled.
+      Recent picks table (last 15) from dm_get_drafted_picks().
+    Remaining Board tab: 5-filter row (position/tier/divergence/sort/limit) →
+      dm_get_remaining_board() → dataframe with divergence badges.
+    Team Companion tab: 32-team selectbox → scheme/needs/capital header →
+      4 expanders: Top Fits, Value Plays, Pick Window, Recently Off Board.
+- Snapshot_id=7 rebuild: full pipeline chain executed.
+    prospect_model_outputs: 999 rows (is_active=1). Rebuilt from scratch.
+    snapshot_board (--force): 999 rows, snapshot_id=7, 2026-04-21, "Pre-Draft S93 2026".
+    All compute layers run: metrics → source_metrics → coverage → confidence → verify.
+    Doctor: PASSED post-rebuild. Zero drafted-player state leaked (drafted_picks_2026=0 rows).
+- Board blank bug fix:
+    Root cause: snapshot_id=7 confidence compute assigned health_chip='Stale' to all 17
+      active sources (March rankings vs April 21 date). Stale penalty (0.80) collapsed all
+      confidence scores to 15-17 → all confidence_band='Low'. Default show_low=False hid all rows.
+    Fix: show_low checkbox default changed from False → True (line 2328, app/app.py).
+      Appropriate for draft-night context — confidence band is informational, not a gate.
+- Migrations applied: 0001–0055. Next migration: 0056.
+- Doctor: PASSED post-session.
 
 Session 92 close (Targets + team-fit query layer. Migrations 0051–0054. v_draft_targets_2026 canonical target surface. draftosqueriestargets + draftosqueriesteamfit expanded. Read-path constraint formalized.)
 
@@ -1426,17 +1473,14 @@ Prior sessions on record: 12 (DB rebuild), 13 (weekly pipeline), 13b (school/arc
 
 ## Next Milestone (Single Target)
 
-- Session 93: Rebuild pre-draft snapshot (snapshot_id=7) via full pipeline chain using S90
-  300-prospect scored universe. Pipeline: build_consensus -> snapshot_board ->
-  compute_snapshot_metrics -> compute_source_snapshot_metrics -> compute_snapshot_coverage ->
-  compute_snapshot_confidence -> verify_snapshot_integrity.
-  Then: triage new premium APEX_HIGH signals from expanded top-300 universe — candidates
-  include Logan Fano (EDGE +179), Andre Fuller (CB +168), Trey Moore (EDGE +161),
-  George Gumbs (EDGE +134), Mason Reiger (EDGE +133), Charles Demmings (CB +133),
-  Dani Dennis-Sutton (EDGE +129). Use Sports Almanac Mode where warranted.
-  Deferred: prospect_comps expansion for newly scored prospects.
-  Deferred: position_rank_label format inconsistency ("LB #1" vs "#1 at LB").
-  Deferred: full team_fit surface integration (app.py pick-fit panel, detail iframe).
+- Session 94: Draft night operations. Use Draft Mode UI (sidebar "Draft Mode (operator)"
+  checkbox) to record picks via mark_drafted_2026.py or the Draft Control tab.
+  Validate board after each round: python -m scripts.validate_reactive_board_2026.
+  Post-draft: run reset_drafted_2026.py (dry run first) to clear test picks if needed.
+  Deferred (post-draft): prospect_comps expansion for newly scored prospects.
+  Deferred (post-draft): position_rank_label format inconsistency ("LB #1" vs "#1 at LB").
+  Deferred (post-draft): full team_fit surface integration (app.py pick-fit panel, detail iframe).
+  Deferred (post-draft): post-draft audit framework (APEX Framework Section 9).
 
 ---
 
@@ -1499,10 +1543,11 @@ APEX: Operational. 300 v2.3 active non-cal scored + 12 calibration artifacts.
   Keylan Rutledge (pid=136): TOP50_POSITION_OVERRIDES OG added Session 37 (position_raw='G' fix).
   Igbinosun (pid=36): ARCHETYPE_OVERRIDES[36] added Session 39 with PAA gate findings.
   Ghost cleanup (Session 39): pid=3559, 4369 (Klare dups) is_active=0. pid=4347 (Ponds LB) is_active=0.
-  Migrations applied: 0001–0054. Next migration: 0055.
+  Migrations applied: 0001–0055. Next migration: 0056.
     0044 historical_comps table. 0046 added pre_draft_signal + is_fm_reference columns.
     0047 prospect_comps table (analyst-curated comp cards per prospect).
     0048 prospect_measurables table (jfosterfilm expanded measurables, 716 rows).
+    0055 drafted_picks_2026 event table + v_draft_targets_remaining_2026 remaining-board view.
   historical_comps: 350 rows total (314 position comps + 36 FM refs). All 13 positions covered.
     All canonical archetypes have ≥2 comps. Seeded via seed_perplexity_comps_2026.py (Session 79).
     DT→IDL normalization live in query module + scoring prompt + app filter (Session 79).
@@ -1553,6 +1598,27 @@ Forbidden direct reads in query helpers (unless building or repairing the views)
 Required entry point for all target-selection reads:
   - v_draft_targets_2026 directly, OR
   - draftosqueriestargets._select(...)
+
+DRAFT MODE (S93):
+
+Event layer (Migration 0055, season_id=1):
+- drafted_picks_2026: 0 rows (clean pre-draft state). Records picks as they happen.
+- v_draft_targets_remaining_2026: reactive view, auto-filters drafted prospects via NOT EXISTS.
+  Same 28 columns as v_draft_targets_2026. Zero-latency — updates on every pick.
+
+Scripts (all idempotent, run as python -m scripts.<name>):
+- mark_drafted_2026.py: record a single pick (--prospect-id, --pick-number, --team, --note)
+- reset_drafted_2026.py: rollback picks (--team, --pick-number filters; --apply 0/1)
+- get_team_board_2026.py: remaining board for a team (--team, --limit, --positions)
+- validate_reactive_board_2026.py: 7-check non-destructive validation
+
+Query layer: draftos/queries/draft_mode.py
+- All reads through v_draft_targets_remaining_2026. Forbidden upstream tables never touched.
+- mark_prospect_drafted(): backs up DB once per day, 3 validations, then INSERT.
+
+UI: app/app.py sidebar checkbox "Draft Mode (operator)" → 3-tab panel
+- Draft Control / Remaining Board / Team Companion
+- Reads exclusively through draft_mode.py functions.
 
 Notes:
   - Any future helper that needs additional filtering (e.g., "all MAJOR orphans for a given
@@ -1721,11 +1787,11 @@ Inactive (data preserved): ngs_2026 (source_id=29, is_active=0) — model score,
 
 2) System Snapshot Output
 === DRAFTOS SYSTEM SNAPSHOT ===
-generated_utc: 2026-04-21T18:06:07.738344+00:00
+generated_utc: 2026-04-21T18:08:22.136270+00:00
 
 ## Git
 branch: main
-commit: 4a48465781e54022639bdbb846b3d44506843e3c
+commit: f64fc57a194aaa87bbd6e785d80ec9ad7a23fe01
 status: clean
 
 ## Tables
