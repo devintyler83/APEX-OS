@@ -10,14 +10,14 @@ Non-negotiables:
 - Provide run order + verification commands
 
 Goal for this chat:
-Session 95: Draft night operations. Use the 🏈 Draft Mode tab in the app to record picks.
+Session 95: Draft night operations. Use the Draft Mode tab in the app to record picks.
 
 Authoritative State:
 
 1) STATE_SNAPSHOT.md
 # APEX OS State Snapshot
 
-Last Updated (UTC): 2026-04-21T20:14:35.538718+00:00
+Last Updated (UTC): 2026-04-21T20:15:16.881962+00:00
 
 ---
 
@@ -1522,7 +1522,7 @@ Prior sessions on record: 12 (DB rebuild), 13 (weekly pipeline), 13b (school/arc
 
 ## Next Milestone (Single Target)
 
-- Session 95: Draft night operations. Use the 🏈 Draft Mode tab in the app to record picks.
+- Session 95: Draft night operations. Use the Draft Mode tab in the app to record picks.
   Team hat selectbox → team board (v_draft_team_board_2026) + remaining board
   (v_draft_remaining_2026) + per-row "Draft ➜" buttons → insert_draft_pick() → live log.
   Validate board after each round: python -m scripts.validate_reactive_board_2026.
@@ -1837,11 +1837,11 @@ Inactive (data preserved): ngs_2026 (source_id=29, is_active=0) — model score,
 
 2) System Snapshot Output
 === DRAFTOS SYSTEM SNAPSHOT ===
-generated_utc: 2026-04-21T20:14:34.866416+00:00
+generated_utc: 2026-04-21T20:15:16.207179+00:00
 
 ## Git
 branch: main
-commit: 5d022d916161d51a8fb718962c3de3f3756b5c6d
+commit: ed3ad9640ef06240c2929e2fe20b4a57bb1e7aa9
 status: clean
 
 ## Tables
