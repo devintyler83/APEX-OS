@@ -1,6 +1,6 @@
 # APEX OS State Snapshot
 
-Last Updated (UTC): 2026-04-21T06:08:29.610085+00:00
+Last Updated (UTC): 2026-04-21T07:15:00.000000+00:00
 
 ---
 
@@ -10,7 +10,48 @@ Last Updated (UTC): 2026-04-21T06:08:29.610085+00:00
 
 ## Last Completed Milestone
 
-Session 90 close (APEX v2.3 coverage expanded to top-300 consensus; Rodriguez ILB-1 ARCHETYPE_OVERRIDES entry added; divergence recomputed; tags triaged to pending=0.)
+Session 91 close (Full 32-team context build + team-fit layer rebuilt + jFoster reconciliation. All 32 teams at context_version=v2.0. team_prospect_fit: 9,600 rows. Migration 0050. apex_jfoster_reconciliation_2026: 300 rows, 189 flagged.)
+
+Session 91 close:
+- Migration 0050 applied: 5 new columns added to team_draft_context
+  (secondary_needs_json, failure_mode_sensitivity_json, source_provenance,
+   context_version, snapshot_date).
+- build_team_context_2026.py: Full 32-team UPSERT with sourced 2026 data.
+  Sources: NFL.com draft order + needs, ESPN, SharpFootball Analysis (Apr 2026).
+  All 32 teams at context_version=v2.0. 32/32 fields populated (7/7 per team).
+  Previous 8 pilot teams updated: correct 2026 pick numbers, revised needs,
+  scheme_family/offense_style/defense_structure populated.
+- rebuild_team_fit_2026.py: recomputed 9,600 rows (300 prospects × 32 teams).
+  Fit tier distribution AFTER (vs BEFORE with 24 sparse teams):
+    IDEAL  :    1 (0.0%)  [was   2]
+    STRONG :  297 (3.1%)  [was 104, +193]
+    VIABLE : 1903 (19.8%) [was 466, +1437]
+    FRINGE : 7397 (77.1%) [was 8980, -1583]
+    POOR   :    2 (0.0%)  [was  48, -46]
+  FRINGE-heavy distribution is structurally expected: each team has 3 premium
+  positional needs; most prospect-team pairs don't match → correct behavior.
+  The improvement (VIABLE+STRONG: 570→2200, +286%) reflects real context quality,
+  not threshold tuning.
+- draftosqueriesteamfit.get_player_team_fit_context() fixed:
+  stale column names failuremodeprimary → failure_mode_primary,
+  failuremodesecondary → failure_mode_secondary,
+  capitalrange (nonexistent) → capital_adjusted. Function now executes cleanly.
+- reconcile_consensus_vs_jfosterfilm_2026.py: new diagnostic script.
+  Output table: apex_jfoster_reconciliation_2026 (300 rows).
+  Output CSV: data/apex_jfoster_reconciliation_2026_session90.csv.
+  Universe: 300 active non-calibration apex_v2.3 prospects.
+  Coverage: 246/300 have jFoster CON rank; 54 engine-only.
+  Combined rank: engine×0.6 + jFoster×0.4 (fallback to engine only).
+  Flagged (|divergence| ≥ 25): 189 — APEX_HIGH=100, APEX_LOW=89.
+  Name match: exact=184, normalized=14, missing=88, mismatch=14.
+  Top divergences (APEX_HIGH): Landon Robinson DT -227, Logan Fano EDGE -201,
+    Dillon Bell WR -194, Andre Fuller CB -170, Mason Reiger EDGE -152.
+  Top divergences (APEX_LOW): Kage Casey LB +156, Justin Joly TE +153,
+    Jadarian Price RB +151, Emmett Johnson RB +151, Trey Moore EDGE +151.
+  Note: "missing" name-match on 88 prospects = no source_player_map entry for
+  jfosterfilm_2026 (source_id=1). Not a script bug — coverage gap in bootstrap.
+  14 mismatches logged for manual audit (names like Rueben Bain, Anthony Hill).
+- Doctor: PASSED (pre and post session).
 
 Session 90 close:
 - No schema changes. No migrations. Next migration: 0050.
