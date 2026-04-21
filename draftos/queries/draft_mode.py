@@ -666,3 +666,251 @@ def mark_prospect_drafted(
 
     except Exception as exc:
         return f"ERROR: {exc}"
+
+
+# ─────────────────────────────────────────────────────────────
+# Phase 2 spec helpers (Migration 0056 views)
+#
+# These four functions match the Phase 2 API spec exactly.
+# They read from v_draft_remaining_2026 and v_draft_team_board_2026
+# (added in migration 0056) and write to drafted_picks_2026.
+#
+# `conn` is optional in all signatures: pass an open connection for
+# transaction control, or omit to have the function create one internally.
+# The `team_code` argument maps to the `team_id` column in the DB.
+# ─────────────────────────────────────────────────────────────
+
+def get_draft_remaining_board(
+    conn=None,
+    seasonid: int = _SEASON_ID,
+    limit: int = 300,
+) -> list[dict]:
+    """
+    All remaining (not-yet-drafted) prospects as a flat list ordered for the
+    main board: APEX rank → consensus rank.
+
+    Source: v_draft_remaining_2026 (spec-named alias for v_draft_targets_remaining_2026).
+    Returns DISTINCT prospect rows (one row per prospect, not one per team).
+
+    `conn` is accepted for API compatibility but managed internally — pass None
+    (the default) or omit it; the function opens and closes its own connection.
+
+    Deterministic sort:
+      1. APEX rank ASC (lower = model-higher-ranked)
+      2. Consensus rank ASC
+      3. prospect_id ASC (tiebreak)
+    """
+    try:
+        with connect() as _conn:
+            rows = _conn.execute(
+                """
+                SELECT DISTINCT
+                    r.prospect_id,
+                    p.display_name,
+                    p.position_group,
+                    r.consensus_rank,
+                    r.apex_rank,
+                    r.capital_adjusted,
+                    r.failure_mode_primary,
+                    r.divergence_flag,
+                    r.divergence_magnitude,
+                    r.recon_bucket
+                FROM v_draft_remaining_2026 r
+                JOIN prospects p ON p.prospect_id = r.prospect_id
+                WHERE r.season_id = ?
+                ORDER BY
+                    r.apex_rank ASC NULLS LAST,
+                    r.consensus_rank ASC NULLS LAST,
+                    r.prospect_id ASC
+                LIMIT ?
+                """,
+                (seasonid, limit),
+            ).fetchall()
+            return [dict(r) for r in rows]
+    except Exception:
+        return []
+
+
+def get_draft_team_board(
+    conn=None,
+    team_code: str = "",
+    seasonid: int = _SEASON_ID,
+    limit: int = 50,
+) -> list[dict]:
+    """
+    Per-team remaining best-available board ordered for team-specific decision making.
+
+    Source: v_draft_team_board_2026 (Migration 0056).
+    Includes scheme context columns (scheme_family, capital_profile, etc.) from
+    v_team_fit_context_2026 alongside each prospect×team fit row.
+
+    `team_code` maps to the `team_id` column in the DB.
+    `conn` is accepted for API compatibility but managed internally.
+
+    Sort order (spec-aligned):
+      1. fit_band ASC (A before B before C)
+      2. fit_tier ASC (IDEAL before STRONG before VIABLE)
+      3. fit_score DESC
+      4. consensus_rank ASC
+    """
+    team_key = team_code.strip().upper() if team_code else ""
+    try:
+        with connect() as _conn:
+            rows = _conn.execute(
+                """
+                SELECT
+                    b.prospect_id,
+                    b.team_id,
+                    b.season_id,
+                    p.display_name,
+                    p.position_group,
+                    b.fit_tier,
+                    b.fit_band,
+                    b.fit_score,
+                    b.consensus_rank,
+                    b.apex_rank,
+                    b.divergence_flag,
+                    b.capital_adjusted,
+                    b.failure_mode_primary,
+                    b.verdict,
+                    b.why_for,
+                    b.why_against,
+                    b.deployment_fit,
+                    b.pick_fit,
+                    b.team_name,
+                    b.scheme_family,
+                    b.capital_profile,
+                    b.failure_mode_bias,
+                    b.development_timeline,
+                    b.risk_tolerance,
+                    b.needs_json
+                FROM v_draft_team_board_2026 b
+                JOIN prospects p ON p.prospect_id = b.prospect_id
+                WHERE b.season_id = ?
+                  AND b.team_id   = ?
+                ORDER BY
+                    CASE b.fit_band WHEN 'A' THEN 1 WHEN 'B' THEN 2 WHEN 'C' THEN 3 ELSE 9 END ASC,
+                    CASE b.fit_tier WHEN 'IDEAL' THEN 1 WHEN 'STRONG' THEN 2 WHEN 'VIABLE' THEN 3 ELSE 9 END ASC,
+                    b.fit_score   DESC,
+                    b.consensus_rank ASC NULLS LAST
+                LIMIT ?
+                """,
+                (seasonid, team_key, limit),
+            ).fetchall()
+            return [dict(r) for r in rows]
+    except Exception:
+        return []
+
+
+def get_next_pick(
+    conn=None,
+    seasonid: int = _SEASON_ID,
+) -> dict:
+    """
+    Compute the next pick position for the ongoing draft session.
+
+    Returns a dict:
+      {
+        "overall_pick":  <int>,  # next pick number (max existing + 1, or 1 if none)
+        "round_number":  <int>,  # (overall_pick - 1) // 32 + 1
+        "pick_in_round": <int>,  # (overall_pick - 1) % 32 + 1
+      }
+
+    Uses a 32-team-per-round convention matching the NFL draft structure.
+    `conn` is accepted for API compatibility but managed internally.
+    """
+    next_overall = 1
+    try:
+        with connect() as _conn:
+            row = _conn.execute(
+                "SELECT COALESCE(MAX(pick_number), 0) AS mx FROM drafted_picks_2026 WHERE season_id = ?",
+                (seasonid,),
+            ).fetchone()
+            if row and row["mx"] is not None:
+                next_overall = row["mx"] + 1
+    except Exception:
+        pass
+
+    round_number  = (next_overall - 1) // 32 + 1
+    pick_in_round = (next_overall - 1) % 32 + 1
+    return {
+        "overall_pick":  next_overall,
+        "round_number":  round_number,
+        "pick_in_round": pick_in_round,
+    }
+
+
+def insert_draft_pick(
+    conn=None,
+    *,
+    seasonid: int,
+    overall_pick: int,
+    round_number: int,
+    pick_in_round: int,
+    drafting_team: str,
+    prospectid: int,
+) -> None:
+    """
+    Insert a single pick into drafted_picks_2026.
+
+    Keyword-only after `conn` to prevent positional-arg mistakes on draft night.
+    `pick_in_round` is stored in the `note` field as metadata (the table stores
+    pick_number = overall_pick and round_number directly).
+    `conn` is accepted for API compatibility but managed internally.
+
+    Raises ValueError with a clear message on:
+      - Duplicate (seasonid, overall_pick) — pick number already used
+      - Duplicate (seasonid, prospectid)   — prospect already drafted
+
+    Does NOT silently overwrite. Backs up the DB before any write (at most once
+    per calendar day, shared with mark_prospect_drafted()).
+    """
+    team_upper = drafting_team.strip().upper()
+    note_meta  = f"pick_in_round={pick_in_round}"
+
+    with connect() as _conn:
+        # Guard: pick number not already used
+        dup_pick = _conn.execute(
+            "SELECT prospect_id FROM drafted_picks_2026 WHERE season_id=? AND pick_number=?",
+            (seasonid, overall_pick),
+        ).fetchone()
+        if dup_pick:
+            raise ValueError(
+                f"insert_draft_pick: pick #{overall_pick} already recorded "
+                f"(prospect_id={dup_pick['prospect_id']}) for season_id={seasonid}. "
+                f"No INSERT performed."
+            )
+
+        # Guard: prospect not already drafted
+        dup_pid = _conn.execute(
+            "SELECT pick_number FROM drafted_picks_2026 WHERE season_id=? AND prospect_id=?",
+            (seasonid, prospectid),
+        ).fetchone()
+        if dup_pid:
+            raise ValueError(
+                f"insert_draft_pick: prospect_id={prospectid} already drafted "
+                f"at pick #{dup_pid['pick_number']} for season_id={seasonid}. "
+                f"No INSERT performed."
+            )
+
+        _backup_db_once_today()
+
+        _conn.execute(
+            """
+            INSERT INTO drafted_picks_2026
+                (season_id, pick_number, round_number, drafting_team,
+                 prospect_id, drafted_at, source, note)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                seasonid,
+                overall_pick,
+                round_number,
+                team_upper,
+                prospectid,
+                _utc_now_iso(),
+                "ui",
+                note_meta,
+            ),
+        )
+        _conn.commit()

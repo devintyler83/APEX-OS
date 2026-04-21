@@ -79,6 +79,55 @@ def main() -> None:
             active = conn.execute("SELECT COUNT(*) AS n FROM sources WHERE is_active = 1;").fetchone()["n"]
             print(f"sources_active: {active}")
 
+        # Draft Mode checks (migrations 0055–0056)
+        views = {
+            r["name"]
+            for r in conn.execute(
+                "SELECT name FROM sqlite_master WHERE type='view';"
+            ).fetchall()
+        }
+
+        if "drafted_picks_2026" in tables:
+            drafted_n = conn.execute(
+                "SELECT COUNT(*) AS n FROM drafted_picks_2026;"
+            ).fetchone()["n"]
+            print(f"drafted_picks_2026: {drafted_n} rows")
+
+            # No duplicate pick numbers within a season
+            dup_picks = conn.execute(
+                """
+                SELECT COUNT(*) AS n FROM (
+                    SELECT season_id, pick_number, COUNT(*) AS c
+                    FROM drafted_picks_2026
+                    GROUP BY season_id, pick_number
+                    HAVING c > 1
+                )
+                """
+            ).fetchone()["n"]
+            _require(dup_picks == 0, f"drafted_picks_2026: {dup_picks} duplicate pick_number rows")
+
+            # No duplicate prospect_ids within a season
+            dup_pids = conn.execute(
+                """
+                SELECT COUNT(*) AS n FROM (
+                    SELECT season_id, prospect_id, COUNT(*) AS c
+                    FROM drafted_picks_2026
+                    GROUP BY season_id, prospect_id
+                    HAVING c > 1
+                )
+                """
+            ).fetchone()["n"]
+            _require(dup_pids == 0, f"drafted_picks_2026: {dup_pids} duplicate prospect_id rows")
+
+            # All season_id values must be 1
+            bad_season = conn.execute(
+                "SELECT COUNT(*) AS n FROM drafted_picks_2026 WHERE season_id != 1;"
+            ).fetchone()["n"]
+            _require(bad_season == 0, f"drafted_picks_2026: {bad_season} rows with season_id != 1")
+
+        _require("v_draft_remaining_2026" in views,   "view v_draft_remaining_2026 missing (migration 0056)")
+        _require("v_draft_team_board_2026" in views,  "view v_draft_team_board_2026 missing (migration 0056)")
+
     print("OK: doctor checks passed")
 
 
