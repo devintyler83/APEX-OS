@@ -1859,8 +1859,15 @@ def _render_apex_detail(d: dict) -> None:
 
     _team_options = {t["team_name"]: t["team_id"] for t in _all_teams}
     _team_names   = ["— select team —"] + list(_team_options.keys())
+    # Team Fit + Pick — aligned control row with shared label treatment
     _fit_col1, _fit_col2 = st.columns([3, 1])
     with _fit_col1:
+        st.markdown(
+            '<div style="font-size:9px;font-weight:700;letter-spacing:0.12em;'
+            'text-transform:uppercase;color:rgba(255,255,255,0.32);margin-bottom:2px;">'
+            'Team Fit</div>',
+            unsafe_allow_html=True,
+        )
         _selected_team_name = st.selectbox(
             "Team Fit",
             options=_team_names,
@@ -1869,6 +1876,12 @@ def _render_apex_detail(d: dict) -> None:
             label_visibility="collapsed",
         )
     with _fit_col2:
+        st.markdown(
+            '<div style="font-size:9px;font-weight:700;letter-spacing:0.12em;'
+            'text-transform:uppercase;color:rgba(255,255,255,0.32);margin-bottom:2px;">'
+            'Pick #</div>',
+            unsafe_allow_html=True,
+        )
         _pick_override = st.number_input(
             "Pick",
             min_value=0,
@@ -1877,6 +1890,7 @@ def _render_apex_detail(d: dict) -> None:
             step=1,
             key=f"team_fit_pick_{prospect_id}",
             help="Pick override (0 = use team default)",
+            label_visibility="collapsed",
         )
 
     if _selected_team_name != "— select team —":
@@ -2295,7 +2309,7 @@ st.caption("APEX OS · 2026 Draft · Session 44 · " + _export_dt.now().strftime
 with st.sidebar:
     st.header("Filters")
 
-    show_low = st.checkbox("Show Low confidence", value=True)
+    show_low = st.checkbox("Show Low confidence", value=False)
 
     show_divergence_only = st.checkbox("Show divergence flags only (⚡)", value=False)
 
@@ -2347,6 +2361,14 @@ with st.sidebar:
             max_value=ras_max,
             value=(ras_min, ras_max),
             step=0.1,
+        )
+        st.markdown(
+            '<div style="font-size:11px;line-height:1.6;margin-top:-4px;">'
+            '<span style="color:#e05c5c;">■</span> &lt;5 risk &nbsp;'
+            '<span style="color:#e8a84a;">■</span> 5–7.99 avg &nbsp;'
+            '<span style="color:#5ab87a;">■</span> 8+ elite'
+            '</div>',
+            unsafe_allow_html=True,
         )
     else:
         ras_range = None
@@ -2629,6 +2651,33 @@ APEX_TIER_COLORS = {
 DIVERGENCE_COLOR = "color: #e8a84a; font-weight: 700"   # amber text, no background
 
 
+# ── RAS semantic color ────────────────────────────────────────────────────────
+# Shared helper used for board cells, detail panel, chips, compare view.
+# Thresholds: 8.00+ green · 5.00–7.99 yellow · 0.01–4.99 red · None grey
+def _ras_color(val) -> str:
+    """Return CSS hex color for a RAS value. None/NaN → grey."""
+    if val is None:
+        return "rgba(255,255,255,0.32)"
+    try:
+        v = float(val)
+    except (TypeError, ValueError):
+        return "rgba(255,255,255,0.32)"
+    if v >= 8.00:
+        return "#5ab87a"   # green
+    if v >= 5.00:
+        return "#e8a84a"   # yellow/amber
+    if v > 0.0:
+        return "#e05c5c"   # red
+    return "rgba(255,255,255,0.32)"  # missing / zero
+
+
+def _style_ras(val) -> str:
+    """DataFrame .map() style function for the RAS column."""
+    color = _ras_color(val)
+    weight = "700" if val is not None and not pd.isna(val) else "400"
+    return f"color: {color}; font-weight: {weight}"
+
+
 def _style_confidence(val: str) -> str:
     return CONFIDENCE_COLORS.get(val, "")
 
@@ -2653,9 +2702,11 @@ def _style_divergence(val: str) -> str:
 
 def _style_apex_delta(val: str) -> str:
     """
-    Positive (APEX higher than market) -> cold blue — system sees premium not priced in.
-    Negative (APEX lower than market)  -> red, muted.
-    Zero / em-dash -> no style.
+    APEX vs Consensus delta — higher = better signal for evaluation:
+      Large positive (≥+10) → bright green  — APEX sees meaningful surplus
+      Moderate positive      → cold blue     — mild positive signal
+      Near zero (±2)         → dim neutral   — aligned
+      Negative               → red muted     — APEX below market
     """
     if val in ("", "—", "\u2014", None):
         return ""
@@ -2663,10 +2714,12 @@ def _style_apex_delta(val: str) -> str:
         n = int(str(val).replace("+", ""))
     except (ValueError, AttributeError):
         return ""
-    if n > 0:
-        return "color: #7eb4e2; font-weight: 700"   # cold blue — APEX higher than market
-    if n < 0:
-        return "color: #e05c5c; font-weight: 500"   # red — APEX lower than market
+    if n >= 10:
+        return "color: #5ab87a; font-weight: 700"   # green — large surplus
+    if n > 2:
+        return "color: #7eb4e2; font-weight: 700"   # cold blue — moderate positive
+    if n < -2:
+        return "color: #e05c5c; font-weight: 500"   # red — APEX below market
     return "color: rgba(255,255,255,0.35)"           # aligned — dim neutral
 
 
@@ -2706,6 +2759,7 @@ styled = (
     # ── Color signals ───────────────────────────────────────────────────────
     .map(_style_confidence,     subset=["Confidence"])
     .map(_style_consensus_tier, subset=["Consensus"])
+    .map(_style_ras,            subset=["RAS"])
     .map(_style_divergence,     subset=["⚡ Div"])
     .map(_style_apex_delta,     subset=["\u0394 APEX"])
     .map(_style_apex_tier,      subset=["APEX Tier"])

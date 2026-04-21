@@ -767,80 +767,74 @@ def buildteamfithtml(fit: dict | None) -> str:
     </div>
 
     <!-- ⑧ SUPPORT METRICS (secondary) -->
-    <div style="margin-top:12px; padding:10px 12px; background:var(--ink3);
+    <div style="margin-top:12px; padding:12px 14px; background:var(--ink3);
                 border:1px solid var(--wire); border-radius:4px;">
-      <div style="font-size:7px; font-weight:700; letter-spacing:0.14em;
-                  text-transform:uppercase; color:var(--dim); margin-bottom:7px;">
+      <div style="font-size:9px; font-weight:700; letter-spacing:0.14em;
+                  text-transform:uppercase; color:var(--dim); margin-bottom:10px;">
         Support metrics
       </div>
-      <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:6px;">
+      <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px;">
         <div>
-          <div style="font-size:7px; color:var(--dim); margin-bottom:2px;">Deployment</div>
-          <div style="font-size:11px; font-weight:700; color:{dep_color};">
+          <div style="font-size:9px; font-weight:600; color:var(--dim); margin-bottom:3px; text-transform:uppercase; letter-spacing:0.08em;">Deployment</div>
+          <div style="font-size:14px; font-weight:700; color:{dep_color}; line-height:1.2;">
             {dep_label}
-            <span style="font-size:8px; font-weight:400; color:var(--dim);"> {dep_num}</span>
           </div>
+          <div style="font-size:11px; font-weight:400; color:var(--dim); margin-top:1px;">{dep_num}</div>
         </div>
         <div>
-          <div style="font-size:7px; color:var(--dim); margin-bottom:2px;">Pick fit</div>
-          <div style="font-size:11px; font-weight:700; color:{pf_color};">
+          <div style="font-size:9px; font-weight:600; color:var(--dim); margin-bottom:3px; text-transform:uppercase; letter-spacing:0.08em;">Pick fit</div>
+          <div style="font-size:14px; font-weight:700; color:{pf_color}; line-height:1.2;">
             {pf_label}
-            <span style="font-size:8px; font-weight:400; color:var(--dim);"> {pf_num}</span>
           </div>
+          <div style="font-size:11px; font-weight:400; color:var(--dim); margin-top:1px;">{pf_num}</div>
         </div>
         <div>
-          <div style="font-size:7px; color:var(--dim); margin-bottom:2px;">FM severity</div>
-          <div style="font-size:11px; font-weight:700; color:{fm_color};">
+          <div style="font-size:9px; font-weight:600; color:var(--dim); margin-bottom:3px; text-transform:uppercase; letter-spacing:0.08em;">FM severity</div>
+          <div style="font-size:14px; font-weight:700; color:{fm_color}; line-height:1.2;">
             {fm_label}
-            <span style="font-size:8px; font-weight:400; color:var(--dim);"> {fm_num}</span>
           </div>
-          <div style="font-size:7px; color:var(--dim); font-style:italic; margin-top:1px;">
-            not a probability
-          </div>
+          <div style="font-size:11px; font-weight:400; color:var(--dim); margin-top:1px;">{fm_num} · not a probability</div>
         </div>
         <div>
-          <div style="font-size:7px; color:var(--dim); margin-bottom:2px;">Eval confidence</div>
-          <div style="font-size:11px; font-weight:700; color:{conf_color};">
+          <div style="font-size:9px; font-weight:600; color:var(--dim); margin-bottom:3px; text-transform:uppercase; letter-spacing:0.08em;">Eval confidence</div>
+          <div style="font-size:14px; font-weight:700; color:{conf_color}; line-height:1.2;">
             {conf_label}
-            <span style="font-size:8px; font-weight:400; color:var(--dim);"> {conf_pct}</span>
           </div>
-          <div style="font-size:7px; color:var(--dim); font-style:italic; margin-top:1px;">
-            eval depth, not fit %
-          </div>
+          <div style="font-size:11px; font-weight:400; color:var(--dim); margin-top:1px;">{conf_pct} · eval depth</div>
         </div>
       </div>
     </div>
 
     <!-- ⑨ SCORE GUIDE -->
-    <div style="margin-top:8px; padding:8px 12px; background:var(--ink3);
+    <div style="margin-top:8px; padding:12px 14px; background:var(--ink3);
                 border:1px solid var(--wire); border-radius:4px;">
-      <div style="font-size:7px; font-weight:700; letter-spacing:0.14em;
-                  text-transform:uppercase; color:var(--dim); margin-bottom:5px;">
+      <div style="font-size:9px; font-weight:700; letter-spacing:0.14em;
+                  text-transform:uppercase; color:var(--dim); margin-bottom:8px;">
         Score guide
       </div>
-      <div style="font-size:8px; color:var(--dim); line-height:1.7;">
-        <span style="color:var(--dim); font-weight:600;">Deployment &middot; Pick fit</span>
-        &nbsp;&mdash;&nbsp;
-        <span style="color:#5ab87a;">Excellent 85+</span>&nbsp;
-        <span style="color:#8bc34a;">Strong 70&ndash;84</span>&nbsp;
-        <span style="color:#e8a84a;">Conditional 55&ndash;69</span>&nbsp;
-        <span style="color:#e07b1a;">Fragile 40&ndash;54</span>&nbsp;
+      <div style="font-size:12px; color:var(--mid); line-height:1.9;">
+        <span style="color:var(--text); font-weight:600;">Deployment · Pick fit</span>
+        &mdash;
+        <span style="color:#5ab87a;">Excellent 85+</span> &nbsp;
+        <span style="color:#8bc34a;">Strong 70–84</span> &nbsp;
+        <span style="color:#e8a84a;">Conditional 55–69</span> &nbsp;
+        <span style="color:#e07b1a;">Fragile 40–54</span> &nbsp;
         <span style="color:#e05c5c;">Poor &lt;40</span>
         <br>
-        <span style="color:var(--dim); font-weight:600;">FM Risk severity</span>
-        &nbsp;&mdash;&nbsp;
-        <span style="color:#5ab87a;">Low &lt;25</span>&nbsp;
-        <span style="color:#8bc34a;">Manageable 25&ndash;44</span>&nbsp;
-        <span style="color:#e8a84a;">Moderate 45&ndash;59</span>&nbsp;
-        <span style="color:#e07b1a;">Elevated 60&ndash;74</span>&nbsp;
+        <span style="color:var(--text); font-weight:600;">FM Risk severity</span>
+        &mdash;
+        <span style="color:#5ab87a;">Low &lt;25</span> &nbsp;
+        <span style="color:#8bc34a;">Manageable 25–44</span> &nbsp;
+        <span style="color:#e8a84a;">Moderate 45–59</span> &nbsp;
+        <span style="color:#e07b1a;">Elevated 60–74</span> &nbsp;
         <span style="color:#e05c5c;">Severe 75+</span>
         <br>
-        <span style="color:var(--dim); font-weight:600;">Eval confidence</span>
-        &nbsp;&mdash;&nbsp;
-        <span style="color:#5ab87a;">High</span> (&ge;80%)&nbsp;
-        <span style="color:#e8a84a;">Medium</span> (65&ndash;79%)&nbsp;
+        <span style="color:var(--text); font-weight:600;">Eval confidence</span>
+        &mdash;
+        <span style="color:#5ab87a;">High</span> (&ge;80%) &nbsp;
+        <span style="color:#e8a84a;">Medium</span> (65–79%) &nbsp;
         <span style="color:#e05c5c;">Low</span> (&lt;65%)
-        &nbsp;&middot; reflects APEX evaluation depth, not fit probability.
+        &nbsp;· reflects APEX evaluation depth, not fit probability.
       </div>
     </div>
     """
@@ -1150,7 +1144,7 @@ body {
 
 .ras-block-right { text-align: right; flex-shrink: 0; }
 .ras-lbl { font-size: 7px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--dim); margin-bottom: 2px; }
-.ras-val { font-family: 'Barlow Condensed', sans-serif; font-size: 28px; font-weight: 800; color: var(--green); line-height: 1; }
+.ras-val { font-family: 'Barlow Condensed', sans-serif; font-size: 28px; font-weight: 800; line-height: 1; }
 
 /* Archetype fit row */
 .fit-row {
@@ -1338,7 +1332,7 @@ body {
 .comp-accent.hit     { background: linear-gradient(180deg, var(--green), rgba(90,184,122,0.3)); }
 .comp-accent.partial { background: linear-gradient(180deg, var(--amber), rgba(232,168,74,0.3)); }
 .comp-accent.miss    { background: linear-gradient(180deg, var(--red), rgba(224,92,92,0.3)); }
-.comp-type-lbl { font-size: 8px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 3px; }
+.comp-type-lbl { font-size: 9px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 3px; }
 .comp-type-lbl.hit     { color: var(--green); }
 .comp-type-lbl.partial { color: var(--amber); }
 .comp-type-lbl.miss    { color: var(--red); }
@@ -1346,17 +1340,17 @@ body {
 .comp-name { font-family: 'Barlow Condensed', sans-serif; font-size: 24px; font-weight: 900; letter-spacing: 0.01em; text-transform: uppercase; color: var(--text); line-height: 1; }
 .comp-badge {
   display: inline-flex; align-items: center; gap: 4px;
-  font-size: 8px; font-weight: 700; letter-spacing: 0.10em; text-transform: uppercase;
+  font-size: 9px; font-weight: 700; letter-spacing: 0.10em; text-transform: uppercase;
   padding: 2px 7px; border-radius: 2px;
 }
 .comp-badge.hit     { background: var(--green-dim); color: var(--green); border: 1px solid rgba(90,184,122,0.25); }
 .comp-badge.partial { background: var(--amber-dim); color: var(--amber); border: 1px solid rgba(232,168,74,0.25); }
 .comp-badge.miss    { background: var(--red-dim);   color: var(--red);   border: 1px solid rgba(224,92,92,0.25); }
 .comp-badge::before { content: ''; width: 4px; height: 4px; border-radius: 50%; background: currentColor; opacity: 0.8; }
-.comp-fm-note { font-size: 9px; color: var(--dim); margin-bottom: 8px; font-style: italic; }
+.comp-fm-note { font-size: 11px; color: var(--dim); margin-bottom: 8px; font-style: italic; }
 .comp-fm-note span { color: #c4a5f5; font-style: normal; font-weight: 600; }
 .comp-desc { font-size: 13px; line-height: 1.65; color: var(--mid); margin-bottom: 8px; }
-.comp-year { font-size: 8px; color: rgba(255,255,255,0.20); font-family: 'Barlow Condensed', sans-serif; letter-spacing: 0.06em; }
+.comp-year { font-size: 11px; color: rgba(255,255,255,0.28); font-family: 'Barlow Condensed', sans-serif; letter-spacing: 0.06em; }
 
 /* FM Risk Reference Records */
 .fm-ref-section { margin-bottom: 20px; }
@@ -1375,18 +1369,18 @@ body {
 .fm-ref-card.partial { border-left-color: var(--amber); }
 .fm-ref-card.hit     { border-left-color: var(--green); }
 .fm-ref-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
-.fm-ref-outcome { font-size: 7px; font-weight: 700; letter-spacing: 0.10em; text-transform: uppercase; }
+.fm-ref-outcome { font-size: 9px; font-weight: 700; letter-spacing: 0.10em; text-transform: uppercase; }
 .fm-ref-outcome.miss    { color: var(--red); }
 .fm-ref-outcome.partial { color: var(--amber); }
 .fm-ref-outcome.hit     { color: var(--green); }
-.fm-ref-name { font-family: 'Barlow Condensed', sans-serif; font-size: 18px; font-weight: 800; text-transform: uppercase; color: var(--text); line-height: 1; }
-.fm-ref-pos-fm { font-size: 9px; color: var(--dim); margin-bottom: 4px; }
+.fm-ref-name { font-family: 'Barlow Condensed', sans-serif; font-size: 22px; font-weight: 800; text-transform: uppercase; color: var(--text); line-height: 1; margin-bottom: 4px; }
+.fm-ref-pos-fm { font-size: 11px; color: var(--dim); margin-bottom: 5px; }
 .fm-ref-pos-fm span { color: #c4a5f5; }
-.fm-ref-pattern { font-size: 12px; color: var(--mid); font-style: italic; line-height: 1.5; margin-bottom: 4px; }
-.fm-ref-excerpt { font-size: 12px; color: var(--dim); line-height: 1.5; }
+.fm-ref-pattern { font-size: 13px; color: var(--mid); font-style: italic; line-height: 1.55; margin-bottom: 5px; }
+.fm-ref-excerpt { font-size: 13px; color: var(--mid); line-height: 1.55; }
 .fm-ref-meta { text-align: right; }
-.fm-ref-years { font-size: 8px; color: rgba(255,255,255,0.20); font-family: 'Barlow Condensed', sans-serif; letter-spacing: 0.06em; white-space: nowrap; }
-.fm-ref-gen { font-size: 7px; color: var(--dim); white-space: nowrap; margin-top: 2px; }
+.fm-ref-years { font-size: 11px; color: rgba(255,255,255,0.28); font-family: 'Barlow Condensed', sans-serif; letter-spacing: 0.06em; white-space: nowrap; }
+.fm-ref-gen { font-size: 9px; color: var(--dim); white-space: nowrap; margin-top: 2px; }
 
 /* No same-position FM ref data */
 .fm-ref-no-data {
@@ -1397,10 +1391,10 @@ body {
   padding: 12px 16px;
 }
 .fm-ref-no-data-lbl {
-  font-size: 9px; font-weight: 700; letter-spacing: 0.10em; text-transform: uppercase;
-  color: var(--dim); margin-bottom: 5px;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.10em; text-transform: uppercase;
+  color: var(--dim); margin-bottom: 6px;
 }
-.fm-ref-no-data-text { font-size: 10px; line-height: 1.6; color: var(--dim); }
+.fm-ref-no-data-text { font-size: 13px; line-height: 1.6; color: var(--dim); }
 
 /* Card stamp */
 .card-stamp {
@@ -1542,11 +1536,11 @@ body {
 }
 .sp-kv:last-child { border-bottom: none; }
 .sp-k {
-  font-size: 7px;
+  font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.10em;
   text-transform: uppercase;
-  color: var(--dim);
+  color: rgba(255,255,255,0.45);
   flex-shrink: 0;
 }
 .sp-v {
@@ -2895,10 +2889,22 @@ def build_detail_html(d: dict, comps: list, rate, fm_ref_comps: list | None = No
         # RAS block
         ras_html = ""
         if ras_str and ras_str != "—":
+            try:
+                _ras_fv = float(ras_str)
+                if _ras_fv >= 8.0:
+                    _ras_color = "var(--green)"
+                elif _ras_fv >= 5.0:
+                    _ras_color = "var(--amber)"
+                elif _ras_fv > 0.0:
+                    _ras_color = "var(--red)"
+                else:
+                    _ras_color = "var(--dim)"
+            except (TypeError, ValueError):
+                _ras_color = "var(--dim)"
             ras_html = (
                 f'<div class="ras-block-right">'
                 f'<div class="ras-lbl">RAS Score</div>'
-                f'<div class="ras-val">{_e(ras_str)}</div>'
+                f'<div class="ras-val" style="color:{_ras_color};">{_e(ras_str)}</div>'
                 f'</div>'
             )
 
@@ -3287,8 +3293,6 @@ def build_detail_html(d: dict, comps: list, rate, fm_ref_comps: list | None = No
             <div class="section-header">System Traits</div>
             {system_html}
           </div>
-
-          {pos_traits_note_html}
 
         </div>
 
