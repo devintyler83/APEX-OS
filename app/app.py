@@ -27,7 +27,7 @@ from draftos.queries.model_outputs import get_big_board, get_prospect_detail, ge
 from draftos.ui.profile_dimensions import get_profile_dimensions
 from datetime import datetime as _export_dt
 from scripts.export_png import export_png_bytes
-from scripts.draftos_detail_iframe_v2 import build_detail_html, estimate_height
+from scripts.draftos_detail_iframe_v2 import build_detail_html, estimate_height, resolve_draft_day_take
 from draftos.queries.team_fit import (
     get_team_fit_pilot_teams,
     get_team_fit_context,
@@ -1884,6 +1884,9 @@ def _render_apex_detail(d: dict) -> None:
                 rate_info  = get_archetype_translation_rate(_hconn, archetype_raw)
             for code in sorted(fm_codes_for_ref):
                 fm_ref_comps.extend(get_fm_reference_comps(_hconn, fm_code=f"FM-{code}", limit=4))
+            _pid_for_take = d.get("prospect_id") or 0
+            if _pid_for_take:
+                d["draft_day_take_resolved"] = resolve_draft_day_take(_pid_for_take, None, _hconn)
     except Exception:
         comps_list, rate_info, fm_ref_comps = [], None, []
 

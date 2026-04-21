@@ -705,8 +705,12 @@ MOCK_RUEBEN_BAIN = {
 }
 
 if __name__ == "__main__":
+    import tempfile
     out = html_page(MOCK_RUEBEN_BAIN)
-    with open("/tmp/test_card.html", "w", encoding="utf-8") as f:
+    fd, path = tempfile.mkstemp(suffix=".html", prefix="test_card_")
+    _os.close(fd)
+    with open(path, "w", encoding="utf-8") as f:
         f.write(out)
     print(f"Test card written: {len(out)} chars")
-    print("Run: python export_png.py /tmp/test_card.html /tmp/test_card.png")
+    print(f"Output path: {path}")
+    print(f"Run: python export_png.py \"{path}\" \"{path.replace('.html', '.png')}\"")

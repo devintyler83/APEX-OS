@@ -1340,41 +1340,43 @@ def resolve_draft_day_take(
             if isinstance(val, str) and val.strip():
                 return val.strip()
 
-    # 2) notes table lookup
-    # Import lazily to avoid circulars if needed
-    from draftos.queries import notes as q_notes  # adjust path if different
-
+    # 2) notes table lookup — direct SQL (no external module dependency)
     try:
-        notes = q_notes.get_notes_for_prospect(
-            conn,
-            prospect_id=pid,
-            season_id=1,               # 2026 baseline
-            note_type="draft_day_take"
-        )
+        cur = conn.cursor()
+        note_row = cur.execute(
+            """
+            SELECT note FROM notes
+            WHERE prospect_id = ? AND note_type = 'draft_day_take'
+            ORDER BY created_at DESC
+            LIMIT 1
+            """,
+            (pid,),
+        ).fetchone()
+        if note_row:
+            note_text = (note_row[0] or "").strip()
+            if note_text:
+                return note_text
     except Exception:
-        notes = []
+        pass
 
-    if notes:
-        # assume newest-first; if not, sort here
-        note_text = (notes[0].get("note_text") or "").strip()
-        if note_text:
-            return note_text
-
-    # 3) generator fallback using fields from the detail dict
+    # 3) generator fallback — join prospects + divergence_flags for required fields
     cur = conn.cursor()
     row = cur.execute(
         """
         SELECT
-            position_group,
-            apex_tier,
-            matched_archetype,
-            eval_confidence,
-            failure_mode_primary,
-            failure_mode_secondary,
-            divergence_delta,
-            auto_apex_delta
-        FROM apexscores
-        WHERE prospect_id = ? AND season_id = 1
+            p.position_group,
+            a.apex_tier,
+            a.matched_archetype,
+            a.eval_confidence,
+            a.failure_mode_primary,
+            a.failure_mode_secondary,
+            df.divergence_rank_delta,
+            df.divergence_rank_delta
+        FROM apex_scores a
+        JOIN prospects p ON p.prospect_id = a.prospect_id
+        LEFT JOIN divergence_flags df
+               ON df.prospect_id = a.prospect_id AND df.season_id = a.season_id
+        WHERE a.prospect_id = ? AND a.season_id = 1
         """,
         (pid,),
     ).fetchone()
@@ -1560,20 +1562,11 @@ def _build_scout_pad(d: dict, fm_codes: set, fm_labels: list, tag_list: list) ->
         )
         pills_html = f'<div class="htags-row" style="margin-top:4px">{pills}</div>'
 
-      # Draft Day Take
-    pid = d.get("prospect_id")
-
-        # Draft Day Take
-    take_sentence = _build_draft_day_take(pos, tier, arch_label_sp, conf_raw, fm_codes, div_delta)
-    take_html = ""
-    if take_sentence:
-        take_html = (
-            '<div class="sp-take-block">'
-            f'<div class="sp-k" style="margin-bottom:6px">Draft Day Take</div>'
-            f'<div class="sp-take-text">{_e(take_sentence)}</div>'
-            '</div>'
-        )
-
+    # Draft Day Take — prefer pre-resolved value (set by caller via d["draft_day_take_resolved"])
+    take_sentence = (
+        d.get("draft_day_take_resolved")
+        or _build_draft_day_take(pos, tier, arch_label_sp, conf_raw, fm_codes, div_delta)
+    )
     take_html = ""
     if take_sentence:
         take_html = (

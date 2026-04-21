@@ -943,6 +943,20 @@ def _build_html(data: dict, comps: dict, fm_ref_comps: list | None = None) -> st
             f'</div>'
         )
 
+    # ── Draft Day Take block (amber, same language as translation risk) ───
+    take_block_html = ""
+    _take_text_pdf = _trunc(data.get("draft_day_take_resolved") or "", 280)
+    if _take_text_pdf:
+        take_block_html = (
+            f'<div class="trans-block">'
+            f'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:7pt;'
+            f'font-weight:800;letter-spacing:0.12em;text-transform:uppercase;'
+            f'color:#e8a84a;flex-shrink:0;margin-top:2px">Take</span>'
+            f'<span style="font-family:\'Barlow\',sans-serif;font-size:7.5pt;'
+            f'color:rgba(232,168,74,0.78);line-height:1.5">{_take_text_pdf}</span>'
+            f'</div>'
+        )
+
     # ── Divergence callout ────────────────────────────────────────────────
     narrative = _build_divergence_narrative(data)
     divergence_callout_html = ""
@@ -1627,6 +1641,7 @@ body::before {{
   </div>
 
   {trans_block_html}
+  {take_block_html}
 
   <div class="comps-region">
     {divergence_callout_html}
@@ -1671,6 +1686,13 @@ def generate_pdf(prospect_id: int, season_id: int = SEASON_ID) -> Path:
         fm_m = re.search(r"FM-\d+", fm_primary_str)
         if fm_m:
             fm_ref_comps = get_fm_reference_comps(conn, fm_m.group(0), arch, limit=2)
+
+        # Draft Day Take — resolved while connection is still open
+        from scripts.draftos_detail_iframe_v2 import resolve_draft_day_take
+        try:
+            data["draft_day_take_resolved"] = resolve_draft_day_take(prospect_id, None, conn)
+        except Exception:
+            data["draft_day_take_resolved"] = ""
 
     html_str = _build_html(data, comps, fm_ref_comps=fm_ref_comps)
     Path("C:/DraftOS/debug_render.html").write_text(html_str, encoding="utf-8")
