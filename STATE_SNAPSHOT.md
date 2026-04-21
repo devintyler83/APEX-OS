@@ -10,7 +10,37 @@ Last Updated (UTC): 2026-04-21T07:07:22.561656+00:00
 
 ## Last Completed Milestone
 
-Session 91 close (Full 32-team context build + team-fit layer rebuilt + jFoster reconciliation. All 32 teams at context_version=v2.0. team_prospect_fit: 9,600 rows. Migration 0050. apex_jfoster_reconciliation_2026: 300 rows, 189 flagged.)
+Session 92 close (Targets + team-fit query layer. Migrations 0051–0054. v_draft_targets_2026 canonical target surface. draftosqueriestargets + draftosqueriesteamfit expanded. Read-path constraint formalized.)
+
+Session 92 close:
+- Migrations applied: 0051–0054 (all additive, no destructive changes).
+- Migration 0051: v_team_prospect_fit_signal_2026 + 2 covering indexes.
+  Filtered to IDEAL/STRONG/VIABLE, season_id=1 baked in.
+  Added get_team_fit_signal_for_team / get_team_fit_signal_for_prospect to draftosqueriesteamfit.py.
+- Migration 0052: fit_band column (A/B/C CASE expression) added to signal view.
+  Band distribution: A=1, B=297, C=1903.
+- Migration 0053: consensus_reconciliation_2026 persistent table (300 rows) + v_draft_targets_2026
+  unified view (28 cols, 2,201 rows). reconcile_consensus_vs_jfosterfilm_2026.py updated to write
+  consensus_reconciliation_2026. draftosqueriestargets.py created with 3 helpers.
+  Seeded: HIGH=64, LOW=88, NONE=94, COVERAGE_GAP=54.
+- Migration 0054: 5 normalized team-context tables (team_context_snapshots, team_needs_2026,
+  team_depth_pressure_2026, team_deployment_traits_2026, team_context_sources_2026) + view
+  v_team_fit_context_2026 (32 rows). seed_team_context_normalized_2026.py: 32 snapshots,
+  161 needs, 97 depth, 224 traits, 32 sources. rebuild_team_fit_2026.py updated to consume
+  v_team_fit_context_2026 instead of team_draft_context directly.
+- draftosqueriestargets.py: full module docstring (recon_bucket semantics, orphan definition,
+  exact consensus_reconciliation_2026 schema, exact v_draft_targets_2026 column list),
+  dict_factory, get_connection, _select internal helper.
+- draftosqueriesteamfit.py: 5 new functions + connection infrastructure.
+  get_team_fit_summary, get_team_fit_tier_counts, get_best_fits_for_team,
+  get_reconciled_targets_for_team, get_scheme_sensitive_targets.
+  Fixed 4 spec bugs: team_code→team_id, relative import→flat import, dict_factory row type,
+  trait_filters via EXISTS against team_deployment_traits_2026.
+- Read-path constraint formalized: All target-selection reads must enter through
+  v_draft_targets_2026 or _select(). Direct refs to consensus_reconciliation_2026,
+  divergence_flags, v_team_prospect_fit_signal_2026 forbidden in read helpers.
+- STATE_SNAPSHOT.md: TARGETS AND TEAM FIT SURFACES block added to Layer Status.
+- Doctor: PASSED (pre-session). Next migration: 0055.
 
 Session 91 close:
 - Migration 0050 applied: 5 new columns added to team_draft_context
@@ -1379,7 +1409,7 @@ Prior sessions on record: 12 (DB rebuild), 13 (weekly pipeline), 13b (school/arc
 
 ## Next Milestone (Single Target)
 
-- Session 91: Rebuild pre-draft snapshot (snapshot_id=7) via full pipeline chain using S90
+- Session 93: Rebuild pre-draft snapshot (snapshot_id=7) via full pipeline chain using S90
   300-prospect scored universe. Pipeline: build_consensus -> snapshot_board ->
   compute_snapshot_metrics -> compute_source_snapshot_metrics -> compute_snapshot_coverage ->
   compute_snapshot_confidence -> verify_snapshot_integrity.
@@ -1452,7 +1482,7 @@ APEX: Operational. 300 v2.3 active non-cal scored + 12 calibration artifacts.
   Keylan Rutledge (pid=136): TOP50_POSITION_OVERRIDES OG added Session 37 (position_raw='G' fix).
   Igbinosun (pid=36): ARCHETYPE_OVERRIDES[36] added Session 39 with PAA gate findings.
   Ghost cleanup (Session 39): pid=3559, 4369 (Klare dups) is_active=0. pid=4347 (Ponds LB) is_active=0.
-  Migrations applied: 0001–0048. Next migration: 0049.
+  Migrations applied: 0001–0054. Next migration: 0055.
     0044 historical_comps table. 0046 added pre_draft_signal + is_fm_reference columns.
     0047 prospect_comps table (analyst-curated comp cards per prospect).
     0048 prospect_measurables table (jfosterfilm expanded measurables, 716 rows).
