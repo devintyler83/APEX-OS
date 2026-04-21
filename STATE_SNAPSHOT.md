@@ -1,6 +1,6 @@
 # APEX OS State Snapshot
 
-Last Updated (UTC): 2026-04-21T20:00:00.000000+00:00
+Last Updated (UTC): 2026-04-21T20:14:35.538718+00:00
 
 ---
 
@@ -1505,7 +1505,7 @@ Prior sessions on record: 12 (DB rebuild), 13 (weekly pipeline), 13b (school/arc
 
 ## Next Milestone (Single Target)
 
-- Session 95: Draft night operations. Use the 🏈 Draft Mode tab in the app to record picks.
+- Session 95: Draft night operations. Use the Draft Mode tab in the app to record picks.
   Team hat selectbox → team board (v_draft_team_board_2026) + remaining board
   (v_draft_remaining_2026) + per-row "Draft ➜" buttons → insert_draft_pick() → live log.
   Validate board after each round: python -m scripts.validate_reactive_board_2026.
