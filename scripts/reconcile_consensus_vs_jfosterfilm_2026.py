@@ -6,7 +6,7 @@ for the 300-prospect S90 universe (season_id=1, 2026 draft).
 
 Purpose
 -------
-Diagnostic / audit artifact. Identifies prospects where the APEX engine's
+Diagnostic / audit artifact.  Identifies prospects where the APEX engine's
 implied overall rank diverges by >=25 positions from a weighted composite
 of the engine consensus rank and jFosterFilm's CON (consensus) rank.  Also
 performs name/mapping sanity checks to verify the jfosterfilm source_player_map
@@ -25,8 +25,22 @@ Schema notes (confirmed against live DB)
 
 Output
 ------
-- Table  : apex_jfoster_reconciliation_2026 (DELETE + INSERT, read from any run)
+- Table  : apex_jfoster_reconciliation_2026  (DELETE + INSERT, read from any run)
+- Table  : consensus_reconciliation_2026      (INSERT OR REPLACE, season-scoped)
+                                              Created by Migration 0053.
 - CSV    : data/apex_jfoster_reconciliation_2026_session90.csv
+
+recon_bucket encoding (consensus_reconciliation_2026):
+  HIGH         : |divergence| >= 25 AND APEX ranks prospect HIGHER than market
+                 (apex_ovr_rank < combined → divergence_25 < -24)
+  LOW          : |divergence| >= 25 AND APEX ranks prospect LOWER
+                 (divergence_25 > 24)
+  NONE         : |divergence| < 25 AND has jFoster CON coverage
+  COVERAGE_GAP : no jFoster CON rank available for this prospect
+
+divergence_delta in consensus_reconciliation_2026:
+  consensus_rank_engine - apex_ovr_rank
+  Positive = APEX bullish (matches divergence_flags.divergence_rank_delta sign).
 
 Usage
 -----
@@ -55,11 +69,11 @@ from draftos.db.connect import connect
 # Constants
 # ---------------------------------------------------------------------------
 
-SEASON_ID     = 1
-MODEL_VERSION = "apex_v2.3"
+SEASON_ID         = 1
+MODEL_VERSION     = "apex_v2.3"
 JFOSTER_SOURCE_ID = 1
 
-# Weighting for combined rank
+# Weighting for combined rank (jFoster-blended divergence signal only)
 W_ENGINE  = 0.6
 W_JFOSTER = 0.4
 
@@ -69,10 +83,10 @@ DIV_THRESHOLD = 25
 OUTPUT_CSV = PATHS.root / "data" / "apex_jfoster_reconciliation_2026_session90.csv"
 
 # ---------------------------------------------------------------------------
-# DDL for audit table (idempotent: CREATE IF NOT EXISTS + DELETE + INSERT)
+# DDL: apex_jfoster_reconciliation_2026 (existing diagnostic table)
 # ---------------------------------------------------------------------------
 
-_CREATE_TABLE_SQL = """
+_CREATE_JFOSTER_TABLE_SQL = """
 CREATE TABLE IF NOT EXISTS apex_jfoster_reconciliation_2026 (
     prospect_id             INTEGER PRIMARY KEY,
     display_name            TEXT,
@@ -90,7 +104,7 @@ CREATE TABLE IF NOT EXISTS apex_jfoster_reconciliation_2026 (
 )
 """
 
-_INSERT_SQL = """
+_JFOSTER_INSERT_SQL = """
 INSERT INTO apex_jfoster_reconciliation_2026 (
     prospect_id, display_name, school_canonical, position_group,
     apex_ovr_rank, consensus_rank_engine, consensus_rank_jfoster,
@@ -99,7 +113,42 @@ INSERT INTO apex_jfoster_reconciliation_2026 (
 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 """
 
-# Column names for CSV export (same order as _INSERT_SQL minus computed_at)
+# ---------------------------------------------------------------------------
+# DDL: consensus_reconciliation_2026 (season-scoped recon store, Migration 0053)
+# ---------------------------------------------------------------------------
+
+_CREATE_RECON_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS consensus_reconciliation_2026 (
+    prospect_id      INTEGER NOT NULL,
+    season_id        INTEGER NOT NULL DEFAULT 1,
+    has_jfoster_con  INTEGER NOT NULL DEFAULT 0 CHECK (has_jfoster_con IN (0, 1)),
+    jfoster_con_rank INTEGER,
+    apex_rank        INTEGER NOT NULL,
+    consensus_rank   INTEGER NOT NULL,
+    divergence_delta INTEGER NOT NULL,
+    recon_bucket     TEXT    NOT NULL
+                     CHECK (recon_bucket IN ('HIGH', 'LOW', 'NONE', 'COVERAGE_GAP')),
+    notes            TEXT,
+    PRIMARY KEY (prospect_id, season_id)
+)
+"""
+
+_RECON_UPSERT_SQL = """
+INSERT INTO consensus_reconciliation_2026 (
+    prospect_id, season_id, has_jfoster_con, jfoster_con_rank,
+    apex_rank, consensus_rank, divergence_delta, recon_bucket, notes
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+ON CONFLICT (prospect_id, season_id) DO UPDATE SET
+    has_jfoster_con  = excluded.has_jfoster_con,
+    jfoster_con_rank = excluded.jfoster_con_rank,
+    apex_rank        = excluded.apex_rank,
+    consensus_rank   = excluded.consensus_rank,
+    divergence_delta = excluded.divergence_delta,
+    recon_bucket     = excluded.recon_bucket,
+    notes            = excluded.notes
+"""
+
+# Column names for CSV export
 _CSV_FIELDS = [
     "prospect_id", "display_name", "school_canonical", "position_group",
     "apex_ovr_rank", "consensus_rank_engine", "consensus_rank_jfoster",
@@ -151,10 +200,6 @@ LEFT JOIN prospect_measurables pm
 ORDER BY r.consensus_rank
 """
 
-# ---------------------------------------------------------------------------
-# Query: jFosterFilm source_player_map for a set of prospect_ids
-# ---------------------------------------------------------------------------
-
 _JFOSTER_MAP_SQL = """
 SELECT
     spm.prospect_id,
@@ -183,12 +228,9 @@ def _normalize_name(name: str) -> str:
     """Lower-case, strip accents, remove punctuation, collapse whitespace."""
     if not name:
         return ""
-    # Decompose accents (é → e + combining accent), then drop non-ASCII
     nfkd = unicodedata.normalize("NFKD", name)
     ascii_str = nfkd.encode("ascii", "ignore").decode("ascii")
-    # Lowercase and strip punctuation (keep letters, digits, spaces)
     cleaned = "".join(c if c.isalnum() or c == " " else "" for c in ascii_str.lower())
-    # Collapse whitespace
     return " ".join(cleaned.split())
 
 
@@ -198,15 +240,7 @@ def _combined_rank(engine_rank: int, jfoster_rank: int | None) -> int:
     return round(engine_rank * W_ENGINE + jfoster_rank * W_JFOSTER)
 
 
-def _name_match_status(
-    display_name: str,
-    jfoster_names: list[str],
-) -> str:
-    """
-    Classify the name-mapping quality for this prospect's jFosterFilm entry.
-
-    jfoster_names: list of raw_full_name values from source_player_map for this prospect_id.
-    """
+def _name_match_status(display_name: str, jfoster_names: list[str]) -> str:
     if not jfoster_names:
         return "missing"
     if len(jfoster_names) > 1:
@@ -218,14 +252,33 @@ def _name_match_status(
         return "normalized_match"
     return "mismatch"
 
+
+def _recon_bucket(divergence_25: int, jfoster_rank: int | None) -> str:
+    """
+    Compute recon_bucket for consensus_reconciliation_2026.
+
+    divergence_25 = apex_ovr_rank - combined_rank
+      Negative → apex_ovr_rank < combined → APEX rates prospect HIGHER → 'HIGH'
+      Positive → APEX rates prospect LOWER → 'LOW'
+
+    Sign convention matches divergence_flags.divergence_rank_delta:
+      positive divergence_delta = APEX bullish.
+    """
+    if jfoster_rank is None:
+        return "COVERAGE_GAP"
+    if abs(divergence_25) < DIV_THRESHOLD:
+        return "NONE"
+    return "HIGH" if divergence_25 < 0 else "LOW"
+
+
 # ---------------------------------------------------------------------------
 # Core
 # ---------------------------------------------------------------------------
 
 def _build_records(conn) -> list[dict]:
     """
-    Fetch the 300-prospect working set, compute combined rank and divergence,
-    perform name-match checks, and return a list of record dicts.
+    Fetch the 300-prospect working set, compute combined rank, divergence,
+    name-match status, and recon fields.  Returns a list of record dicts.
     """
     rows = conn.execute(
         _WORKING_SET_SQL,
@@ -263,6 +316,10 @@ def _build_records(conn) -> list[dict]:
         flag           = 1 if abs_div >= DIV_THRESHOLD else 0
         jnames         = jfoster_name_map.get(pid, [])
         match_status   = _name_match_status(r["display_name"], jnames)
+        bucket         = _recon_bucket(divergence, jfoster_rank)
+        # divergence_delta: consensus_rank_engine - apex_ovr_rank
+        # positive = APEX bullish (matches divergence_flags.divergence_rank_delta sign)
+        delta          = engine_rank - apex_ovr_rank
 
         records.append({
             "prospect_id":             pid,
@@ -278,13 +335,17 @@ def _build_records(conn) -> list[dict]:
             "div25_flag":              flag,
             "name_match_status":       match_status,
             "computed_at":             ts,
+            # recon fields
+            "has_jfoster_con":         1 if jfoster_rank is not None else 0,
+            "recon_bucket":            bucket,
+            "divergence_delta":        delta,
         })
 
     return records
 
 
 def _print_summary(records: list[dict]) -> None:
-    flagged = [r for r in records if r["div25_flag"]]
+    flagged   = [r for r in records if r["div25_flag"]]
     no_jfoster = [r for r in records if r["consensus_rank_jfoster"] is None]
     missing_map = [r for r in records if r["name_match_status"] == "missing"]
     mismatch    = [r for r in records if r["name_match_status"] == "mismatch"]
@@ -300,18 +361,26 @@ def _print_summary(records: list[dict]) -> None:
     print(f"  Name match — mismatch        : {len(mismatch)}")
     print()
 
-    # Direction breakdown for flagged
-    apex_high = [r for r in flagged if r["divergence_25"] > 0]
-    apex_low  = [r for r in flagged if r["divergence_25"] < 0]
-    print(f"  Flagged direction: APEX_HIGH (APEX ranks prospect higher) : {len(apex_high)}")
-    print(f"  Flagged direction: APEX_LOW  (APEX ranks prospect lower)  : {len(apex_low)}")
+    # recon_bucket distribution
+    bucket_counts: dict[str, int] = {}
+    for r in records:
+        b = r["recon_bucket"]
+        bucket_counts[b] = bucket_counts.get(b, 0) + 1
+    print(f"  recon_bucket HIGH            : {bucket_counts.get('HIGH', 0)}"
+          f"  (APEX bullish vs market, |div|>={DIV_THRESHOLD})")
+    print(f"  recon_bucket LOW             : {bucket_counts.get('LOW', 0)}"
+          f"  (APEX bearish vs market, |div|>={DIV_THRESHOLD})")
+    print(f"  recon_bucket NONE            : {bucket_counts.get('NONE', 0)}"
+          f"  (jFoster covered, small delta)")
+    print(f"  recon_bucket COVERAGE_GAP    : {bucket_counts.get('COVERAGE_GAP', 0)}"
+          f"  (no jFoster CON rank)")
     print()
 
     # Top 10 by abs divergence
     top10 = sorted(records, key=lambda r: r["abs_divergence_25"], reverse=True)[:10]
     print(f"  {'Rank':>4}  {'Name':<28} {'Pos':<6} {'ApxRk':>5} {'EngRk':>5} "
-          f"{'JffRk':>5} {'CmbRk':>5} {'Div':>5} {'MatchStatus':<18}")
-    print(f"  {'-'*4}  {'-'*28} {'-'*6} {'-'*5} {'-'*5} {'-'*5} {'-'*5} {'-'*5} {'-'*18}")
+          f"{'JffRk':>5} {'CmbRk':>5} {'Div':>5} {'Bucket':<12} {'MatchStatus':<18}")
+    print(f"  {'-'*4}  {'-'*28} {'-'*6} {'-'*5} {'-'*5} {'-'*5} {'-'*5} {'-'*5} {'-'*12} {'-'*18}")
     for i, r in enumerate(top10, 1):
         jffr = str(r["consensus_rank_jfoster"]) if r["consensus_rank_jfoster"] is not None else "—"
         flag_marker = "  *** " if r["div25_flag"] else "      "
@@ -320,17 +389,15 @@ def _print_summary(records: list[dict]) -> None:
             f"{r['display_name']:<28} {r['position_group']:<6} "
             f"{r['apex_ovr_rank']:>5} {r['consensus_rank_engine']:>5} "
             f"{jffr:>5} {r['consensus_rank_combined']:>5} "
-            f"{r['divergence_25']:>+5}  {r['name_match_status']:<18}"
+            f"{r['divergence_25']:>+5}  {r['recon_bucket']:<12} {r['name_match_status']:<18}"
         )
-
     print()
-    # Mismatch detail if any
+
     if mismatch:
         print("  NAME MISMATCHES (raw jFosterFilm name != display_name, normalized also differs):")
         for r in mismatch:
             print(f"    pid={r['prospect_id']} display='{r['display_name']}'")
 
-    # Prospects without jFoster rank (universe coverage gap)
     if no_jfoster:
         print()
         print("  PROSPECTS WITH NO jFoster CON RANK (engine consensus only):")
@@ -371,7 +438,7 @@ def _run(apply: bool) -> None:
         print(f"Flag threshold: |divergence| >= {DIV_THRESHOLD}")
         print()
 
-        # -- Build records (all computation in Python) ----------------------
+        # -- Build records (all computation in Python) -----------------------
         records = _build_records(conn)
 
         # -- Print summary regardless of mode --------------------------------
@@ -381,12 +448,12 @@ def _run(apply: bool) -> None:
             print("Dry run complete. No changes written.")
             return
 
-        # -- Apply: backup, write table, write CSV --------------------------
+        # -- Apply: backup, write tables, write CSV --------------------------
         backup_path = backup_db()
         print(f"Backup : {backup_path}")
 
-        # Ensure table exists, then wipe and reload (idempotent recompute)
-        conn.execute(_CREATE_TABLE_SQL)
+        # ── apex_jfoster_reconciliation_2026 (diagnostic, DELETE+INSERT) ────
+        conn.execute(_CREATE_JFOSTER_TABLE_SQL)
         deleted = conn.execute(
             "DELETE FROM apex_jfoster_reconciliation_2026"
         ).rowcount
@@ -394,7 +461,7 @@ def _run(apply: bool) -> None:
             print(f"Cleared {deleted} existing rows from apex_jfoster_reconciliation_2026.")
 
         conn.executemany(
-            _INSERT_SQL,
+            _JFOSTER_INSERT_SQL,
             [
                 (
                     r["prospect_id"], r["display_name"], r["school_canonical"],
@@ -407,21 +474,50 @@ def _run(apply: bool) -> None:
                 for r in records
             ],
         )
-        conn.commit()
 
-        # Verify
-        count = conn.execute(
-            "SELECT COUNT(*) FROM apex_jfoster_reconciliation_2026"
-        ).fetchone()[0]
+        count   = conn.execute("SELECT COUNT(*) FROM apex_jfoster_reconciliation_2026").fetchone()[0]
         flagged = conn.execute(
             "SELECT COUNT(*) FROM apex_jfoster_reconciliation_2026 WHERE div25_flag=1"
         ).fetchone()[0]
         print(f"Table  : apex_jfoster_reconciliation_2026 — {count} rows, {flagged} flagged")
 
-        _write_csv(records)
+        # ── consensus_reconciliation_2026 (season-scoped, INSERT OR REPLACE) ─
+        conn.execute(_CREATE_RECON_TABLE_SQL)
+        conn.executemany(
+            _RECON_UPSERT_SQL,
+            [
+                (
+                    r["prospect_id"],
+                    SEASON_ID,
+                    r["has_jfoster_con"],
+                    r["consensus_rank_jfoster"],
+                    r["apex_ovr_rank"],
+                    r["consensus_rank_engine"],
+                    r["divergence_delta"],
+                    r["recon_bucket"],
+                    None,  # notes: not populated by this script
+                )
+                for r in records
+            ],
+        )
+        conn.commit()
 
+        recon_count = conn.execute(
+            "SELECT COUNT(*) FROM consensus_reconciliation_2026 WHERE season_id=?",
+            (SEASON_ID,),
+        ).fetchone()[0]
+        bucket_dist = conn.execute(
+            "SELECT recon_bucket, COUNT(*) FROM consensus_reconciliation_2026 "
+            "WHERE season_id=? GROUP BY recon_bucket ORDER BY COUNT(*) DESC",
+            (SEASON_ID,),
+        ).fetchall()
+        dist_str = "  ".join(f"{b}={n}" for b, n in bucket_dist)
+        print(f"Table  : consensus_reconciliation_2026 — {recon_count} rows  [{dist_str}]")
+
+        _write_csv(records)
         print()
         print("Apply complete.")
+
 
 # ---------------------------------------------------------------------------
 # Entry point
@@ -436,7 +532,7 @@ def main() -> None:
     )
     parser.add_argument(
         "--apply", type=int, default=0, choices=[0, 1],
-        help="0 = dry run (default), 1 = write table + CSV",
+        help="0 = dry run (default), 1 = write tables + CSV",
     )
     args = parser.parse_args()
     _run(apply=bool(args.apply))
