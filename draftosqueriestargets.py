@@ -24,17 +24,90 @@ Column reference
                     NONE = covered by jFoster, small delta
                     COVERAGE_GAP = no jFoster CON rank for this prospect
 
+recon_bucket semantics (from consensus_reconciliation_2026)
+-----------------------------------------------------------
+  HIGH          divergence_25 < -24 (apex_rank numerically lower = better rank than
+                jFoster combined rank by >=25 positions). APEX is meaningfully bullish
+                relative to the jFoster-blended market. Strong convergence signal.
+  LOW           divergence_25 > 24 (APEX rates the prospect >=25 spots below jFoster).
+                APEX is bearish relative to market. Monitor as potential FM-driven discount.
+  NONE          jFoster coverage exists and |divergence_25| <= 24. APEX and jFoster agree
+                within margin. Treat as aligned; no additional edge.
+  COVERAGE_GAP  No jFoster CON rank exists for this prospect (has_jfoster_con=0).
+                Cannot compute divergence_25; recon_bucket defaults to this sentinel.
+                Does not mean APEX is wrong — only that external validation is absent.
+
+Orphan divergence target definition
+------------------------------------
+A prospect is an "orphan" when:
+  - divergence_flag = 'APEX_HIGH' (APEX rates meaningfully above consensus)
+  - divergence_magnitude >= MAJOR (strongest signal tier)
+  - The prospect has NO Band A or Band B fit at ANY of the 32 teams in v_draft_targets_2026
+    (all fits are Band C or the prospect has no fit rows at all)
+
+Orphans represent profiles where APEX believes the market undervalues the player, but no
+team's scheme/needs align well enough to produce a STRONG or IDEAL fit score. These are
+candidates for "value in wrong context" — track for trades or positional scheme changes.
+
+consensus_reconciliation_2026 schema (9 columns, PK: prospect_id + season_id)
+------------------------------------------------------------------------------
+  prospect_id      INTEGER NOT NULL  — FK to prospects.prospect_id
+  season_id        INTEGER NOT NULL  — default 1 (2026 draft year)
+  has_jfoster_con  INTEGER NOT NULL  — 1 if jFoster CON rank exists, else 0
+  jfoster_con_rank INTEGER           — jFoster blended consensus rank (NULL if no coverage)
+  apex_rank        INTEGER NOT NULL  — derived from apex_composite DESC rank order
+  consensus_rank   INTEGER NOT NULL  — from prospect_consensus_rankings.consensus_rank
+  divergence_delta INTEGER NOT NULL  — consensus_rank - apex_rank (positive = APEX bullish)
+  recon_bucket     TEXT    NOT NULL  — HIGH / LOW / NONE / COVERAGE_GAP
+  notes            TEXT              — free-text provenance note
+
+v_draft_targets_2026 column list (28 columns)
+----------------------------------------------
+  From team_prospect_fit (via signal view):
+    prospect_id           INTEGER
+    team_id               TEXT
+    season_id             INTEGER
+    fit_score             REAL
+    fit_tier              TEXT        IDEAL / STRONG / VIABLE
+    fit_band              TEXT        A / B / C  (computed CASE, not stored)
+    deployment_fit        INTEGER
+    pick_fit              INTEGER
+    fm_risk_score         INTEGER
+    verdict               TEXT
+    why_for               TEXT        JSON array (stored as text)
+    why_against           TEXT        JSON array (stored as text)
+    confidence            REAL
+    fit_explanation       TEXT
+  From apex_scores (via signal view):
+    capital_adjusted      TEXT
+    failure_mode_primary  TEXT
+    failure_mode_secondary TEXT
+  From team_draft_context (via signal view):
+    team_primary_needs    TEXT        JSON (premium_needs_json)
+    team_secondary_needs  TEXT        JSON (secondary_needs_json)
+    coverage_bias         TEXT
+    primary_defense_family TEXT
+  From prospect_consensus_rankings (via divergence_flags):
+    consensus_rank        INT
+  Derived / reconciled:
+    apex_rank             INTEGER     COALESCE(recon.apex_rank, fallback from delta)
+    divergence_delta      INTEGER     consensus_rank - apex_rank (positive = APEX bullish)
+    divergence_flag       TEXT        normalized: APEX_HIGH / APEX_LOW / ALIGNED / etc.
+    divergence_magnitude  TEXT        MAJOR / MODERATE / MINOR
+    jfoster_con_rank      INTEGER     NULL if COVERAGE_GAP
+    recon_bucket          TEXT        HIGH / LOW / NONE / COVERAGE_GAP (COALESCE from recon table)
+
 Usage
 -----
     import sqlite3
     from draftosqueriestargets import (
+        get_connection,
         get_targets_for_team,
         get_targets_for_prospect,
         get_orphan_divergence_targets,
     )
 
-    conn = sqlite3.connect("data/edge/draftos.sqlite")
-    conn.row_factory = sqlite3.Row
+    conn = get_connection("data/edge/draftos.sqlite")
 
     # Band A/B fits for KC where APEX is a major bull
     rows = get_targets_for_team(conn, "KC")
@@ -48,6 +121,8 @@ Usage
 
 from __future__ import annotations
 
+import sqlite3
+from pathlib import Path
 from typing import Any
 
 # ---------------------------------------------------------------------------
@@ -102,6 +177,60 @@ def _magnitudes_at_or_above(min_magnitude: str) -> list[str]:
         )
     cutoff = _MAGNITUDE_ORDER.index(key)
     return _MAGNITUDE_ORDER[: cutoff + 1]
+
+
+# ---------------------------------------------------------------------------
+# Connection / row infrastructure
+# ---------------------------------------------------------------------------
+
+def dict_factory(cursor: sqlite3.Cursor, row: tuple) -> dict[str, Any]:
+    """sqlite3 row_factory that returns rows as plain dicts keyed by column name."""
+    return {col[0]: row[idx] for idx, col in enumerate(cursor.description)}
+
+
+def get_connection(path: str | Path) -> sqlite3.Connection:
+    """
+    Open a read-only sqlite3 connection to the DraftOS DB with dict_factory applied.
+
+    Args:
+        path: Absolute or relative path to the SQLite database file.
+
+    Returns:
+        sqlite3.Connection with row_factory=dict_factory set.
+    """
+    conn = sqlite3.connect(str(path))
+    conn.row_factory = dict_factory
+    return conn
+
+
+def _select(
+    conn: sqlite3.Connection,
+    where_clause: str,
+    params: tuple = (),
+    limit: int | None = None,
+) -> list[dict[str, Any]]:
+    """
+    Internal helper: SELECT * FROM v_draft_targets_2026 WHERE <where_clause>
+    ORDER BY apex_rank ASC [LIMIT <limit>].
+
+    All public query helpers route through this function so the view name and
+    default ordering are defined in exactly one place.
+
+    Args:
+        conn:         sqlite3 connection (row_factory must return dicts).
+        where_clause: SQL fragment appended after WHERE (no leading WHERE keyword).
+        params:       Positional parameters bound to the query.
+        limit:        Optional row cap; omit for unlimited.
+
+    Returns:
+        List of row dicts. Empty list if no rows match.
+    """
+    sql = f"SELECT * FROM v_draft_targets_2026 WHERE {where_clause} ORDER BY apex_rank ASC"
+    if limit is not None:
+        sql += f" LIMIT {int(limit)}"
+    rows = conn.execute(sql, params).fetchall()
+    # Support both dict_factory connections and sqlite3.Row connections.
+    return [dict(r) if not isinstance(r, dict) else r for r in rows]
 
 
 # ---------------------------------------------------------------------------
