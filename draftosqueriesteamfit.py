@@ -121,3 +121,113 @@ def get_player_team_fit_context(
         "eval_confidence":       row["eval_confidence"],
         "divergence_rank_delta": row["divergence_rank_delta"],
     }
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Signal view helpers — backed by v_team_prospect_fit_signal_2026 (Migration 0051)
+# View is pre-filtered to season_id=1, fit_tier IN ('IDEAL','STRONG','VIABLE').
+# ──────────────────────────────────────────────────────────────────────────────
+
+# Tier quality order, highest to lowest, matching the view's allowed set.
+_SIGNAL_TIER_ORDER: list[str] = ["IDEAL", "STRONG", "VIABLE"]
+
+
+def _tiers_at_or_above(min_tier: str) -> list[str]:
+    """
+    Return all tier labels that are >= min_tier in the fit quality hierarchy.
+
+    The signal view covers only IDEAL/STRONG/VIABLE.  Passing a tier outside
+    that set raises ValueError so callers fail loudly rather than silently
+    returning an empty result.
+
+    Examples:
+        _tiers_at_or_above("VIABLE") → ["IDEAL", "STRONG", "VIABLE"]
+        _tiers_at_or_above("STRONG") → ["IDEAL", "STRONG"]
+        _tiers_at_or_above("IDEAL")  → ["IDEAL"]
+    """
+    key = min_tier.upper()
+    if key not in _SIGNAL_TIER_ORDER:
+        raise ValueError(
+            f"min_tier must be one of {_SIGNAL_TIER_ORDER}, got {min_tier!r}. "
+            "The signal view does not include FRINGE or POOR rows."
+        )
+    cutoff = _SIGNAL_TIER_ORDER.index(key)
+    return _SIGNAL_TIER_ORDER[: cutoff + 1]
+
+
+def get_team_fit_signal_for_team(
+    conn,
+    team_id: str,
+    min_tier: str = "VIABLE",
+    season_id: int = 1,
+) -> list[dict[str, Any]]:
+    """
+    Return all signal-tier prospect fits for a given team, ordered by fit_score DESC.
+
+    Backed by v_team_prospect_fit_signal_2026 (Migration 0051).
+    The view is pre-filtered to season_id=1 and fit_tier IN ('IDEAL','STRONG','VIABLE').
+
+    Args:
+        conn:      sqlite3 connection with row_factory = sqlite3.Row.
+        team_id:   NFL team abbreviation (e.g. "KC", "PHI").
+        min_tier:  Minimum fit quality to include. One of 'IDEAL', 'STRONG', 'VIABLE'.
+                   Defaults to 'VIABLE' (returns all three signal tiers).
+        season_id: Season scope. Defaults to 1 (2026 draft year). Must match the
+                   view's baked-in season_id=1 filter or the result will be empty.
+
+    Returns:
+        List of dicts, each containing all view columns. Empty list if no matches.
+    """
+    tiers = _tiers_at_or_above(min_tier)
+    placeholders = ",".join("?" * len(tiers))
+    rows = conn.execute(
+        f"""
+        SELECT *
+        FROM v_team_prospect_fit_signal_2026
+        WHERE season_id = ?
+          AND team_id   = ?
+          AND fit_tier IN ({placeholders})
+        ORDER BY fit_score DESC
+        """,
+        (season_id, team_id, *tiers),
+    ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def get_team_fit_signal_for_prospect(
+    conn,
+    prospect_id: int,
+    min_tier: str = "VIABLE",
+    season_id: int = 1,
+) -> list[dict[str, Any]]:
+    """
+    Return all signal-tier team fits for a given prospect, ordered by fit_score DESC.
+
+    Backed by v_team_prospect_fit_signal_2026 (Migration 0051).
+    The view is pre-filtered to season_id=1 and fit_tier IN ('IDEAL','STRONG','VIABLE').
+
+    Args:
+        conn:        sqlite3 connection with row_factory = sqlite3.Row.
+        prospect_id: Prospect primary key from the prospects table.
+        min_tier:    Minimum fit quality to include. One of 'IDEAL', 'STRONG', 'VIABLE'.
+                     Defaults to 'VIABLE' (returns all three signal tiers).
+        season_id:   Season scope. Defaults to 1 (2026 draft year). Must match the
+                     view's baked-in season_id=1 filter or the result will be empty.
+
+    Returns:
+        List of dicts, each containing all view columns. Empty list if no matches.
+    """
+    tiers = _tiers_at_or_above(min_tier)
+    placeholders = ",".join("?" * len(tiers))
+    rows = conn.execute(
+        f"""
+        SELECT *
+        FROM v_team_prospect_fit_signal_2026
+        WHERE season_id   = ?
+          AND prospect_id = ?
+          AND fit_tier IN ({placeholders})
+        ORDER BY fit_score DESC
+        """,
+        (season_id, prospect_id, *tiers),
+    ).fetchall()
+    return [dict(r) for r in rows]
