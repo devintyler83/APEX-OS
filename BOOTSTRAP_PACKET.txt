@@ -10,14 +10,14 @@ Non-negotiables:
 - Provide run order + verification commands
 
 Goal for this chat:
-Session 86: Rebuild pre-draft snapshot (snapshot_id=7) — run full pipeline from
+Session 89: Full batch APEX re-score (--batch all --force). Investigate Arvell Reese (#2, pid=16)
 
 Authoritative State:
 
 1) STATE_SNAPSHOT.md
 # APEX OS State Snapshot
 
-Last Updated (UTC): 2026-04-21T03:21:29.369787+00:00
+Last Updated (UTC): 2026-04-21T03:22:50.615657+00:00
 
 ---
 
@@ -26,6 +26,41 @@ Last Updated (UTC): 2026-04-21T03:21:29.369787+00:00
 - 2026 (season_id=1)
 
 ## Last Completed Milestone
+
+Session 88 close (Detail UI 9-phase polish + readability/alignment cleanup pass; RAS semantic coloring bug fixed on Big Board.)
+
+Session 88 close:
+- No DB writes. No schema changes. No migrations. Next migration: 0050.
+- Doctor: PASSED (no data/schema changes this session).
+
+Detail UI — 9-phase polish (scripts/draftos_detail_iframe_v2.py):
+- Font floor: all body/explanatory CSS raised to ≥13px (16 rules updated).
+- New CSS primitives: `.detail-hero-card`, `.detail-section`, `.detail-section-header`,
+  `.stat-chip-row`, `.detail-stat-chip`, `.insight-card` (amber/green/red variants),
+  `.insight-split`, `.support-info`.
+- New functions: `_build_risk_hero()` (Risk tab hero card), `_build_top_traits_card()` (Traits tab).
+- Summary tab: 3-chip stat row (Capital / Archetype Fit / Eval Confidence) + sig-play as insight-card.
+- Fit tab: works-if/breaks-if as insight-split.
+- Notes tab: detail-section wrappers + Draft Day Take as insight-card amber.
+- Report tab: "Report Contents" section header added.
+- Typography fixes: FIT Support Metrics/Score Guide, .sp-k labels, FM ref card, comps card
+  all raised from 7–9px illegible to 9–14px readable range.
+- RAS rail: dynamic color injection (green ≥8.00, amber ≥5.00, red >0.0, grey null).
+
+Big Board cleanup (app/app.py):
+- Centralized `_ras_color()` / `_style_ras()` helpers.
+- `show_low` default: True → False (re-applied from S87 fix).
+- `_style_apex_delta()`: positive delta emphasis (≥10 green, >2 cold blue, <-2 red).
+- RAS threshold legend added below slider.
+- Team Fit + Pick controls: consistent label alignment, both collapsed.
+- Selected-prospect banner added above detail panel.
+- `.board-selection-bar` CSS block added.
+
+Bug fix — RAS semantic color on Big Board:
+- Root cause: `.map(_style_ras)` was applied only to top-level `styled` Styler chain,
+  which is never passed to `st.dataframe()`. Board renders via `_make_bb_styled(sub)`.
+- Fix: `.map(_style_ras, subset=["RAS"])` added to `_make_bb_styled()`.
+  Committed: 2990004.
 
 Session 87 close (Team Fit panel rebuilt to decision-grade; all 32 teams in dropdown; board show_low default fixed; staleness threshold corrected.)
 
@@ -1218,10 +1253,10 @@ Prior sessions on record: 12 (DB rebuild), 13 (weekly pipeline), 13b (school/arc
 
 ## Next Milestone (Single Target)
 
-- Session 86: Rebuild pre-draft snapshot (snapshot_id=7) — run full pipeline from
-  build_consensus_2026.py through snapshot_board.py, compute_snapshot_* chain,
-  verify_snapshot_integrity.py, then export apex_scores_all_s85.json.
-  Deferred from S85: position_rank_label format inconsistency (contract "LB #1" vs detail "#1 at LB").
+- Session 89: Full batch APEX re-score (--batch all --force). Investigate Arvell Reese (#2, pid=16)
+  ELITE→DAY1 drop (-8.8 pts, forty=4.46/ATH=86.6). If drop justified, accept and run full batch.
+  After re-score: rebuild pre-draft snapshot (snapshot_id=7) via full pipeline chain.
+  Deferred: position_rank_label format inconsistency (contract "LB #1" vs detail "#1 at LB").
   Deferred from S85: full team_fit surface integration (app.py pick-fit panel, detail iframe team context block).
   Note: resolve_draft_day_take() WIRED AND CLOSED S85. Tag triage COMPLETE S84.
 
@@ -1444,11 +1479,11 @@ Inactive (data preserved): ngs_2026 (source_id=29, is_active=0) — model score,
 
 2) System Snapshot Output
 === DRAFTOS SYSTEM SNAPSHOT ===
-generated_utc: 2026-04-21T03:21:28.630979+00:00
+generated_utc: 2026-04-21T03:22:49.934268+00:00
 
 ## Git
 branch: main
-commit: 2990004c4c708b6d3bd58f30e264c7f9b760aa28
+commit: 58af018b5e2f9506b86dc56b96ab99a0ef5ece3e
 status: clean
 
 ## Tables
