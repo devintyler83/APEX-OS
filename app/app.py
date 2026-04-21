@@ -2834,6 +2834,7 @@ def _make_bb_styled(sub: pd.DataFrame):
         )
         .map(_style_confidence,     subset=["Confidence"])
         .map(_style_consensus_tier, subset=["Consensus"])
+        .map(_style_ras,            subset=["RAS"])
         .map(_style_divergence,     subset=["⚡ Div"])
         .map(_style_apex_delta,     subset=["\u0394 APEX"])
         .map(_style_apex_tier,      subset=["APEX Tier"])
