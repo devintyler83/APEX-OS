@@ -12,6 +12,74 @@ import json
 from typing import Any
 
 
+# Canonical 32-team registry — always shown in dropdown regardless of DB seed state.
+# team_id must match the team_id used in team_draft_context rows.
+_NFL_32_TEAMS: list[dict[str, str]] = [
+    # AFC East
+    {"team_id": "BUF", "team_name": "Buffalo Bills",           "short_label": "Bills",     "conference": "AFC", "division": "AFC East"},
+    {"team_id": "MIA", "team_name": "Miami Dolphins",          "short_label": "Dolphins",  "conference": "AFC", "division": "AFC East"},
+    {"team_id": "NE",  "team_name": "New England Patriots",    "short_label": "Patriots",  "conference": "AFC", "division": "AFC East"},
+    {"team_id": "NYJ", "team_name": "New York Jets",           "short_label": "Jets",      "conference": "AFC", "division": "AFC East"},
+    # AFC North
+    {"team_id": "BAL", "team_name": "Baltimore Ravens",        "short_label": "Ravens",    "conference": "AFC", "division": "AFC North"},
+    {"team_id": "CIN", "team_name": "Cincinnati Bengals",      "short_label": "Bengals",   "conference": "AFC", "division": "AFC North"},
+    {"team_id": "CLE", "team_name": "Cleveland Browns",        "short_label": "Browns",    "conference": "AFC", "division": "AFC North"},
+    {"team_id": "PIT", "team_name": "Pittsburgh Steelers",     "short_label": "Steelers",  "conference": "AFC", "division": "AFC North"},
+    # AFC South
+    {"team_id": "HOU", "team_name": "Houston Texans",          "short_label": "Texans",    "conference": "AFC", "division": "AFC South"},
+    {"team_id": "IND", "team_name": "Indianapolis Colts",      "short_label": "Colts",     "conference": "AFC", "division": "AFC South"},
+    {"team_id": "JAX", "team_name": "Jacksonville Jaguars",    "short_label": "Jaguars",   "conference": "AFC", "division": "AFC South"},
+    {"team_id": "TEN", "team_name": "Tennessee Titans",        "short_label": "Titans",    "conference": "AFC", "division": "AFC South"},
+    # AFC West
+    {"team_id": "DEN", "team_name": "Denver Broncos",          "short_label": "Broncos",   "conference": "AFC", "division": "AFC West"},
+    {"team_id": "KC",  "team_name": "Kansas City Chiefs",      "short_label": "Chiefs",    "conference": "AFC", "division": "AFC West"},
+    {"team_id": "LAC", "team_name": "Los Angeles Chargers",    "short_label": "Chargers",  "conference": "AFC", "division": "AFC West"},
+    {"team_id": "LV",  "team_name": "Las Vegas Raiders",       "short_label": "Raiders",   "conference": "AFC", "division": "AFC West"},
+    # NFC East
+    {"team_id": "DAL", "team_name": "Dallas Cowboys",          "short_label": "Cowboys",   "conference": "NFC", "division": "NFC East"},
+    {"team_id": "NYG", "team_name": "New York Giants",         "short_label": "Giants",    "conference": "NFC", "division": "NFC East"},
+    {"team_id": "PHI", "team_name": "Philadelphia Eagles",     "short_label": "Eagles",    "conference": "NFC", "division": "NFC East"},
+    {"team_id": "WAS", "team_name": "Washington Commanders",   "short_label": "Commanders","conference": "NFC", "division": "NFC East"},
+    # NFC North
+    {"team_id": "CHI", "team_name": "Chicago Bears",           "short_label": "Bears",     "conference": "NFC", "division": "NFC North"},
+    {"team_id": "DET", "team_name": "Detroit Lions",           "short_label": "Lions",     "conference": "NFC", "division": "NFC North"},
+    {"team_id": "GB",  "team_name": "Green Bay Packers",       "short_label": "Packers",   "conference": "NFC", "division": "NFC North"},
+    {"team_id": "MIN", "team_name": "Minnesota Vikings",       "short_label": "Vikings",   "conference": "NFC", "division": "NFC North"},
+    # NFC South
+    {"team_id": "ATL", "team_name": "Atlanta Falcons",         "short_label": "Falcons",   "conference": "NFC", "division": "NFC South"},
+    {"team_id": "CAR", "team_name": "Carolina Panthers",       "short_label": "Panthers",  "conference": "NFC", "division": "NFC South"},
+    {"team_id": "NO",  "team_name": "New Orleans Saints",      "short_label": "Saints",    "conference": "NFC", "division": "NFC South"},
+    {"team_id": "TB",  "team_name": "Tampa Bay Buccaneers",    "short_label": "Buccaneers","conference": "NFC", "division": "NFC South"},
+    # NFC West
+    {"team_id": "ARI", "team_name": "Arizona Cardinals",       "short_label": "Cardinals", "conference": "NFC", "division": "NFC West"},
+    {"team_id": "LAR", "team_name": "Los Angeles Rams",        "short_label": "Rams",      "conference": "NFC", "division": "NFC West"},
+    {"team_id": "SEA", "team_name": "Seattle Seahawks",        "short_label": "Seahawks",  "conference": "NFC", "division": "NFC West"},
+    {"team_id": "SF",  "team_name": "San Francisco 49ers",     "short_label": "49ers",     "conference": "NFC", "division": "NFC West"},
+]
+
+
+def get_all_32_teams(conn: Any | None = None, season_id: int = 1) -> list[dict[str, str]]:
+    """
+    Return all 32 NFL teams from the canonical registry.
+    Each entry includes has_context=True if the team has a seeded row in team_draft_context.
+    conn and season_id are accepted for signature consistency but conn may be None.
+    """
+    seeded: set[str] = set()
+    if conn is not None:
+        try:
+            rows = conn.execute(
+                "SELECT team_id FROM team_draft_context WHERE season_id = ? AND is_active = 1",
+                (season_id,),
+            ).fetchall()
+            seeded = {r["team_id"] for r in rows}
+        except Exception:
+            pass
+    return [
+        {**t, "has_context": t["team_id"] in seeded}
+        for t in _NFL_32_TEAMS
+    ]
+
+
 def _loads(v: str | None, fallback):
     if not v:
         return fallback

@@ -95,76 +95,753 @@ def _trait_cls(v: float) -> str:
     return "red"
 
 
+_FIT_VERDICT_COLORS: dict[str, str] = {
+    "Strong fit":             "#5ab87a",   # --green
+    "Strong conditional fit": "#8bc34a",
+    "Mixed fit":              "#e8a84a",   # --amber
+    "Fragile fit":            "#e07b1a",
+    "Poor fit":               "#e05c5c",   # --red
+}
+
+_FM_DISPLAY_NAMES: dict[str, str] = {
+    "FM-1": "Athleticism Mirage",
+    "FM-2": "Zone Dependency",
+    "FM-3": "Processing Wall",
+    "FM-4": "Structural Fragility",
+    "FM-5": "Motivation Cliff",
+    "FM-6": "Role Mismatch",
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Interpretation helpers
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _si(v: object, fallback: int | None = None) -> int | None:
+    """Safe int conversion. Returns fallback on None/failure."""
+    if v is None:
+        return fallback
+    try:
+        return int(round(float(v)))  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return fallback
+
+
+# deployment_fit and pick_fit: 0-100 graded scores (baselines 60/65). Higher = better. Not probabilities.
+def _interp_grade(score: object) -> tuple[str, str]:
+    v = _si(score)
+    if v is None:                return ("—",            "rgba(255,255,255,0.32)")
+    if v >= 85: return ("Excellent",   "#5ab87a")
+    if v >= 70: return ("Strong",      "#8bc34a")
+    if v >= 55: return ("Conditional", "#e8a84a")
+    if v >= 40: return ("Fragile",     "#e07b1a")
+    return              ("Poor",       "#e05c5c")
+
+
+# fm_risk_score: 0-100 severity grade (baseline 50). Higher = more risk. NOT a probability.
+def _interp_fm_risk(score: object) -> tuple[str, str]:
+    v = _si(score)
+    if v is None:                return ("—",          "rgba(255,255,255,0.32)")
+    if v < 25: return ("Low",        "#5ab87a")
+    if v < 45: return ("Manageable", "#8bc34a")
+    if v < 60: return ("Moderate",   "#e8a84a")
+    if v < 75: return ("Elevated",   "#e07b1a")
+    return              ("Severe",   "#e05c5c")
+
+
+# confidence: APEX eval tier (A→0.85, B→0.70, C→0.55). Eval depth, not fit probability.
+def _interp_confidence(conf: object) -> tuple[str, str]:
+    if conf is None:
+        return ("—", "rgba(255,255,255,0.32)")
+    try:
+        v = float(conf)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return ("—", "rgba(255,255,255,0.32)")
+    if v >= 0.80: return ("High",   "#5ab87a")
+    if v >= 0.65: return ("Medium", "#e8a84a")
+    return              ("Low",     "#e05c5c")
+
+
+def _decision_banner(
+    verdict: str,
+    pick_number: object,
+    vr_start: object,
+    vr_end: object,
+    fm_activated: list[str],
+    raw_fm_risk: object,
+) -> tuple[str, str]:
+    """
+    Top-level decision label (6 states) + color.
+    Derived from verdict, pick-vs-band alignment, and FM risk.
+    Logic:
+      - 'Draftable for this team'    → Strong fit, pick not overpriced
+      - 'Draftable only at value'    → Strong fit but pick is before value band (overpriced)
+      - 'Role-dependent fit'         → Conditional/Mixed with active FMs or scheme dependency
+      - 'Risky fit'                  → Fragile fit or Elevated/Severe FM risk
+      - 'Avoid at current price'     → Any fit where pick is overpriced relative to value band
+      - 'Not a fit for this team'    → Poor fit
+    """
+    pn = _si(pick_number)
+    lo = _si(vr_start)
+    hi = _si(vr_end)
+    fm_v = _si(raw_fm_risk, 50)
+
+    # Pick overpriced = pick is BEFORE the value band start (team spending too early)
+    is_overpriced = (pn is not None and lo is not None and pn < lo)
+
+    if verdict == "Poor fit":
+        return ("Not a fit for this team", "#e05c5c")
+
+    if verdict == "Fragile fit":
+        if is_overpriced:
+            return ("Avoid at current price", "#e07b1a")
+        return ("Risky fit", "#e07b1a")
+
+    if verdict == "Mixed fit":
+        if is_overpriced:
+            return ("Avoid at current price", "#e8a84a")
+        if fm_activated:
+            return ("Role-dependent fit", "#e8a84a")
+        return ("Conditional fit", "#e8a84a")
+
+    if verdict == "Strong conditional fit":
+        if is_overpriced:
+            return ("Avoid at current price", "#8bc34a")
+        if fm_activated:
+            return ("Role-dependent fit", "#8bc34a")
+        return ("Draftable — conditional", "#8bc34a")
+
+    if verdict == "Strong fit":
+        if is_overpriced:
+            return ("Draftable only at value", "#8bc34a")
+        return ("Draftable for this team", "#5ab87a")
+
+    return ("Fit not evaluated", "rgba(255,255,255,0.32)")
+
+
+def _fo_summary(
+    team_name: str,
+    verdict: str,
+    role: str,
+    vr_start: object,
+    vr_end: object,
+    pick_number: object,
+    fm_activated: list[str],
+    fm_suppressed: list[str],
+) -> str:
+    """
+    One-sentence front office summary covering role, value alignment, and primary failure path.
+    Derived entirely from available fit fields. Never invents analytics.
+    """
+    role_lower = (role or "").lower()
+    if "day 1 starter" in role_lower:
+        role_clause = "offers a clear Day 1 starter path"
+    elif "sub-package" in role_lower or "year 2" in role_lower:
+        role_clause = "provides a sub-package entry role with a full-time path by Year 2"
+    elif "redshirt" in role_lower:
+        role_clause = "requires a redshirt runway before meaningful deployment"
+    else:
+        role_clause = "has a role path contingent on scheme alignment"
+
+    pn = _si(pick_number)
+    lo = _si(vr_start)
+    hi = _si(vr_end)
+
+    if pn is not None and lo is not None and hi is not None:
+        if lo <= pn <= hi:
+            value_clause = f"value aligns at Pick {pn}"
+        elif pn < lo:
+            value_clause = f"Pick {pn} is ahead of the established value window (Picks {lo}-{hi})"
+        else:
+            value_clause = f"Pick {pn} is a value opportunity below the standard window"
+    elif lo is not None and hi is not None:
+        value_clause = f"optimal value window is Picks {lo}-{hi}"
+    else:
+        value_clause = "value window is not yet calibrated"
+
+    if fm_activated:
+        fm = fm_activated[0]
+        fm_name = _FM_DISPLAY_NAMES.get(fm, fm)
+        risk_clause = f"{fm} ({fm_name}) is the primary failure path in this context"
+    elif fm_suppressed:
+        fm = fm_suppressed[0]
+        fm_name = _FM_DISPLAY_NAMES.get(fm, fm)
+        risk_clause = f"team context suppresses {fm} ({fm_name}), supporting the outcome floor"
+    else:
+        risk_clause = "no active failure modes flagged for this pairing"
+
+    return f"{team_name} {role_clause}; {value_clause}; {risk_clause}."
+
+
+def _fmt_value_range_football(lo: object, hi: object) -> str:
+    """
+    Convert pick-number range to football-native round language.
+    Examples: "Round 1", "Late Round 1 / Round 2", "Round 2", "Round 3"
+    Never returns 'None', 'None - None', or empty strings.
+    """
+    lo_v = _si(lo)
+    hi_v = _si(hi)
+    if lo_v is None or hi_v is None:
+        return "Not calibrated"
+
+    def _r(p: int) -> int:
+        if p <= 32:  return 1
+        if p <= 64:  return 2
+        if p <= 105: return 3
+        if p <= 143: return 4
+        if p <= 178: return 5
+        if p <= 215: return 6
+        return 7
+
+    lo_r = _r(lo_v)
+    hi_r = _r(hi_v)
+
+    if lo_r == hi_r:
+        r = lo_r
+        if r == 1:
+            if hi_v <= 10:                  return "Top 10"
+            if lo_v <= 10:                  return "Round 1"
+            if lo_v <= 22:                  return "Round 1 mid-late"
+            return "Round 1 late"
+        if r == 2:
+            if hi_v <= 48:                  return "Round 2 early"
+            if lo_v >= 49:                  return "Round 2 late"
+            return "Round 2"
+        return f"Round {r}"
+
+    if lo_r == 1 and hi_r == 2:
+        if lo_v >= 22:                      return "Late Round 1 / Round 2"
+        return "Round 1-2"
+    if lo_r == 2 and hi_r == 3:
+        if lo_v <= 48:                      return "Round 2-3"
+        return "Round 2 late / Round 3"
+    if lo_r >= 4:
+        return f"Day 3 (Round {lo_r}+)"
+    return f"Round {lo_r}-{hi_r}"
+
+
+def _short_role(role: str) -> str:
+    """Compact version of role_outcome for chip display."""
+    rl = (role or "").lower()
+    if "day 1 starter"  in rl: return "Day 1 starter"
+    if "sub-package"    in rl: return "Sub-pkg / Year 2"
+    if "redshirt"       in rl: return "Redshirt runway"
+    if not role:               return "Role not set"
+    return role[:20] + ("..." if len(role) > 20 else "")
+
+
+def _main_risk_chip(fm_activated: list[str], fm_suppressed: list[str]) -> tuple[str, str]:
+    """
+    Primary risk chip text + color for the decision strip.
+    Returns (text, color). Never returns blank or null artifacts.
+    """
+    if fm_activated:
+        fm = fm_activated[0]
+        name = _FM_DISPLAY_NAMES.get(fm, fm)
+        return (f"{fm} - {name}", "#e05c5c")
+    if fm_suppressed:
+        fm = fm_suppressed[0]
+        name = _FM_DISPLAY_NAMES.get(fm, fm)
+        return (f"Mitigated - {name}", "#5ab87a")
+    return ("None flagged", "#5ab87a")
+
+
+def _action_tag(
+    verdict: str,
+    pick_number: object,
+    vr_start: object,
+    vr_end: object,
+    fm_activated: list[str],
+) -> tuple[str, str]:
+    """
+    Draft recommendation label + color for the Decision strip and Draft Decision block.
+    Recommendation set: Target confidently / Target at value / Target only in protected role /
+                        Proceed cautiously / Avoid at current price / Do not target for this team
+    Derived deterministically from verdict, pick alignment, and activated FMs.
+    """
+    pn = _si(pick_number)
+    lo = _si(vr_start)
+    hi = _si(vr_end)
+    is_overpriced = (pn is not None and lo is not None and pn < lo)
+
+    if verdict == "Poor fit":
+        return ("Do not target for this team", "#e05c5c")
+
+    if verdict == "Fragile fit":
+        if is_overpriced:
+            return ("Avoid at current price", "#e07b1a")
+        return ("Proceed cautiously", "#e07b1a")
+
+    if verdict == "Mixed fit":
+        if is_overpriced:
+            return ("Avoid at current price", "#e8a84a")
+        return ("Proceed cautiously", "#e8a84a")
+
+    if verdict == "Strong conditional fit":
+        if is_overpriced:
+            return ("Avoid at current price", "#8bc34a")
+        if fm_activated:
+            return ("Target only in protected role", "#8bc34a")
+        return ("Target at value", "#8bc34a")
+
+    if verdict == "Strong fit":
+        if is_overpriced:
+            return ("Target at value", "#8bc34a")
+        if pn is not None and lo is not None and hi is not None and lo <= pn <= hi:
+            return ("Target confidently", "#5ab87a")
+        return ("Target at value", "#5ab87a")
+
+    return ("Evaluating", "rgba(255,255,255,0.32)")
+
+
+def _fmt_score(v: object) -> str:
+    """Format an integer score 0-100. Returns em-dash only when value is genuinely absent."""
+    if v is None:
+        return "—"
+    try:
+        return str(int(round(float(v))))  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return "—"
+
+
+def _fmt_confidence(v: object) -> str:
+    """Format confidence float as percentage string. Never returns None/nan."""
+    if v is None:
+        return "—"
+    try:
+        return f"{int(round(float(v) * 100))}%"  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return "—"
+
+
+def _fmt_pick(v: object) -> str:
+    """Format a pick number. Returns 'TBD' instead of null artifacts."""
+    if v is None:
+        return "TBD"
+    try:
+        n = int(v)  # type: ignore[arg-type]
+        return f"Pick {n}"
+    except (TypeError, ValueError):
+        return "TBD"
+
+
+def _fmt_value_range(vr: dict | None) -> str:
+    """
+    Null-safe best value range formatter.
+    Never returns 'None - None', 'None', or empty strings.
+    """
+    if not vr:
+        return "Best value range not set."
+    lo = vr.get("start")
+    hi = vr.get("end")
+    if lo is not None and hi is not None:
+        try:
+            return f"Picks {int(lo)}–{int(hi)}"
+        except (TypeError, ValueError):
+            pass
+    if lo is not None:
+        try:
+            return f"Pick {int(lo)} and later"
+        except (TypeError, ValueError):
+            pass
+    if hi is not None:
+        try:
+            return f"Up to Pick {int(hi)}"
+        except (TypeError, ValueError):
+            pass
+    return "Best value range not set."
+
+
+def _draft_decision_text(
+    verdict: str,
+    pick_number: object,
+    vr_start: object,
+    vr_end: object,
+    fm_activated: list[str],
+    fm_suppressed: list[str],
+) -> str:
+    """
+    Derive a deterministic, mechanism-grade draft decision sentence.
+    Never returns empty string or null artifacts.
+    """
+    pn = None
+    try:
+        pn = int(pick_number)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        pass
+    lo = None
+    hi = None
+    try:
+        lo = int(vr_start)  # type: ignore[arg-type]
+        hi = int(vr_end)    # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        pass
+
+    fm_act_str = ", ".join(fm_activated) if fm_activated else ""
+    fm_sup_str = ", ".join(fm_suppressed) if fm_suppressed else ""
+
+    if verdict == "Strong fit":
+        if pn is not None and lo is not None and hi is not None and lo <= pn <= hi:
+            return f"Draft at {_fmt_pick(pn)}. Value band, deployment path, and positional need are aligned."
+        if pn is not None and lo is not None and pn < lo:
+            return f"Draft at {_fmt_pick(pn)} if value is justified. Pick is ahead of the standard value window."
+        return "Draft. Strong deployment, need, and mechanism alignment across all dimensions."
+
+    if verdict == "Strong conditional fit":
+        if fm_act_str:
+            return f"Draft conditionally. Scheme fit is valid — monitor {fm_act_str} activation under NFL-speed reads."
+        if fm_sup_str:
+            return f"Draft conditionally. {fm_sup_str} is suppressed by this context, supporting the floor."
+        return "Draft conditionally. Scheme execution is the governing variable — deployment path is real but not guaranteed."
+
+    if verdict == "Mixed fit":
+        if pn is not None and hi is not None and pn > hi:
+            return f"Wait or pass. {_fmt_pick(pn)} is above the value ceiling. Revisit if available in a later round."
+        if fm_act_str:
+            return f"Proceed with caution. {fm_act_str} may be activated in this scheme context — downside is real."
+        return "Proceed with caution. Fit has structural merit but gaps in deployment or value alignment remain."
+
+    if verdict == "Fragile fit":
+        if fm_act_str:
+            return f"Avoid unless positional desperation. {fm_act_str} is activated in this context and creates high bust exposure."
+        return "Avoid unless no better option exists at the position. Fit is fragile and dependent on favorable conditions."
+
+    # Poor fit
+    if fm_act_str:
+        return f"Do not draft for this team. {fm_act_str} is active in this context. Deployment, value, or FM exposure disqualifies this pairing."
+    return "Do not draft for this team. Deployment mismatch or value misalignment makes this pairing non-viable."
+
+
 def buildteamfithtml(fit: dict | None) -> str:
+    """
+    Render the decision-grade Team Fit panel for the detail iframe.
+
+    Field semantics (from team_fitevaluator.py):
+      deployment_fit   — 0-100 graded score (baseline 60). How well the team's scheme
+                         activates the player's winning mechanism. Higher is better.
+      pick_fit         — 0-100 graded score (baseline 65). How well the team's actual
+                         pick aligns with the player's APEX value band. Higher is better.
+      fm_risk_score    — 0-100 severity score (baseline 50). Whether team context
+                         activates or suppresses the player's failure modes. NOT a
+                         probability. NOT a trigger percentage. Higher = more risk.
+      confidence       — 0.35-0.95, derived from APEX eval tier (A→0.85, B→0.70, C→0.55).
+                         Reflects depth/reliability of the APEX model evaluation of this
+                         player. NOT probability the fit works.
+
+    Null-safety contract:
+      fit=None            → prompt state. Never blank.
+      fit._no_context     → team name + 'not yet evaluated'. Never blank.
+      All numeric fields  → typed formatters. No Python None/nan/null in HTML.
+
+    Panel hierarchy (decision-grade):
+      ① Decision Banner — large label + team/pick + one-sentence FO summary
+      ② Decision Strip  — 4 chips: Action / Best Role / Best Value / Main Risk
+      ③ Fit Conditions  — Works if / Breaks if (from why_for[0] / why_against[0])
+      ④ Why It Works    — full bullet list
+      ⑤ Why It Could Fail — full bullet list
+      ⑥ FM Risk Detail  — activated/suppressed FM breakdown
+      ⑦ Draft Decision  — action tag + decision sentence
+      ⑧ Support metrics — deployment/pick_fit/fm_risk/confidence (secondary)
+      ⑨ Score guide     — interpretation key
+    """
     if not fit:
         return """
         <div class="notes-placeholder">
           <div class="notes-lbl">TEAM FIT</div>
-          <div class="notes-body">No team fit context loaded.</div>
+          <div class="notes-body">Select a team from the dropdown to evaluate fit.</div>
         </div>
         """
 
-    verdict = fit.get("verdict", "N/A")
-    team = fit.get("team_name", "")
-    pickn = fit.get("pick_number", "—")
-    deployment = fit.get("deployment_fit", "—")
-    pick_fit = fit.get("pick_fit", "—")
-    fm_risk = fit.get("fm_risk_score", "—")
-    confidence = fit.get("confidence", "—")
-    role = fit.get("role_outcome", "—")
-    vr = fit.get("best_value_range", {}) or {}
-    vr_text = f"{vr.get('start', '—')} - {vr.get('end', '—')}"
-    why_for = fit.get("why_for", []) or []
-    why_against = fit.get("why_against", []) or []
+    # ── No-context state (team selected but not seeded in DB) ──────────────────
+    if fit.get("_no_context"):
+        team_name = fit.get("team_name") or fit.get("team_id") or "Unknown team"
+        team_id   = fit.get("team_id") or ""
+        return f"""
+        <div class="report-block">
+          <div class="report-lbl">TEAM FIT — {team_id}</div>
+          <div class="report-val">{team_name}</div>
+          <div class="report-sub" style="margin-top:10px; color:var(--amber);">
+            Team fit not yet evaluated for this club.
+          </div>
+          <div class="report-sub" style="margin-top:4px; color:var(--dim);">
+            Seed team context via <code>seed_team_draft_context_2026.py</code> to enable
+            deterministic fit evaluation across all 32 clubs.
+          </div>
+        </div>
+        """
 
-    def bullets(items):
+    # ── Raw fields ──────────────────────────────────────────────────────────────
+    team_id     = fit.get("team_id") or ""
+    team_name   = fit.get("team_name") or team_id or "Unknown team"
+    pick_number = fit.get("pick_number")
+    pick_display = _fmt_pick(pick_number)
+
+    raw_deployment = fit.get("deployment_fit")
+    raw_pick_fit   = fit.get("pick_fit")
+    raw_fm_risk    = fit.get("fm_risk_score")
+    raw_confidence = fit.get("confidence")
+
+    # ── Interpretation labels ───────────────────────────────────────────────────
+    dep_label, dep_color   = _interp_grade(raw_deployment)
+    pf_label,  pf_color    = _interp_grade(raw_pick_fit)
+    fm_label,  fm_color    = _interp_fm_risk(raw_fm_risk)
+    conf_label, conf_color = _interp_confidence(raw_confidence)
+
+    dep_num  = _fmt_score(raw_deployment)
+    pf_num   = _fmt_score(raw_pick_fit)
+    fm_num   = _fmt_score(raw_fm_risk)
+    conf_pct = _fmt_confidence(raw_confidence)
+
+    # ── Text fields ─────────────────────────────────────────────────────────────
+    verdict     = fit.get("verdict") or "Fit not evaluated"
+    role        = fit.get("role_outcome") or "No deterministic deployment note available yet."
+    vr          = fit.get("best_value_range") or {}
+    vr_start    = vr.get("start")
+    vr_end      = vr.get("end")
+    why_for     = [x for x in (fit.get("why_for")     or []) if x and str(x).strip()]
+    why_against = [x for x in (fit.get("why_against") or []) if x and str(x).strip()]
+    fm_activated  = [x for x in (fit.get("fm_activated")  or []) if x and str(x).strip()]
+    fm_suppressed = [x for x in (fit.get("fm_suppressed") or []) if x and str(x).strip()]
+
+    # ── Decision-grade derived fields ───────────────────────────────────────────
+    banner_label, banner_color = _decision_banner(
+        verdict, pick_number, vr_start, vr_end, fm_activated, raw_fm_risk
+    )
+    fo_summary = _fo_summary(
+        team_name, verdict, role, vr_start, vr_end, pick_number, fm_activated, fm_suppressed
+    )
+    action, action_color = _action_tag(
+        verdict, pick_number, vr_start, vr_end, fm_activated
+    )
+    short_role_text              = _short_role(role)
+    best_value_football          = _fmt_value_range_football(vr_start, vr_end)
+    risk_chip_text, risk_chip_color = _main_risk_chip(fm_activated, fm_suppressed)
+
+    # ── Fit Conditions (first item from why_for / why_against) ─────────────────
+    works_if  = why_for[0]  if why_for  else "Deployment path and need alignment hold."
+    breaks_if = why_against[0] if why_against else "Scheme execution gaps or FM activation occur."
+
+    # ── Draft Decision sentence ─────────────────────────────────────────────────
+    decision_text = _draft_decision_text(
+        verdict, pick_number, vr_start, vr_end, fm_activated, fm_suppressed,
+    )
+
+    def bullets(items: list[str], empty_msg: str) -> str:
         if not items:
-            return "<div class='report-sub'>—</div>"
+            return f"<div class='report-sub' style='color:var(--dim);'>{empty_msg}</div>"
         return "".join(f"<div class='report-sub'>• {x}</div>" for x in items)
 
+    # ── FM Risk Detail block inner HTML ────────────────────────────────────────
+    if fm_activated or fm_suppressed:
+        fm_lines: list[str] = []
+        for fm in fm_activated:
+            name = _FM_DISPLAY_NAMES.get(fm, fm)
+            fm_lines.append(
+                f"<div class='report-sub' style='margin-bottom:3px;'>"
+                f"<span style='color:#e05c5c; font-weight:700;'>&#9650; {fm} — {name}</span>"
+                f" — activated in this scheme context."
+                f"</div>"
+            )
+        for fm in fm_suppressed:
+            name = _FM_DISPLAY_NAMES.get(fm, fm)
+            fm_lines.append(
+                f"<div class='report-sub' style='margin-bottom:3px;'>"
+                f"<span style='color:#5ab87a; font-weight:700;'>&#9660; {fm} — {name}</span>"
+                f" — suppressed by this team's deployment structure."
+                f"</div>"
+            )
+        fm_detail_inner = "".join(fm_lines)
+    else:
+        fm_detail_inner = (
+            "<div class='report-sub' style='color:var(--dim);'>"
+            "No failure modes activated or suppressed by this team context.</div>"
+        )
+
     return f"""
-    <div class="report-block">
-      <div class="report-lbl">TEAM FIT</div>
-      <div class="report-val">{team} at Pick {pickn}</div>
-      <div class="report-sub" style="margin-top:8px;"><strong>{verdict}</strong></div>
+    <!-- ① DECISION BANNER -->
+    <div style="padding:14px 16px 12px; background:var(--ink3);
+                border:1px solid {banner_color}40; border-radius:6px; margin-bottom:10px;">
+      <div style="font-size:7px; font-weight:700; letter-spacing:0.14em;
+                  text-transform:uppercase; color:var(--dim); margin-bottom:6px;">
+        Team fit — {team_id} &nbsp;·&nbsp; {pick_display}
+      </div>
+      <div style="font-size:18px; font-weight:700; color:{banner_color};
+                  letter-spacing:-0.01em; line-height:1.2; margin-bottom:8px;">
+        {banner_label}
+      </div>
+      <div style="font-size:10px; color:var(--mid); line-height:1.5;">
+        {fo_summary}
+      </div>
     </div>
 
-    <div class="decision-card" style="margin-top:12px;">
-      <div class="dc-zones">
-        <div>
-          <div class="dc-field-lbl">Deployment</div>
-          <div class="dc-field-val">{deployment}</div>
+    <!-- ② DECISION STRIP -->
+    <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-bottom:10px;">
+      <!-- Action -->
+      <div style="padding:8px 10px; background:var(--ink4); border-radius:4px;
+                  border-top:2px solid {action_color};">
+        <div style="font-size:7px; font-weight:700; letter-spacing:0.12em;
+                    text-transform:uppercase; color:var(--dim); margin-bottom:3px;">
+          Decision
         </div>
-        <div>
-          <div class="dc-field-lbl">Pick Fit</div>
-          <div class="dc-field-val">{pick_fit}</div>
+        <div style="font-size:9px; font-weight:700; color:{action_color}; line-height:1.3;">
+          {action}
         </div>
-        <div>
-          <div class="dc-field-lbl">FM Risk</div>
-          <div class="dc-field-val">{fm_risk}</div>
+      </div>
+      <!-- Best Role -->
+      <div style="padding:8px 10px; background:var(--ink4); border-radius:4px;
+                  border-top:2px solid var(--cold);">
+        <div style="font-size:7px; font-weight:700; letter-spacing:0.12em;
+                    text-transform:uppercase; color:var(--dim); margin-bottom:3px;">
+          Best role
         </div>
-        <div>
-          <div class="dc-field-lbl">Confidence</div>
-          <div class="dc-field-val">{confidence}</div>
+        <div style="font-size:9px; font-weight:700; color:var(--text); line-height:1.3;">
+          {short_role_text}
+        </div>
+      </div>
+      <!-- Best Value -->
+      <div style="padding:8px 10px; background:var(--ink4); border-radius:4px;
+                  border-top:2px solid var(--amber);">
+        <div style="font-size:7px; font-weight:700; letter-spacing:0.12em;
+                    text-transform:uppercase; color:var(--dim); margin-bottom:3px;">
+          Best value
+        </div>
+        <div style="font-size:9px; font-weight:700; color:var(--amber); line-height:1.3;">
+          {best_value_football}
+        </div>
+      </div>
+      <!-- Main Risk -->
+      <div style="padding:8px 10px; background:var(--ink4); border-radius:4px;
+                  border-top:2px solid {risk_chip_color};">
+        <div style="font-size:7px; font-weight:700; letter-spacing:0.12em;
+                    text-transform:uppercase; color:var(--dim); margin-bottom:3px;">
+          Main risk
+        </div>
+        <div style="font-size:9px; font-weight:700; color:{risk_chip_color}; line-height:1.3;">
+          {risk_chip_text}
         </div>
       </div>
     </div>
 
-    <div class="report-block" style="margin-top:12px;">
-      <div class="report-lbl">ROLE OUTCOME</div>
-      <div class="report-val">{role}</div>
-      <div class="report-lbl" style="margin-top:10px;">BEST VALUE RANGE</div>
-      <div class="report-val">{vr_text}</div>
+    <!-- ③ FIT CONDITIONS -->
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:10px;">
+      <div style="padding:8px 10px; background:rgba(90,184,122,0.07);
+                  border:1px solid rgba(90,184,122,0.18); border-radius:4px;">
+        <div style="font-size:7px; font-weight:700; letter-spacing:0.12em;
+                    text-transform:uppercase; color:#5ab87a; margin-bottom:4px;">
+          Works if
+        </div>
+        <div style="font-size:9px; color:var(--mid); line-height:1.4;">{works_if}</div>
+      </div>
+      <div style="padding:8px 10px; background:rgba(224,92,92,0.07);
+                  border:1px solid rgba(224,92,92,0.18); border-radius:4px;">
+        <div style="font-size:7px; font-weight:700; letter-spacing:0.12em;
+                    text-transform:uppercase; color:#e05c5c; margin-bottom:4px;">
+          Breaks if
+        </div>
+        <div style="font-size:9px; color:var(--mid); line-height:1.4;">{breaks_if}</div>
+      </div>
     </div>
 
-    <div class="report-block" style="margin-top:12px;">
-      <div class="report-lbl">WHY IT WORKS</div>
-      {bullets(why_for)}
+    <!-- ④ WHY IT WORKS -->
+    <div class="report-block" style="margin-top:10px;">
+      <div class="report-lbl">Why it works</div>
+      {bullets(why_for, "No affirmative fit factors identified.")}
     </div>
 
-    <div class="report-block" style="margin-top:12px;">
-      <div class="report-lbl">WHY IT COULD FAIL</div>
-      {bullets(why_against)}
+    <!-- ⑤ WHY IT COULD FAIL -->
+    <div class="report-block" style="margin-top:10px;">
+      <div class="report-lbl">Why it could fail</div>
+      {bullets(why_against, "No structural failure risks identified for this pairing.")}
+    </div>
+
+    <!-- ⑥ FM RISK DETAIL -->
+    <div class="report-block" style="margin-top:10px;">
+      <div class="report-lbl">FM risk detail</div>
+      {fm_detail_inner}
+    </div>
+
+    <!-- ⑦ DRAFT DECISION -->
+    <div class="report-block" style="margin-top:10px; border-left:3px solid {action_color};">
+      <div class="report-lbl">Draft decision</div>
+      <div class="report-val" style="font-size:13px; color:{action_color};">{action}</div>
+      <div class="report-sub" style="margin-top:6px;">{decision_text}</div>
+    </div>
+
+    <!-- ⑧ SUPPORT METRICS (secondary) -->
+    <div style="margin-top:12px; padding:10px 12px; background:var(--ink3);
+                border:1px solid var(--wire); border-radius:4px;">
+      <div style="font-size:7px; font-weight:700; letter-spacing:0.14em;
+                  text-transform:uppercase; color:var(--dim); margin-bottom:7px;">
+        Support metrics
+      </div>
+      <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:6px;">
+        <div>
+          <div style="font-size:7px; color:var(--dim); margin-bottom:2px;">Deployment</div>
+          <div style="font-size:11px; font-weight:700; color:{dep_color};">
+            {dep_label}
+            <span style="font-size:8px; font-weight:400; color:var(--dim);"> {dep_num}</span>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:7px; color:var(--dim); margin-bottom:2px;">Pick fit</div>
+          <div style="font-size:11px; font-weight:700; color:{pf_color};">
+            {pf_label}
+            <span style="font-size:8px; font-weight:400; color:var(--dim);"> {pf_num}</span>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:7px; color:var(--dim); margin-bottom:2px;">FM severity</div>
+          <div style="font-size:11px; font-weight:700; color:{fm_color};">
+            {fm_label}
+            <span style="font-size:8px; font-weight:400; color:var(--dim);"> {fm_num}</span>
+          </div>
+          <div style="font-size:7px; color:var(--dim); font-style:italic; margin-top:1px;">
+            not a probability
+          </div>
+        </div>
+        <div>
+          <div style="font-size:7px; color:var(--dim); margin-bottom:2px;">Eval confidence</div>
+          <div style="font-size:11px; font-weight:700; color:{conf_color};">
+            {conf_label}
+            <span style="font-size:8px; font-weight:400; color:var(--dim);"> {conf_pct}</span>
+          </div>
+          <div style="font-size:7px; color:var(--dim); font-style:italic; margin-top:1px;">
+            eval depth, not fit %
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ⑨ SCORE GUIDE -->
+    <div style="margin-top:8px; padding:8px 12px; background:var(--ink3);
+                border:1px solid var(--wire); border-radius:4px;">
+      <div style="font-size:7px; font-weight:700; letter-spacing:0.14em;
+                  text-transform:uppercase; color:var(--dim); margin-bottom:5px;">
+        Score guide
+      </div>
+      <div style="font-size:8px; color:var(--dim); line-height:1.7;">
+        <span style="color:var(--dim); font-weight:600;">Deployment &middot; Pick fit</span>
+        &nbsp;&mdash;&nbsp;
+        <span style="color:#5ab87a;">Excellent 85+</span>&nbsp;
+        <span style="color:#8bc34a;">Strong 70&ndash;84</span>&nbsp;
+        <span style="color:#e8a84a;">Conditional 55&ndash;69</span>&nbsp;
+        <span style="color:#e07b1a;">Fragile 40&ndash;54</span>&nbsp;
+        <span style="color:#e05c5c;">Poor &lt;40</span>
+        <br>
+        <span style="color:var(--dim); font-weight:600;">FM Risk severity</span>
+        &nbsp;&mdash;&nbsp;
+        <span style="color:#5ab87a;">Low &lt;25</span>&nbsp;
+        <span style="color:#8bc34a;">Manageable 25&ndash;44</span>&nbsp;
+        <span style="color:#e8a84a;">Moderate 45&ndash;59</span>&nbsp;
+        <span style="color:#e07b1a;">Elevated 60&ndash;74</span>&nbsp;
+        <span style="color:#e05c5c;">Severe 75+</span>
+        <br>
+        <span style="color:var(--dim); font-weight:600;">Eval confidence</span>
+        &nbsp;&mdash;&nbsp;
+        <span style="color:#5ab87a;">High</span> (&ge;80%)&nbsp;
+        <span style="color:#e8a84a;">Medium</span> (65&ndash;79%)&nbsp;
+        <span style="color:#e05c5c;">Low</span> (&lt;65%)
+        &nbsp;&middot; reflects APEX evaluation depth, not fit probability.
+      </div>
     </div>
     """
 
@@ -2428,8 +3105,12 @@ def estimate_height(d: dict, comps: list, fm_ref_comps: list | None = None, team
     if fm_ref_comps:
         h += 90 * min(len(fm_ref_comps), 4)
 
-    # FIT tab — fixed layout, adds ~280px when result is present
+    # FIT tab — full panel: overall + decision strip + role/range + why_for + why_against
+    # + fm_risk_detail + draft_decision blocks ≈ 480px when result is present
     if team_fit_result:
-        h += 280
+        if team_fit_result.get("_no_context"):
+            h += 120
+        else:
+            h += 700
 
     return max(980, h)

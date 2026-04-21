@@ -29,7 +29,7 @@ from datetime import datetime as _export_dt
 from scripts.export_png import export_png_bytes
 from scripts.draftos_detail_iframe_v2 import build_detail_html, estimate_height, resolve_draft_day_take
 from draftos.queries.team_fit import (
-    get_team_fit_pilot_teams,
+    get_all_32_teams,
     get_team_fit_context,
     resolve_team_fit_pick,
 )
@@ -1821,61 +1821,68 @@ def _render_apex_detail(d: dict) -> None:
                 fm_codes_for_ref.add(int(m.group(1)))
 
     # ── Team Fit controls (keyed to selected_pid to prevent stale widget state) ──
+    # Always show all 32 teams; evaluate only when team context is seeded in DB.
     team_fit_result: dict | None = None
     try:
         with connect() as _tconn:
-            _pilot_teams = get_team_fit_pilot_teams(_tconn)
+            _all_teams = get_all_32_teams(_tconn)
     except Exception:
-        _pilot_teams = []
+        _all_teams = get_all_32_teams(None)
 
-    if _pilot_teams:
-        _team_options    = {t["team_name"]: t["team_id"] for t in _pilot_teams}
-        _team_names      = ["— select team —"] + list(_team_options.keys())
-        _fit_col1, _fit_col2 = st.columns([3, 1])
-        with _fit_col1:
-            _selected_team_name = st.selectbox(
-                "Team Fit",
-                options=_team_names,
-                index=0,
-                key=f"team_fit_select_{prospect_id}",
-                label_visibility="collapsed",
-            )
-        with _fit_col2:
-            _pick_override = st.number_input(
-                "Pick",
-                min_value=0,
-                max_value=257,
-                value=0,
-                step=1,
-                key=f"team_fit_pick_{prospect_id}",
-                help="Pick override (0 = use team default)",
-            )
+    _team_options = {t["team_name"]: t["team_id"] for t in _all_teams}
+    _team_names   = ["— select team —"] + list(_team_options.keys())
+    _fit_col1, _fit_col2 = st.columns([3, 1])
+    with _fit_col1:
+        _selected_team_name = st.selectbox(
+            "Team Fit",
+            options=_team_names,
+            index=0,
+            key=f"team_fit_select_{prospect_id}",
+            label_visibility="collapsed",
+        )
+    with _fit_col2:
+        _pick_override = st.number_input(
+            "Pick",
+            min_value=0,
+            max_value=257,
+            value=0,
+            step=1,
+            key=f"team_fit_pick_{prospect_id}",
+            help="Pick override (0 = use team default)",
+        )
 
-        if _selected_team_name != "— select team —":
-            _team_code = _team_options[_selected_team_name]
-            try:
-                with connect() as _fconn:
-                    _team_ctx = get_team_fit_context(_fconn, _team_code)
-                if _team_ctx:
-                    _pick = resolve_team_fit_pick(_team_ctx, int(_pick_override))
-                    _player_ctx = {
-                        "prospect_id":     prospect_id,
-                        "display_name":    d.get("display_name"),
-                        "position_group":  d.get("position_group"),
-                        "matched_archetype": archetype_raw,
-                        "active_fm_codes": [
-                            str(fv).split()[0]
-                            for fv in [d.get("failure_mode_primary"), d.get("failure_mode_secondary")]
-                            if fv and str(fv).strip().upper() not in ("", "NONE", "N/A")
-                        ],
-                        "capital_range":   d.get("capital_base") or d.get("capital_adjusted"),
-                        "apex_tier":       d.get("apex_tier"),
-                        "eval_confidence": d.get("eval_confidence"),
-                        "divergence_rank_delta": d.get("auto_apex_delta"),
-                    }
-                    team_fit_result = evaluate_team_fit(_player_ctx, _team_ctx, _pick)
-            except Exception:
-                team_fit_result = None
+    if _selected_team_name != "— select team —":
+        _team_code = _team_options[_selected_team_name]
+        try:
+            with connect() as _fconn:
+                _team_ctx = get_team_fit_context(_fconn, _team_code)
+            if _team_ctx:
+                _pick = resolve_team_fit_pick(_team_ctx, int(_pick_override))
+                _player_ctx = {
+                    "prospect_id":     prospect_id,
+                    "display_name":    d.get("display_name"),
+                    "position_group":  d.get("position_group"),
+                    "matched_archetype": archetype_raw,
+                    "active_fm_codes": [
+                        str(fv).split()[0]
+                        for fv in [d.get("failure_mode_primary"), d.get("failure_mode_secondary")]
+                        if fv and str(fv).strip().upper() not in ("", "NONE", "N/A")
+                    ],
+                    "capital_range":   d.get("capital_base") or d.get("capital_adjusted"),
+                    "apex_tier":       d.get("apex_tier"),
+                    "eval_confidence": d.get("eval_confidence"),
+                    "divergence_rank_delta": d.get("auto_apex_delta"),
+                }
+                team_fit_result = evaluate_team_fit(_player_ctx, _team_ctx, _pick)
+            else:
+                # Team selected but not yet seeded — pass stub so panel renders team name.
+                team_fit_result = {
+                    "_no_context": True,
+                    "team_id":   _team_code,
+                    "team_name": _selected_team_name,
+                }
+        except Exception:
+            team_fit_result = None
 
     try:
         with connect() as _hconn:
@@ -2260,7 +2267,7 @@ st.caption("APEX OS · 2026 Draft · Session 44 · " + _export_dt.now().strftime
 with st.sidebar:
     st.header("Filters")
 
-    show_low = st.checkbox("Show Low confidence", value=False)
+    show_low = st.checkbox("Show Low confidence", value=True)
 
     show_divergence_only = st.checkbox("Show divergence flags only (⚡)", value=False)
 
