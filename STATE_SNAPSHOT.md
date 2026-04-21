@@ -1,6 +1,6 @@
 # APEX OS State Snapshot
 
-Last Updated (UTC): 2026-04-21T18:08:22.815115+00:00
+Last Updated (UTC): 2026-04-21T20:00:00.000000+00:00
 
 ---
 
@@ -9,6 +9,55 @@ Last Updated (UTC): 2026-04-21T18:08:22.815115+00:00
 - 2026 (season_id=1)
 
 ## Last Completed Milestone
+
+Session 94 close (Draft Mode first-class tab + migration 0056 spec views + Phase 2 helpers.)
+
+Session 94 close:
+- Migration 0056 applied (additive only): two new views.
+    v_draft_remaining_2026: spec-named alias exposing all 28 columns from
+      v_draft_targets_remaining_2026. Canonical spec contract surface.
+    v_draft_team_board_2026: joins v_draft_remaining_2026 with v_team_fit_context_2026
+      on (team_id, season_id). Adds scheme_family, capital_profile, development_timeline,
+      risk_tolerance, needs_json, deployment_traits_json to each prospect×team fit row.
+      2201 rows (no prospects drafted). 85 rows for SF specifically.
+- draftos/queries/draft_mode.py: 4 Phase 2 spec helpers added at end of file.
+    get_draft_remaining_board(conn=None, seasonid=1, limit=300) → list[dict]
+      DISTINCT remaining prospects from v_draft_remaining_2026. Sort: apex_rank → consensus_rank.
+    get_draft_team_board(conn=None, team_code, seasonid=1, limit=50) → list[dict]
+      Per-team board from v_draft_team_board_2026 with scheme context columns.
+      Sort: fit_band → fit_tier → fit_score DESC → consensus_rank ASC.
+    get_next_pick(conn=None, seasonid=1) → dict
+      Returns {overall_pick, round_number, pick_in_round}. 32-pick-per-round formula.
+    insert_draft_pick(conn=None, *, seasonid, overall_pick, round_number, pick_in_round,
+      drafting_team, prospectid) → None
+      Audit-safe INSERT: raises ValueError (not silent overwrite) on duplicate pick# or pid.
+      Backs up DB before write (at most once per calendar day).
+    All 4 helpers self-manage connections (conn arg accepted for API compat, ignored internally).
+- app/app.py: Draft Mode promoted to first-class tab (Phase 2 spec helpers only).
+    Tab bar extended: st.tabs(["Big Board", "APEX Board", "Draft Mode"]).
+    render_draft_mode(conn=None) function added (line ~2160):
+      Team hat selectbox (persisted in session_state["draft_mode_team"]).
+      4-column pick context strip: picks recorded, next overall, R/P, team hat.
+      Left column: team board from v_draft_team_board_2026 via dm_get_draft_team_board().
+        Scheme context caption (scheme_family, capital_profile, timeline, risk).
+        Top-3 best-available inline cards.
+        Extended team board table (read-only dataframe).
+      Right column: global remaining board via dm_get_draft_remaining_board().
+        Per-row "Draft ➜" buttons for top 75 prospects.
+        On click: dm_get_next_pick_spec() → dm_insert_draft_pick() → st.rerun().
+        ValueError (duplicate pick/prospect) surfaced as st.error().
+        Draft log table (all picks from dm_get_drafted_picks(), newest-first).
+    Sidebar draft_mode_on checkbox removed (superseded by tab).
+    Old 500-line sidebar-gated Draft Mode block removed and replaced by
+      `with tab_draft: render_draft_mode()`.
+- scripts/doctor.py: draft mode sanity checks added.
+    drafted_picks_2026 row count printed.
+    No duplicate pick_number per season.
+    No duplicate prospect_id per season.
+    All rows have season_id = 1.
+    v_draft_remaining_2026 and v_draft_team_board_2026 views must exist.
+- Migrations applied: 0001–0056. Next migration: 0057.
+- Doctor: PASSED post-session.
 
 Session 93 close (Draft Mode spine + full operator UI + snapshot_id=7 rebuild + board blank fix.)
 
@@ -1456,10 +1505,11 @@ Prior sessions on record: 12 (DB rebuild), 13 (weekly pipeline), 13b (school/arc
 
 ## Next Milestone (Single Target)
 
-- Session 94: Draft night operations. Use Draft Mode UI (sidebar "Draft Mode (operator)"
-  checkbox) to record picks via mark_drafted_2026.py or the Draft Control tab.
+- Session 95: Draft night operations. Use the 🏈 Draft Mode tab in the app to record picks.
+  Team hat selectbox → team board (v_draft_team_board_2026) + remaining board
+  (v_draft_remaining_2026) + per-row "Draft ➜" buttons → insert_draft_pick() → live log.
   Validate board after each round: python -m scripts.validate_reactive_board_2026.
-  Post-draft: run reset_drafted_2026.py (dry run first) to clear test picks if needed.
+  Post-draft: run reset_drafted_2026.py (dry run first) if test picks need clearing.
   Deferred (post-draft): prospect_comps expansion for newly scored prospects.
   Deferred (post-draft): position_rank_label format inconsistency ("LB #1" vs "#1 at LB").
   Deferred (post-draft): full team_fit surface integration (app.py pick-fit panel, detail iframe).
