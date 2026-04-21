@@ -10,14 +10,14 @@ Non-negotiables:
 - Provide run order + verification commands
 
 Goal for this chat:
-Session 90: Add pid=19 (Jacob Rodriguez) to ARCHETYPE_OVERRIDES in run_apex_scoring_2026.py
+Session 91: Rebuild pre-draft snapshot (snapshot_id=7) via full pipeline chain using S90
 
 Authoritative State:
 
 1) STATE_SNAPSHOT.md
 # APEX OS State Snapshot
 
-Last Updated (UTC): 2026-04-21T04:45:58.259530+00:00
+Last Updated (UTC): 2026-04-21T06:08:29.610085+00:00
 
 ---
 
@@ -27,7 +27,58 @@ Last Updated (UTC): 2026-04-21T04:45:58.259530+00:00
 
 ## Last Completed Milestone
 
-Session 89 close (Full APEX v2.3 batch re-score (all 139); Arvell Reese ILB-3 gate reaffirmed; Jacob Rodriguez ILB-1 archetype correction seeded.)
+Session 90 close (APEX v2.3 coverage expanded to top-300 consensus; Rodriguez ILB-1 ARCHETYPE_OVERRIDES entry added; divergence recomputed; tags triaged to pending=0.)
+
+Session 90 close:
+- No schema changes. No migrations. Next migration: 0050.
+- Doctor: PASSED (pre and post session).
+
+ARCHETYPE_OVERRIDES update (S89 ACTION REQUIRED fulfilled):
+- pid=19 (Jacob Rodriguez) added to ARCHETYPE_OVERRIDES in run_apex_scoring_2026.py.
+  Archetype: ILB-1 Green Dot Anchor. FM-6 primary, FM-2 secondary.
+  Capital: R3 Early base / R2 Late upside (landing-spot conditional).
+  v_scheme_vers_cap: 5.0 (PAA Q3 FAILED). placed_session: 89.
+  Protects archetype on all future --batch all re-scores.
+  Note: position_group="LB" in DB; no TOP50_POSITION_OVERRIDES needed (LB PVC=0.85 same as ILB).
+
+APEX v2.3 scoring expansion (Session 90):
+- Incremental set: 161 new prospects (consensus ranks 76-300 not previously scored).
+- Batch run: 45 scored in first pass (credit failure), 111 scored in resume pass.
+  5 JSON parse/validation failures retried individually; all 5 resolved.
+  (DJ Campbell OL pid=121, Colbie Young WR pid=323, Trey Moore EDGE pid=3818,
+   Ethan Burke EDGE pid=205, Kaleb Proctor DT pid=348.)
+- Final scored universe: 300 active non-calibration prospects at apex_v2.3.
+  (139 prior + 161 newly scored = 300 total.)
+
+Tier distribution (S90, full 300-prospect universe):
+  ELITE=2, DAY1=31, DAY2=105, DAY3=145, UDFA-P=17 (total=300 active non-cal).
+  Note: ELITE dropped from 3→2 and DAY1 from 34→31 vs S89 — expected as newly scored
+  lower-ranked prospects shift the distribution toward DAY3/UDFA-P.
+
+Divergence (S90, 300 prospects):
+  ALIGNED=37, APEX_HIGH=126, APEX_LOW=23, APEX_LOW_PVC_STRUCTURAL=115.
+  Legacy "APEX LOW" (space) flag: 11 rows — pre-existing format artifact, non-blocking.
+  Notable new premium APEX_HIGH signals (newly scored prospects):
+    Logan Fano (EDGE) +179, Andre Fuller (CB) +168, Trey Moore (EDGE) +161,
+    Sawyer Robertson (QB) +144, Diego Pavia (QB) +144, Devon Marshall (CB) +143,
+    Drew Allar (QB) +142, George Gumbs (EDGE) +134, Mason Reiger (EDGE) +133,
+    Charles Demmings (CB) +133, Dani Dennis-Sutton (EDGE) +129.
+  Notable new premium APEX_LOW signals (newly scored prospects):
+    Caden Curry (EDGE) -148, Jakobe Thomas (S) -69, Mikail Kamara (EDGE) -67,
+    Trinidad Chambliss (QB) -51, LT Overton (EDGE) -49, Ethan Burke (EDGE) -25.
+
+Tag triggers (S90):
+  217 new recs fired across expanded 300-prospect universe.
+  All 217 accepted via triage_pending_tags_2026.py --apply 1. Pending = 0.
+  Breakdown: Development Bet=50, Divergence Alert=49, Elite RAS=39, Great RAS=30,
+  Compression Flag=23, Scheme Dependent=21, Poor RAS=4, Character Watch=1.
+
+Exports (S90):
+  data/apex_all_scored_session90_20260421T060351Z.json — 300-row JSON (all active non-cal v2.3).
+  data/apex_top300_board_session90_20260421T060628Z.csv — 300-row CSV (consensus rank,
+    display_name, position_group, apex_composite, apex_tier, matched_archetype,
+    failure_mode_primary, eval_confidence, capital_base, capital_adjusted,
+    divergence_flag, divergence_rank_delta).
 
 Session 89 close:
 - No schema changes. No migrations. Next migration: 0050.
@@ -1304,12 +1355,15 @@ Prior sessions on record: 12 (DB rebuild), 13 (weekly pipeline), 13b (school/arc
 
 ## Next Milestone (Single Target)
 
-- Session 90: Add pid=19 (Jacob Rodriguez) to ARCHETYPE_OVERRIDES in run_apex_scoring_2026.py
-  (ILB-1 Green Dot Anchor; prevents ILB-2 regression on any future --batch all run).
-  Then rebuild pre-draft snapshot (snapshot_id=7) via full pipeline chain using S89 scores.
-  Pipeline: build_consensus -> snapshot_board -> compute_snapshot_metrics ->
-  compute_source_snapshot_metrics -> compute_snapshot_coverage ->
+- Session 91: Rebuild pre-draft snapshot (snapshot_id=7) via full pipeline chain using S90
+  300-prospect scored universe. Pipeline: build_consensus -> snapshot_board ->
+  compute_snapshot_metrics -> compute_source_snapshot_metrics -> compute_snapshot_coverage ->
   compute_snapshot_confidence -> verify_snapshot_integrity.
+  Then: triage new premium APEX_HIGH signals from expanded top-300 universe — candidates
+  include Logan Fano (EDGE +179), Andre Fuller (CB +168), Trey Moore (EDGE +161),
+  George Gumbs (EDGE +134), Mason Reiger (EDGE +133), Charles Demmings (CB +133),
+  Dani Dennis-Sutton (EDGE +129). Use Sports Almanac Mode where warranted.
+  Deferred: prospect_comps expansion for newly scored prospects.
   Deferred: position_rank_label format inconsistency ("LB #1" vs "#1 at LB").
   Deferred: full team_fit surface integration (app.py pick-fit panel, detail iframe).
 
@@ -1345,15 +1399,15 @@ SNAPSHOTS: Operational. Latest: snapshot_id=6 (2026-03-18). rows=1001 — PASSED
   compute_source_snapshot_metrics → compute_snapshot_coverage →
   compute_snapshot_confidence → verify_snapshot_integrity
 
-APEX: Operational. 139 v2.3 active non-cal scored + 12 calibration artifacts.
+APEX: Operational. 300 v2.3 active non-cal scored + 12 calibration artifacts.
   Archetype-aware measurables context live (Session 71): MEASURABLES_ARCHETYPE_CONTEXT dict,
   9 archetypes mapped. _get_measurables_context() updated with archetype_code parameter.
   716 prospects have measurables data.
-  Tiers (v2.3 active non-cal, post S89 full batch re-score):
-    ELITE=3, DAY1=34, DAY2=74, DAY3=37, UDFA-P=2 (total active non-cal rows=150 in DB;
-    139 from batch + calibration; Rodriguez seed row apex_id=283 included in total).
-  Divergence (post S89 full batch):
-    ALIGNED=25, APEX_HIGH=61, APEX_LOW=5, APEX_LOW_PVC_STRUCTURAL=48.
+  Tiers (v2.3 active non-cal, post S90 top-300 expansion):
+    ELITE=2, DAY1=31, DAY2=105, DAY3=145, UDFA-P=17 (total active non-cal = 300).
+  Divergence (post S90):
+    ALIGNED=37, APEX_HIGH=126, APEX_LOW=23, APEX_LOW_PVC_STRUCTURAL=115.
+    Legacy "APEX LOW" (space) flag: 11 rows — pre-existing format artifact, non-blocking.
   Arvell Reese (pid=16): ILB-3 Run-First Enforcer, raw=82.3 composite=70.0 DAY1 Tier A.
     S89 gate: APEX_LOW_PVC_STRUCTURAL REAFFIRMED. Structural ILB PVC. No override changes.
   Jacob Rodriguez (pid=19): ILB-1 Green Dot Anchor (S89 Almanac correction from ILB-2).
@@ -1537,11 +1591,11 @@ Inactive (data preserved): ngs_2026 (source_id=29, is_active=0) — model score,
 
 2) System Snapshot Output
 === DRAFTOS SYSTEM SNAPSHOT ===
-generated_utc: 2026-04-21T04:45:57.544392+00:00
+generated_utc: 2026-04-21T06:08:27.906423+00:00
 
 ## Git
 branch: main
-commit: cfa8572c1a02065752a858d37dd744ad51a496eb
+commit: dba4f023230cdfbec4bcacc82cf07491782a9dac
 status: clean
 
 ## Tables
