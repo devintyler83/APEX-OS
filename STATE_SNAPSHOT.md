@@ -1461,6 +1461,65 @@ APEX: Operational. 300 v2.3 active non-cal scored + 12 calibration artifacts.
     DT→IDL normalization live in query module + scoring prompt + app filter (Session 79).
   Tag trigger re-run executed post-Session 42 — 147 pending recs generated (see TAGS).
 
+TARGETS AND TEAM FIT SURFACES (S91):
+
+Contract surfaces (read-only, season_id = 1 baked in):
+
+- v_team_fit_context_2026
+  - Rows: 32 (one per team_id, season_id)
+  - Assembles:
+    - team_context_snapshots               (scheme_family, capital_profile, failure_mode_bias, provenance_note)
+    - team_needs_2026                      (PREMIUM + SECONDARY needs, confidence default 'B')
+    - team_depth_pressure_2026             (pressure_score 0–100, starter_quality)
+    - team_deployment_traits_2026          (normalized traits e.g. CB_PRIMARY_COVERAGE, EDGE_BASE_FRONT, S_SPLIT_FIELD_USAGE, RB_RUN_SCHEME via row model)
+    - team_context_sources_2026            (per-team provenance log)
+    - team_draft_context                   (evaluator-facing fields)
+  - Purpose: canonical team-side context for the team-fit evaluator and any UI/reporting that needs per-team scheme/capital/pressure/traits.
+
+- v_draft_targets_2026
+  - Rows: 2,201
+  - Columns: 28 (prospect, team, fit, divergence, reconciliation)
+  - Join chain (implementation detail, not to be reimplemented in readers):
+      v_team_prospect_fit_signal_2026
+        → divergence_flags (apex_v2.3, space-variants normalized)
+        → consensus_reconciliation_2026 (LEFT JOIN, COALESCE(recon_bucket, 'COVERAGE_GAP'))
+  - Purpose: canonical target surface combining:
+      - prospect-side APEX fit and divergence
+      - team-side fit tier / fit band
+      - consensus reconciliation via recon_bucket
+
+recon_bucket semantics (from consensus_reconciliation_2026):
+  HIGH         APEX bullish ≥ 25 vs jFoster-blended market
+  LOW          APEX bearish ≥ 25
+  NONE         Covered by jFoster, small delta
+  COVERAGE_GAP No jFoster CON rank (COALESCE default in the view)
+
+Orphan definition (targets layer):
+  A prospect with APEX_HIGH divergence and MAJOR magnitude
+  AND all team fits in v_draft_targets_2026 are Band C (no Band A/B fits).
+
+Forbidden direct reads in query helpers (unless building or repairing the views):
+  - consensus_reconciliation_2026
+  - divergence_flags
+  - v_team_prospect_fit_signal_2026
+
+Required entry point for all target-selection reads:
+  - v_draft_targets_2026 directly, OR
+  - draftosqueriestargets._select(...)
+
+Notes:
+  - Any future helper that needs additional filtering (e.g., "all MAJOR orphans for a given
+    position group") MUST query v_draft_targets_2026 with the appropriate filters
+    (position_group, recon_bucket, divergence_flag, divergence_magnitude, fit_band, etc.)
+    and NOT recompute divergence or reconciliation by joining back to divergence_flags
+    or consensus_reconciliation_2026.
+  - team_deployment_traits_2026 is allowed in read helpers ONLY for EXISTS-style predicates
+    to constrain teams by scheme traits. All returned rows still come from v_draft_targets_2026
+    or v_team_fit_context_2026.
+  - Scripts that WRITE consensus_reconciliation_2026 remain confined to dedicated Mode 2
+    pipeline scripts (e.g., rebuild_consensus_reconciliation_2026.py) and must be
+    idempotent (INSERT OR REPLACE), season-scoped, with backup-before-write and --apply 0/1 flags.
+
 TAGS: Operational. Session 24 trigger engine built and active.
   Scripts: run_tag_triggers_2026.py (engine), accept_tag_recs_2026.py (workflow),
     draftos/tags/evaluator.py (pure function library).
