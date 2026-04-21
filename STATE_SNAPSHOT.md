@@ -10,6 +10,47 @@ Last Updated (UTC): 2026-04-21T00:22:01.090637+00:00
 
 ## Last Completed Milestone
 
+Session 85 close (resolve_draft_day_take() wired into detail drawer + PDF generator; S85 regression gate 6/6 passed; export_reports_html_share.py Windows /tmp/ path bug fixed.)
+
+Session 85 close:
+- resolve_draft_day_take() — bugs fixed before wiring:
+    draftos/queries/notes.py does not exist — broken module import replaced with inline SQL
+    against the notes table (SELECT note FROM notes WHERE prospect_id=? AND note_type='draft_day_take'
+    ORDER BY created_at DESC LIMIT 1).
+    Column ref note_text→note[0] (actual schema column is 'note').
+    season_id filter removed (notes table has no season_id column).
+    Generator fallback table apexscores→apex_scores; query refactored to JOIN prospects
+    (position_group) and LEFT JOIN divergence_flags (divergence_rank_delta).
+- _build_scout_pad() wiring (draftos_detail_iframe_v2.py):
+    take_sentence now reads d.get('draft_day_take_resolved') or _build_draft_day_take(...).
+    Dead duplicate take_html block removed (artifact of prior reverted wiring attempt).
+    Dead pid = d.get('prospect_id') line removed (was unused).
+- app.py wiring:
+    resolve_draft_day_take imported from scripts.draftos_detail_iframe_v2.
+    Called within existing with connect() as _hconn: block in _render_apex_detail().
+    Result stored in d['draft_day_take_resolved'] before build_detail_html() call.
+    archetype_overrides=None (display layer; notes table + generator sufficient).
+- generate_prospect_pdf_2026.py wiring:
+    resolve_draft_day_take called inside generate_pdf() while conn still open.
+    data['draft_day_take_resolved'] stored before with block closes.
+    _build_html(): amber take_block_html added using existing trans-block CSS class.
+    Injected between {trans_block_html} and <div class="comps-region"> in right panel.
+    "Take" label in amber, consistent with DraftOS amber language. No new CSS class.
+- export_reports_html_share.py — Windows fix:
+    /tmp/test_card.html (Unix hardcoded path) → tempfile.mkstemp(suffix='.html', prefix='test_card_').
+    _os.close(fd) added (mkstemp returns open fd). Path variable reused in print output.
+    Hint print updated to use resolved path for both HTML and PNG args.
+    Verified: resolves to C:\Users\burly\AppData\Local\Temp\test_card_*.html on win32.
+- S85 regression gate: ALL 6 PASS.
+    Test 1: PID 28 (notes-backed) — 1 block, correct notes text, tabs intact.
+    Test 2: PID 57 (generator fallback) — 1 block, QB-1 Field General text, tabs intact.
+    Test 3a: unscored PID 9999 → resolve returns '' (correct).
+    Test 3b: key absent from d → generator fires as resilience fallback (correct).
+    Test 4: PDF PID 28 — amber take block, order trans<take<comps, notes text confirmed.
+    Test 5: PDF PID 57 — amber take block, order correct, generator text confirmed.
+    Test 6: PDF empty case — 0 take spans, no empty amber shell, comps-region intact.
+- Doctor: PASSED. No schema changes. No migrations this session. Next migration: 0050.
+
 Session 84 close (Pending tag triage complete — 24 recs auto-accepted (Great RAS=10, Elite RAS=5, Compression Flag=4, Scheme Dependent=4, Character Watch=1); resolve_draft_day_take() helper remains implemented but not wired into Scout Pad/PDF; export_reports_html_share.py deferred — Windows path bug on /tmp/test_card.html.)
 
 Session 84 close:
@@ -1096,12 +1137,12 @@ Prior sessions on record: 12 (DB rebuild), 13 (weekly pipeline), 13b (school/arc
 
 ## Next Milestone (Single Target)
 
-- Session 84: Complete remaining 25 pending tag recs (Elite RAS=5, Great RAS=10, Compression=4,
-  Scheme Dependent=4, Character Watch=1 [Genesis Smith], Divergence Alert=1 [Caleb Downs -- held]).
-  Then: rebuild pre-draft snapshot (snapshot_id=7), export apex_scores_all_s83.json.
-  Deferred: resolve_draft_day_take() helper in draftos_detail_iframe_v2.py + PDF generator.
-  Deferred: position_rank_label format inconsistency (contract "LB #1" vs detail "#1 at LB").
-  Deferred: full team_fit surface integration (app.py pick-fit panel, detail iframe team context block).
+- Session 86: Rebuild pre-draft snapshot (snapshot_id=7) — run full pipeline from
+  build_consensus_2026.py through snapshot_board.py, compute_snapshot_* chain,
+  verify_snapshot_integrity.py, then export apex_scores_all_s85.json.
+  Deferred from S85: position_rank_label format inconsistency (contract "LB #1" vs detail "#1 at LB").
+  Deferred from S85: full team_fit surface integration (app.py pick-fit panel, detail iframe team context block).
+  Note: resolve_draft_day_take() WIRED AND CLOSED S85. Tag triage COMPLETE S84.
 
 ---
 
