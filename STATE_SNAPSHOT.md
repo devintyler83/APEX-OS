@@ -1,6 +1,6 @@
 # APEX OS State Snapshot
 
-Last Updated (UTC): 2026-04-21T00:23:42.051959+00:00
+Last Updated (UTC): 2026-04-21T02:00:00.000000+00:00
 
 ---
 
@@ -10,7 +10,17 @@ Last Updated (UTC): 2026-04-21T00:23:42.051959+00:00
 
 ## Last Completed Milestone
 
-Session 85 close (resolve_draft_day_take() wired into detail drawer + PDF generator; S85 regression gate 6/6 passed; export_reports_html_share.py Windows /tmp/ path bug fixed.)
+Session 86 close (Export-only session — generated apex_scores_all_s85.json export script; no DB writes, no schema changes, no migrations.)
+
+Session 86 close:
+- No DB writes. No schema changes. No migrations. Next migration: 0050.
+- Doctor: PASSED (sources_active=17, prospects=4571, models=1).
+- Deliverable: Python export script for C:\DraftOS\data\exports\apex_scores_all_s85.json.
+  Query: apex_scores JOIN prospects WHERE season_id=1, model_version='apex_v2.3',
+  is_active=1, is_calibration_artifact=0 ORDER BY apex_composite DESC.
+  Read-only mode (file URI ?mode=ro). Output: pretty-printed UTF-8 JSON, indent=2.
+- No pipeline changes. No app changes. No scoring changes.
+- Current priorities unchanged from S85 (see below).
 
 Session 85 close:
 - resolve_draft_day_take() — bugs fixed before wiring:
