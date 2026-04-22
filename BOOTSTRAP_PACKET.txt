@@ -1,6 +1,23 @@
+DRAFTOS CONTINUATION
+
+Non-negotiables:
+- Deterministic only
+- Additive migrations only
+- Season scoped
+- Active sources only
+- Idempotent scripts
+- Full file replacements only
+- Provide run order + verification commands
+
+Goal for this chat:
+Session 101: Draft night operations. Use the Draft Mode tab to run the live draft.
+
+Authoritative State:
+
+1) STATE_SNAPSHOT.md
 # APEX OS State Snapshot
 
-Last Updated (UTC): 2026-04-22T04:07:14.541548+00:00
+Last Updated (UTC): 2026-04-22T08:24:05.697013+00:00
 
 ---
 
@@ -8,7 +25,63 @@ Last Updated (UTC): 2026-04-22T04:07:14.541548+00:00
 
 - 2026 (season_id=1)
 
+## Doctor / Maintenance Tools
+
+| Command | Purpose |
+|---------|---------|
+| `sqlite3 data/edge/draftos.sqlite < prospect_ghosts_doctor.sql` | Read-only invariant checks: active-PID dupes, board ghosts, dedup rows, inactive leaks. |
+| `python -m scripts.fix_prospect_ghosts2026` | Dry-run classifier — prints all DEDUP_GHOST / INACTIVE_SNAPSHOT / MULTI_ACTIVE issues with planned actions. Read-only. |
+| `python -m scripts.fix_prospect_ghosts2026 --name "Player Name"` | Same, filtered to one player. |
+| `python -m scripts.apply_prospect_ghost_fixes2026 --apply 0` | Shows exact patch plan (deactivations + snapshot deletes). No writes. |
+| `python -m scripts.apply_prospect_ghost_fixes2026 --apply 1` | **Execute fixes.** Requires: (1) run the DB backup command printed by the script, (2) set `ALLOW_WRITES = True` inside the script. MULTI_ACTIVE clusters are never auto-fixed — they require manual review. |
+
+As of Session 101 (post-fix): DEDUP_GHOST and INACTIVE_SNAPSHOT passes complete. 304 MULTI_ACTIVE real-school clusters remain — require manual review before any further deactivation.
+
 ## Last Completed Milestone
+
+Session 101 close (Prospect Ghost Fix v1 — mechanical dedup/ghost/inactive-snapshot cleanup, season_id=1.)
+
+Session 101 close:
+- DB writes: YES — 609 prospect deactivations, 111 snapshot row deletions.
+- Schema change: prospect_ghost_fixes2026 audit table created (additive, IF NOT EXISTS).
+- Next migration label: 0049 (no migration needed — audit table created in-script).
+- Doctor: PASSED (post-fix).
+- Files modified: scripts/apply_prospect_ghost_fixes2026.py, STATE_SNAPSHOT.md.
+
+Prospect Ghost Fix v1 — mechanical pass only (no multi-active real-school cluster changes):
+
+SCOPE:
+  DEDUP_GHOST (609 prospects deactivated):
+    UPDATE prospects SET is_active=0 for all school_canonical LIKE '__dedup_%' or '__ghost_%'.
+    Deleted any snapshot rows those PIDs held.
+  INACTIVE_SNAPSHOT (13 prospects, 41 snapshot rows deleted):
+    Prospects already is_active=0 with real schools that had leaked into snapshot rows.
+    Removed from prospect_board_snapshot_rows only (no is_active change needed).
+  MULTI_ACTIVE (304 clusters): printed, NOT touched. Require manual review per session 101 spec.
+
+PROCESS:
+  - DB backup: data/edge/draftos_ghostfix_backup.sqlite (25MB, pre-fix).
+  - Dry run (--apply 0): confirmed 609 deactivations, 111 snapshot deletes, 0 multi-active writes.
+  - Spot-checked: Arvell Reese (pid=16 canonical preserved, 3 dedup pids deactivated),
+    Treydan Stukes (pid=160 canonical preserved, 9 snapshot rows cleared across 5 ghost PIDs),
+    TJ Parker (pid=27 canonical preserved, pid=644 LB ghost cleared from 6 snapshots),
+    Domonique Orange (pid=110 canonical preserved, 3 dedup deactivated, multi-active pid=1153
+    printed but not touched).
+  - Applied (--apply 1): deactivations=609, snapshot_deletes=111.
+  - Idempotency verified: second run → deactivations=0, snapshot_deletes=0.
+  - Audit table prospect_ghost_fixes2026: 720 rows (609 deactivate_prospect + 111 delete_snapshot_row).
+
+DOCTOR RESULTS (post-fix):
+  CHECK 1 (active PID dupes): unchanged — multi-active real-school pairs still present (expected).
+  CHECK 2 (multi-PID in snapshots): 349 distinct PIDs remaining — all from multi-active clusters (expected).
+  CHECK 3b (dedup rows in snapshots): 0 (was 70). CLEARED.
+  CHECK 4 (inactive PIDs in snapshots): 0 (was 41). CLEARED.
+
+NEXT:
+  Multi-active real-school cluster resolution (304 clusters) — Session 102+ when ready.
+  Requires per-cluster review: the LB-ghost pattern (one real-position PID + one LB PID,
+  same school) accounts for the majority; a separate targeted pass can deactivate LB
+  duplicates where the player's canonical position is clearly non-LB.
 
 Session 100 close (Draft Mode scoring inversion fix — quality-dominant formula, non-negative capital fit, Team Board quality gate.)
 
@@ -198,3 +271,2150 @@ Draft Room 3-panel refactor (render_draft_mode, ~700 lines):
 - Pass 3: 4-bullet inspector (Need/Value/Why this fits/Risk), team status pills, compact
   board schema, "What Changed" module, view toggle (4 modes).
 - Interaction correctness pass: view-switch key bust, lock semantics fix (_is_locked =
+  locked_pid is not None), _do_draft coupled lock/sel fix, compare queue purge on draft,
+  "Best Value" → "Market Edge" rename with stale-key coercion guard.
+
+Session 95 close (APEX OS Big Board UI/UX refactor — 8 fixes across app.py and draftos_detail_iframe_v2.py.)
+
+Session 95 close:
+- No DB writes. No schema changes. No migrations. Next migration: 0057.
+- Doctor: PASSED post-session.
+
+UI/UX fixes applied (app/app.py + scripts/draftos_detail_iframe_v2.py):
+
+1. Tier board collapse: Each APEX tier section (ELITE/DAY1/DAY2/DAY3/UDFA-P/UDFA) in tab_bb
+   wrapped in st.expander. ELITE defaults to expanded, all others start collapsed.
+   Dataframe, row-click handler, on_select, and all controls live inside each expander.
+
+2. Row click → detail scroll: Replaced st.markdown(<script>) with components.html(height=0).
+   st.markdown strips <script> tags; components.html renders in a sandboxed iframe that can
+   call window.parent.document.getElementById("prospect-detail").scrollIntoView(...).
+
+3. Confidence fully removed from all detail surfaces:
+   - _build_scout_pad Draft Call block: Confidence sp-kv removed
+   - FIT support metrics: Eval confidence 4th cell removed, grid changed from 4→3 columns
+   - FIT score guide: Eval confidence interpretation row removed
+   - Decision card Zone 3 strip: EVAL CONFIDENCE item removed (now: Archetype Fit + APEX Score)
+   - Left rail conf-row: Confidence item removed; now shows only APEX Edge (divergence)
+   - REPORT tab: Eval Confidence block removed
+
+4. Δ APEX → APEX Edge: scout pad Market View block label updated (sed — Unicode char).
+
+5. Translation Risk truncation fixed: removed 120-char hard cap in _build_scout_pad;
+   added period normalization; replaced text-align:right with white-space:normal +
+   word-break:break-word on the cell so the full sentence renders and wraps cleanly.
+
+6. My Guy → My Team + icons: both _USER_TAG_OPTIONS (sidebar filter) and _USER_TAG_LIST
+   (detail panel toggle buttons) updated to icon-prefixed labels:
+   [💎 Crush, 💚 Want, ❌ Do Not Want, 👀 Sleeper, 🔻 Overrated, 💰 My Team]
+
+7. FIT tab de-duplication: Removed ③ FIT CONDITIONS summary grid (Works if / Breaks if
+   first-item cards). Full ④ Why It Works and ⑤ Why It Could Fail bullet lists remain.
+
+8. Clear button wrapping: sidebar Prospect Detail column ratio changed from [3,1] → [4,1];
+   inline CSS white-space:nowrap added to prevent character wrap on "Clear" label.
+
+Session 94 close (Draft Mode first-class tab + migration 0056 spec views + Phase 2 helpers.)
+
+Session 94 close:
+- Migration 0056 applied (additive only): two new views.
+    v_draft_remaining_2026: spec-named alias exposing all 28 columns from
+      v_draft_targets_remaining_2026. Canonical spec contract surface.
+    v_draft_team_board_2026: joins v_draft_remaining_2026 with v_team_fit_context_2026
+      on (team_id, season_id). Adds scheme_family, capital_profile, development_timeline,
+      risk_tolerance, needs_json, deployment_traits_json to each prospect×team fit row.
+      2201 rows (no prospects drafted). 85 rows for SF specifically.
+- draftos/queries/draft_mode.py: 4 Phase 2 spec helpers added at end of file.
+    get_draft_remaining_board(conn=None, seasonid=1, limit=300) → list[dict]
+      DISTINCT remaining prospects from v_draft_remaining_2026. Sort: apex_rank → consensus_rank.
+    get_draft_team_board(conn=None, team_code, seasonid=1, limit=50) → list[dict]
+      Per-team board from v_draft_team_board_2026 with scheme context columns.
+      Sort: fit_band → fit_tier → fit_score DESC → consensus_rank ASC.
+    get_next_pick(conn=None, seasonid=1) → dict
+      Returns {overall_pick, round_number, pick_in_round}. 32-pick-per-round formula.
+    insert_draft_pick(conn=None, *, seasonid, overall_pick, round_number, pick_in_round,
+      drafting_team, prospectid) → None
+      Audit-safe INSERT: raises ValueError (not silent overwrite) on duplicate pick# or pid.
+      Backs up DB before write (at most once per calendar day).
+    All 4 helpers self-manage connections (conn arg accepted for API compat, ignored internally).
+- app/app.py: Draft Mode promoted to first-class tab (Phase 2 spec helpers only).
+    Tab bar extended: st.tabs(["Big Board", "APEX Board", "Draft Mode"]).
+    render_draft_mode(conn=None) function added (line ~2160):
+      Team hat selectbox (persisted in session_state["draft_mode_team"]).
+      4-column pick context strip: picks recorded, next overall, R/P, team hat.
+      Left column: team board from v_draft_team_board_2026 via dm_get_draft_team_board().
+        Scheme context caption (scheme_family, capital_profile, timeline, risk).
+        Top-3 best-available inline cards.
+        Extended team board table (read-only dataframe).
+      Right column: global remaining board via dm_get_draft_remaining_board().
+        Per-row "Draft ➜" buttons for top 75 prospects.
+        On click: dm_get_next_pick_spec() → dm_insert_draft_pick() → st.rerun().
+        ValueError (duplicate pick/prospect) surfaced as st.error().
+        Draft log table (all picks from dm_get_drafted_picks(), newest-first).
+    Sidebar draft_mode_on checkbox removed (superseded by tab).
+    Old 500-line sidebar-gated Draft Mode block removed and replaced by
+      `with tab_draft: render_draft_mode()`.
+- scripts/doctor.py: draft mode sanity checks added.
+    drafted_picks_2026 row count printed.
+    No duplicate pick_number per season.
+    No duplicate prospect_id per season.
+    All rows have season_id = 1.
+    v_draft_remaining_2026 and v_draft_team_board_2026 views must exist.
+- Migrations applied: 0001–0056. Next migration: 0057.
+- Doctor: PASSED post-session.
+
+Session 93 close (Draft Mode spine + full operator UI + snapshot_id=7 rebuild + board blank fix.)
+
+Session 93 close:
+- Migration 0055 applied: drafted_picks_2026 event table + v_draft_targets_remaining_2026 view.
+  drafted_picks_2026: season_id, pick_number, round_number, drafting_team, prospect_id,
+    drafted_at, draft_session_label, source, note. UNIQUE on (season_id, pick_number) and
+    (season_id, prospect_id). Zero rows — clean state pre-draft.
+  v_draft_targets_remaining_2026: all 28 columns from v_draft_targets_2026 filtered via
+    NOT EXISTS against drafted_picks_2026. Reactive — auto-updates as picks are recorded.
+- Scripts created (all idempotent, --apply 0/1 pattern):
+    scripts/mark_drafted_2026.py — records single drafted player with 3 validations +
+      DB backup. Reads only through v_draft_targets_2026.
+    scripts/reset_drafted_2026.py — deletes rows from drafted_picks_2026. Supports
+      --team and --pick-number filters. Ambiguous column bug fixed (dp. qualification).
+    scripts/get_team_board_2026.py — read-only; reads v_draft_targets_remaining_2026.
+      --team, --limit, --positions filters. Ordered fit_tier/fit_band/fit_score/consensus_rank.
+    scripts/validate_reactive_board_2026.py — 7 non-destructive checks: table/view exist,
+      no duplicate prospect_id or pick_number, remaining≤total, FK integrity on both sides.
+- Query layer: draftos/queries/draft_mode.py (14+ functions).
+    All reads through v_draft_targets_remaining_2026 or direct operational tables.
+    Forbidden upstream tables never referenced.
+    Key functions: derive_round, get_all_teams, get_team_context, search_available_prospects,
+      get_remaining_board, get_value_plays, get_pick_window_targets, mark_prospect_drafted,
+      get_drafted_picks, get_drafted_picks_since, get_team_fits, get_drafted_count.
+    Bug fixed: get_value_plays() team_id path was missing r.divergence_flag in SELECT.
+- Draft Mode UI: app/app.py 3-section tabbed operator panel (gated by sidebar checkbox).
+    Draft Control tab: prospect search → pick# / round / team / note → Mark as Drafted.
+      Auto-suggest pick# via dm_get_next_pick(). Round derived via dm_derive_round(), disabled.
+      Recent picks table (last 15) from dm_get_drafted_picks().
+    Remaining Board tab: 5-filter row (position/tier/divergence/sort/limit) →
+      dm_get_remaining_board() → dataframe with divergence badges.
+    Team Companion tab: 32-team selectbox → scheme/needs/capital header →
+      4 expanders: Top Fits, Value Plays, Pick Window, Recently Off Board.
+- Snapshot_id=7 rebuild: full pipeline chain executed.
+    prospect_model_outputs: 999 rows (is_active=1). Rebuilt from scratch.
+    snapshot_board (--force): 999 rows, snapshot_id=7, 2026-04-21, "Pre-Draft S93 2026".
+    All compute layers run: metrics → source_metrics → coverage → confidence → verify.
+    Doctor: PASSED post-rebuild. Zero drafted-player state leaked (drafted_picks_2026=0 rows).
+- Board blank bug fix:
+    Root cause: snapshot_id=7 confidence compute assigned health_chip='Stale' to all 17
+      active sources (March rankings vs April 21 date). Stale penalty (0.80) collapsed all
+      confidence scores to 15-17 → all confidence_band='Low'. Default show_low=False hid all rows.
+    Fix: show_low checkbox default changed from False → True (line 2328, app/app.py).
+      Appropriate for draft-night context — confidence band is informational, not a gate.
+- Migrations applied: 0001–0055. Next migration: 0056.
+- Doctor: PASSED post-session.
+
+Session 92 close (Targets + team-fit query layer. Migrations 0051–0054. v_draft_targets_2026 canonical target surface. draftosqueriestargets + draftosqueriesteamfit expanded. Read-path constraint formalized.)
+
+Session 92 close:
+- Migrations applied: 0051–0054 (all additive, no destructive changes).
+- Migration 0051: v_team_prospect_fit_signal_2026 + 2 covering indexes.
+  Filtered to IDEAL/STRONG/VIABLE, season_id=1 baked in.
+  Added get_team_fit_signal_for_team / get_team_fit_signal_for_prospect to draftosqueriesteamfit.py.
+- Migration 0052: fit_band column (A/B/C CASE expression) added to signal view.
+  Band distribution: A=1, B=297, C=1903.
+- Migration 0053: consensus_reconciliation_2026 persistent table (300 rows) + v_draft_targets_2026
+  unified view (28 cols, 2,201 rows). reconcile_consensus_vs_jfosterfilm_2026.py updated to write
+  consensus_reconciliation_2026. draftosqueriestargets.py created with 3 helpers.
+  Seeded: HIGH=64, LOW=88, NONE=94, COVERAGE_GAP=54.
+- Migration 0054: 5 normalized team-context tables (team_context_snapshots, team_needs_2026,
+  team_depth_pressure_2026, team_deployment_traits_2026, team_context_sources_2026) + view
+  v_team_fit_context_2026 (32 rows). seed_team_context_normalized_2026.py: 32 snapshots,
+  161 needs, 97 depth, 224 traits, 32 sources. rebuild_team_fit_2026.py updated to consume
+  v_team_fit_context_2026 instead of team_draft_context directly.
+- draftosqueriestargets.py: full module docstring (recon_bucket semantics, orphan definition,
+  exact consensus_reconciliation_2026 schema, exact v_draft_targets_2026 column list),
+  dict_factory, get_connection, _select internal helper.
+- draftosqueriesteamfit.py: 5 new functions + connection infrastructure.
+  get_team_fit_summary, get_team_fit_tier_counts, get_best_fits_for_team,
+  get_reconciled_targets_for_team, get_scheme_sensitive_targets.
+  Fixed 4 spec bugs: team_code→team_id, relative import→flat import, dict_factory row type,
+  trait_filters via EXISTS against team_deployment_traits_2026.
+- Read-path constraint formalized: All target-selection reads must enter through
+  v_draft_targets_2026 or _select(). Direct refs to consensus_reconciliation_2026,
+  divergence_flags, v_team_prospect_fit_signal_2026 forbidden in read helpers.
+- STATE_SNAPSHOT.md: TARGETS AND TEAM FIT SURFACES block added to Layer Status.
+- Doctor: PASSED (pre-session). Next migration: 0055.
+
+Session 91 close:
+- Migration 0050 applied: 5 new columns added to team_draft_context
+  (secondary_needs_json, failure_mode_sensitivity_json, source_provenance,
+   context_version, snapshot_date).
+- build_team_context_2026.py: Full 32-team UPSERT with sourced 2026 data.
+  Sources: NFL.com draft order + needs, ESPN, SharpFootball Analysis (Apr 2026).
+  All 32 teams at context_version=v2.0. 32/32 fields populated (7/7 per team).
+  Previous 8 pilot teams updated: correct 2026 pick numbers, revised needs,
+  scheme_family/offense_style/defense_structure populated.
+- rebuild_team_fit_2026.py: recomputed 9,600 rows (300 prospects × 32 teams).
+  Fit tier distribution AFTER (vs BEFORE with 24 sparse teams):
+    IDEAL  :    1 (0.0%)  [was   2]
+    STRONG :  297 (3.1%)  [was 104, +193]
+    VIABLE : 1903 (19.8%) [was 466, +1437]
+    FRINGE : 7397 (77.1%) [was 8980, -1583]
+    POOR   :    2 (0.0%)  [was  48, -46]
+  FRINGE-heavy distribution is structurally expected: each team has 3 premium
+  positional needs; most prospect-team pairs don't match → correct behavior.
+  The improvement (VIABLE+STRONG: 570→2200, +286%) reflects real context quality,
+  not threshold tuning.
+- draftosqueriesteamfit.get_player_team_fit_context() fixed:
+  stale column names failuremodeprimary → failure_mode_primary,
+  failuremodesecondary → failure_mode_secondary,
+  capitalrange (nonexistent) → capital_adjusted. Function now executes cleanly.
+- reconcile_consensus_vs_jfosterfilm_2026.py: new diagnostic script.
+  Output table: apex_jfoster_reconciliation_2026 (300 rows).
+  Output CSV: data/apex_jfoster_reconciliation_2026_session90.csv.
+  Universe: 300 active non-calibration apex_v2.3 prospects.
+  Coverage: 246/300 have jFoster CON rank; 54 engine-only.
+  Combined rank: engine×0.6 + jFoster×0.4 (fallback to engine only).
+  Flagged (|divergence| ≥ 25): 189 — APEX_HIGH=100, APEX_LOW=89.
+  Name match: exact=184, normalized=14, missing=88, mismatch=14.
+  Top divergences (APEX_HIGH): Landon Robinson DT -227, Logan Fano EDGE -201,
+    Dillon Bell WR -194, Andre Fuller CB -170, Mason Reiger EDGE -152.
+  Top divergences (APEX_LOW): Kage Casey LB +156, Justin Joly TE +153,
+    Jadarian Price RB +151, Emmett Johnson RB +151, Trey Moore EDGE +151.
+  Note: "missing" name-match on 88 prospects = no source_player_map entry for
+  jfosterfilm_2026 (source_id=1). Not a script bug — coverage gap in bootstrap.
+  14 mismatches logged for manual audit (names like Rueben Bain, Anthony Hill).
+- Doctor: PASSED (pre and post session).
+
+Session 90 close:
+- No schema changes. No migrations. Next migration: 0050.
+- Doctor: PASSED (pre and post session).
+
+ARCHETYPE_OVERRIDES update (S89 ACTION REQUIRED fulfilled):
+- pid=19 (Jacob Rodriguez) added to ARCHETYPE_OVERRIDES in run_apex_scoring_2026.py.
+  Archetype: ILB-1 Green Dot Anchor. FM-6 primary, FM-2 secondary.
+  Capital: R3 Early base / R2 Late upside (landing-spot conditional).
+  v_scheme_vers_cap: 5.0 (PAA Q3 FAILED). placed_session: 89.
+  Protects archetype on all future --batch all re-scores.
+  Note: position_group="LB" in DB; no TOP50_POSITION_OVERRIDES needed (LB PVC=0.85 same as ILB).
+
+APEX v2.3 scoring expansion (Session 90):
+- Incremental set: 161 new prospects (consensus ranks 76-300 not previously scored).
+- Batch run: 45 scored in first pass (credit failure), 111 scored in resume pass.
+  5 JSON parse/validation failures retried individually; all 5 resolved.
+  (DJ Campbell OL pid=121, Colbie Young WR pid=323, Trey Moore EDGE pid=3818,
+   Ethan Burke EDGE pid=205, Kaleb Proctor DT pid=348.)
+- Final scored universe: 300 active non-calibration prospects at apex_v2.3.
+  (139 prior + 161 newly scored = 300 total.)
+
+Tier distribution (S90, full 300-prospect universe):
+  ELITE=2, DAY1=31, DAY2=105, DAY3=145, UDFA-P=17 (total=300 active non-cal).
+  Note: ELITE dropped from 3→2 and DAY1 from 34→31 vs S89 — expected as newly scored
+  lower-ranked prospects shift the distribution toward DAY3/UDFA-P.
+
+Divergence (S90, 300 prospects):
+  ALIGNED=37, APEX_HIGH=126, APEX_LOW=23, APEX_LOW_PVC_STRUCTURAL=115.
+  Legacy "APEX LOW" (space) flag: 11 rows — pre-existing format artifact, non-blocking.
+  Notable new premium APEX_HIGH signals (newly scored prospects):
+    Logan Fano (EDGE) +179, Andre Fuller (CB) +168, Trey Moore (EDGE) +161,
+    Sawyer Robertson (QB) +144, Diego Pavia (QB) +144, Devon Marshall (CB) +143,
+    Drew Allar (QB) +142, George Gumbs (EDGE) +134, Mason Reiger (EDGE) +133,
+    Charles Demmings (CB) +133, Dani Dennis-Sutton (EDGE) +129.
+  Notable new premium APEX_LOW signals (newly scored prospects):
+    Caden Curry (EDGE) -148, Jakobe Thomas (S) -69, Mikail Kamara (EDGE) -67,
+    Trinidad Chambliss (QB) -51, LT Overton (EDGE) -49, Ethan Burke (EDGE) -25.
+
+Tag triggers (S90):
+  217 new recs fired across expanded 300-prospect universe.
+  All 217 accepted via triage_pending_tags_2026.py --apply 1. Pending = 0.
+  Breakdown: Development Bet=50, Divergence Alert=49, Elite RAS=39, Great RAS=30,
+  Compression Flag=23, Scheme Dependent=21, Poor RAS=4, Character Watch=1.
+
+Exports (S90):
+  data/apex_all_scored_session90_20260421T060351Z.json — 300-row JSON (all active non-cal v2.3).
+  data/apex_top300_board_session90_20260421T060628Z.csv — 300-row CSV (consensus rank,
+    display_name, position_group, apex_composite, apex_tier, matched_archetype,
+    failure_mode_primary, eval_confidence, capital_base, capital_adjusted,
+    divergence_flag, divergence_rank_delta).
+
+Session 89 close:
+- No schema changes. No migrations. Next migration: 0050.
+- Doctor: PASSED (pre and post session).
+
+Full APEX v2.3 batch re-score (--batch all --force):
+- 132 scored directly; 7 JSON parse failures recovered via individual retries.
+  Retried pids: 3236 (D'Angelo Ponds), 75 (Caleb Banks), 74 (Keith Abney),
+  97 (Caleb Tiernan), 30 (Ted Hurst), 134 (Isaiah World), 95 (Trey Zuhn).
+  All 7 written successfully.
+- Final scored universe: 139 active non-calibration prospects at apex_v2.3.
+
+Tier distribution (S89):
+  ELITE=3, DAY1=34, DAY2=74, DAY3=37, UDFA-P=2 (total=150 incl. calibration;
+  active non-cal = 139 + 1 Rodriguez partial = 140 expected).
+
+Divergence (S89):
+  ALIGNED=25, APEX_HIGH=61, APEX_LOW=5, APEX_LOW_PVC_STRUCTURAL=48.
+
+Tag triggers (S89):
+  4 new recs fired; all 4 accepted via triage_pending_tags_2026.py --apply 1.
+  New accepts: Gracen Halton (DT, Compression Flag), Derrick Moore (EDGE, Divergence Alert),
+  Garrett Nussmeier (QB, Divergence Alert), Jalen Farmer (OL, Scheme Dependent).
+  Pending = 0.
+
+Arvell Reese (pid=16) S89 gate check:
+  S89 state: ILB-3 Run-First Enforcer | raw=82.3 | PVC=0.85 | composite=70.0 | DAY1 |
+  FM-6 primary | FM-3 secondary | Tier A | R2 Mid-R3 Top | APEX_LOW_PVC_STRUCTURAL | delta=-31.
+  Verdict: Structural ILB APEX_LOW REAFFIRMED. Archetype, PVC, tier, confidence, and
+  capital all unchanged from S81 baseline. No override changes. Delta=-31 explained
+  entirely by 0.85 ILB PVC + FM-6 deployment constraint vs consensus #2.
+
+Jacob Rodriguez (pid=19) -- Sports Almanac Mode 1 archetype correction:
+  Archetype corrected: ILB-2 Coverage Eraser -> ILB-1 Green Dot Anchor.
+  Seed script: scripts/seed_rodriguez_s89.py (idempotent; do not re-run without dropping rows).
+  Writes applied (all via seed_rodriguez_s89.py --apply 1):
+    apex_scores (apex_id=283): raw 71.8->76.5, composite 61.0->65.0, DAY2, FM-6 primary,
+      FM-2 secondary, capital R3 Early, v_scheme_vers hard-capped 5.0 (PAA Q3 FAILED).
+    notes (4 rows): paa_trace, divergence_analysis, landing_spot_flag, validation_trigger.
+    override_log (1 row): archetype_correction, magnitude=4.0.
+    prospect_comps (3 rows): Demario Davis (hit/primary), Bobby Wagner (hit/ceiling),
+      Deion Jones (miss/bust).
+    divergence_flags (div_id=7160): composite 61->65, capital R4->R3 Early, mag MINOR->MODERATE.
+  PAA status: PARTIAL (Q1 CLEAR, Q2 CLEAR w/ caveat, Q3 FAILED, Q4 FM-6 elevated).
+  Divergence: APEX_LOW_PVC_STRUCTURAL, MODERATE, 1.5 rounds vs consensus R2 Early.
+  Capital: R3 Early base / R2 Late upside (landing-spot conditional).
+  Post-draft trigger: Year 1 snap share >=55% confirms FM-6 overstated.
+  ACTION REQUIRED next session: add pid=19 to ARCHETYPE_OVERRIDES in
+    run_apex_scoring_2026.py before any future --batch all re-score.
+
+Session 88 close (Detail UI 9-phase polish + readability/alignment cleanup pass; RAS semantic coloring bug fixed on Big Board.)
+
+Session 88 close:
+- No DB writes. No schema changes. No migrations. Next migration: 0050.
+- Doctor: PASSED (no data/schema changes this session).
+
+Detail UI — 9-phase polish (scripts/draftos_detail_iframe_v2.py):
+- Font floor: all body/explanatory CSS raised to ≥13px (16 rules updated).
+- New CSS primitives: `.detail-hero-card`, `.detail-section`, `.detail-section-header`,
+  `.stat-chip-row`, `.detail-stat-chip`, `.insight-card` (amber/green/red variants),
+  `.insight-split`, `.support-info`.
+- New functions: `_build_risk_hero()` (Risk tab hero card), `_build_top_traits_card()` (Traits tab).
+- Summary tab: 3-chip stat row (Capital / Archetype Fit / Eval Confidence) + sig-play as insight-card.
+- Fit tab: works-if/breaks-if as insight-split.
+- Notes tab: detail-section wrappers + Draft Day Take as insight-card amber.
+- Report tab: "Report Contents" section header added.
+- Typography fixes: FIT Support Metrics/Score Guide, .sp-k labels, FM ref card, comps card
+  all raised from 7–9px illegible to 9–14px readable range.
+- RAS rail: dynamic color injection (green ≥8.00, amber ≥5.00, red >0.0, grey null).
+
+Big Board cleanup (app/app.py):
+- Centralized `_ras_color()` / `_style_ras()` helpers.
+- `show_low` default: True → False (re-applied from S87 fix).
+- `_style_apex_delta()`: positive delta emphasis (≥10 green, >2 cold blue, <-2 red).
+- RAS threshold legend added below slider.
+- Team Fit + Pick controls: consistent label alignment, both collapsed.
+- Selected-prospect banner added above detail panel.
+- `.board-selection-bar` CSS block added.
+
+Bug fix — RAS semantic color on Big Board:
+- Root cause: `.map(_style_ras)` was applied only to top-level `styled` Styler chain,
+  which is never passed to `st.dataframe()`. Board renders via `_make_bb_styled(sub)`.
+- Fix: `.map(_style_ras, subset=["RAS"])` added to `_make_bb_styled()`.
+  Committed: 2990004.
+
+Session 87 close (Team Fit panel rebuilt to decision-grade; all 32 teams in dropdown; board show_low default fixed; staleness threshold corrected.)
+
+Session 87 close:
+- No DB writes. No schema changes. No migrations. Next migration: 0050.
+- Doctor: PASSED (assumed clean — no schema/data changes this session).
+
+Board fix (boards showing no players):
+- Root cause: snapshot 7 had all sources as health_chip='Stale' (38 days old vs 7-day default).
+  Stale penalty in confidence formula collapsed all scores to <=18.7, all bands='Low'.
+  App default show_low=False hid all 997 rows.
+- Fix 1: app/app.py show_low checkbox default changed to True (line 2263).
+- Fix 2: source metrics re-run with --stale-days 60; confidence recomputed.
+  Result: Medium=53, Low=944, max score=68.9. Board now visible.
+
+Team Fit — 32-team dropdown (draftos/queries/team_fit.py):
+- Added _NFL_32_TEAMS: canonical list of all 32 teams with team_id, team_name, short_label,
+  conference, division. Organized by division.
+- Added get_all_32_teams(conn, season_id): queries DB for seeded teams, annotates each entry
+  with has_context=True/False. Returns all 32 regardless of DB seed state.
+- app/app.py: import changed from get_team_fit_pilot_teams to get_all_32_teams.
+  Removed pilot_teams guard — Team Fit UI always renders.
+  No-context stub path: unseeded teams get {"_no_context": True, ...} passed to render layer.
+
+Team Fit panel — decision-grade rebuild (scripts/draftos_detail_iframe_v2.py):
+- New helper functions added (replaces old _FIT_VERDICT_COLORS / _action_tag block):
+  _si(v): safe int conversion
+  _decision_banner(verdict, pick, lo, hi, fm_activated, raw_fm_risk): 6-label top banner
+    Labels: Draftable for this team / Draftable only at value / Role-dependent fit /
+            Risky fit / Avoid at current price / Not a fit for this team
+  _fo_summary(team_name, verdict, role, ...): one-sentence FO summary (role + value + risk clause)
+  _fmt_value_range_football(lo, hi): pick range → football-native round language
+    e.g. "Round 1 mid-late", "Late Round 1 / Round 2", "Round 2 early"
+  _short_role(role): compact role label for chip display
+  _main_risk_chip(fm_activated, fm_suppressed): primary risk chip text + color
+  _action_tag(verdict, pick, lo, hi, fm_activated): 6-label recommendation set
+    Labels: Target confidently / Target at value / Target only in protected role /
+            Proceed cautiously / Avoid at current price / Do not target for this team
+  Interpretation helpers retained: _interp_grade, _interp_fm_risk, _interp_confidence
+- buildteamfithtml() fully rebuilt — 9-block decision-grade panel hierarchy:
+  Block 1: Decision Banner — large colored label + team/pick header + one-sentence FO summary
+  Block 2: Decision Strip — 4 chips: Decision / Best Role / Best Value / Main Risk
+  Block 3: Fit Conditions — "Works if" (green) / "Breaks if" (red) side-by-side
+  Block 4: Why It Works — full bullet list
+  Block 5: Why It Could Fail — full bullet list
+  Block 6: FM Risk Detail — activated (red ▲) / suppressed (green ▼) FM breakdown
+  Block 7: Draft Decision — action tag + mechanism-grade sentence, left-bordered
+  Block 8: Support Metrics — deployment/pick_fit/fm_risk/confidence pushed to secondary grid
+  Block 9: Score Guide — interpretation key
+  Numeric scores no longer lead. Banner and decision chips are the primary read surface.
+- estimate_height for evaluated team fit: 480 → 700 (panel is taller with new blocks)
+- Null-safety contract maintained: no Python None/nan/null artifacts reach HTML output.
+- All 3 panel states clean: prompt (no team) / no-context stub / full evaluated result.
+- Smoke test: 13/13 assertions pass across 5 test cases.
+
+Session 86 close (Export-only session — generated apex_scores_all_s85.json export script; no DB writes, no schema changes, no migrations.)
+
+Session 86 close:
+- No DB writes. No schema changes. No migrations. Next migration: 0050.
+- Doctor: PASSED (sources_active=17, prospects=4571, models=1).
+- Deliverable: Python export script for C:\DraftOS\data\exports\apex_scores_all_s85.json.
+  Query: apex_scores JOIN prospects WHERE season_id=1, model_version='apex_v2.3',
+  is_active=1, is_calibration_artifact=0 ORDER BY apex_composite DESC.
+  Read-only mode (file URI ?mode=ro). Output: pretty-printed UTF-8 JSON, indent=2.
+- No pipeline changes. No app changes. No scoring changes.
+- Current priorities unchanged from S85 (see below).
+
+Session 85 close:
+- resolve_draft_day_take() — bugs fixed before wiring:
+    draftos/queries/notes.py does not exist — broken module import replaced with inline SQL
+    against the notes table (SELECT note FROM notes WHERE prospect_id=? AND note_type='draft_day_take'
+    ORDER BY created_at DESC LIMIT 1).
+    Column ref note_text→note[0] (actual schema column is 'note').
+    season_id filter removed (notes table has no season_id column).
+    Generator fallback table apexscores→apex_scores; query refactored to JOIN prospects
+    (position_group) and LEFT JOIN divergence_flags (divergence_rank_delta).
+- _build_scout_pad() wiring (draftos_detail_iframe_v2.py):
+    take_sentence now reads d.get('draft_day_take_resolved') or _build_draft_day_take(...).
+    Dead duplicate take_html block removed (artifact of prior reverted wiring attempt).
+    Dead pid = d.get('prospect_id') line removed (was unused).
+- app.py wiring:
+    resolve_draft_day_take imported from scripts.draftos_detail_iframe_v2.
+    Called within existing with connect() as _hconn: block in _render_apex_detail().
+    Result stored in d['draft_day_take_resolved'] before build_detail_html() call.
+    archetype_overrides=None (display layer; notes table + generator sufficient).
+- generate_prospect_pdf_2026.py wiring:
+    resolve_draft_day_take called inside generate_pdf() while conn still open.
+    data['draft_day_take_resolved'] stored before with block closes.
+    _build_html(): amber take_block_html added using existing trans-block CSS class.
+    Injected between {trans_block_html} and <div class="comps-region"> in right panel.
+    "Take" label in amber, consistent with DraftOS amber language. No new CSS class.
+- export_reports_html_share.py — Windows fix:
+    /tmp/test_card.html (Unix hardcoded path) → tempfile.mkstemp(suffix='.html', prefix='test_card_').
+    _os.close(fd) added (mkstemp returns open fd). Path variable reused in print output.
+    Hint print updated to use resolved path for both HTML and PNG args.
+    Verified: resolves to C:\Users\burly\AppData\Local\Temp\test_card_*.html on win32.
+- S85 regression gate: ALL 6 PASS.
+    Test 1: PID 28 (notes-backed) — 1 block, correct notes text, tabs intact.
+    Test 2: PID 57 (generator fallback) — 1 block, QB-1 Field General text, tabs intact.
+    Test 3a: unscored PID 9999 → resolve returns '' (correct).
+    Test 3b: key absent from d → generator fires as resilience fallback (correct).
+    Test 4: PDF PID 28 — amber take block, order trans<take<comps, notes text confirmed.
+    Test 5: PDF PID 57 — amber take block, order correct, generator text confirmed.
+    Test 6: PDF empty case — 0 take spans, no empty amber shell, comps-region intact.
+- Doctor: PASSED. No schema changes. No migrations this session. Next migration: 0050.
+
+Session 84 close (Pending tag triage complete — 24 recs auto-accepted (Great RAS=10, Elite RAS=5, Compression Flag=4, Scheme Dependent=4, Character Watch=1); resolve_draft_day_take() helper remains implemented but not wired into Scout Pad/PDF; export_reports_html_share.py deferred — Windows path bug on /tmp/test_card.html.)
+
+Session 84 close:
+- Doctor: PASSED. No schema changes. No migrations this session.
+- Mode 3 boot: PASSED.
+- Pending tag triage: triage_pending_tags_2026.py --apply 1 ran clean.
+    24 recs auto-accepted (0 dismissed, 0 left pending).
+    Breakdown: Great RAS=10, Elite RAS=5, Compression Flag=4, Scheme Dependent=4, Character Watch=1.
+    Backup written: draftos.sqlite.backup.20260420T225141Z.
+- resolve_draft_day_take() helper: implemented in prior session but NOT yet wired into
+    build_detail_html() (draftos_detail_iframe_v2.py) or PDF generator. Prior wiring attempt
+    reverted to preserve green UI. Deferred to S85.
+- export_reports_html_share.py: hit Windows path bug — script references /tmp/test_card.html
+    (Unix path), fails on win32. Deferred to S85 for test harness path fix.
+- Next session priority (S85):
+    1. Wire resolve_draft_day_take() into build_detail_html() + PDF at correct scope.
+    2. Fix export_reports_html_share.py test harness path (/tmp → tempfile.mkstemp or platform-aware path).
+
+Session 83 close (Migration 0049 applied; team_draft_context seeded (8 pilot teams); team_fit query layer + evaluator validated end-to-end; eval_confidence Tier label bug fixed in team_fitevaluator.py.)
+
+Session 83 close:
+- Migration 0049 (team_draft_context): applied. Table already existed with composite PK (team_id, season_id) from prior session — no id autoincrement column. CREATE TABLE IF NOT EXISTS silently preserved the existing schema. Migration SQL updated to document the actual schema accurately.
+- seed_team_draft_context_2026.py: new script (renamed from seedteamdraftcontext2026.py). Fixed SELECT id → SELECT team_id to match actual composite PK. Seeded 8 pilot teams: KC, PHI, BAL, MIA, DET, GB, NYJ, CLE. All 8 inserted, verification passed (8 active rows season_id=1).
+- get_team_fit_pilot_teams() + get_team_fit_context(): both returning correct data. JSON fields (premium_needs, depth_chart_pressure, draft_capital) deserialized to native Python objects.
+- evaluate_team_fit() eval_confidence bug fixed (team_fitevaluator.py:93): eval_confidence is always 'Tier A/B/C' in apex_scores, never a float. Evaluator was calling float('Tier B') and crashing. Fix: normalize tier label at read site via _EVAL_CONF_MAP (Tier A→8.0, Tier B→5.0, Tier C→2.0), feeding existing 0.45+(x*0.05) confidence formula (A→0.85, B→0.70, C→0.55).
+- End-to-end test confirmed: evaluate_team_fit(Anthony Hill LB / BAL / pick 27) → verdict=Poor fit, confidence=0.70, fm_activated=[FM-3, FM-4].
+- Doctor: PASSED. No new migrations beyond 0049.
+
+Session 82 close (Tag triage complete — Divergence Alerts + Dev Bets resolved; Caleb Downs S-1 archetype correction + re-score; Draft Day Take Override Mode formalized; app.py + draftos_detail_iframe_v2.py repair.)
+
+Session 82 close:
+- run_tag_triggers_2026.py: fixed column name bug (fm_primary → failure_mode_primary / fm_secondary → failure_mode_secondary). Script was crashing on Step 19. Re-run confirmed 187 recs across 115 prospects (all idempotent, 0 new writes).
+- Tag triage — Divergence Alerts (6 pending → 0 pending):
+    Accepted: Nadame Tucker EDGE (+26), Kamari Ramsey S (-39), Genesis Smith S (-34), Carson Beck QB (-30), Akheem Mesidor EDGE (-20).
+    Held (pending): Caleb Downs S (-37) — held for archetype review, resolved same session.
+- Tag triage — Development Bets (4 pending → 0 pending):
+    Accepted: Trey Zuhn LB (ILB-5, v_dev=8.0), Connor Lew OL (C-5, PVC structural), Keagen Trost OL (OT-5, FM-1/FM-3 stack), Jeremiah Wright OL (OT-5).
+- Caleb Downs (pid=28) archetype correction — S82 final determination:
+    ARCHETYPE CORRECTED: S-4 Zone-Dominant Coverage Safety → S-1 Centerfielder (Zone-Processor variant).
+    Mechanism: anticipatory zone processor; elite robber/poach; box-adjacent run fits; deep zone adequate only.
+    ZONE_COVERAGE_FLAG ACTIVE: Zone 91.5 vs Man 56.9 gap. Man/Press are constraints, not S-1 disqualifiers.
+    DIVERGENCE_VALID: consensus pricing scheme-proof S-3/S-4 hybrid; market assumption error, not model miss.
+    LANDING_SPOT_MANDATORY: Tier-A only in zone-dominant/robber/quarters structures.
+    Re-score result: raw=83.4, composite=75.1 DAY1 (up from 67.7 DAY2 under S-4), delta=-12 MINOR.
+    Divergence Alert accepted (rec_id=314). GATE_TRACKER.md updated to v2.0.
+- Draft Day Take Override Mode formalized:
+    Write path: ARCHETYPE_OVERRIDES[pid]['draft_day_take'] OR notes table (note_type='draft_day_take').
+    Read order: override dict > notes table > build_draft_day_take() generator.
+    resolve_draft_day_take() helper required in detail iframe + PDF generator (not yet implemented).
+    First live use: pid=28, note_id=2. Take stored in both locations.
+- app/app.py repairs:
+    Fixed ModuleNotFoundError: draftosqueries_team_fit → draftos.queries.team_fit (stub created).
+    Fixed ModuleNotFoundError: draftos.team_fit.evaluator → draftos.team_fitevaluator.
+    Restored truncated file from commit 60d7aaf (1951 lines → 3487 lines — 1,526 lines of rendering code were missing, causing blank "Deploy-only" page).
+    Added startup CSS guard (try/except st.exception).
+- draftos_detail_iframe_v2.py: 1,515 mojibake characters fixed (UTF-8 bytes decoded as cp1252 and saved back). Patterns: em dash, en dash, middle dot, ellipsis, box-drawing chars, triangle symbols, checkmark/warning/cross, multiplication, Greek delta. Backup saved as .bak_mojibake.
+- Pending tag state post-S82: 25 pending (Elite RAS=5, Great RAS=10, Compression Flag=4, Scheme Dependent=4, Character Watch=1, Divergence Alert=1 [Downs held]).
+- Doctor: PASSED (no schema changes, no migrations this session). Next migration: 0049.
+
+Session 81 close (Full batch APEX re-score — 139/139 scored, divergence recomputed, tag triggers Step 19 re-run, position_rank_label format inconsistency identified.)
+
+Session 81 close:
+- Full batch APEX re-score (--batch all --force --apply 1):
+    133/139 scored on first pass. 6 JSON parse failures (strengths/weaknesses text truncated
+    mid-string with unescaped delimiter): Monroe Freeling, Caleb Banks, Max Iheanachor,
+    Zakee Wheatley, Deion Burks, Taurean York.
+    Retry via --prospect-ids 25,75,5,100,104,49 --apply 1: 6/6 scored, 0 failed.
+    Full board: 139/139. No DB schema changes. No migrations.
+- Arvell Reese (#2, pid=16) decision gate resolved:
+    Post-rescore: ILB-3 Run-First Enforcer, raw=82.4, PVC=0.85, composite=70.0 DAY1.
+    Gap: CLEAN (18.7). Confidence: Tier A. Tags: Schwesinger Half. Capital: R2 Mid–R3 Top.
+    APEX LOW -24.88 vs consensus #2 is structural ILB PVC, not a misfire. DAY1 70.0 floor justified.
+- Divergence recomputed (139 prospects):
+    ALIGNED=30, APEX_HIGH=56, APEX_LOW=6, APEX_LOW_PVC_STRUCTURAL=47.
+    Premium APEX_LOW: Kamari Ramsey S (-39 MAJOR), Caleb Downs S (-37 MAJOR),
+    Genesis Smith S (-34 MAJOR), Carson Beck QB (-30 MODERATE),
+    Zakee Wheatley S (-25 MODERATE), Akheem Mesidor EDGE (-17 MODERATE).
+    S-position cluster (3 of 6 premium APEX_LOW) notable — positional pattern, not random noise.
+    Premium APEX_HIGH top hits: Treydan Stukes CB (+91), Jadon Canady CB (+91),
+    Nadame Tucker EDGE (+82), Malik Muhammad CB (+76).
+- Tag triggers Step 19 re-run (run_tag_triggers_2026.py --apply 1):
+    26 new recommendations written. 34 pending total.
+    Pending breakdown: Great RAS=10, Divergence Alert=6, Elite RAS=5,
+    Scheme Dependent=4, Development Bet=4, Compression Flag=4, Character Watch=1.
+    Character Watch is a newly-firing tag — 1 pending rec, unreviewed.
+- position_rank_label format inconsistency identified (not fixed):
+    apex.py:225 (contract layer): f"{pos_grp} #{pos_rank}" → e.g. "LB #1"
+    draftos_detail_iframe_v2.py:1995 (detail page): f"#{pos_rank} at {pos}" → e.g. "#1 at LB"
+    Detail page re-derives from raw locals, bypasses contract entirely.
+    Fix deferred — cosmetic, not data-integrity issue.
+- Doctor: PASSED (no structural changes this session).
+
+Session 80 close:
+- draftos_detail_iframe_v2.py — Scout Pad Notes tab fully implemented:
+    _build_draft_day_take(): deterministic one-sentence draft call from tier/pos/arch/confidence/FM/divergence.
+    _build_scout_pad(): 5-block panel — Draft Call, Market View, Risk Snapshot, Flags, Draft Day Take.
+    notes_tab_html wired in build_detail_html() before REPORT tab fragment.
+    TAB NOTES placeholder replaced with Scout Pad HTML.
+- draftos_detail_iframe_v2.py — SUMMARY/RISK tab restructure:
+    Strengths & Red Flags (two_col_html) moved from RISK tab to SUMMARY tab (after sig_html).
+    RISK tab now: fm_html + risk_html only. No two_col_html.
+- draftos_detail_iframe_v2.py — invalidation truncation fix:
+    build_decision_card() first_sentence truncation changed from hard [:120] to word-boundary at 280 chars.
+    rfind(" ") retreat applied if truncation lands mid-word; appends "…".
+    Fixes Fernando Mendoza (and any long translation_risk text) being cut mid-word.
+- app/app.py — Prev/Next prospect navigation (full fix):
+    Task 3 (prior session): nav bar render with ← Prev / N of M · Board / Next → columns.
+      big_board_pids and apex_board_pids stored in session_state after board filters applied.
+      Board row on_select handlers set active_board="bb"/"apex".
+    Task 4 (prior session, partial): sidebar selectbox changed to on_change callback to prevent
+      unconditional overwrite. Proved insufficient — board widget selection persistence was the root cause.
+    Task 5 (this session — complete fix):
+      _nav_gen counter initialized at script top, embedded in all board widget keys
+        (bb_tier_{tier}_g{N}, apex_board_table_g{N}). Nav increment forces widget re-init with empty
+        selection on the next render — stale on_select events cannot fire.
+      _nav_just_fired flag: set by Prev/Next handlers, popped at script top on next render.
+        Gates selectbox sync so selectbox cannot overwrite nav-driven selected_pid.
+      on_change removed from sidebar selectbox; replaced with _nav_just_fired-guarded imperative sync.
+      Nav handlers: set selected_pid → increment _nav_gen → set _nav_just_fired=True → st.rerun().
+      Priority chain: nav > board row-click > selectbox.
+- No DB changes. No migrations. No scoring changes. Doctor status: unchanged (PASSED).
+
+Session 79 close:
+- historical_comps table: 314 position comps (is_fm_reference=0) + 36 FM reference rows = 350 total.
+  Coverage: all 13 APEX positions × all canonical archetypes. Zero gaps. Zero thin archetypes (≥2 comps each).
+  Seeded via: scripts/seed_perplexity_comps_2026.py (INSERT OR IGNORE — additive, preserves curated rows).
+  Source: data/imports/comps/perplexity_historical_comps_2026.csv (198 rows; 161 new inserted, 37 existing preserved).
+  DT→IDL prefix remap applied at ingest time (APEX engine labels IDL as DT; DB uses IDL).
+  Schema sufficient from migrations 0044 + 0046. No new migration. Next migration: 0049.
+- DT→IDL normalization bug — fixed in 3 locations that were each silently failing:
+  1. draftos/queries/historical_comps.py: _normalize_archetype_code() + _ARCHETYPE_PREFIX_REMAP.
+     Applied in get_historical_comps() + get_archetype_translation_rate().
+     IDL comps now correctly returned when called with DT-* matched_archetype codes from apex_scores.
+  2. scripts/run_apex_scoring_2026.py: _COMP_ARCH_REMAP + _norm_comp_arch() inside _get_comp_context().
+     Scoring prompt comp injection now correctly fetches IDL-* rows on re-score for IDL/DT prospects.
+  3. app/app.py: "DT" key added to _POS_GROUP_MAP → {"IDL","DT","DE","NT"}.
+     FM reference comp position filter now matches IDL position values when prospect position_group="DT".
+- FM reference card rendering bug fixed:
+  scripts/draftos_detail_iframe_v2.py: c.get("bust_mechanism","") → c.get("fm_mechanism","").
+  FM ref cards were rendering with blank mechanism text (wrong dict key, silent failure since Session 65).
+- New scripts delivered:
+  scripts/seed_perplexity_comps_2026.py — canonical importer. INSERT OR IGNORE. Backup before write.
+    DT→IDL remap. --apply 0/1. Accurate inserted/skipped counts via changes().
+  scripts/summarize_historical_comps_2026.py — read-only summary report (position coverage,
+    archetype detail, FM usage, FM reference library, gap report).
+- Query layer (draftos/queries/historical_comps.py) — full rewrite:
+  season_id=1 param added to all public functions. get_fm_reference_comps archetype_code param replaced
+  with position_group=None (DB-level filter). Returned dicts include position_group key aliased from
+  position column. _extract_position_prefix() helper added.
+- Importer behavior decision: INSERT OR IGNORE (not upsert).
+  Rationale: 37 overlapping rows carry richer hand-curated content (scheme_context, signature_trait,
+  peak_years, fm_mechanism, pre_draft_signal) that the CSV cannot provide. Upsert would silently
+  degrade quality. Perplexity fills 161 archetype gaps; curated rows are permanent reference.
+- No DB schema changes. No migrations. Doctor: PASSED.
+
+Session 78 close (APEX OS UI — Sprint 1–4 complete: unified filter/sort controls, metadata status bar, decision card, 6-tab detail panel, board visual hierarchy + CSS polish pass).
+
+Session 78 close:
+- app.py — Sprint 1 (Trust Cleanup):
+    Replaced two ambiguous APEX-scored checkboxes with single `show_apex_only` (filters apex_composite.notna()).
+    Added `sort_by` selectbox ("Consensus Rank" / "APEX Rank" / "APEX Score") in sidebar above position multiselect.
+    Big Board sort now conditional on sort_by selection; APEX Board tab sort unchanged.
+    Replaced st.caption metadata line with persistent HTML status bar (universe label, sort, coverage, showing count, tag filter count).
+    Unscored APEX Tier rows: fillna("—") instead of blank — disambiguation for unscored prospects.
+    Added ∆ APEX column tooltip: help="APEX rank vs consensus rank. Positive = APEX rates higher than market."
+- app.py — Sprint 4 (UI Polish):
+    Added _highlight_consensus_tier() row-level .apply() — Elite rows get gold tint, Watch rows get red tint.
+    Sidebar control spacing CSS (stCheckbox, stSelectbox, stMultiSelect, stSlider, stNumberInput margin-bottom).
+    Sidebar hr tighter, selectbox value text Barlow 12px, checkbox label 11px.
+    [data-testid="stDataFrame"] border suppression block — collapse, td border:none, th bottom-only, row dividers.
+    Version stamp st.caption below title: "APEX OS · 2026 Draft · Session 44 · {date}".
+    Rank column nth-child(1) updated to 14px/rgba(0.38).
+- draftos_detail_iframe_v2.py — Sprint 2 (Decision Card):
+    build_decision_card(d, fm_codes) function added above build_detail_html().
+    Decision card CSS block added to _CSS: .decision-card, .dc-zones, .dc-call-lbl, .dc-call-text,
+      .dc-field-lbl, .dc-field-val, .dc-risk-hdr, .dc-risk-note, .dc-strip, .dc-strip-lbl, .dc-strip-val, .dc-sep.
+    Card renders at top of right content pane for APEX-scored prospects only.
+    Three zones: Call block (tier→call text, capital, market edge), Risk block (FM tags max 2 + translation_risk first sentence), Confidence strip (eval confidence, archetype fit, APEX score).
+    Guard: returns "" when apex_composite absent/null.
+    Injected as decision_card_html computed after fm_codes build, placed before Archetype section in template.
+- draftos_detail_iframe_v2.py — Sprint 3 (Tabbed Detail Panel):
+    Flat vertical right-pane stack replaced with 6-tab panel (HTML/CSS/JS — no Streamlit tabs).
+    Tab nav: .tab-nav, .tab-btn (.active = cold blue underline), .tab-pane (display:none / .active = block).
+    TAB SUMMARY (default): decision card + archetype section + divergence panel + signature play.
+    TAB TRAITS: football trait bars + system trait bars + positional baseline note (hardcoded dict per position).
+    TAB RISK: fm_html + two_col_html + risk_html.
+    TAB COMPS: comps_html + fm_ref_html, or empty state "No historical comp data available...".
+    TAB NOTES: placeholder panel (.notes-placeholder).
+    TAB REPORT: capital block + eval confidence + position rank + snapshot date.
+    JS click handler injected before </body>.
+    estimate_height() simplified: base=980, addends only for FM count and comps; returns max(980, h).
+    New CSS classes: .tab-nav, .tab-btn, .tab-pane, .notes-placeholder, .notes-lbl, .notes-body,
+      .report-block, .report-lbl, .report-val, .report-sub, .traits-note, .comps-empty.
+- No DB changes. No migrations. No scoring changes.
+- POLISH-05 confirmed: tab labels + aria-selected CSS already present — no change needed.
+- FIX-02 confirmed: eval_confidence flows through d dict unmodified — no change needed.
+
+Session 77 close:
+- draftos_detail_iframe_v2.py (new): extracted _build_detail_html() and height estimation logic from
+    app.py into standalone module. Exports build_detail_html() and estimate_height().
+- app.py: _render_apex_detail() now calls build_detail_html() + estimate_height() from
+    draftos_detail_iframe_v2. FM reference comp fetching added — fetches up to 4 same-position
+    historical comps for each active FM code on the prospect (FM-1 through FM-6).
+    Position group normalization applied (OL/DL/LB/DB → constituent positions).
+- app.py: sidebar CSS additions — multiselect chips (cold blue, kills Streamlit default red),
+    filter section labels (Barlow Condensed, uppercase, dimmed).
+- app_wiring_patch.py (new): carry-over wiring patch script from prior session work.
+- draftos_drawer_reference.html (new): standalone HTML reference file for drawer layout.
+- export_reports_html_share.py: modified (details carried from prior session work).
+- Code quality pass (simplify):
+    Merged 2 duplicate connect() calls into 1 in _render_apex_detail() (archetype + FM refs share one connection).
+    Merged 2 duplicate connect() calls into 1 in _render_compare_panel().
+    Moved `import re` from inside fm_tags_html() loop to module level in export_reports_html_share.py.
+    Removed orphaned # _build_detail_html removed comment.
+- No DB changes. No migrations. No scoring changes.
+
+Session 76 close:
+- APEX OS rename applied to all display surfaces across 7 files:
+    export_reports_html.py — lines 2, 836, 1071, 1188, 1219, 1255 updated; lines 367, 371, 1119 untouched
+    STATE_SNAPSHOT.md — heading line 1 updated; line 188 historical log untouched
+    app.py — lines 2, 35, 2250, 2500, 2963, 2977 updated; all CSS/docstring/comment identifiers untouched
+    open_session.py — docstring line 3 updated
+    open_session_mode1.py — docstring line 3 updated
+    open_session_mode3.py — docstring line 3 updated
+    generate_prospect_pdf_2026.py — lines 2, 1577, 1640 updated; docstrings/comments/path untouched
+- update_session_state_mode3.py and update_session_state_mode1.py: fixed false-alarm warnings in
+    update_field() and update_section() — now use re.search() pre-check instead of comparing
+    post-sub string identity. update_session_state.py (strict/raises) left unchanged.
+- export_png.py: added Windows asyncio policy guard (WindowsProactorEventLoopPolicy) to fix
+    NotImplementedError from SelectorEventLoop subprocess transport when launching Chromium.
+- Backups (.bak_apexos) retained in app/ and scripts/ for all 7 modified files.
+- No DB changes. No migrations. No scoring changes.
+
+Session 75 batch close:
+- Sports Almanac Mode 1 complete. Eight archetype overrides applied this session:
+    pid=28  Caleb Downs    S-1 → S-4 Zone-Dominant Coverage Safety (MANUAL_HOLD, Mode B pending)
+    pid=9   Ty Simpson     QB-5 → QB-4 Game Manager Elevated (APEX_LOW compresses -38→-21.8)
+    pid=309 Jalon Kilgore  S-3 → S-2 Coverage Centerfielder (DB label: S-1 Centerfielder — see note)
+    pid=13  Malik Muhammad CB-3 → CB-1 Anticipatory Lockdown (73.2 DAY1, delta +69 MAJOR)
+    pid=107 Daylen Everette CB-3 → CB-2 Outside Man-Coverage (DB label: CB-3 — see note)
+    pid=36  Davison Igbinosun CB-3 PAA → CB-2 Zone Coverage Technician (68.2 DAY2, R4 Early)
+    pid=147 Genesis Smith  S-3 → S-3 FM-5 corrected (composite drops 71.5→56.2, DAY1→DAY2)
+    pid=58  Garrett Nussmeier QB-4 → QB-3 Pocket Technician (58.7 DAY2, R5)
+- Archetype label discrepancy (API reversion):
+    Kilgore: forced S-2, DB=S-1 Centerfielder (S library prompt no distinct S-2 label)
+    Everette: forced CB-2, DB=CB-3 Press Man Corner (API reads athleticism-primary as CB-3)
+    Capital ranges and FM flags are correct for both. Recommend Mode 3 CB labeling discipline.
+- Tier distribution (FINAL S75 batch close, 140 prospects, apex_v2.3):
+    ELITE=2, DAY1=28, DAY2=71, DAY3=36, UDFA-P=3 (total=140)
+  Unchanged from pre-batch-close baseline — overrides shifted composites but not tier distribution.
+- Divergence recomputed: 140 prospects.
+    APEX_HIGH=62, ALIGNED=26, APEX_LOW=4, APEX_LOW_PVC_STRUCTURAL=48
+  Premium APEX_LOW (actionable): Genesis Smith S (delta=-36 MAJOR), Caleb Downs S (delta=-31 MAJOR),
+    TJ Parker EDGE (delta=-12 MINOR), Zakee Wheatley S (delta=-7 MINOR).
+  Simpson dropped off APEX_LOW premium list after QB-4 correction (now +8 MINOR APEX_HIGH).
+- GATE_TRACKER v1.4:
+    CLEARED: Arvell Reese MANUAL_HOLD — ILB-3 viable at Titans/Giants, Mode B confirmed S75.
+             Capital R2 Early / R1 Late Titans-Giants confirmed. Tier 1.
+    HELD:    Caleb Downs MANUAL_HOLD (Mode B zone deployment), Julian Neal CONE_GATE (7.13s open).
+- DB doctor: PASSED (Session 75 batch close).
+- Active ARCHETYPE_OVERRIDES: 15 entries
+    pid=16 Reese, pid=28 Downs, pid=29 Thieneman, pid=35 C.Johnson, pid=36 Igbinosun,
+    pid=38 McCoy, pid=42 Faulk, pid=58 Nussmeier, pid=61 Love, pid=71 Cisse, pid=72 Hood,
+    pid=80 Mesidor, pid=107 Everette, pid=109 Neal, pid=148 Ramsey, pid=309 Kilgore,
+    pid=449 Kilgore-CB, pid=1420 Drones, pid=3236 Ponds, pid=9 Simpson, pid=13 Muhammad,
+    pid=147 G.Smith
+- Next session priorities (ordered):
+    1. TJ Parker pid=27 display_name audit (carried S50)
+    2. Stukes dual entry audit (two scored S/CB rows — DB integrity check)
+    3. Canady + Domani Jackson EXCLUDED entries in GATE_TRACKER
+    4. Parse failures individual re-score: Burks, Coleman, Barber
+    5. Sports Almanac Mode 3 — CB archetype labeling discipline anchor
+    6. Sports Almanac Mode 3 — Candidate XP-8 second-position confirmation
+    7. Tier 2 evaluation queue: Taaffe, Moore, Josephs, Davis, Tucker
+
+Session 74 (MEASURABLES_ARCHETYPE_CONTEXT complete — 23 archetypes protected) — no re-score, no DB changes.
+
+Session 74:
+- MEASURABLES_ARCHETYPE_CONTEXT: 13 new entries added.
+  CB-2, CB-4, CB-5, ILB-4, QB-1 through QB-5,
+  OT-1, OT-4, OG-1, OG-3.
+- Total archetypes with mechanism-aware measurables
+  context: 23 of 62 canonical archetypes.
+- Key context rules applied:
+    QB-1/QB-4: measurables LOW-WEIGHT, processing governs
+    QB-2: forty and SPEED full weight (run threat required)
+    QB-5: measurables full weight (tools are the investment)
+    OG-1: ATH composite WARNING — inflation risk explicit
+    OG-3: AGI and ACC primary (zone mechanism)
+    CB-2: AGI primary, forty secondary (zone processor)
+    CB-4: AGI and ACC primary, SIZE not a gate
+    ILB-4: AGI and ACC primary, FM-3 watch flagged
+    OT-1: forty + AGI ceiling gates (both required)
+- Source: positional .docx library files (CB, ILB, QB,
+  OT, OG) — translation work, no new analysis.
+- Doctor: PASSED.
+- Next: Session 75 — full batch re-score (--batch all
+  --force) with complete 23-archetype protection layer.
+  Then divergence recompute, tag triggers, board review.
+  This is the scoring baseline that holds through the draft.
+
+Session 73 (EDGE-4 measurables context fix + JSON version label + Bailey/Barham re-score) — board updated.
+
+Session 73:
+- MEASURABLES_ARCHETYPE_CONTEXT: EDGE-4 Athletic Dominator entry added to run_apex_scoring_2026.py.
+  Forty and ATH composite now correctly weighted as ceiling indicators (not floor checks) for EDGE-4.
+  Total archetypes protected: 10 (EDGE-1/2/3/4, CB-1/3, OT-2/3, S-1, ILB-3).
+- Bailey (pid=41): 83.2 DAY1 EDGE-4 → 89.2 ELITE EDGE-1 Every-Down Disruptor.
+  ELITE confirmed. Model re-classified to EDGE-1 on fresh re-score (no prior score after force-delete;
+  no ARCHETYPE_OVERRIDE). Arm 33.75", technique-primary profile drove EDGE-1 assignment.
+  Score direction correct — not suppressed. ALIGNED, rank_delta=+5.
+- Barham (pid=258): 65.8 DAY2 EDGE-4 → 63.8 DAY2 EDGE-4 Athletic Dominator.
+  Score within variance (-2.0). EDGE-4 archetype held. Forty=4.64 (>4.55) + ATH=42.3 (<75):
+  both FM-1 high-risk thresholds breached per EDGE-4 doctrine. Score appropriately limited.
+  APEX_HIGH MAJOR delta compressed: +57 → +45. Tier B confidence.
+- archetype_canonical_reference.json: metadata block added at top of root object.
+  file_version=1.0, system_version=2.3. Version ambiguity resolved — cold sessions will not
+  flag false alignment failure. Existing archetype content unchanged.
+- Divergence recomputed post re-score. ALIGNED=27, APEX_HIGH=58, APEX_LOW=5, STRUCTURAL=50.
+- Doctor: PASSED.
+- Next: Session 74 — 15-archetype MEASURABLES_ARCHETYPE_CONTEXT pass (CB-2, ILB-4,
+  QB-1 through QB-5, OT-1, OG-1, OG-3, remaining positions with active scored prospects)
+  using positional .docx files as source. Translation work only — no batch re-score until
+  complete. After Session 74: full batch re-score with complete protection layer as draft baseline.
+
+Session 71 (Full batch APEX re-score; archetype-aware measurables fix; Reese ILB-3 pipeline correction) — board current.
+
+Session 71:
+- Archetype-aware measurables fix: MEASURABLES_ARCHETYPE_CONTEXT dict added to run_apex_scoring_2026.py.
+  9 archetypes mapped (EDGE-1, EDGE-2, EDGE-3, CB-1, CB-3, OT-2, OT-3, S-1, ILB-3).
+  _get_measurables_context() updated: archetype_code parameter, prefix injected before raw measurables block.
+  Call site moved to after existing_score fetch; archetype resolved from ARCHETYPE_OVERRIDES label > DB score.
+- Reese pipeline correction (pid=16, ILB-3 Run-First Enforcer):
+  Sports Almanac handoff confirmed: DB=EDGE was S62 consolidation artifact. Correct classification: ILB-3.
+  S70 EDGE-4/FM-1 (78.4) and S71 gate EDGE-1/FM-3 (84.1) both discarded — scored against wrong library.
+  Corrections applied: position_group EDGE→LB in prospects table; TOP50_POSITION_OVERRIDES[16]="ILB";
+  ARCHETYPE_OVERRIDES[16] added with ILB-3 archetype_label, FM-6 primary, FM-3-limited secondary.
+  Re-score result: ILB-3 Run-First Enforcer, composite=68.5 DAY2 (raw=80.6, PVC=0.85), Tier A confidence.
+  FM-6 (Role Mismatch) confirmed as primary bust risk. Capital: R2 Mid–R3 Top.
+  GATE_TRACKER.md updated: Reese MANUAL_HOLD added. APEX_LOW MAJOR (delta=-31) — legitimate
+  architectural disagreement. Consensus prices EDGE athleticism+LB production as additive ceiling.
+  APEX prices Zone=31 coverage floor as structural deployment constraint. Do not suppress.
+  Clear condition: Landing Spot Note (Mode B) confirming scheme match for ILB-3 deployment.
+- Full batch re-score: 140/140 scored (136 in main batch, 4 JSON parse failures retried individually).
+  0 GEN- archetypes. 0 skipped.
+  Failures retried: Jordyn Tyson (pid=68), Domonique Orange (pid=110), Gracen Halton (pid=164),
+  Nate Boerkircher (pid=150). All 4 scored cleanly on retry.
+- Tier distribution post S71 (full board, 140 active):
+  ELITE=1, DAY1=36, DAY2=67, DAY3=33, UDFA-P=3.
+  vs S70 full board estimate: ELITE=3, DAY1=35, DAY2=66, DAY3=34, UDFA-P=2.
+  ELITE dropped 3→1: only Fernando Mendoza (QB, 87.3). Caleb Downs dropped to 79.6 DAY1.
+- ARCHETYPE_OVERRIDES integrity: Kilgore (pid=309) INTACT (65.5 DAY2, S-3 ✓).
+  Neal (pid=109): 70.1 DAY1, CB-2 ✓ (-1.7 from S70 estimate, within variance, DAY1 maintained).
+- Divergence post full batch: APEX_HIGH=58, ALIGNED=27, APEX_LOW=5, APEX_LOW_PVC_STRUCTURAL=50.
+  vs S70: APEX_HIGH=63→58 (-5), STRUCTURAL=45→50 (+5), ALIGNED=28→27 (-1), APEX_LOW=4→5 (+1).
+  STRUCTURAL increase consistent with position corrections (Reese ILB-3) and measurables-informed scoring.
+- Tag triggers re-run: 15 new recs fired and accepted (pending=0).
+- Doctor: PASSED.
+- Backup: data/apex_all_rescored_s71_20260329T063036Z.json (140 records).
+
+Session 70 (Top-50 APEX re-score with measurables block live; state file updates) — board changed.
+
+Session 70:
+- Top-50 re-score: 50/50 scored (Fano retried individually after JSON parse failure on batch run).
+  0 failed, 0 GEN- archetypes.
+- Tier distribution post re-score (top 50): ELITE=3, DAY1=26, DAY2=20, DAY3=1, UDFA-P=0.
+  vs pre-score (top 50):                   ELITE=4, DAY1=30, DAY2=15, DAY3=1, UDFA-P=0.
+- Notable score shifts (|delta| > 3 pts): 17 prospects.
+  Largest: Mansoor Delane +9.1 (DAY1), Arvell Reese -8.8 (ELITE->DAY1), Ty Simpson +7.3 (DAY2->DAY1).
+  Full list in data/exports/s70_rescore_report.txt.
+- ARCHETYPE_OVERRIDES integrity: Kilgore (pid=309) INTACT, Neal (pid=109) INTACT.
+- Divergence post re-score: APEX_HIGH=63, ALIGNED=28, STRUCTURAL=45, APEX_LOW=4.
+  (vs S69: APEX_HIGH=61, ALIGNED=30, STRUCTURAL=46, APEX_LOW=3 — shifts of <=2, stable)
+- Decision gate report: HOLD -- INVESTIGATE.
+  Trigger: DAY1 shifted -4, DAY2 shifted +5 in top-50 (threshold <=3 per tier).
+  Primary driver: Arvell Reese (#2 consensus) dropped ELITE->DAY1 (-8.8 pts) with measurables
+  context (forty=4.46, ATH=86.6, SPEED=72.6). Investigate before full batch.
+  Report: data/exports/s70_rescore_report.txt.
+- STATE_SNAPSHOT.md and CLAUDE.md updated to reflect S69-S70.
+- Doctor: PASSED.
+
+Session 69 (RAS re-ingest, jfosterfilm measurables pipeline, combine_2026 decommission, Migration 0048) — board current.
+
+Session 69:
+- RAS re-ingest: ingest_ras_2026.py --apply 1. 726 matched, 1135 unmatched (UDFA/FCS). RAS updated
+  with post-combine data (ras_2026.csv 2026-03-17). updated_at timestamps refreshed.
+- Migration 0048: prospect_measurables table. 27 columns. UNIQUE(prospect_id, season_id).
+  Stores jfosterfilm expanded measurables: bio, arm/wing/hand, speed/agility drills,
+  explosiveness, composite scores (ATH/SPEED/ACC/AGI/SIZE/PROD), consensus_rank.
+  meta_migrations: 0048_prospect_measurables logged.
+- ingest_jfosterfilm_measurables_2026.py: new script. 731 rows in CSV, 716 matched (97.9%),
+  15 unmatched (minor UDFA-tier players not in DB). All via exact_name_school_raw.
+  prospect_measurables: 716 rows written.
+- run_apex_scoring_2026.py: _get_measurables_context() added. Injected into web_context
+  immediately after RAS block. Graceful fallback — no-op for prospects with no measurables row.
+  Kilgore/Neal/Drones ARCHETYPE_OVERRIDES gates untouched (constraint respected).
+- combine_2026 decommission: source_id=31 was already is_active=0 (no DB change needed).
+  ingest_combine_2026.py: DECOMMISSIONED header + sys-exit in main(). Prints clean message.
+  patch_source_canonicalization_2026.py: decommission comment at lines 77-80.
+  ingest_nflcom_2026.py: doc comment updated to reference prospect_measurables pipeline.
+- Consensus rebuild: 1001 rows. Fernando Mendoza #1, Arvell Reese #2, Caleb Downs #3. Stable.
+- Divergence recompute: ALIGNED=30, APEX_HIGH=61, APEX_LOW=3, STRUCTURAL=46. Identical to S68 baseline.
+- Tag triggers: 16 new recs (6 Elite RAS, 8 Great RAS, 2 Poor RAS). All 16 auto-accepted.
+  pending=0. System tags total=249.
+- Doctor: PASSED. Active sources=16. Migrations applied through 0048.
+
+Session 68 (Visual system rebuild: DraftOS design token system, Prizm card aesthetic, prospect_comps Migration 0047) — board current.
+
+Session 68:
+- app/app.py: DRAFTOS_CSS token system (Barlow Condensed/Barlow fonts, --ink/--cold/--amber/--green/--elite
+  CSS custom properties). _render_apex_detail full Prizm rebuild with nameplate, FM pip bar, threshold-color
+  trait bars, dos-panel archetype block, comp cards. Board Styler updated: APEX_TIER_COLORS/CONFIDENCE_COLORS/
+  DIVERGENCE_COLOR to token palette. set_table_styles with Barlow Condensed headers.
+- scripts/export_reports_html.py: html_page(prospect: dict) -> str — standalone Card v2 renderer
+  (Classified Dossier × Panini Prizm). MOCK_RUEBEN_BAIN test record. Live DB fallback: if comps not
+  passed by caller and prospect_id set, pulls from prospect_comps table automatically.
+  Old html_page() renamed to html_report_page() — all 3 main() call sites updated.
+- scripts/generate_prospect_pdf_2026.py: _build_html() full Prizm card rebuild. 6-tier TIER_PALETTE.
+  Prism strip left-edge gradient. Holographic shimmer on score window. Ghost rank watermark.
+  FM pip bar (6 pips, 4px). Threshold-color trait bars. Translation risk amber banner. Gradient comp cards.
+- draftos/db/migrations/0047_prospect_comps.sql: prospect_comps table. UNIQUE(prospect_id, season_id, player_name).
+  FK to prospects. comp_type CHECK IN ('hit','partial','miss'). sort_order for display ordering.
+- draftos/queries/historical_comps.py: get_prospect_comps() + upsert_prospect_comp(). sort_order returned
+  in dict as "order" key. Idempotent ON CONFLICT upsert.
+- Doctor: PASSED. Migrations applied through 0047.
+
+Session 67 (PDF left panel flexbox trait grid, compact FM ref, app FM ref full depth, pre-draft snapshot) — board current.
+
+Session 67:
+- PDF left panel trait grid: replaced _build_trait_grid_html() with _build_lp_trait_grid() using
+  flexbox row layout (not CSS grid). CSS classes: .lp-profile-section, .lp-bars-row, .lp-bar-col,
+  .lp-bar-item, .lp-bar-label, .lp-bar-track, .lp-bar-outer, .lp-bar-inner, .lp-bar-val.
+  Font sizes: 8px labels, 9px values — PDF-scale, compact, proportional to 2.6in column.
+  Column headers: .lp-col-label 7px uppercase. Correct DB columns: v_injury, v_scheme_vers.
+- PDF FM reference block: replaced with compact one-liner per comp (no pre_draft_signal).
+  New CSS classes: .comp-section, .section-label, .comp-header, .comp-name, .comp-arch, .comp-era,
+  .comp-body. Mechanism truncated at 110 chars. Cross-position note: one line, 8px amber.
+  No overflow — right panel height budget respected.
+- App FM reference: upgraded to full analytical depth. Colored left border per outcome.
+  Player name 16px bold, mechanism 14px. Pre-draft signal expander OPEN by default.
+  Bust mechanism inline below card (border-left red). Cross-position callout 13px amber.
+- Source freshness audit: all 16 active sources ingested post-combine (≥2026-03-12). No stale sources.
+  T1 (pff, thedraftnetwork, theringer) all ingested 2026-03-14. Clean.
+  Note: ras_2026.csv updated today (2026-03-17) — new RAS data available for re-ingest.
+- Pre-draft snapshot: take_predraft_snapshot_2026.py --apply 1. 140 rows written.
+  Tier dist: ELITE=4, DAY1=36, DAY2=64, DAY3=34, UDFA-P=2.
+- Board snapshot 6 (2026-03-18): rows=1001, coverage=1001, confidence=1001 — PASSED.
+- Board CSV exported: exports/board_2026_v1_default.csv (1001 rows). Top: Mendoza #1, Downs #2, Love #3.
+- Doctor: PASSED.
+
+Session 66 (visual quality pass: grey→white, font floor 13px, trait grid, FM cross-position callout) — board current.
+
+Session 66:
+- Systematic grey→white text pass: replaced all #aaa/#888/#999/#cccccc/#aaaaaa grey hex values with
+  #ffffff (or opacity variants) in app/app.py and scripts/generate_prospect_pdf_2026.py.
+- Font floor enforcement: 13px minimum for body text in app injected HTML.
+  Body text bumped: trait bar labels (12px→13px), formula line (12px→13px), translation rate span
+  (12px→13px), FM ref header spans (11px→13px), gap badge (11px→13px), Draft Capital sub-labels
+  (11px→13px), comparison field name labels (11px→13px).
+  PDF: FM bar segment label (5.5px→8px), divergence section label (7px→8px).
+  UI chrome labels with letter-spacing/text-transform:uppercase preserved at 11px (intentional).
+- PDF left panel trait grid: replaced _trait_table() + lp-spacer dead air with _build_trait_grid_html().
+  8 trait bars in 2-column layout (Football: Processing/Athleticism/Comp.Tough/Durability;
+  System: Scheme Vers./Production/Dev.Traj./Character). Container uses flex:1 to fill available space.
+- FM reference cross-position callout: when FM ref comp is from a different position group,
+  amber (#f0a500) callout line explains mechanism is position-independent.
+  Applies to both app.py (_render_apex_detail) and PDF (_fm_ref_block_html).
+- italic removal: font-style:italic removed from all injected HTML in both files.
+- Validation script: scripts/fix_text_styles_s66.py added. Final run: Total violations: 0.
+- Doctor: PASSED.
+
+Session 65:
+- Capital range derivation bug fixed: capital_base/capital_adjusted were derived from raw_score
+  (RPG, pre-PVC) instead of apex_composite (PVC-adjusted). Added _derive_capital_range() to
+  run_apex_scoring_2026.py. All future scores derive capital from apex_composite. Analyst override
+  capitals (ARCHETYPE_OVERRIDES capital_range) preserved and take priority.
+  DB patch: all 140 existing apex_v2.3 non-calibration rows patched with correct formula.
+  11 analyst-override PIDs (72,71,38,35,449,309,1420,61,148,36,109) preserved exactly.
+  Mauigoa (OG, pid=22): was R1 Picks 11-32 → now R2 Mid–R3 Top. apex_composite=69.8. PASS.
+- historical_comps.py: added get_fm_reference_comps() using actual DB column names
+  (outcome_summary, fm_mechanism, pre_draft_signal). Gracefully returns [] if no FM code set.
+- app.py: FM Risk Reference block added in _render_apex_detail() after Historical Comps block.
+  pre_draft_signal shown in collapsed expander. fm_mechanism shown as bust text. re imported.
+- PDF generator: spider chart (_radar_chart_svg) removed permanently. Left panel redesigned:
+  - .radar-wrap CSS replaced with .lp-spacer (flex:1) to eliminate dead air.
+  - Trait table reorganized: Football left (Processing/Athleticism/Comp.Tough/Durability),
+    System right (Scheme Vers./Production/Dev.Traj./Character). Column headers added.
+  - FM Risk Reference block added to right panel comps-region using actual DB columns.
+  - math import removed (no longer needed without SVG computation).
+- Divergence recomputed post-capital-patch. Doctor: PASSED.
+
+Session 64:
+- Kilgore (pid=309) combine gate: forty=4.40s CLEAR, shuttle=4.32s S-tier (not elite man-CB),
+  3-cone NOT TESTED at combine. Gate result: S-3 REINFORCED. Athletic profile = elite S, not CB.
+  Stored combine data in ras_json. ARCHETYPE_OVERRIDES[309] updated with full gate assessment.
+  Re-scored to v2.3: S-3 Multiplier Safety 64.1 DAY2, R3 base confirmed, APEX_HIGH +23.
+  Man coverage ceiling NOT raised. Existing recs (Elite RAS, Divergence Alert, Dev Bet) — all accepted, no new triage.
+- Neal (pid=109) 3-cone gate: 7.13s confirmed. Gate FIRES (7.13 > 6.90 per S39 doctrine).
+  ARCHETYPE_OVERRIDES[109] added with 3-cone gate injection. R3 capital cap enforced.
+  Re-scored to v2.3: CB-2 Zone Architect 71.8 DAY1, R3 top, APEX_HIGH +37 MAJOR.
+  CB-2 archetype gate-consistent (zone-first, not man-first). Capital ceiling: R2->R3.
+  Monitor tag (ptag_id=71) deactivated. Override logged. Gate closed.
+- Tag trigger re-run: 0 new recs. pending=0. accepted=224, dismissed=35.
+- Active tags: Dev Bet=80, Elite RAS=45, Compression Flag=41, Divergence Alert=29,
+  Great RAS=18, Scheme Dependent=8, Top 5 NextGen=7, Poor RAS=1, Injury Flag=1. Monitor=0.
+- Divergence: ALIGNED=30, APEX_HIGH=61, APEX_LOW=3, STRUCTURAL=46 (140 scored total).
+- Doctor: PASSED. Active sources: 16. Total source_rankings: 42743.
+
+Session 63 (APEX re-score: Reese/Thomas/Jacas/Simpson against correct position libraries) — board current.
+
+Session 63:
+- Removed 4 stale TOP50_POSITION_OVERRIDES entries (pids 7/9/16/18) that forced LB/ILB/OLB
+  libraries post-S62 ghost PID consolidation. DB position_group now authoritative.
+- Re-scored all 4 with correct libraries and full source coverage (15-16 sources):
+    Arvell Reese (pid=16): EDGE-5 67.4 DAY2 -> EDGE-1 87.2 ELITE, ALIGNED -1
+      Old score was migrated from ghost PID with limited coverage. True APEX confirms consensus #2.
+    R Mason Thomas (pid=7): EDGE-4 63.4 DAY2 -> EDGE-3 73.8 DAY1, APEX_HIGH +15
+      At divergence_alert_positive threshold (>15 strictly) — no rec fired, monitoring.
+    Gabe Jacas (pid=18): EDGE-5 63.2 DAY2 -> EDGE-3 73.2 DAY1, APEX_HIGH +25
+      Divergence Alert rec_id=267 accepted. Mechanism: EDGE-3 Power-Counter Technician.
+    Ty Simpson (pid=9): QB-5 44.2 DAY3 -> QB-5 64.3 DAY2, APEX_LOW -34 MAJOR
+      Structural QB-5 projection. Dismiss stands. FM-3 Processing Wall.
+- Deactivated 3 stale APEX_LOW Divergence Alert tags (ptag_ids 245/246/247).
+  These were accepted under old APEX_LOW scores; prospects are now ALIGNED/APEX_HIGH.
+- Divergence recomputed: ALIGNED=48, APEX_HIGH=82, APEX_LOW=3, STRUCTURAL=60.
+- Doctor: PASSED. Active sources: 16. Total source_rankings: 42743.
+
+Session 62 (LB ghost PID consolidation — 6 premium prospects fixed, divergence real signals revealed) — board current.
+
+Session 62:
+- consolidate_lb_ghost_pids_s62.py: Consolidated 6 LB ghost PID splits in one idempotent script.
+  Pairs fixed (keep_pid <- ghost_pid):
+    Arvell Reese       16 (LB->EDGE) <- 1058 (EDGE): 7 SPM rerouted, EDGE-5 67.4 apex migrated
+    R Mason Thomas      7 (LB->EDGE) <- 3538 (EDGE): 4 SPM rerouted, EDGE-4 63.4 apex migrated
+    Gabe Jacas         18 (LB->EDGE) <- 3542 (EDGE): 4 SPM rerouted, EDGE-5 63.2 apex migrated
+    Ty Simpson          9 (LB->QB)   <- 3531 (QB):   4 SPM rerouted, QB-5 44.2 apex migrated
+    Mansoor Delane     39 (CB, OK)   <- 3509 (CB):   6 SPM rerouted, ghost CB-2 66.8 apex deleted
+    Jalon Kilgore     309 (S, OK)   <- 449  (CB):   3 SPM rerouted, S-3 63.1 v2.2 apex migrated
+  Total: 28 SPM rows rerouted. 4 position_group corrections. 8 wrong-library apex rows deleted.
+  5 ghost PIDs deactivated with __ghost_N__ position marker (constraint-safe).
+  Override log: 26 entries written documenting all changes.
+- Consensus rebuilt: 1001 rows. Arvell Reese now #2 overall (was split across LB/EDGE PIDs).
+- Divergence recomputed: fake +80-170 artifacts eliminated for EDGE/QB pairs.
+  Real signals revealed: Reese APEX_LOW -44 (consensus #2 vs APEX 67.4 EDGE-5),
+    Thomas APEX_LOW -27, Jacas APEX_LOW -17, Simpson APEX_LOW -106 (QB-5 vs consensus #29 from LB coverage).
+- Tag triggers re-run: 3 new Divergence Alert recs (264 Cisse APEX_HIGH, 265 Thomas APEX_LOW, 266 Jacas APEX_LOW).
+  All 3 accepted. Reese rec_id=37 (previously dismissed as fake) re-opened and accepted with updated note.
+- Doctor: PASSED. Active sources: 16. Total source_rankings: 42743.
+
+Session 61 (Diagnostic-only: PID split / LB ghost problem scoped — no code written, no DB writes) — board unchanged from S60.
+
+Session 61:
+- Diagnostic 1 (Kilgore): pid=449 (CB, 3 src, APEX 63.1) and pid=309 (S, 7 src, no APEX) are split.
+  +261 divergence on pid=449 is entirely fake. 9/12 active sources map to pid=309 (S/SAF).
+  PFF and NFLDraftBuzz are the only sources listing him as CB. Fix: move APEX to pid=309, repoint CBSSports.
+- Diagnostic 2 (scope): LB ghost PID split affects 6+ premium-position apex-scored prospects.
+  Root cause: early ingests labeled EDGE/DT/CB players as LB → bootstrap LB PID → later correct-position PIDs
+  → APEX scored on correct-position PID with 3-4 sources, real coverage on LB ghost PID with 12-13 sources.
+  EDGE artifacts (divergence signals likely fake or badly inflated):
+    Arvell Reese: APEX on pid=1058 EDGE (4 src, rank=#89). Real coverage: pid=16 LB (12 src, rank=#13).
+    R Mason Thomas: APEX on pid=3538 EDGE (3 src, rank=#164). Real: pid=7 LB (13 src, rank=#60).
+    Gabe Jacas: APEX on pid=3542 EDGE (3 src, rank=#170). Real: pid=18 LB (12 src, rank=#73).
+    Mansoor Delane: APEX on pid=3509 CB (5 src, rank=#76). Real: pid=39 CB (11 src, rank=#28) — ALIGNED.
+  QB artifact: Ty Simpson APEX on pid=3531 QB (3 src, rank=#145). Real: pid=9 LB (13 src, rank=#47).
+  Less severe (APEX PID already has majority coverage): Kamari Ramsey S, Treydan Stukes CB.
+- Diagnostic 3 (unmapped): 96.9% of source_players are mapped. Only 29 active-source unmapped rows
+  (all drafttek_2026 intentional skips from S60). Coverage gaps are NOT caused by missing SPM entries —
+  entirely a PID routing problem. No mapping pass will fix this.
+- CONFIRMED: Gabe Jacas, R Mason Thomas, Arvell Reese divergence signals were artifacts from the split.
+  Do not act on their Divergence Alert tags until consolidation runs.
+- Next session: build consolidate_lb_ghost_pids_s61.py to fix all 6 premium cases in one script.
+  Approach: update apex_scores prospect_id to canonical ghost PID, repoint SPM entries, deactivate split PID,
+  rebuild consensus + recompute divergence. No API calls needed (just row moves).
+
+Session 60 (New source ingest complete: fantasypros_2026 T2 + drafttek_2026 T3, consensus rebuilt 16 sources, divergence recomputed) — board current.
+
+Session 60:
+- fantasypros_2026 (source_id=32, T2, weight=1.0): 100 prospects ingested, 100% SPM mapping via patch_new_source_mapping_s60.py.
+- drafttek_2026 (source_id=33, T3, weight=0.7): 500 prospects ingested, 471/500 SPM mapped (94%). 29 skipped (12 no prospect, 17 ambiguous).
+  DraftTek non-standard positions normalized at ingest: DL5T→EDGE, OC→C, DL3T→DT, DL1T→DT, CBN→CB, WRS→WR.
+- patch_new_source_mapping_s60.py: canonical-SPM disambiguation (prefer highest existing SPM count, non-dedup school). 341 new mappings.
+- 16 new prospects bootstrapped (candidates from 2+ sources in new ingest).
+- Consensus rebuilt: 1007 rows (from 1005). Top 5 all at 16/16 sources_covered.
+- build_consensus_2026.py SOURCE_WEIGHTS updated: fantasypros_2026=1.0, drafttek_2026=0.7.
+- Divergence recomputed: APEX_HIGH=90, ALIGNED=47, APEX_LOW_PVC_STRUCTURAL=65, APEX HIGH(old)=12, APEX LOW(old)=11, APEX_LOW=2.
+- Premium confirmed signals (MAJOR, sources>=5): Everette CB +72 (13src), Igbinosun CB +56 (15src),
+    Muhammad CB +61 (14src), Julian Neal CB +41 (13src), Keyron Crawford EDGE +37 (13src),
+    Joshua Josephs EDGE +25 MODERATE (13src), TJ Parker EDGE +18 MODERATE (14src).
+- No APEX re-score performed. Tag trigger re-run deferred to next session.
+- Doctor: PASSED. Active sources: 16. Total source_rankings: 42743.
+
+Session 59 (Divergence Alert triage complete + full pending tag queue cleared — 0 pending recs) — tag board fully current.
+
+Session 59:
+- Divergence Alert triage (5 pending → 0):
+  rec_id=235 TJ Parker EDGE +23 → ACCEPTED: DAY1 72.4, 12 sources, post-fix genuine moderate signal.
+  rec_id=238 Arvell Reese EDGE +35 → DISMISSED: EDGE-5 Tweener structural, 4 sources (coverage noise), FM-6.
+  rec_id=242 LT Overton EDGE +37 → DISMISSED: EDGE-5 Tweener structural, FM-6 Role Mismatch.
+  rec_id=244 Anthony Lucas EDGE +29 → DISMISSED: EDGE-5 Tweener structural, FM-6 Role Mismatch.
+  rec_id=251 Treydan Stukes S pid=3011 +68 → DISMISSED: S-5 Raw Projection, 3 sources (coverage gap artifact).
+- Compression Flag x9 → ACCEPTED (all informational, gap_label SOLID/TWEENER).
+- Development Bet x12 → ACCEPTED (all Tier B/C eval_conf — no finished-product exceptions).
+- Scheme Dependent x2 → ACCEPTED (Josh Cameron ILB 3.9, Brian Parker OT 3.8).
+- Pending recs: 0. Rec status: accepted=229, dismissed=34.
+- Active tags: Dev Bet=82, Elite RAS=45, Compression Flag=41, Divergence Alert=33,
+  Great RAS=18, Scheme Dependent=8, Top 5 NextGen=7, Poor RAS=1, Monitor=1, Injury Flag=1.
+- Doctor: PASSED.
+
+Session 58 (Divergence Alert tags accepted for 7 S57 ACCEPT signals + Williams v2.3 confirmed) — tag board current.
+
+Session 58:
+- Divergence Alert tags (tag_def_id=7): all 7 S57 ACCEPT targets confirmed active in prospect_tags.
+  6 were already accepted from prior sessions (Muhammad, Igbinosun, Height, D.Moore, Everette, Barham).
+  Hezekiah Masses (pid=158, CB, California): had no rec — evaluate_tag_triggers re-run created
+    rec_id=241 (Divergence: +55), accepted with S57 triage rationale note.
+  Total active Divergence Alert tags on board: 32 (all on apex_v2.3).
+- evaluate_tag_triggers_2026 re-run (--apply 1): 29 new recs created, 144 already existed.
+  5 new pending Divergence Alert recs generated: TJ Parker EDGE +23, Arvell Reese EDGE +35,
+    LT Overton EDGE +37, Anthony Lucas EDGE +29, Treydan Stukes S pid=3011 +68.
+  These need separate triage (not S58 targets).
+- Antonio Williams (pid=63, WR Clemson): apex_v2.3 score confirmed (69.1 DAY2, WR-1 Route Technician,
+    scored 2026-03-17T04:58:59). S54 parse failure was already resolved in a prior run.
+  Divergence recomputed: apex_v2.3 +5 ALIGNED (consensus #47). Not a signal.
+- Divergence recomputed (--batch divergence --apply 1): all flags updated to apex_v2.3.
+- Doctor: PASSED.
+
+Session 57 (TJ Parker pid fix + divergence triage — 40 premium signals bucketed) — board clean.
+
+Session 57:
+- TJ Parker (EDGE, Clemson) pid fix:
+  pid=3789 "TJ Parker" EDGE Clemson (is_active=1, 0 sources) — deactivated. Ghost confirmed.
+  pid=3539 "T.j.parker" EDGE Clemson (is_active=0, 4 SPM rows) — 4 rows repointed to pid=27.
+    Sources repointed: bleacherreport_2026, combine_ranks_2026, nflcom_2026, combine_2026.
+    No duplicate conflicts (clean repoint, no DEDUP-DELETE needed).
+  Parker post-fix: sources_covered 9->12, consensus_rank #84->#46, divergence +61 MAJOR -> +23 MODERATE.
+  Parker was another coverage artifact — not a major market inefficiency signal.
+- Consensus rebuilt: 1005 rows.
+- Divergence recomputed post-Parker-fix:
+  Full premium board (QB/CB/EDGE/S, sources_covered>=5): 34 signals audited.
+- Divergence triage completed — 40 total signals bucketed:
+  ACCEPT (new genuine signals — tagging deferred to S58):
+    Daylen Everette CB +69 (11 src, #88, CB-3 Press Man, DAY1)
+    Malik Muhammad CB +63 (13 src, #89, CB-3 Press Man, DAY1)
+    Jaishawn Barham EDGE +54 (9 src, #114, EDGE-4 Athletic Dom, DAY2)
+    Davison Igbinosun CB +46 (13 src, #68, CB-3 Press Man, DAY1) — PAA-corrected
+    Hezekiah Masses CB +55 (9 src, #121, CB-4 Slot, DAY2)
+    Romello Height EDGE +28 (13 src, #72, EDGE-4 Athletic Dom, DAY2)
+    Derrick Moore EDGE +20 (13 src, #65, EDGE-4 Athletic Dom, DAY2)
+  CONDITIONAL (signal present, gate open):
+    Julian Neal CB +42 — MONITOR tag active (3-cone gate still open)
+    TJ Parker EDGE +23 — post-fix moderate signal, well-covered
+    Treydan Stukes CB +54 — 7 sources, CB-5 Raw Projection (borderline)
+    Keionte Scott CB +21 — 7 sources, CB-4 Slot (borderline coverage)
+  DISMISS (archetype-structural, not market miss):
+    Jadon Canady CB +77 — CB-5 #183 (projection archetype, not a miss)
+    Domani Jackson CB +36 / Tacario Davis CB +34 — CB-5 Raw Projection low coverage
+    LT Overton EDGE +37 / Anthony Lucas EDGE +29 — EDGE-5 Hybrid Tweener
+    Michael Taaffe S +25 — S-5 Raw Projection, DAY3 53.6
+    Nadame Tucker EDGE +15 — EDGE-5 DAY3
+  ALREADY TAGGED / MINOR: Hood, Josephs, D.Moore, C.Johnson, Rivers, Abney, Howell, Faulk,
+    Thieneman, Cisse, Terrell, McCoy, Mesidor, Nussmeier (all MINOR or previously accepted)
+- Doctor: PASSED (pre-session close).
+- NOTE: New Divergence Alert tags for Everette/Muhammad/Barham/Masses/Height/D.Moore deferred to S58.
+- NOTE: Antonio Williams 1 JSON parse failure (Session 54) — single retry still pending.
+
+Session 56 (SPM dead-PID repoint + consensus rebuild + divergence recompute) — coverage artifacts resolved.
+
+Session 56:
+- fix_spm_dead_pid_repoint.py (new): finds source_player_map entries pointing to is_active=0
+  prospects, resolves via Rule A (name+school), Rule B (name only), Rule C (ambiguous), Rule D (no match).
+  Dry run: 2451 dead PIDs — 10 unambiguous, 26 ambiguous, 2415 no candidate (garbage ingest, non-blocking).
+  Apply: 30 source_player_map rows re-pointed across 10 dead PIDs.
+  DEDUP-DELETE safety: if source_player_id already mapped to canonical PID, delete dead duplicate.
+  Key re-points: pid=73 -> 3236 (Dangelo Ponds CB, 9 rows), pid=4347 -> 3236 (Ponds LB, 2 rows),
+    pid=144 -> 3401 (Leveon Moss, 8 rows), pid=3516 -> 3 (KC Concepcion, 3 rows).
+  26 ambiguous entries require manual position-group resolution — deferred.
+- Consensus rebuilt: 1005 rows (up from 849, SPM fix reconnected orphaned source rows).
+- Divergence recomputed post-repoint:
+  ALIGNED=25, APEX_HIGH=64, APEX_LOW=3, APEX_LOW_PVC_STRUCTURAL=52
+  D'Angelo Ponds: sources_covered 2->12, consensus_rank #190->#28. Removed from APEX_HIGH list.
+  Premium APEX_HIGH top signals: Gabe Jacas EDGE (+81), R Mason Thomas EDGE (+80),
+    Jadon Canady CB (+77), Daylen Everette CB (+69), Treydan Stukes S (+68), Malik Muhammad CB (+63),
+    TJ Parker EDGE (+61), Hezekiah Masses CB (+55), Mansoor Delane CB (+54).
+  Total premium APEX_HIGH signals: ~39.
+- Doctor: PASSED.
+- KNOWN ISSUE: TJ Parker (pid=27, EDGE) still pending duplicate pid audit (+61 APEX_HIGH).
+- KNOWN ISSUE: Antonio Williams — 1 JSON parse failure from Session 54 top50 run. Needs single retry.
+
+Session 55 (Ponds ghost deactivation):
+- D'Angelo Ponds LB ghost (pid=4347) deactivated (is_active=0).
+  Canonical Ponds is pid=3236 CB Indiana. pid=4347 was Tankathon-only artifact.
+- Root cause of +158 APEX_HIGH artifact: 9 of 12 covering sources mapped to pid=73 (is_active=0),
+  leaving only 2 sources contributing to consensus for pid=3236.
+  After SPM repoint (Session 56): sources_covered 2->12, divergence artifact eliminated.
+
+Session 54 (Full comp-enriched re-score — 144 prospects, --batch all implemented) — all scored.
+
+Session 54:
+- _run_all() implemented in run_apex_scoring_2026.py (after _run_top50()).
+  Queries apex_scores JOIN prospects — scores existing scored universe only (not all 1005 with
+  consensus data). is_calibration_artifact=0, is_active=1 filters enforced. --force respected.
+  Wired into main() dispatch replacing [TODO] stub.
+- top50 re-score (Step 1): 49/50 scored, 1 JSON parse error (Antonio Williams — one-off retry).
+- all-batch re-score (Step 3): 144/144 scored, 0 failed, 0 errors.
+  Every prospect now has comp-enriched prompts from Sessions 51-53 libraries.
+- Tier distribution (post re-score):
+  ELITE=3, DAY1=35, DAY2=68, DAY3=36, UDFA-P=2  (total=144)
+- Divergence distribution (post recompute, pre-SPM-fix):
+  ALIGNED=25, APEX_HIGH=63, APEX_LOW=3, APEX_LOW_PVC_STRUCTURAL=53
+  (D'Angelo Ponds CB +158 was top signal — coverage artifact, resolved Session 56)
+- Doctor: PASSED.
+
+Session 53 (Historical comp injection into APEX scoring prompt) — comp_context live in prompt.
+
+Session 53:
+- _get_comp_context(conn, archetype_code, fm_code) added to run_apex_scoring_2026.py.
+  Slot 1: HIT comp, same archetype (is_fm_reference=0), confidence ASC.
+  Slot 2: MISS/PARTIAL comp, same archetype + matching fm_code preferred.
+  Slot 3: FM cross-position reference (is_fm_reference=1) if fm_code set and slot 2 empty.
+  Graceful fallback: returns "" if no comps found — prompt identical to pre-S53 in that case.
+- matched_archetype parsed: "EDGE-1 Every-Down Disruptor" -> "EDGE-1" (split on space, take part[0]).
+- failure_mode_primary parsed: "FM-1 Athleticism Mirage" -> "FM-1" (split on space, take part[0]).
+- Column confirmed: fm codes stored in failure_mode_primary/failure_mode_secondary (NOT tags).
+  tags column stores labels like "CRUSH", "Two-Way Premium" etc.
+- comp_context added to prospect_data dict, passed into build_user_prompt().
+- prompts.py: comp_block injected between ctx_block and gate_block in return string.
+- Dry run verified: 50/50 top50 prospects inject comp context. 0 "no comps" fallbacks.
+  David Bailey: EDGE-1 / FM-1 -> Julius Peppers (HIT) + Jadeveon Clowney (PARTIAL).
+- No DB changes. No new columns. No new migrations. No API calls made.
+- Doctor: PASSED.
+- NOTE: Comps only inject for already-scored prospects. First-time score = empty comp block.
+  Session 54 re-score will be the first run where all prospects get comp-enriched prompts.
+
+Session 52 (Position comp seeding batch 2 — RB/TE/OT/OG/C/IDL/ILB/OLB/S) — 78 rows seeded, schema complete.
+
+Session 52:
+- seed_position_comps_batch2.py: Seeds 78 position comp records across 9 new positions.
+  RB: 15 | TE: 12 | OT: 10 | OG: 6 | C: 8 | IDL: 7 | ILB: 6 | OLB: 7 | S: 7.
+  (Trent Richardson RB-1 was 79th record but skipped — already in DB as is_fm_reference=1 FM-2 row.)
+  Bug found and fixed during session: CHECK constraints on historical_comps require
+    translation_outcome IN ('HIT','PARTIAL','MISS') and comp_confidence IN ('A','B','C').
+    Initial records used 'BUST' and 'HIGH'/'MEDIUM' — INSERT OR IGNORE silently discarded all.
+    Fixed to 'MISS' / 'A' / 'B' before apply run. All 78 now inserted correctly.
+  All rows: is_fm_reference=0, pre_draft_signal=NULL. INSERT OR IGNORE idempotent.
+- Total historical_comps position comps (is_fm_reference=0):
+  C=8, CB=17, EDGE=16, IDL=7, ILB=6, OG=6, OLB=7, OT=10, QB=17, RB=15, S=7, TE=12, WR=24.
+  Full positional library complete across all 13 APEX positions.
+- No schema changes (Migration 0046 already applied in Session 51).
+- Doctor: PASSED.
+- Next: Session 53 — inject historical_comps into APEX scoring prompt.
+  Pull 2 comp records per prospect based on matched_archetype + fm_code match.
+
+Session 51 (Migration 0046 + FM reference seeding — pre_draft_signal column, 35 FM records) — Migration 0046 applied.
+
+Session 51:
+- Migration 0046: ALTER TABLE historical_comps ADD COLUMN pre_draft_signal TEXT (nullable).
+  ALTER TABLE historical_comps ADD COLUMN is_fm_reference INTEGER NOT NULL DEFAULT 0.
+  Logged in meta_migrations. Migration file: draftos/db/migrations/0046_historical_comps_fm_seed.sql.
+- seed_fm_reference_comps.py: Seeds 35 FM reference records from FM-1 through FM-6 source docs.
+  FM-1: 6 records | FM-2: 6 records | FM-3: 6 records | FM-4: 4 records | FM-5: 6 records | FM-6: 7 records.
+  Note: FM-4 sourced 4 of 16 (8 highest-confidence not fully provided in prompt).
+  Note: FM-2 sourced 6 (header said 7 but only 6 provided in prompt content).
+  INSERT OR IGNORE + UPDATE fallback for 6 existing position comp rows with same (player_name, archetype_code):
+    Vernon Hargreaves III CB-3, Gareon Conley CB-3 (FM-1),
+    Marcus Peters CB-2 (FM-2), JaMarcus Russell QB-5 (FM-3),
+    Jadeveon Clowney EDGE-1 (FM-4), Von Miller EDGE-1 (FM-5).
+  These 6 rows received is_fm_reference=1 + pre_draft_signal without replacing existing content.
+  Von Miller EDGE-1 fm_code patched to 'FM-5' (was empty in position comp row).
+- Result: 29 inserted, 6 patched (existing rows). Total: 35 FM reference rows.
+  All 35 have pre_draft_signal populated. 0 position comp rows (is_fm_reference=0) have pre_draft_signal.
+  Total historical_comps: 109 rows (80 position comps + 29 new FM reference + 6 dual-purpose rows).
+- Doctor: PASSED. No pipeline changes. No APEX scoring.
+
+Session 49 (apex_favors_text, PDF polish — FM legend, white text, bullet unclip) — Migration 0045 applied.
+
+Session 49:
+- Migration 0045: ALTER TABLE divergence_flags ADD COLUMN apex_favors_text TEXT.
+  Populated at divergence-write time by run_apex_scoring_2026.py --batch divergence.
+  APEX_HIGH/APEX_LOW_PVC_STRUCTURAL → mechanism name + " profile" (e.g. "Elite Pass Rusher profile").
+  APEX_LOW → FM code + title-cased label + " risk" (e.g. "FM-2 Conditional risk").
+  ALIGNED → NULL. 114/144 rows populated; 30 ALIGNED rows correctly NULL.
+- run_apex_scoring_2026.py: _make_apex_favors_text() helper added. Divergence SELECT extended
+  to include matched_archetype + failure_mode_primary from apex_scores (no extra join).
+  apex_favors_text written to divergence_flags INSERT (19 columns → 19 values).
+- generate_prospect_pdf_2026.py:
+  1. FM legend: white 6.5pt monospace line below FM risk bar showing active FM names
+     (e.g. "FM-3 Processing Wall  ·  FM-6 Role Mismatch"). No dict needed — name from stored string.
+  2. overflow:hidden removed from .rp CSS — fixes sf-box bullet clipping in Chromium flex/grid layout.
+     html,body overflow:hidden still enforces page boundary.
+  3. Bullet char limit raised 165→360 — eliminates mid-sentence … truncation in strengths/red_flags.
+  4. capital_context font-size 6.5px→8px, line-height 1.4→1.5 (readability on mobile).
+  5. All grey text (#aaa, #bbb, #999, #666, #e0e0e0, #d0d0d0, #b8c4d8) → #ffffff.
+  6. divergence_narrative: uses apex_favors_text from DB instead of fallback "mechanism traits".
+- app/app.py: all grey text (#A0AEC0, #718096, #999, #666, #888, #bbb, #e0e0e0, #E2E8F0) → #ffffff.
+- Doctor: PASSED. No pipeline changes. Sources/consensus/snapshot unchanged.
+- KNOWN ISSUE (pending): pid=27 (TJ Parker EDGE Clemson) — duplicate active pids with stale
+  display_name formatting. Audit query provided; fix deferred to next session.
+
+Session 48 (PDF generator v4 — bullets fix, contrast pass, positional badge gate, Concepcion remediation) — No migrations. No schema changes. Code-only + one DB data fix (Concepcion).
+
+Session 48:
+- generate_prospect_pdf_2026.py v4: Full rebuild with four layers of fixes:
+  1. Bullets fix: _bullets() was splitting on \n only — but APEX scoring pipeline stores
+     strengths/red_flags as prose paragraphs (3 sentences, no newlines). Added sentence-boundary
+     fallback: re.split(r'(?<=[.!?])\s+(?=[A-Z])', text) when no \n present. Now returns 3 bullets.
+  2. Contrast pass (full): three-tier color hierarchy applied —
+     #999 (least important: scarcity note, comp italic mech, PVC footnote, "Pending evaluation.")
+     #aaa (secondary labels: footer, Eval Confidence, Divergence label, section nav labels,
+           .slbl, .arch-code, radar SVG axis labels, comp era bracket, FM tag non-active, Archetype Pending)
+     #bbb (muted body: trait labels .tl, .badge default, comp summary body text)
+     FM inactive segment label: #888 (clearly "off" but legible)
+  3. Positional rank badge gate: pos_rank_s only rendered when pos_rank != rank.
+     Suppressed when both numbers are equal (e.g. #1 overall who is also #1 at position).
+  4. Layout fixes from prior session: radar flex-wrap, sf-box min-height:0,
+     divergence callout moved inside .comps-region, rp-footer margin-top removed, SVG 100%/viewBox.
+- fix_concepcion_2026.py (new): KC Concepcion remediation — deactivated ghost pids 3516/4324,
+  fixed display_name casing "Kc"→"KC", wiped 2 ILB apex_scores rows, wiped divergence_flags.
+  Re-scored as WR: WR-1 Route Technician 66.1 DAY2.
+- audit_position_overrides_2026.py (new): read-only audit of all 27 TOP50_POSITION_OVERRIDES
+  against canonical DB position_group. All 27 clean post-Concepcion removal.
+- run_apex_scoring_2026.py: removed stale TOP50_POSITION_OVERRIDES[3] ILB entry for Concepcion.
+  Scoring priority: TOP50_POSITION_OVERRIDES → position_raw → position_group.
+- KNOWN GAP (migration pending): divergence_flags.apex_favors is stored as INTEGER (0/1 boolean),
+  not TEXT. Divergence narratives in PDF fall back to "mechanism traits" for all prospects.
+  Migration needed: ALTER TABLE divergence_flags ADD COLUMN apex_favors_text TEXT;
+  populate from run_apex_scoring_2026.py scoring pipeline at divergence-write time.
+- Doctor: PASSED. No DB schema changes. No migrations.
+
+Session 47 (PDF generator polish — viewport fix, tier palette alignment, comp flexbox, data fix) — No migrations. No schema changes. Code-only + one DB data fix.
+
+Session 47:
+- generate_prospect_pdf_2026.py: Four targeted fixes applied.
+  1. Viewport fix: `await page.set_viewport_size({"width": 1056, "height": 816})` added before
+     page.goto() — forces Chromium render viewport to match PDF canvas exactly, eliminating dead space.
+  2. Trait color thresholds tightened: 5-level gradient (9.0+ teal, 8.0+ green, 6.5+ gold, 5.0+ orange, below red).
+     Prior 4-level thresholds (8.5/7.0/5.5) were too loose for typical APEX score distributions.
+  3. TIER_PALETTE updated to match Big Board exactly:
+     ELITE dark gold #b8860b | DAY1 green #1a7a1a | DAY2 navy #005090 | DAY3 burnt orange #cc5500
+     UDFA-P purple #6a1a8a | UDFA slate #455a64. tier-badge CSS uses badge_bg (not raw tc hex).
+  4. comp_block header: replaced table layout with flexbox div row — eliminates player name centering
+     artifact. All four header elements (role label / player name / outcome / era) left-aligned in flex row.
+- historical_comps DB fix: comp_id=22 "Adrian Peterson (CB)" corrected to "Patrick Peterson" on CB-1.
+  Was causing wrong comp name on McCoy and other CB-1 prospects.
+- debug_render.html added to .gitignore.
+- No pipeline changes. No doctor required (no DB schema changes).
+
+Prior: Session 46 (historical comp layer + PDF generator rebuild) — Migration 0044 applied. 80 historical comp records seeded (QB/CB/EDGE/WR). PDF generator rebuilt from ReportLab → Playwright HTML→PDF. Streamlit asyncio/NotImplementedError fixed via threading + WindowsProactorEventLoopPolicy.
+
+Session 46:
+- Migration 0044: historical_comps table created (UNIQUE idx on player_name+archetype_code, 4 additional indexes).
+- seed_historical_comps.py: 80 records seeded (18 QB, 20 CB, 18 EDGE, 24 WR). INSERT OR IGNORE idempotent.
+- draftos/queries/historical_comps.py: get_historical_comps(), get_archetype_translation_rate(), _extract_archetype_code() regex helper.
+- app.py: Historical Comps section added to _render_apex_detail() — translation rate badge + comp pills with HIT/PARTIAL/MISS icons + expandable comp details.
+- generate_prospect_pdf_2026.py: full rebuild abandoning ReportLab Platypus. New: HTML→PDF via Playwright (Chromium), dark theme, landscape 11"×8.5", two-panel CSS grid. Comp block integrated.
+- PDF Streamlit fix: replaced subprocess.run (NotImplementedError on Windows SelectorEventLoop) with threading.Thread + asyncio.WindowsProactorEventLoopPolicy inside thread. Doctor: PASSED.
+
+Prior: Session 45 (full 144-prospect re-score against corrected v2.3 archetype library) — All 99 non-top-50 stale prospects re-scored. 0 GEN- labels remain. All 144 active non-cal prospects now carry canonical v2.3 archetype names.
+
+Session 45:
+- Re-scored 99 non-top-50 prospects (stale pre-Session-44 archetype names: DT-3 Scheme Fit,
+  ILB-4 Raw Projection, OG-4 Chess Piece, S-3 Versatile Weapon, S-4 Raw Projection,
+  EDGE-2 Speed Rusher, EDGE-4 Toolbox, TE-4 Chess Piece, OT-4 Developmental Athletic, etc.).
+  All replaced with canonical v2.3 names.
+- Two-pass run: 76/99 first pass (23 rate-limited), then 23/23 retry run — all 99 complete.
+- 0 GEN- archetypes remaining across all 144 active non-cal v2.3 rows.
+- Divergence recomputed (144 prospects): ALIGNED=30, APEX_HIGH=59, APEX_LOW=4,
+  APEX_LOW_PVC_STRUCTURAL=51.
+- Tier dist (all 144 v2.3 active non-cal): ELITE=3, DAY1=30, DAY2=74, DAY3=34, UDFA-P=3.
+- Doctor: PASSED.
+
+Prior: Session 44 (archetype library rebuild + top-50 re-score):
+
+Session 44:
+- prompts.py Section B fully rebuilt from 14 canonical .docx library files (Session 28).
+  All 14 positions have their own section (C and OLB restored as separate sections).
+  Archetype names corrected: EDGE-2 Speed-Bend Specialist, EDGE-3 Power-Counter Technician,
+  EDGE-4 Athletic Dominator, CB-1 Anticipatory Lockdown, CB-2 Zone Architect,
+  CB-3 Press Man Corner, S-3 Multiplier Safety, S-4 Coverage Safety (new), S-5 Raw Projection,
+  ILB-3 Run-First Enforcer, ILB-4 Hybrid Chess Piece, ILB-5 Raw Projection (new),
+  WR-6 Complete Outside Weapon (new archetype).
+- POSITION_PAA_GATES aligned to canonical names. OLB and C gates added.
+  _normalize_position_for_gate: OLB→OLB, C→C routing corrected.
+- ARCHETYPE_OVERRIDES stale labels fixed (pid=72/71 CB-3, pid=38 CB-1, pid=35 CB-2, pid=3236).
+- archetype_canonical_reference.json created at draftos/docs/apex/archetype_canonical_reference.json.
+- Weight table audit (Session 28B): 5 base table errors confirmed (RB/OT/ILB/OLB/CB Injury
+  arithmetic typos). All corrected in prompts.py. WR-3 Character=4% and WR-5 Injury=2% added.
+- MODEL_VERSION bumped to apex_v2.3 in run_apex_scoring_2026.py.
+- Migrations 0042+0043: Board views (v_board, v_divergence_board, v_position_board) updated
+  from apex_v2.2 → apex_v2.3 AND from stale consensus_rankings (0 rows) →
+  prospect_consensus_rankings (1007 rows). All three views now return live data.
+- Top-50 re-score: 50/50 scored, 0 failed, 0 GEN- labels.
+  Tier distribution (fresh 50): ELITE=3, DAY1=26, DAY2=20, DAY3=1.
+  All 50 assigned canonical v2.3 archetype names. Section E compliance confirmed (3 spot-checks).
+- Divergence recomputed (149 prospects): ALIGNED=29, APEX_HIGH=65, APEX_LOW=3,
+  APEX_LOW_PVC_STRUCTURAL=52.
+- Doctor: PASSED. Snapshot integrity: 1007==1007==1007.
+
+Prior: Session 43 — Weekly pipeline first clean run + tag triage + end_session.py hardening.
+
+Session 43:
+- triage_pending_tags_2026.py (new): auto-accept/dismiss all 147 pending system tag recs.
+  Gates: RAS tags always accept; V23_GATED_TAGS require apex_v2.3 score; Divergence Alert
+  requires >= 3 active source rankings (joined via source_player_map + sources.is_active=1).
+  Calibration artifacts auto-dismissed. All 147 accepted (0 dismissed, 0 left pending).
+  prospect_tags now has 211 system-source rows. Rec status: accepted=204, dismissed=30, pending=0.
+  INSERT OR IGNORE idempotency. rec_id backlink populated on each prospect_tags row.
+- Weekly pipeline (run_weekly_update.py): first clean 18-step run post-Session 42.
+  All steps completed with exit code 0. Final line: OK: weekly pipeline completed successfully.
+  Snapshot_id=5 (2026-03-14): rows=1007, coverage=1007, confidence=1007 — PASSED.
+  Tag trigger re-run: 0 new recs (all 185 existing recs already in DB — idempotent).
+  prospects: 4555 (post-bootstrap), source_rankings: 42143, sources_active=14. Doctor: PASSED.
+  ngs_2026.csv and ras_2026.csv skipped by stage step — expected (non-standard format).
+- end_session.py hardened (scripts/end_session.py):
+  CURRENT_SESSION constant added — developer increments each session before running.
+  print_pre_run_checklist(): ASCII box + 5-second abort window fires at startup.
+  validate_state_snapshot_content(): new stale-session check — FAIL if Last Completed
+    Milestone references Session N < CURRENT_SESSION.
+  Post-packet confirmation: prints Next Milestone + 3-second abort window before commit.
+  Reminder comment documents next-session update protocol.
+
+Prior: Session 42 — Position audit + UX polish (Fix 3.2, Sessions 5.3/5.4/41).
+
+Session 39:
+- APEX v2.3 scoring expansion: 99 prospects ranked 51-150 scored. Total v2.3 non-cal: 149.
+  Batch used --prospect-ids (targeted, no --force). Dry run confirmed 99 prospects, 0 failed.
+  Quality check: PASS. Backup: data/apex_51_150_session5_scored.json (563KB).
+- Ghost deactivation (housekeeping): pid=3559 Max Klare TE (__dedup_3559__) is_active=0.
+  pid=4369 Max Klare LB (__dedup_4369__) is_active=0. Both confirmed dedup artifacts.
+  pid=4347 D'Angelo Ponds LB (Tankathon only) is_active=0 — canonical is pid=3236 CB Indiana.
+  div_id=697 (stale v2.2 divergence row for Ponds) deleted — div_id=966 (v2.3) retained.
+- Igbinosun re-score (pid=36, CB, Ohio State): PAA gate injection applied.
+  Session 5 batch scored CB-2 Zone Architect 76.4 DAY1 without PAA findings — incorrect.
+  PAA re-score: CB-3 Press Man Corner 68.4 DAY2, Tier B, FM-2 CONDITIONAL, R2 early–R3 top.
+  ARCHETYPE_OVERRIDES[36] added to run_apex_scoring_2026.py with 8 confirmed gate results.
+  Divergence: APEX_HIGH +48 MAJOR → +23 MODERATE. CB-2 was over-scoring by ~8 pts.
+  Override logged: PAA gate injection + capital revision per doctrine.
+- Monitor tag added: tag_def_id=54 (editorial, gray, note_required=1).
+  Applied to Julian Neal (pid=109, CB, rank=70): 3-cone gate trigger, R2 vs R3 hinge.
+  Do not re-score until combine 3-cone data ingested.
+- Divergence recomputed (149 prospects): ALIGNED=25, APEX_HIGH=67, APEX_LOW=3,
+  APEX_LOW_PVC_STRUCTURAL=54.
+- Doctor: PASSED.
+
+Prior: Session 38 — Tag description fix + gitignore cleanup.
+
+Session 38: Minimal maintenance session.
+- tag_definitions: Updated 'Top 5 NextGen' description to accurate NGS composite explanation.
+  Tag Legend in app pulls description dynamically — no app.py change needed.
+- .gitignore: Added patterns to cover DB backup files (draftos.backup.*, *.sqlite.backup.*),
+  data/*.json session exports, data/edge/ directory, and *.docx files.
+  This unblocked end_session.py which requires a clean working directory.
+- No DB schema changes. No migrations. No script changes.
+- Doctor: PASSED. No pipeline changes.
+
+Prior: Session 37 — APEX top-50 re-score with positional archetype libraries + UI tag/detail card overhaul.
+
+Session 37: APEX top-50 re-score (50 prospects) + UI fixes.
+- app/app.py: Unified tag rendering. Board Tags column and Tagged expander pills now use same
+  _render_tag_pill() function and same _TAGS_DISPLAY_MAP lookup. Root cause was _TAG_LABEL_MAP
+  (emoji-short) vs _TAGS_DISPLAY_MAP (full label) divergence — both now use _TAGS_DISPLAY_MAP.
+  _TAG_COLOR_MAP removed. New _TAG_PILL_COLORS 3-tuple dict (bg/border/text) covers all 32 tags.
+- app/app.py: Prospect detail card redesigned. Colored HTML trait bars via _trait_bar_html().
+  APEX tier badge with fill color (_APEX_TIER_BADGE dict). Position badge (_POS_BADGE_COLORS dict).
+  Dynamic bullet points from _generate_bullets() — threshold-based from trait scores, not echoing
+  summary text. Radio toggle preserved (Summary / Bullet Points) namespaced by prospect_id.
+- run_apex_scoring_2026.py: pid=136 (Keylan Rutledge, position_raw='G') added to
+  TOP50_POSITION_OVERRIDES as "OG". 'G' not in _CLEAN_POSITIONS → would have scored as OL.
+- APEX top-50 batch: 50 prospects scored, 0 failed. All positional archetype libraries applied.
+  Notable: Fernando Mendoza QB-1 86.4 ELITE | David Bailey EDGE-1 88.4 ELITE | Rueben Bain 87.1
+  Caleb Downs S-1 81.4 DAY1 | Jermod McCoy CB-1 82.1 DAY1 (FM-4 Medical Flag Active).
+  5 new prospects scored: Concepcion ILB-3 59.8, Trotter ILB-3 62.7, Simpson ILB-3 61.0,
+  Ioane OG-1 59.0, Rutledge OG-3 54.6 DAY3.
+- Divergence recomputed (59 active non-cal): ALIGNED=20, APEX_HIGH=26, APEX_LOW=0, APEX_LOW_PVC_STRUCTURAL=16.
+- Backup: data/apex_top50_rescored_session37.json (144KB).
+- Doctor: PASSED. No schema changes. No migrations.
+
+Prior: Sessions 34–36 — Prospect detail expander, unified detail panel, clickable rows, UI polish.
+
+Session 36: Tabbed boards, tag display overhaul, detail card polish, color disambiguation.
+- Tabbed boards: st.tabs(["📋 Big Board", "⚡ APEX Board — N scored"]).
+  Tagged prospects expander inside Big Board tab. APEX Board inside APEX tab.
+  Free-standing tier legend captions removed — content moved into Column Guide expander.
+- Tags: _TAGS_DISPLAY_MAP expanded to all 28 DB tag_names. "APE" bug fixed —
+  _fmt_tags_text was using t[:3].upper() fallback → now uses _TAGS_DISPLAY_MAP + raw tag_name.
+  Both _fmt_tags and _fmt_tags_text use two-space separator.
+- Color disambiguation: "Tier" column renamed "Consensus" in display DataFrame.
+  _style_consensus_tier() added (text-color only). APEX Tier keeps background-fill badge.
+  Visual contract: Consensus = text color · APEX Tier = filled badge.
+- Detail card (_render_apex_detail):
+  Character sub-scores → plain English (Off-field record / Motor & drive / Mental makeup).
+  Schwesinger/Smith rule badges → plain English descriptions, one per line.
+  Archetype gap → "Archetype fit: N pts — [Clean/Solid/Tweener context]".
+  Strengths/Red Flags → radio toggle Summary vs Bullet Points (key namespaced by prospect_id).
+- No DB changes. No migrations. No query changes. app.py only.
+- Doctor: PASSED (no pipeline changes).
+
+Prior: Session 29 — RAS re-ingest (pro day scores) + Kamari Ramsey S-3 re-score.
+
+- Tag pills: "Tags" column added to main board dataframe. Emoji text labels per tag type
+  (⚡ DIV, 📈 DEV, ⚖ COMP, 🔥 ERAS, ✓ GRAS, ⚠ PRAS, 🩹 INJ). 44 tagged prospects visible.
+- Tag filter: sidebar checkboxes (7 tag types), OR logic. Selecting any tag collapses board
+  to matching prospects. Uncheck all = full board restored.
+- Tagged prospects expander: colored HTML pill badges (amber/blue/purple/green/teal/red/orange)
+  rendered via st.markdown unsafe_allow_html. Each tagged row shows rank + APEX + pills.
+- Coverage fix: get_big_board() now LEFT JOINs prospect_board_snapshot_coverage on
+  snapshot_id + prospect_id. prospect_board_snapshot_rows.coverage_count was always NULL.
+  Sadiq now shows coverage=14 (was NULL/0). All 995 board rows fixed.
+- APEX tier sort: _apex_tier_sort integer key added (ELITE=0, DAY1=1 ... UDFA=5).
+  Hidden from display. APEX scores panel now pre-sorted ELITE→DAY1→DAY2→DAY3.
+- Em dash: APEX and Δ APEX cells show — instead of blank for unscored prospects.
+- Tag legend: collapsible sidebar expander below tag checkboxes. Describes all 7 tag types.
+- Column guide: collapsible expander above the board. Markdown table defining all 14 columns.
+- Files changed: app/app.py, draftos/queries/model_outputs.py.
+- Doctor: PASSED. No schema changes. No pipeline changes.
+
+Prior: Session 27 — Max Klare position fix (LB→TE) + tag rec triage (9 pending → 0 pending).
+
+- Max Klare (pid=6): position_group updated LB→TE. Two inactive duplicate rows deactivated
+  (pid=3559 TE Ohio State, pid=4369 LB dedup) after UNIQUE constraint blocked direct update.
+  pid=3559 school_canonical set to __dedup_3559__ to free unique slot. Re-scored as TE-5
+  Raw Projection, 51.3 DAY3. Divergence recomputed (no change in distribution).
+- Tag rec triage: 9 pending → 0 pending.
+  Accepted (2): Josephs EDGE Compression Flag (TWEENER +4.2), Ramsey S Divergence Alert (+28).
+  Dismissed (7): Iheanachor LB Compression (SOLID not tweener), Ponds CB Divergence (artifact),
+  all 5 Dev Bet recs (Howell/Faulk/Mcdonald/Cooper/Rutledge — consensus ranks 18–47, market
+  has priced development trajectory, Dev Bet requires rank >75 to be informative).
+- Rec status: accepted=57, dismissed=29, pending=0.
+- Doctor: PASSED. Snapshot integrity: PASSED.
+
+Prior: Session 26 — APEX full re-score: calibration batch (11) + top-50 batch (50) with positional libraries.
+
+- CRITICAL FIX: CALIBRATION_OVERRIDES prospect_ids were all stale pre-rebuild PIDs (e.g.,
+  Schwesinger=1464/Jalen Catalon, Hunter=885/Travis Kelce, Ezeiruaku=1420/Kyron Drones).
+  All 11 corrected to post-rebuild PIDs: Schwesinger=1925, Hunter=455, Sanders=230,
+  Membou=1371, Ratledge=880, Etienne=304, Emmanwori=1278, Ezeiruaku=1729,
+  Williams=1050, Paul=504, Wilson=1391. Session 26 annotations added.
+- Calibration batch (11 prospects): all re-scored with correct players and correct positions.
+  Key changes: Sanders DAY2 67.0→DAY1 78.9 (was scoring Tyler Allgeier), Etienne DAY3→DAY2 57.7
+  (was scoring Kaimi Fairbairn), Emmanwori ILB-1 DAY1→S-2 DAY2 (correct position now),
+  Hunter ELITE 91.2→DAY1 84.8 CB-3 (correct player), Ratledge now OG-1 (was TE-4).
+- Top-50 batch: 50 prospects re-scored with --force. All positional archetype libraries applied.
+  Notable changes: David Bailey EDGE-1 82.1→88.7 ELITE (largest upgrade), Mesidor APEX_HIGH +16
+  resolved to ALIGNED +4 (consensus was right), Thieneman divergence compressed +23→+8.
+- New signals: Devin Moore CB APEX_HIGH MAJOR +33, Kamari Ramsey S APEX_HIGH MODERATE +28.
+- Divergence recomputed (62 prospects): ALIGNED=16, APEX_HIGH=26, APEX_LOW=0, APEX_LOW_PVC_STRUCTURAL=20.
+- Tag triggers: 9 new pending recs (5 Dev Bet, 2 Compression, 2 Divergence Alert).
+  Pending: Josephs EDGE/Iheanachor LB (Compression), Howell EDGE/Mcdonald DT/Faulk EDGE/
+  Rutledge OL/Cooper LB (Dev Bet), Ponds CB/Ramsey S (Divergence Alert).
+- Backup: data/apex_top50_rescored_session26.json (147KB).
+- Doctor: PASSED. Snapshot integrity: PASSED (snapshot_id=3, rows=995).
+
+Prior sessions: 27 (Klare fix + tag triage), 26 (APEX full re-score, CALIBRATION_OVERRIDES fix), 25 (weekly pipeline),
+  24 (tag trigger engine), 23b (source key correction), 23 (combine+NGS ingest),
+  21 (dev bet triage), 20 (divergence triage), 19 (tag acceptance workflow),
+  18 (Kilgore re-score, trigger engine seed), 16 (bleacherreport ingest),
+  15 (APEX board audit + override fix), 13b (school/archetype fix), 13 (weekly pipeline),
+  12 (DB rebuild).
+
+Prior sessions: 23b (source key correction), 23 (combine+NGS ingest), 21 (dev bet triage),
+  20 (divergence triage), 19 (tag acceptance workflow), 18 (Kilgore re-score, trigger engine seed),
+  16 (bleacherreport ingest), 15 (APEX board audit + override fix), 13b (school/archetype fix),
+  13 (weekly pipeline), 12 (DB rebuild).
+
+- Renamed source nflcom_2026 (source_id=28) → combine_ranks_2026. 735 ranking rows and all
+  RAS measurables intact. Notes field updated. ras rows unaffected (stored by prospect_id).
+- Ingested nflcom_2026 as new source (source_id=30, T2 1.0). NFL.com editorial big board.
+  303 players. CSV columns: rank/name/school/pos. 92 new source_player_map entries from
+  patch_name_normalization_2026.py.
+- Deactivated ngs_2026 (source_id=29, is_active=0). Data preserved in grade column.
+  Rule established: model-output scores (algorithmic composites) stored with is_active=0.
+  Never feed consensus math. A model score is not a scout ranking. Deactivate at ingest time.
+- Final source state: combine_ranks_2026 (28, active, 735 rows), ngs_2026 (29, inactive,
+  312 rows), nflcom_2026 (30, active, 303 rows).
+- Consensus: 849 rows. 14 active sources.
+  Styles LB #1 confirmed genuine after NGS deactivation. jFoster#1, PFF#8, TDN#10, Ringer#12,
+  14 sources total. House-effect hypothesis was incorrect. T1 sources all have him top-12.
+- Doctor: PASSED (sources=30, sources_active=14, source_rankings=29947).
+- Snapshot 3 (2026-03-12): rows=615, coverage=615, confidence=615 — PASSED.
+
+Prior sessions on record: 12 (DB rebuild), 13 (weekly pipeline), 13b (school/archetype fix),
+15 (APEX board audit + override correction), 16 (bleacherreport ingest), 18 (Kilgore re-score),
+19 (tag acceptance workflow), 20 (divergence triage), 21 (dev bet + compression flag triage),
+23 (combine + NGS ingest), 23b (source key correction).
+
+## Next Milestone (Single Target)
+
+- Session 101: Draft night operations. Use the Draft Mode tab to run the live draft.
+  Scoring inversion fixed (S100): quality-dominant formula, non-negative capital fit,
+  Team Board quality gate. Bailey-type elites now score correctly in both Best Fit and
+  Best Avail views. Con#298/APEX#161 players cannot pollute the top-10 Team Board.
+  To use: streamlit run app/app.py → Draft Mode tab → select team → record picks.
+  Post-draft: run reset_drafted_2026.py (dry run first) if test picks need clearing.
+  Deferred (post-draft): prospect_comps expansion, full batch APEX re-score.
+  Deferred (post-draft): post-draft audit framework (APEX Framework Section 9).
+  Deferred (post-draft): pick ownership trade editor (dm_pick_overrides state key seeded).
+
+---
+
+## Layer Status
+
+RAW CSVs: CSVs present in data/imports/rankings/raw/2026/. combine_2026.csv REMOVED Session 69
+  (superseded by jfosterfilm measurables pipeline). nflcom_2026.csv, ngs_2026.csv present.
+
+STAGING: Staged CSVs present per source under data/imports/rankings/staged/2026/.
+
+INGEST: Operational. 33 sources (16 active canonical), source_players: 10519,
+  source_rankings: 42743.
+  combine_2026 (source_id=31): is_active=0. CSV removed Session 69. Alias retained for audit.
+  nflcom_2026 (source_id=30, T2 1.0): 303 rows. NFL.com editorial big board.
+  ngs_2026 (source_id=29, is_active=0): 312 rows. Model score — not in consensus.
+  MEASURABLES: prospect_measurables table (Migration 0048). 716 rows from jfosterfilm_2026.csv.
+    ingest_jfosterfilm_measurables_2026.py — idempotent, INSERT OR REPLACE on (prospect_id, season_id).
+
+BOOTSTRAP: Operational. prospects: 4571 total (active managed by is_active flag).
+
+UNIVERSE: Operational. data/universe/prospect_universe_2026.csv (861 players).
+  Migration 0033 applied.
+
+CONSENSUS: Operational. 1001 rows (16 active sources, rebuilt Session 69).
+  Top: Fernando Mendoza QB #1 | Arvell Reese EDGE #2 | Caleb Downs S #3.
+
+MODEL OUTPUTS: Operational.
+
+SNAPSHOTS: Operational. Latest: snapshot_id=6 (2026-03-18). rows=1001 — PASSED.
+  Full pipeline: build_consensus → snapshot_board → compute_snapshot_metrics →
+  compute_source_snapshot_metrics → compute_snapshot_coverage →
+  compute_snapshot_confidence → verify_snapshot_integrity
+
+APEX: Operational. 300 v2.3 active non-cal scored + 12 calibration artifacts.
+  Archetype-aware measurables context live (Session 71): MEASURABLES_ARCHETYPE_CONTEXT dict,
+  9 archetypes mapped. _get_measurables_context() updated with archetype_code parameter.
+  716 prospects have measurables data.
+  Tiers (v2.3 active non-cal, post S90 top-300 expansion):
+    ELITE=2, DAY1=31, DAY2=105, DAY3=145, UDFA-P=17 (total active non-cal = 300).
+  Divergence (post S90):
+    ALIGNED=37, APEX_HIGH=126, APEX_LOW=23, APEX_LOW_PVC_STRUCTURAL=115.
+    Legacy "APEX LOW" (space) flag: 11 rows — pre-existing format artifact, non-blocking.
+  Arvell Reese (pid=16): ILB-3 Run-First Enforcer, raw=82.3 composite=70.0 DAY1 Tier A.
+    S89 gate: APEX_LOW_PVC_STRUCTURAL REAFFIRMED. Structural ILB PVC. No override changes.
+  Jacob Rodriguez (pid=19): ILB-1 Green Dot Anchor (S89 Almanac correction from ILB-2).
+    raw=76.5 composite=65.0 DAY2 Tier B. FM-6 primary / FM-2 secondary.
+    Capital: R3 Early base / R2 Late upside (landing-spot conditional).
+    PAA PARTIAL. Notes: paa_trace, divergence_analysis, landing_spot_flag, validation_trigger.
+    Comps: Demario Davis (hit) / Bobby Wagner (ceiling) / Deion Jones (bust).
+    ACTION REQUIRED S90: add pid=19 to ARCHETYPE_OVERRIDES before next --batch all.
+  Latest backup: data/exports/apex_all_rescored_s89.json (139 records).
+  Latest backup: data/apex_all_rescored_s71_20260329T063036Z.json (140 records).
+  Igbinosun (pid=36): CB-3 Press Man Corner 68.4 DAY2, Tier B, FM-2 CONDITIONAL, R2 early–R3 top.
+    PAA gate injection applied Session 39. Prior score (CB-2 76.4) corrected. Delta: +23 MODERATE.
+  Love (pid=61): RB-1 59.8 DAY2 Tier A v_injury=9.0 (carry clock CLEAR, Session 21).
+  Ramsey (pid=148): S-3 72.6 DAY2 Tier B R3. APEX_HIGH MODERATE +29 (Session 39 divergence).
+  Neal (pid=109): MONITOR tag active — 3-cone gate pending. Do not re-score until combine data.
+  CALIBRATION_OVERRIDES: all 11 PIDs corrected Session 26.
+  Max Klare (pid=6): position_group corrected LB→TE (Session 27). Re-scored TE-5 51.3 DAY3.
+  Keylan Rutledge (pid=136): TOP50_POSITION_OVERRIDES OG added Session 37 (position_raw='G' fix).
+  Igbinosun (pid=36): ARCHETYPE_OVERRIDES[36] added Session 39 with PAA gate findings.
+  Ghost cleanup (Session 39): pid=3559, 4369 (Klare dups) is_active=0. pid=4347 (Ponds LB) is_active=0.
+  Migrations applied: 0001–0055. Next migration: 0056.
+    0044 historical_comps table. 0046 added pre_draft_signal + is_fm_reference columns.
+    0047 prospect_comps table (analyst-curated comp cards per prospect).
+    0048 prospect_measurables table (jfosterfilm expanded measurables, 716 rows).
+    0055 drafted_picks_2026 event table + v_draft_targets_remaining_2026 remaining-board view.
+  historical_comps: 350 rows total (314 position comps + 36 FM refs). All 13 positions covered.
+    All canonical archetypes have ≥2 comps. Seeded via seed_perplexity_comps_2026.py (Session 79).
+    DT→IDL normalization live in query module + scoring prompt + app filter (Session 79).
+  Tag trigger re-run executed post-Session 42 — 147 pending recs generated (see TAGS).
+
+TARGETS AND TEAM FIT SURFACES (S91):
+
+Contract surfaces (read-only, season_id = 1 baked in):
+
+- v_team_fit_context_2026
+  - Rows: 32 (one per team_id, season_id)
+  - Assembles:
+    - team_context_snapshots               (scheme_family, capital_profile, failure_mode_bias, provenance_note)
+    - team_needs_2026                      (PREMIUM + SECONDARY needs, confidence default 'B')
+    - team_depth_pressure_2026             (pressure_score 0–100, starter_quality)
+    - team_deployment_traits_2026          (normalized traits e.g. CB_PRIMARY_COVERAGE, EDGE_BASE_FRONT, S_SPLIT_FIELD_USAGE, RB_RUN_SCHEME via row model)
+    - team_context_sources_2026            (per-team provenance log)
+    - team_draft_context                   (evaluator-facing fields)
+  - Purpose: canonical team-side context for the team-fit evaluator and any UI/reporting that needs per-team scheme/capital/pressure/traits.
+
+- v_draft_targets_2026
+  - Rows: 2,201
+  - Columns: 28 (prospect, team, fit, divergence, reconciliation)
+  - Join chain (implementation detail, not to be reimplemented in readers):
+      v_team_prospect_fit_signal_2026
+        → divergence_flags (apex_v2.3, space-variants normalized)
+        → consensus_reconciliation_2026 (LEFT JOIN, COALESCE(recon_bucket, 'COVERAGE_GAP'))
+  - Purpose: canonical target surface combining:
+      - prospect-side APEX fit and divergence
+      - team-side fit tier / fit band
+      - consensus reconciliation via recon_bucket
+
+recon_bucket semantics (from consensus_reconciliation_2026):
+  HIGH         APEX bullish ≥ 25 vs jFoster-blended market
+  LOW          APEX bearish ≥ 25
+  NONE         Covered by jFoster, small delta
+  COVERAGE_GAP No jFoster CON rank (COALESCE default in the view)
+
+Orphan definition (targets layer):
+  A prospect with APEX_HIGH divergence and MAJOR magnitude
+  AND all team fits in v_draft_targets_2026 are Band C (no Band A/B fits).
+
+Forbidden direct reads in query helpers (unless building or repairing the views):
+  - consensus_reconciliation_2026
+  - divergence_flags
+  - v_team_prospect_fit_signal_2026
+
+Required entry point for all target-selection reads:
+  - v_draft_targets_2026 directly, OR
+  - draftosqueriestargets._select(...)
+
+DRAFT MODE (S93):
+
+Event layer (Migration 0055, season_id=1):
+- drafted_picks_2026: 0 rows (clean pre-draft state). Records picks as they happen.
+- v_draft_targets_remaining_2026: reactive view, auto-filters drafted prospects via NOT EXISTS.
+  Same 28 columns as v_draft_targets_2026. Zero-latency — updates on every pick.
+
+Scripts (all idempotent, run as python -m scripts.<name>):
+- mark_drafted_2026.py: record a single pick (--prospect-id, --pick-number, --team, --note)
+- reset_drafted_2026.py: rollback picks (--team, --pick-number filters; --apply 0/1)
+- get_team_board_2026.py: remaining board for a team (--team, --limit, --positions)
+- validate_reactive_board_2026.py: 7-check non-destructive validation
+
+Query layer: draftos/queries/draft_mode.py
+- All reads through v_draft_targets_remaining_2026. Forbidden upstream tables never touched.
+- mark_prospect_drafted(): backs up DB once per day, 3 validations, then INSERT.
+
+UI: app/app.py sidebar checkbox "Draft Mode (operator)" → 3-tab panel
+- Draft Control / Remaining Board / Team Companion
+- Reads exclusively through draft_mode.py functions.
+
+Notes:
+  - Any future helper that needs additional filtering (e.g., "all MAJOR orphans for a given
+    position group") MUST query v_draft_targets_2026 with the appropriate filters
+    (position_group, recon_bucket, divergence_flag, divergence_magnitude, fit_band, etc.)
+    and NOT recompute divergence or reconciliation by joining back to divergence_flags
+    or consensus_reconciliation_2026.
+  - team_deployment_traits_2026 is allowed in read helpers ONLY for EXISTS-style predicates
+    to constrain teams by scheme traits. All returned rows still come from v_draft_targets_2026
+    or v_team_fit_context_2026.
+  - Scripts that WRITE consensus_reconciliation_2026 remain confined to dedicated Mode 2
+    pipeline scripts (e.g., rebuild_consensus_reconciliation_2026.py) and must be
+    idempotent (INSERT OR REPLACE), season-scoped, with backup-before-write and --apply 0/1 flags.
+
+TAGS: Operational. Session 24 trigger engine built and active.
+  Scripts: run_tag_triggers_2026.py (engine), accept_tag_recs_2026.py (workflow),
+    draftos/tags/evaluator.py (pure function library).
+  Schema: tag_definitions=28 (added Monitor id=54 Session 39), tag_trigger_rules=14.
+  Rec status: accepted=204, dismissed=30, pending=0.
+    All 147 pending recs triaged Session 43 via triage_pending_tags_2026.py (all accepted).
+  Active tags (211 total system prospect_tags rows): Development Bet=70, Elite RAS=45,
+    Compression Flag=32, Divergence Alert=31, Great RAS=18, Top 5 NextGen=7,
+    Scheme Dependent=6, Poor RAS=1, Injury Flag=1, Monitor=1 (Neal pid=109).
+  Monitor tag (id=54, Session 39): editorial, gray, note_required=1.
+    Applied to Julian Neal CB — 3-cone gate pending.
+
+EXPORTS: board_2026_v1_default.csv last produced Session 21. Current for that snapshot.
+
+---
+
+## Ordered TODOs
+
+1. ~~Session 4: APEX top-50 batch scoring~~ COMPLETE
+2. ~~Session 5: Add positional archetype libraries to prompts.py~~ COMPLETE
+3. ~~Session 6: RAS join fix, ghost prospect audit~~ COMPLETE
+4. ~~Session 7: Top-50 force re-score (positional archetypes), calibration artifact tagging~~ COMPLETE
+5. ~~Session 8: Prospect universe migration (migration 0033, is_active, consensus rebuild)~~ COMPLETE
+6. ~~Session 9: Re-score top-50 APEX with --force against updated consensus ranks~~ COMPLETE
+7. ~~Session 10: Divergence engine recalibration (rank-relative method, migration 0035)~~ COMPLETE
+8. ~~Session 12: Emergency database rebuild~~ COMPLETE
+9. ~~Session 13: Full clean weekly pipeline run — all 18 steps~~ COMPLETE
+10. ~~Session 13b: School canonicalization + GEN archetype reclassification~~ COMPLETE
+11. ~~Session 14: APEX tier label standardization (DAY1/DAY2/DAY3)~~ COMPLETE
+12. ~~Session 15: Full board audit, stale override ID fix, 9 re-scores, calibration tagging~~ COMPLETE
+13. ~~Session 16: bleacherreport_2026 ingest (source_id=27, T2), analyst_grade capture~~ COMPLETE
+14. ~~Session 18: Kilgore re-score (CB-3 ELITE → S-3 DAY2 63.1), tag trigger engine~~ COMPLETE
+15. ~~Session 19: Tag acceptance workflow (accept_tag_recommendations_2026.py)~~ COMPLETE
+16. ~~Session 20: Divergence Alert triage (6 accepted, 12 dismissed, 1 held)~~ COMPLETE
+17. ~~Session 21: Love re-score (RB-1 59.8), Dev Bet triage (28 accepted), Compression Flag triage~~ COMPLETE
+18. ~~Session 23: combine_ranks_2026 ingest (source_id=28), ngs_2026 ingest (source_id=29)~~ COMPLETE
+19. ~~Session 23b: Source key correction, nflcom_2026 ingest (source_id=30), ngs deactivated~~ COMPLETE
+20. ~~Session 24: Tag trigger engine built (evaluator.py, run_tag_triggers_2026, accept_tag_recs_2026)~~ COMPLETE
+21. ~~Session 25: Full clean weekly pipeline run end-to-end (18 steps)~~ COMPLETE
+22. ~~Session 26: APEX full re-score — calibration (11) + top-50 (50), CALIBRATION_OVERRIDES PIDs fixed~~ COMPLETE
+23. ~~Session 27: Max Klare LB→TE fix + 9 pending tag recs triaged~~ COMPLETE
+24. ~~Session 28: Tag UI live — pills, filter, coverage fix, APEX sort, legend, column guide~~ COMPLETE
+25. ~~Session 29: RAS re-ingest (814 rows, 95 scored) + Ramsey S-3 re-score~~ COMPLETE
+26. ~~Session 29: Kamari Ramsey S-3 re-score — APEX_HIGH MODERATE +29~~ COMPLETE
+27. ~~Session 30–31: Prospect detail drawer + UI polish (score fmt, gap labels, column alignment)~~ COMPLETE
+28. ~~Session 32–33: Auto-APEX-Rank + APEX Board v2.2 + tag filter~~ COMPLETE
+29. ~~Session 34: APEX Board prospect detail expander (get_apex_detail, _render_apex_detail)~~ COMPLETE
+30. ~~Session 35: Unified detail panel, clickable board rows, on_select API~~ COMPLETE
+31. ~~Session 36: Tabbed boards, tag overhaul, detail card polish, color disambiguation~~ COMPLETE
+32. ~~Session 37: APEX top-50 re-score — real trait vectors, UI tag/detail card overhaul~~ COMPLETE
+33. ~~Session 38: Minimal maintenance — Top 5 NextGen tag description fix + gitignore cleanup~~ COMPLETE
+34. ~~Session 39: APEX ranks 51-150 scoring expansion (99 prospects) + Igbinosun PAA re-score~~ COMPLETE
+35. ~~Session 40-42: UX polish (FM text, compare panel, divergence narrative, tag filter) + position audit~~ COMPLETE
+36. ~~Session 43: Tag triage (147 recs → 204 accepted) + weekly pipeline clean run (rows=1007) + end_session.py hardening~~ COMPLETE
+37. ~~Session 44 (archetype rebuild): prompts.py Section B rebuild, PAA gates, override fix, top-50 re-score, migrations 0042+0043~~ COMPLETE
+38. ~~Session 45: Full 144-prospect APEX re-score — 99 non-top-50 stale archetypes corrected, 0 GEN- remaining~~ COMPLETE
+39. **Session 46: Additional source ingest (2–3 sources) + tag trigger re-run** ← NEXT
+40. Post-draft audit framework activation (after April 2026 draft)
+
+---
+
+## APEX Status
+
+- Version: v2.3 (scorer engine + model_version written to DB — aligned Session 44)
+- v2.3 mechanism fields applied (migration 0040): failure_mode_primary, failure_mode_secondary,
+  signature_play, translation_risk. bust_warning added (migration 0041). All 144 v2.3 rows populated.
+- Active 2026 scored: 144 v2.3 (is_active=1, is_calibration_artifact=0). 0 GEN- archetypes.
+- Calibration artifacts: 12 (PIDs: 230,304,313,455,504,880,1050,1278,1371,1391,1729,1925)
+  All re-scored Session 26 with correct PIDs and positions.
+- Tier dist (v2.3 all 144, post Session 45): ELITE=3, DAY1=30, DAY2=74, DAY3=34, UDFA-P=3
+- Divergence (current, post Session 45): ALIGNED=30, APEX_HIGH=59, APEX_LOW=4,
+  APEX_LOW_PVC_STRUCTURAL=51
+- Notable Session 39 additions:
+    Davison Igbinosun CB: PAA-corrected 68.4 DAY2 CB-3, Tier B, FM-2 CONDITIONAL, +23 MODERATE
+    Julian Neal CB: MONITOR tag active — 3-cone gate pending (sub-6.9s = R2, above = R3)
+- Top APEX_HIGH premium signals (actionable — Session 39 divergence):
+    Domani Jackson CB +88 MAJOR | Mansoor Delane CB +63 MAJOR | Romello Height EDGE +49 MAJOR
+    Tacario Davis CB +49 MAJOR | Julian Neal CB +48 MAJOR | Jadon Canady CB +48 MAJOR
+    Jaishawn Barham EDGE +53 MAJOR | Chandler Rivers CB +36 MAJOR | Jude Bowry EDGE +41 MAJOR
+    Michael Taaffe S +36 MAJOR | Garrett Nussmeier QB +37 MAJOR | Kamari Ramsey S +29 MODERATE
+    Davison Igbinosun CB +23 MODERATE | Keyron Crawford EDGE +22 MODERATE | Derrick Moore EDGE +21 MODERATE
+  (D'Angelo Ponds CB +91 is artifact — duplicate divergence source, exclude)
+  (Jalon Kilgore S +38 held — combine man-coverage gate pending)
+- CRITICAL: TOP50_POSITION_OVERRIDES and ARCHETYPE_OVERRIDES in run_apex_scoring_2026.py
+  corrected Session 15. CALIBRATION_OVERRIDES corrected Session 26.
+  Rutledge (pid=136) OG added to TOP50_POSITION_OVERRIDES Session 37.
+  Igbinosun (pid=36) PAA gate injection added to ARCHETYPE_OVERRIDES Session 39.
+  If DB is ever rebuilt, re-verify ALL prospect_ids in ALL THREE dicts before running.
+- APEX LOW on non-premium positions (ILB, OLB, OG, C, TE, RB) is structural PVC, not
+  actionable. Monitor APEX_HIGH on premium positions (QB, CB, EDGE, OT, S) only.
+
+---
+
+## Divergence Status
+
+Current recompute: post-Session 57 (Parker pid fix applied).
+Total (premium QB/CB/EDGE/S/OT, sources_covered>=5): 34 signals. Full distribution not re-queried.
+
+Confirmed premium APEX_HIGH signals (genuine, ready for Divergence Alert tags — S58):
+- DAYLEN EVERETTE CB (pid=?): +69 MAJOR, 11 src, #88, CB-3 Press Man, DAY1 74.2
+- MALIK MUHAMMAD CB: +63 MAJOR, 13 src, #89, CB-3 Press Man, DAY1 71.8
+- HEZEKIAH MASSES CB: +55 MAJOR, 9 src, #121, CB-4 Slot, DAY2 63.7
+- JAISHAWN BARHAM EDGE: +54 MAJOR, 9 src, #114, EDGE-4 Athletic Dom, DAY2 64.7
+- DAVISON IGBINOSUN CB (pid=36): +46 MAJOR, 13 src, #68, CB-3 Press Man, DAY1 73.2 — PAA-corrected
+- ROMELLO HEIGHT EDGE (pid=43): +28 MODERATE, 13 src, #72, EDGE-4, DAY2 67.8
+- DERRICK MOORE EDGE (pid=81): +20 MODERATE, 13 src, #65, EDGE-4, DAY2 67.8
+
+Previously accepted tags (still valid):
+- COLTON HOOD CB +26, JOSHUA JOSEPHS EDGE +27, DEVIN MOORE CB +23, CHRIS JOHNSON CB +17
+- KAMARI RAMSEY S +21, CHANDLER RIVERS CB +26, KEITH ABNEY CB +13
+
+Conditional / gated:
+- JULIAN NEAL CB +42 — MONITOR tag active, 3-cone gate still open
+- TJ PARKER EDGE (pid=27): +23 MODERATE, 12 src, #46 — FIXED S57 (was +61 MAJOR artifact)
+- TREYDAN STUKES CB +54, KEIONTE SCOTT CB +21 — borderline coverage
+
+Dismiss (archetype-structural):
+- JADON CANADY CB +77 — CB-5 #183, projection archetype (not market miss)
+- DOMANI JACKSON CB +36, TACARIO DAVIS CB +34 — CB-5 low coverage
+- LT OVERTON EDGE +37, ANTHONY LUCAS EDGE +29 — EDGE-5 Tweener
+- MICHAEL TAAFFE S +25 — S-5 DAY3 53.6
+
+Resolved artifacts:
+- D'ANGELO PONDS CB (pid=3236): sources 2->12, rank #190->#28 (Session 56)
+- TJ PARKER EDGE (pid=27): coverage artifact resolved Session 57 (+61->+23)
+- JALON KILGORE S (pid=309): held pending combine man-coverage gate
+
+---
+
+## Source Registry (Active)
+
+16 active canonical sources (sources_active=17 per doctor includes 1 legacy row):
+
+| ID | Key | Tier | Weight |
+|----|-----|------|--------|
+| 13 | pff_2026 | T1 | 1.3 |
+| 24 | thedraftnetwork_2026 | T1 | 1.3 |
+| 25 | theringer_2026 | T1 | 1.3 |
+| 9  | nfldraftbuzz_2026_v2 | T2 | 1.0 |
+| 3  | cbssports_2026 | T2 | 1.0 |
+| 6  | espn_2026 | T2 | 1.0 |
+| 10 | nytimes_2026 | T2 | 1.0 |
+| 15 | pfsn_2026 | T2 | 1.0 |
+| 1  | jfosterfilm_2026 | T2 | 1.0 |
+| 2  | bnbfootball_2026 | T3 | 0.7 |
+| 23 | tankathon_2026 | T3 | 0.7 |
+| 27 | bleacherreport_2026 | T2 | 1.0 |
+| 28 | combine_ranks_2026 | T2 | 1.0 |
+| 30 | nflcom_2026 | T2 | 1.0 |
+
+Inactive (data preserved): ngs_2026 (source_id=29, is_active=0) — model score, not ranking.
+
+2) System Snapshot Output
+=== DRAFTOS SYSTEM SNAPSHOT ===
+generated_utc: 2026-04-22T08:24:04.221815+00:00
+
+## Git
+branch: main
+commit: 6d9af42534ed4984266fcb621c6df366ae978ed4
+status: clean
+
+## Tables
+- apex_jfoster_reconciliation_2026
+- apex_scores
+- board_snapshots
+- consensus_rankings
+- consensus_reconciliation_2026
+- divergence_flags
+- draft_results
+- drafted_picks_2026
+- historical_comps
+- measurables
+- meta_migrations
+- model_outputs
+- models
+- name_aliases
+- notes
+- override_log
+- production
+- prospect_board_snapshot_confidence
+- prospect_board_snapshot_coverage
+- prospect_board_snapshot_metrics
+- prospect_board_snapshot_rows
+- prospect_board_snapshots
+- prospect_canonical_map
+- prospect_comps
+- prospect_consensus_rankings
+- prospect_ghost_fixes2026
+- prospect_measurables
+- prospect_model_outputs
+- prospect_tag_history
+- prospect_tag_recommendations
+- prospect_tags
+- prospects
+- ras
+- ras_staging
+- school_aliases
+- seasons
+- source_board_snapshot_metrics
+- source_canonical_map
+- source_player_map
+- source_player_review_queue
+- source_players
+- source_rankings
+- sources
+- sqlite_sequence
+- tag_definitions
+- tag_trigger_rules
+- team_context_snapshots
+- team_context_sources_2026
+- team_deployment_traits_2026
+- team_depth_pressure_2026
+- team_draft_context
+- team_needs_2026
+- team_prospect_fit
+- testing
+- users
+
+## Row Counts (key tables)
+- sources: 34
+- seasons: 1
+- prospects: 4571
+- source_players: 10524
+- source_player_map: 10192
+- source_rankings: 42753
+- models: 1
+- model_outputs: 0
+
+## Migrations
+- 0001_schema_v1 @ 2026-03-10T22:13:56.612939+00:00
+- 0002_seed_2026 @ 2026-03-10T22:13:56.627775+00:00
+- 0002_board_snapshots @ 2026-03-10T22:17:38.518780+00:00
+- 0003_seed_v1_default_model @ 2026-03-10T22:17:38.524214+00:00
+- 0003_snapshot_metrics @ 2026-03-10T22:17:38.525800+00:00
+- 0004_fix_seed_2026_and_model @ 2026-03-10T22:17:38.525800+00:00
+- 0004_source_snapshot_metrics @ 2026-03-10T22:17:38.525800+00:00
+- 0005_prospect_snapshot_confidence @ 2026-03-10T22:17:38.525800+00:00
+- 0005_sources_active_cols @ 2026-03-10T22:19:24.968356+00:00
+- 0006_deprecate_nfldraftbuzz_old @ 2026-03-10T22:19:24.984046+00:00
+- 0008_consensus_board_table @ 2026-03-10T22:19:24.984046+00:00
+- 0008_source_canonical_map @ 2026-03-10T22:19:24.984046+00:00
+- 0008_source_canonicalization @ 2026-03-10T22:19:24.984046+00:00
+- 0009_consensus_tier_reason_chips @ 2026-03-10T22:19:24.984046+00:00
+- 0009_prospect_board_snapshot_coverage @ 2026-03-10T22:19:24.984046+00:00
+- 0009_snapshot_coverage @ 2026-03-10T22:19:24.984046+00:00
+- 0010_model_outputs_table @ 2026-03-10T22:19:24.984046+00:00
+- 0011_name_normalization @ 2026-03-10T22:19:24.984046+00:00
+- 0012_source_players_pos_hint @ 2026-03-10T22:19:24.984046+00:00
+- 0013_source_player_review_queue @ 2026-03-10T22:19:24.999862+00:00
+- 0014_prospect_canonical_map @ 2026-03-10T22:19:24.999862+00:00
+- 0015_source_player_review_queue @ 2026-03-10T22:19:24.999862+00:00
+- 0024_consensus_dispersion_cols @ 2026-03-10T22:19:24.999862+00:00
+- 0025_consensus_weighted_base @ 2026-03-10T22:19:24.999862+00:00
+- 0026_confidence_dispersion_cap @ 2026-03-10T22:19:24.999862+00:00
+- 0027_ras_season_cols @ 2026-03-10T22:19:24.999862+00:00
+- 0028_ras_staging @ 2026-03-10T22:19:24.999862+00:00
+- 0029_seed_jfosterfilm_2026 @ 2026-03-10T22:19:24.999862+00:00
+- 0030_prospect_tags_value @ 2026-03-10T22:19:24.999862+00:00
+- 0031_apex_divergence @ 2026-03-10T22:19:25.015525+00:00
+- 0032_apex_calibration_artifact @ 2026-03-10T22:19:25.015525+00:00
+- 0033_prospect_is_active @ 2026-03-10T22:19:25.015525+00:00
+- 0034_apex_tier_rename @ 2026-03-10T22:19:25.015525+00:00
+- 0035_divergence_rank_delta @ 2026-03-10T22:19:25.015525+00:00
+- 0036_tag_calibration_artifacts @ 2026-03-11T02:33:22.525415+00:00
+- 0037_seed_bleacherreport_2026 @ 2026-03-11T02:59:55.767870+00:00
+- 0038_source_rankings_analyst_grade @ 2026-03-11T02:59:55.773017+00:00
+- 0039_combine_measurables @ 2026-03-12T07:35:36.180978+00:00
+- 0040_apex_v23_mechanism_fields @ 2026-03-13T22:04:51.261321+00:00
+- 0041_apex_bust_warning @ 2026-03-14T05:15:05.026341+00:00
+- 0042_views_bump_to_v23 @ 2026-03-15T02:45:16.480107+00:00
+- 0043_views_fix_consensus_table @ 2026-03-15T02:46:41.919123+00:00
+- 0044_historical_comps @ 2026-03-15T06:07:31.484180+00:00
+- 0045_divergence_favors_text @ 2026-03-15T23:17:09.878059+00:00
+- 0046_historical_comps_fm_seed @ 2026-03-17 02:43:51
+- 0047_prospect_comps @ 2026-03-18T06:19:36.330649+00:00
+- 0048_prospect_measurables @ 2026-03-29 02:49:06
+- 0049teamdraftcontext @ 2026-04-20 22:10:27
+- 0049_team_draft_context @ 2026-04-20T22:10:27.612603+00:00
+- 0050_team_context_enrichment @ 2026-04-21T06:56:14.655357+00:00
+- 0051_team_fit_signal_view @ 2026-04-21 07:10:51
+- 0052_team_fit_band @ 2026-04-21 07:14:02
+- 0053_draft_targets_2026 @ 2026-04-21 07:26:16
+- 0054_team_context_normalized @ 2026-04-21 07:34:18
+- 0055_drafted_picks_2026 @ 2026-04-21T17:10:25.603193+00:00
+- 0056_draft_views_2026 @ 2026-04-21T19:56:36.839354+00:00
+
+## Active Season
+no is_active column
+
+## Script Inventory
+- app\app.py
+- draftos\apex\__init__.py
+- draftos\apex\engine.py
+- draftos\apex\prompts.py
+- draftos\apex\writer.py
+- draftos\config.py
+- draftos\db\connect.py
+- draftos\db\migrate.py
+- draftos\ingest\rankings\loader.py
+- draftos\ingest\rankings\writer.py
+- draftos\normalize\names.py
+- draftos\normalize\positions.py
+- draftos\normalize\schools.py
+- draftos\queries\__init__.py
+- draftos\queries\active.py
+- draftos\queries\apex.py
+- draftos\queries\consensus.py
+- draftos\queries\draft_mode.py
+- draftos\queries\historical_comps.py
+- draftos\queries\model_outputs.py
+- draftos\queries\team_fit.py
+- draftos\tags\__init__.py
+- draftos\tags\evaluator.py
+- draftos\team_fitevaluator.py
+- draftos\ui\__init__.py
+- draftos\ui\profile_dimensions.py
+- draftosqueriestargets.py
+- draftosqueriesteamfit.py
+- fix_card_v5.py
+- fix_score_grid.py
+- scripts\_diag_school_aliases.py
+- scripts\_verify_weights.py
+- scripts\_write_canonical_ref.py
+- scripts\accept_tag_recs_2026.py
+- scripts\app_wiring_patch.py
+- scripts\apply_prospect_ghost_fixes2026.py
+- scripts\apply_prospect_universe_2026.py
+- scripts\archetype_defs.py
+- scripts\archive\__init__.py
+- scripts\archive\apply_review_queue_mappings_2026.py
+- scripts\archive\autoresolve_mapping_review_queue_2026.py
+- scripts\archive\build_mapping_review_queue_2026.py
+- scripts\archive\consolidate_lb_ghost_pids_s62.py
+- scripts\archive\dedup_prospects_2026.py
+- scripts\archive\expand_school_aliases_2026.py
+- scripts\archive\export_mapping_review_queue_csv.py
+- scripts\archive\fix_calibration_divergence_2026.py
+- scripts\archive\fix_concepcion_2026.py
+- scripts\archive\fix_spm_dead_pid_repoint.py
+- scripts\archive\fix_text_styles_s66.py
+- scripts\archive\import_apex_batch_json.py
+- scripts\archive\learn_school_aliases_from_mapped_2026.py
+- scripts\archive\patch_0005_0006_soft_deprecate_nfldraftbuzz.py
+- scripts\archive\patch_0007_bootstrap_prospects_2026.py
+- scripts\archive\patch_apex_archetypes_local_2026.py
+- scripts\archive\patch_new_source_mapping_s60.py
+- scripts\archive\patch_school_canonicalization_2026.py
+- scripts\archive\patch_school_from_universe_2026.py
+- scripts\archive\repair_school_aliases_2026.py
+- scripts\archive\tag_calibration_artifacts_2026.py
+- scripts\audit_position_mismatches_2026.py
+- scripts\audit_position_overrides_2026.py
+- scripts\audit_tjparker_display_name.py
+- scripts\bootstrap_prospects_from_sources_2026.py
+- scripts\build_consensus_2026.py
+- scripts\build_model_outputs_v1_default_2026.py
+- scripts\build_prospect_universe_2026.py
+- scripts\build_snapshot_packet.py
+- scripts\build_team_context_2026.py
+- scripts\cleanup_stukes_ghost_orphans.py
+- scripts\compute_snapshot_confidence.py
+- scripts\compute_snapshot_coverage.py
+- scripts\compute_snapshot_metrics.py
+- scripts\compute_source_snapshot_metrics.py
+- scripts\delete_orphan_snapshots.py
+- scripts\divergence_triage_helper.py
+- scripts\doctor.py
+- scripts\doctor_snapshot.py
+- scripts\draftos_detail_iframe_v2-old.py
+- scripts\draftos_detail_iframe_v2.py
+- scripts\end_session.py
+- scripts\export_board_csv.py
+- scripts\export_confidence_summary_csv.py
+- scripts\export_movers_csv.py
+- scripts\export_png.py
+- scripts\export_reports_html.py
+- scripts\export_reports_html_share.py
+- scripts\export_source_health_csv.py
+- scripts\fix_prospect_ghosts2026.py
+- scripts\generate_prospect_pdf_2026.py
+- scripts\get_team_board_2026.py
+- scripts\ingest_combine_2026.py
+- scripts\ingest_drafttek_2026.py
+- scripts\ingest_fantasypros_2026.py
+- scripts\ingest_jfosterfilm_measurables_2026.py
+- scripts\ingest_nflcom_2026.py
+- scripts\ingest_ngs_2026.py
+- scripts\ingest_perplexity_agg_2026.py
+- scripts\ingest_rankings_staged.py
+- scripts\ingest_ras_2026.py
+- scripts\log_draft_pick_2026.py
+- scripts\mark_drafted_2026.py
+- scripts\open_session.py
+- scripts\open_session_mode1.py
+- scripts\open_session_mode3.py
+- scripts\patch_name_normalization_2026.py
+- scripts\patch_prospect_canonicalization_2026.py
+- scripts\patch_source_canonicalization_2026.py
+- scripts\publish_latest_packet.py
+- scripts\rebuild_team_fit_2026.py
+- scripts\reconcile_consensus_vs_jfosterfilm_2026.py
+- scripts\reingest_source_2026.py
+- scripts\repair_snapshot_orphans.py
+- scripts\reset_drafted_2026.py
+- scripts\run_apex_scoring_2026.py
+- scripts\run_tag_triggers_2026.py
+- scripts\run_weekly_update.py
+- scripts\scrape_nfldraftbuzz_2026.py
+- scripts\scrape_nfldraftbuzz_2026_playwright.py
+- scripts\seed_fm_reference_comps.py
+- scripts\seed_historical_comps.py
+- scripts\seed_perplexity_comps_2026.py
+- scripts\seed_position_comps_batch2.py
+- scripts\seed_rodriguez_s89.py
+- scripts\seed_team_context_normalized_2026.py
+- scripts\seed_team_draft_context_2026.py
+- scripts\snapshot_board.py
+- scripts\stage_rankings_csv.py
+- scripts\summarize_historical_comps_2026.py
+- scripts\take_predraft_snapshot_2026.py
+- scripts\triage_pending_tags_2026.py
+- scripts\update_session_state.py
+- scripts\update_session_state_mode1.py
+- scripts\update_session_state_mode3.py
+- scripts\validate_reactive_board_2026.py
+- scripts\verify_packet_manifest.py
+- scripts\verify_snapshot_integrity.py
+- tests\__init__.py
+- tests\test_profile_dimensions.py
+
+## Stub / Deferred Detection
+- draftos\apex\__init__.py
+- draftos\tags\__init__.py
+- draftos\ui\__init__.py
+- scripts\archive\__init__.py
+- scripts\doctor_snapshot.py (DEFERRED)
+- tests\__init__.py
+
+=== END SNAPSHOT ===
+
+
+Instructions:
+Reconstruct system truth from artifacts only.
+Do not infer from prior chats.
+Implement the next milestone cleanly.
+Respect architectural layers.
+Ensure idempotency.
+Include verification commands.
