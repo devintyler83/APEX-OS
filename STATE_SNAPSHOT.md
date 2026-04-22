@@ -26,6 +26,49 @@ As of Session 101 (post-fix): DEDUP_GHOST and INACTIVE_SNAPSHOT passes complete.
 
 ## Last Completed Milestone
 
+Session 105 close (Sandbox draft overlay — per-session and named-room isolation. Migration 0057.)
+
+Session 105 close:
+- DB writes: YES — Migration 0057 applied: draft_sandbox_picks table + 2 indexes.
+- Schema change: 0057_draft_sandbox_picks.sql (additive only, no destructive changes).
+  Table: draft_sandbox_picks (sandbox_id TEXT, season_id INT, prospect_id INT,
+         sandboxed_at TEXT, note TEXT, PRIMARY KEY(sandbox_id, season_id, prospect_id)).
+  Indexes: idx_sandbox_picks_sandbox_season, idx_sandbox_picks_season_pid.
+- Next migration label: 0058.
+- Files created:
+    draftos/db/migrations/0057_draft_sandbox_picks.sql
+    tests/test_draft_sandbox.py (11 tests, all passing)
+- Files modified:
+    draftos/queries/draft_mode.py — 8 new sandbox helpers added:
+      get_sandbox_picks, get_sandbox_drafted_pids, mark_prospect_sandboxed,
+      delete_sandbox_pick, reset_sandbox, get_remaining_board_sandbox,
+      get_draft_remaining_board_sandbox, get_drafted_count_sandbox.
+      All canonical functions untouched.
+    app/app.py — sandbox overlay wired into Draft Room:
+      SANDBOX_MODE bool flag (default False).
+      sanitize_room_name(raw) + active_sandbox_id() module-level helpers.
+      Per-tab UUID in st.session_state["_sandbox_id"] (auto-isolated per browser tab).
+      Named room support: sidebar text input → "room:{clean_name}" sandbox_id.
+      active_sandbox_id() resolves named room → "room:{name}" or private UUID.
+      _sandbox_id local var re-derived from active_sandbox_id() each render.
+      Read paths (_drafted_n, _remaining) and write paths (_do_draft, _do_undo)
+        all route through sandbox functions when SANDBOX_MODE=True.
+      Sidebar "Sandbox Controls" expander: join/leave room, clear with confirm guard,
+        cleaned name echo after join, shared-room advisory caption.
+      TTL cleanup on first load of each new session (7-day window).
+      Orange [SANDBOX] pill in Draft Room status strip.
+- Doctor: PASSED (post-migration, sandbox table present, canonical tables untouched).
+- Canonical draft behavior: zero behavior change when SANDBOX_MODE=False.
+- drafted_picks_2026: 0 rows (unchanged — sandbox writes never touch canonical table).
+
+## Next Milestone (Single Target)
+
+Session 106: Full batch APEX re-score (--batch all --force) after investigating Arvell Reese
+ELITE→DAY1 drop (-8.8 pts, forty=4.46/ATH=86.6). Gate report: data/exports/s70_rescore_report.txt.
+Run doctor before and after. Export results after re-score.
+
+---
+
 Session 104 close (Marketing site messaging update + Netlify deploy hardening + Streamlit LFS boot fix.)
 
 Session 104 close:
