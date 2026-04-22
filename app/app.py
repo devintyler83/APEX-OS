@@ -54,6 +54,7 @@ from draftos.queries.draft_mode import (
     get_draft_team_board as dm_get_draft_team_board,
     get_next_pick as dm_get_next_pick_spec,
     insert_draft_pick as dm_insert_draft_pick,
+    get_all_pick_ownership as dm_get_all_pick_ownership,
 )
 
 # Streamlit ≥ 1.35 supports on_select / selection_mode on st.dataframe
@@ -2145,205 +2146,950 @@ def _render_compare_panel(name_a: str, name_b: str, board_df: pd.DataFrame) -> N
 
 def render_draft_mode(conn=None) -> None:
     """
-    First-class Draft Mode surface.
-    Uses Phase 2 spec helpers from draftos/queries/draft_mode.py.
+    3-panel Draft Room: Left (Team War Room) | Center (Live Board) | Right (Inspector).
     All reads flow through v_draft_remaining_2026 / v_draft_team_board_2026.
-    Writes only to drafted_picks_2026 via insert_draft_pick().
+    Writes only to drafted_picks_2026 via dm_insert_draft_pick().
     `conn` accepted for API compatibility; helpers manage their own connections.
     """
-    # ── Team selector (team hat) ────────────────────────────────────────────
+    import json as _json_mod
+
+    # ── Internal helpers ─────────────────────────────────────────────────────
+
+    def _norm_token(s: str) -> str:
+        """Normalize snake_case/dash-case metadata tokens to Title Case words."""
+        return " ".join(part.capitalize() for part in str(s).replace("-", "_").split("_")) if s else ""
+
+    def _pill(text: str, fg: str, bg: str, border: str) -> str:
+        return (
+            f'<span style="background:{bg};border:1px solid {border};color:{fg};'
+            f'font-family:\'Barlow Condensed\',sans-serif;font-size:10px;font-weight:700;'
+            f'letter-spacing:0.08em;text-transform:uppercase;padding:2px 7px;border-radius:3px;">'
+            f'{text}</span>'
+        )
+
+    def _render_needs_chips(needs_raw: str | None, dm_team: str, insp_pos: str) -> str:
+        """Render tier-grouped need chips from needs_json. Highlights matching position."""
+        if not needs_raw:
+            return (
+                f'<span style="font-size:11px;color:rgba(255,255,255,0.38);">'
+                f'Evaluating {insp_pos} fit for {dm_team}.</span>'
+            )
+        try:
+            nl = _json_mod.loads(str(needs_raw))
+            if not isinstance(nl, list) or not nl:
+                return (
+                    f'<span style="font-size:11px;color:rgba(255,255,255,0.38);">'
+                    f'Position need: {insp_pos}.</span>'
+                )
+            TIER_ORDER  = ["PREMIUM", "SECONDARY", "DEPTH"]
+            TIER_STYLES = {
+                "PREMIUM":   ("#e8a84a", "rgba(232,168,74,0.12)",    "rgba(232,168,74,0.28)"),
+                "SECONDARY": ("#7eb4e2", "rgba(126,180,226,0.10)",   "rgba(74,144,212,0.25)"),
+                "DEPTH":     ("rgba(255,255,255,0.52)", "rgba(255,255,255,0.05)", "rgba(255,255,255,0.12)"),
+            }
+            by_tier: dict[str, list] = {}
+            for n in nl:
+                t = str(n.get("tier") or "DEPTH").upper()
+                by_tier.setdefault(t, []).append(n)
+            html = ""
+            for tier in TIER_ORDER:
+                if tier not in by_tier:
+                    continue
+                items = sorted(by_tier[tier], key=lambda x: x.get("rank", 99))
+                fg, bg, brd = TIER_STYLES.get(tier, TIER_STYLES["DEPTH"])
+                html += (
+                    f'<div style="font-size:8px;font-weight:700;letter-spacing:0.10em;'
+                    f'text-transform:uppercase;color:rgba(255,255,255,0.28);margin-bottom:2px;">'
+                    f'{tier.capitalize()}</div>'
+                    f'<div style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:5px;">'
+                )
+                for item in items:
+                    pos      = str(item.get("position") or "?")
+                    is_match = (pos == insp_pos)
+                    c_bg  = "rgba(90,184,122,0.18)"  if is_match else bg
+                    c_brd = "rgba(90,184,122,0.45)"  if is_match else brd
+                    c_fg  = "#5ab87a"                if is_match else fg
+                    conf  = str(item.get("confidence") or "")
+                    conf_s = (
+                        f'<span style="opacity:0.55;font-size:8px;margin-left:2px;">{conf}</span>'
+                        if conf else ""
+                    )
+                    html += (
+                        f'<span style="background:{c_bg};border:1px solid {c_brd};'
+                        f'color:{c_fg};font-family:\'Barlow Condensed\',sans-serif;'
+                        f'font-size:10px;font-weight:700;letter-spacing:0.06em;'
+                        f'padding:2px 6px;border-radius:3px;">{pos}{conf_s}</span>'
+                    )
+                html += '</div>'
+            return html or (
+                f'<span style="font-size:11px;color:rgba(255,255,255,0.38);">'
+                f'Position need: {insp_pos}.</span>'
+            )
+        except Exception:
+            return (
+                f'<span style="font-size:11px;color:rgba(255,255,255,0.38);">'
+                f'Position need: {insp_pos}.</span>'
+            )
+
+    def _bullet(label: str, body_html: str, lbl_color: str) -> str:
+        return (
+            f'<div style="padding:7px 0;border-top:1px solid rgba(255,255,255,0.05);">'
+            f'<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:8px;'
+            f'font-weight:700;letter-spacing:0.14em;text-transform:uppercase;'
+            f'color:{lbl_color};margin-bottom:3px;">{label}</div>'
+            f'<div style="font-family:\'Barlow\',sans-serif;font-size:11px;'
+            f'line-height:1.55;color:rgba(255,255,255,0.58);">{body_html}</div>'
+            f'</div>'
+        )
+
+    # ── Canonical state keys ─────────────────────────────────────────────────
+    _STATE_DEFAULTS: list[tuple[str, object]] = [
+        ("draft_mode_selected_pid", None),
+        ("draft_mode_active_team",  None),
+        ("draft_mode_compare_pids", []),
+        ("draft_mode_locked_pid",   None),
+        ("draft_mode_last_pick",    None),
+        ("draft_mode_view",         "best_available"),
+        ("_dm_nav_gen",             0),
+        ("_dm_pre_pick_board",      []),
+        ("_dm_view_snapshot",       "best_available"),
+        ("dm_pick_overrides",       {}),  # {pick_number: team_id} for trade editor
+    ]
+    for _sk, _sv in _STATE_DEFAULTS:
+        if _sk not in st.session_state:
+            st.session_state[_sk] = _sv
+
+    # Pop nav-just-fired sentinel — same pattern as main board nav guards.
+    _dm_nav_just_fired: bool = bool(st.session_state.pop("_dm_nav_just_fired", False))
+
+    # Local aliases (read-only snapshots; mutations go through session_state)
+    _sel_pid      = st.session_state["draft_mode_selected_pid"]
+    _locked_pid   = st.session_state["draft_mode_locked_pid"]
+    _compare_pids = list(st.session_state["draft_mode_compare_pids"])
+    _dm_view      = st.session_state["draft_mode_view"]
+
+    # ── Teams ────────────────────────────────────────────────────────────────
     _dm_all_teams = dm_get_all_teams()
     if not _dm_all_teams:
         st.error("No teams found in team_draft_context. Run build_team_context_2026.py first.")
         return
 
-    _dm_hat_default = st.session_state.get("draft_mode_team", "SF" if "SF" in _dm_all_teams else _dm_all_teams[0])
+    _dm_hat_default = (
+        st.session_state.get("draft_mode_active_team")
+        or st.session_state.get("draft_mode_team", "SF")
+    )
     if _dm_hat_default not in _dm_all_teams:
         _dm_hat_default = _dm_all_teams[0]
 
-    _dm_team = st.selectbox(
-        "Team hat",
-        options=_dm_all_teams,
-        index=_dm_all_teams.index(_dm_hat_default),
-        key="dm_tab_team_hat",
-        help="The team you are scouting for. Determines team board and the drafting_team recorded on each pick.",
-    )
-    st.session_state["draft_mode_team"] = _dm_team
+    # ── Pick context + draft_state (read once up front) ──────────────────────
+    _pick_info      = dm_get_next_pick_spec(seasonid=1)
+    _overall        = _pick_info["overall_pick"]
+    _round_num      = _pick_info["round_number"]
+    _pick_in        = _pick_info["pick_in_round"]
+    _drafted_n      = dm_get_drafted_count()
+    # pick_ownership: {remaining_pick_number: team_id} — excludes already-drafted picks
+    _pick_ownership = dm_get_all_pick_ownership(seasonid=1)
+    _next_up_team   = _pick_ownership.get(_overall)  # team on the clock per capital map
 
-    # ── Pick context strip ───────────────────────────────────────────────────
-    _pick_info  = dm_get_next_pick_spec(seasonid=1)
-    _overall    = _pick_info["overall_pick"]
-    _round_num  = _pick_info["round_number"]
-    _pick_in    = _pick_info["pick_in_round"]
-    _drafted_n  = dm_get_drafted_count()
+    # ── Remaining board (read once) ──────────────────────────────────────────
+    _remaining = dm_get_draft_remaining_board(seasonid=1, limit=300)
 
-    _pc1, _pc2, _pc3, _pc4 = st.columns(4)
-    with _pc1:
-        st.metric("Picks recorded", _drafted_n)
-    with _pc2:
-        st.metric("Next pick (overall)", f"#{_overall}")
-    with _pc3:
-        st.metric("Round / Pick", f"R{_round_num} P{_pick_in}")
-    with _pc4:
-        st.markdown(f"**Team hat:** `{_dm_team}`")
+    # ── Draft action helper ──────────────────────────────────────────────────
+    def _do_draft(pid: int, team_code: str) -> bool:
+        _pi = dm_get_next_pick_spec(seasonid=1)
+        try:
+            _pre_top3 = [
+                {
+                    "pid":  r["prospect_id"],
+                    "name": r.get("display_name", "—"),
+                    "pos":  r.get("position_group", "—"),
+                }
+                for r in (_remaining or [])[:3]
+            ]
+            dm_insert_draft_pick(
+                seasonid=1,
+                overall_pick=_pi["overall_pick"],
+                round_number=_pi["round_number"],
+                pick_in_round=_pi["pick_in_round"],
+                drafting_team=team_code,
+                prospectid=pid,
+            )
+            _picked = next((r for r in (_remaining or []) if r.get("prospect_id") == pid), {})
+            st.session_state["draft_mode_last_pick"] = {
+                "pid":   pid,
+                "team":  team_code,
+                "pick":  _pi["overall_pick"],
+                "round": _pi["round_number"],
+                "name":  _picked.get("display_name", f"pid={pid}"),
+                "pos":   _picked.get("position_group", "—"),
+            }
+            st.session_state["_dm_pre_pick_board"] = _pre_top3
+            if st.session_state["draft_mode_selected_pid"] == pid:
+                st.session_state["draft_mode_selected_pid"] = None
+            if st.session_state["draft_mode_locked_pid"] == pid:
+                st.session_state["draft_mode_locked_pid"] = None
+            _cq = list(st.session_state.get("draft_mode_compare_pids", []))
+            if pid in _cq:
+                _cq.remove(pid)
+                st.session_state["draft_mode_compare_pids"] = _cq
+            return True
+        except ValueError as _ve:
+            st.error(str(_ve))
+            return False
 
-    st.divider()
-
-    # ── Two-column layout ────────────────────────────────────────────────────
-    _col_left, _col_right = st.columns([1, 1.5])
+    # ── 3-column Draft Room ──────────────────────────────────────────────────
+    _lc, _cc, _rc = st.columns([1.2, 2.2, 1.6], gap="medium")
 
     # ════════════════════════════════════════════════════════════════════════
-    # LEFT — Team best-available (v_draft_team_board_2026)
+    # LEFT — Team War Room
     # ════════════════════════════════════════════════════════════════════════
-    with _col_left:
-        st.markdown(f"#### Team board — {_dm_team}")
-        _team_rows = dm_get_draft_team_board(team_code=_dm_team, seasonid=1, limit=50)
+    with _lc:
+        _dm_team = st.selectbox(
+            "Team hat",
+            options=_dm_all_teams,
+            index=_dm_all_teams.index(_dm_hat_default),
+            key="dm_tab_team_hat",
+            help="Your team hat — determines team board and drafting_team on each pick.",
+        )
+        st.session_state["draft_mode_team"]        = _dm_team
+        st.session_state["draft_mode_active_team"] = _dm_team
 
-        if not _team_rows:
-            st.info(f"No remaining prospects in the team context for **{_dm_team}**.")
-        else:
-            # Scheme context header (all rows share same team-level context)
-            _ctx = _team_rows[0]
-            st.caption(
-                f"Scheme: **{_ctx.get('scheme_family') or '—'}** · "
-                f"Capital: {_ctx.get('capital_profile') or '—'} · "
-                f"Timeline: {_ctx.get('development_timeline') or '—'} · "
-                f"Risk: {_ctx.get('risk_tolerance') or '—'}  "
-                f"  *(source: `v_draft_team_board_2026`)*"
+        # Team picks from draft_state — computed after team selectbox resolves
+        _team_picks     = sorted([p for p, t in _pick_ownership.items() if t == _dm_team])
+        _team_next_pick = _team_picks[0] if _team_picks else None
+
+        # Status strip: on-the-clock team + pick number + drafted count
+        _clock_label = f"On the clock: {_next_up_team}" if _next_up_team else "On the clock"
+        st.markdown(
+            f'<div style="display:flex;flex-wrap:wrap;gap:5px;margin:5px 0 8px;">'
+            + _pill(_clock_label, "#5ab87a", "rgba(90,184,122,0.12)", "rgba(90,184,122,0.28)")
+            + _pill(f"Next #{_overall} · R{_round_num} P{_pick_in}",
+                    "rgba(255,255,255,0.52)", "rgba(255,255,255,0.05)", "rgba(255,255,255,0.09)")
+            + _pill(f"{_drafted_n} picked",
+                    "rgba(255,255,255,0.35)", "rgba(255,255,255,0.05)", "rgba(255,255,255,0.09)")
+            + f'</div>',
+            unsafe_allow_html=True,
+        )
+        # Team's remaining picks — compact row: #27 · #58 · ...
+        if _team_picks:
+            _picks_str = " · ".join(f"#{p}" for p in _team_picks[:6])
+            st.markdown(
+                f'<div style="font-size:10px;color:rgba(255,255,255,0.38);margin-bottom:8px;">'
+                f'<span style="font-size:8px;font-weight:700;letter-spacing:0.10em;'
+                f'text-transform:uppercase;color:rgba(255,255,255,0.25);">Your picks</span>'
+                f'  {_picks_str}</div>',
+                unsafe_allow_html=True,
             )
 
-            # Top-3 best-available cards
-            st.markdown("**Top 3 available**")
-            for _i, _r in enumerate(_team_rows[:3], 1):
-                _r_name  = _r.get("display_name") or "—"
-                _r_pos   = _r.get("position_group") or "—"
-                _r_tier  = _r.get("fit_tier") or "—"
-                _r_band  = _r.get("fit_band") or "—"
-                _r_score = _r.get("fit_score") or 0
-                _r_con   = _r.get("consensus_rank")
-                _r_apex  = _r.get("apex_rank")
-                _r_pid_dm = _r.get("prospect_id")
-                _r_utags = " ".join(sorted(st.session_state["user_tags"].get(_r_pid_dm, set())))
-                st.markdown(
-                    f"**{_i}. {_r_name}** ({_r_pos}) &nbsp; "
-                    f"`{_r_tier}/{_r_band}` &nbsp; "
-                    f"Score {_r_score:.1f} · Con#{_r_con} · "
-                    f"Apex#{_r_apex or '—'}"
-                    + (f" · _{_r_utags}_" if _r_utags else ""),
-                    unsafe_allow_html=True,
-                )
+        # View toggle
+        _VIEW_OPTS   = ["best_available", "best_fit", "market_edge", "safest"]
+        _VIEW_LABELS = ["Best Available", "Best Fit", "Market Edge", "Safest"]
+        st.markdown(
+            '<div style="font-size:9px;font-weight:700;letter-spacing:0.14em;'
+            'text-transform:uppercase;color:rgba(255,255,255,0.32);margin-bottom:3px;">'
+            'View</div>',
+            unsafe_allow_html=True,
+        )
+        # Capture view before rendering radio — needed to detect view-switch and bust board key.
+        _dm_view_before_radio = _dm_view
+        # Guard: if stored view is stale key "best_value" (pre-rename), coerce to "market_edge".
+        if _dm_view_before_radio == "best_value":
+            _dm_view_before_radio = "market_edge"
+            st.session_state["draft_mode_view"] = "market_edge"
+        _view_label = st.radio(
+            "dm_view_radio",
+            _VIEW_LABELS,
+            index=(_VIEW_OPTS.index(_dm_view_before_radio) if _dm_view_before_radio in _VIEW_OPTS else 0),
+            horizontal=False,
+            key="dm_view_radio",
+            label_visibility="collapsed",
+        )
+        st.session_state["draft_mode_view"] = _VIEW_OPTS[_VIEW_LABELS.index(_view_label)]
+        _dm_view = st.session_state["draft_mode_view"]
+        # View switched → bust dataframe keys so stale row-index selections don't map to wrong pids.
+        if _dm_view != _dm_view_before_radio:
+            st.session_state["_dm_nav_gen"] = st.session_state["_dm_nav_gen"] + 1
+        st.session_state["_dm_view_snapshot"] = _dm_view
 
-            st.markdown("---")
+        st.markdown("---")
 
-            # Extended team board table (read-only)
-            _tb_rows = []
-            for _r in _team_rows:
-                _tb_rows.append({
-                    "Name":    _r.get("display_name") or "—",
-                    "Pos":     _r.get("position_group") or "—",
-                    "Tier":    _r.get("fit_tier") or "—",
-                    "Band":    _r.get("fit_band") or "—",
-                    "Score":   round(_r.get("fit_score") or 0, 1),
-                    "Con#":    _r.get("consensus_rank"),
-                    "Apex#":   _r.get("apex_rank"),
-                    "Capital": (_r.get("capital_adjusted") or "—")[:16],
-                    "Why For": (_r.get("why_for") or "—")[:40],
-                })
-            st.dataframe(
-                pd.DataFrame(_tb_rows),
+        # Team board — top 10, clickable
+        _team_rows = dm_get_draft_team_board(team_code=_dm_team, seasonid=1, limit=10)
+        st.markdown(
+            f'<div style="font-size:9px;font-weight:700;letter-spacing:0.14em;'
+            f'text-transform:uppercase;color:rgba(255,255,255,0.32);margin-bottom:5px;">'
+            f'Team Board — {_dm_team}</div>',
+            unsafe_allow_html=True,
+        )
+        if not _team_rows:
+            st.caption(f"No prospects in team context for {_dm_team}.")
+        else:
+            _ctx = _team_rows[0]
+            _scheme_disp   = _norm_token(_ctx.get("scheme_family") or "") or "—"
+            _capital_disp  = _norm_token(_ctx.get("capital_profile") or "") or "—"
+            _timeline_disp = _norm_token(_ctx.get("development_timeline") or "") or "—"
+            st.caption(
+                f"Scheme: **{_scheme_disp}** · "
+                f"Capital: {_capital_disp} · "
+                f"Timeline: {_timeline_disp}"
+            )
+            _tb_pids   = [_r.get("prospect_id") for _r in _team_rows]
+            _tb_df_rows = [
+                {
+                    "Player": (_r.get("display_name") or "—")[:20],
+                    "Pos":    _r.get("position_group") or "—",
+                    "Con#":   _r.get("consensus_rank"),
+                    "Apex#":  _r.get("apex_rank"),
+                    "Fit":    (_r.get("fit_tier") or "—")[:6],
+                }
+                for _r in _team_rows
+            ]
+            _tb_h  = min(len(_tb_df_rows) + 1, 11) * 38 + 4
+            _tb_ev = st.dataframe(
+                pd.DataFrame(_tb_df_rows),
                 use_container_width=True,
                 hide_index=True,
+                height=_tb_h,
+                on_select="rerun",
+                selection_mode="single-row",
+                key=f"dm_team_board_g{st.session_state['_dm_nav_gen']}",
                 column_config={
-                    "Score": st.column_config.NumberColumn(format="%.1f"),
                     "Con#":  st.column_config.NumberColumn(format="%d"),
                     "Apex#": st.column_config.NumberColumn(format="%d"),
                 },
             )
+            if (
+                _tb_ev and _tb_ev.selection and _tb_ev.selection.rows
+                and not _dm_nav_just_fired
+            ):
+                _tb_idx = _tb_ev.selection.rows[0]
+                _tb_pid = _tb_pids[_tb_idx] if _tb_idx < len(_tb_pids) else None
+                if _tb_pid and not _locked_pid:
+                    st.session_state["draft_mode_selected_pid"] = _tb_pid
+                    st.session_state["_dm_nav_gen"] = st.session_state["_dm_nav_gen"] + 1
+                    st.session_state["_dm_nav_just_fired"] = True
+                    st.rerun()
 
-    # ════════════════════════════════════════════════════════════════════════
-    # RIGHT — Remaining board + Mark drafted
-    # ════════════════════════════════════════════════════════════════════════
-    with _col_right:
-        st.markdown("#### Global remaining board")
-        _remaining = dm_get_draft_remaining_board(seasonid=1, limit=300)
-
-        if not _remaining:
-            st.success("🏆 Draft complete — no prospects remaining on board.")
-        else:
-            st.caption(
-                f"{len(_remaining)} prospects remaining · "
-                f"source: `v_draft_remaining_2026` · sorted apex rank → consensus rank"
+        # ── What Changed (post-pick module) ──────────────────────────────────
+        _last      = st.session_state.get("draft_mode_last_pick")
+        _pre_board = st.session_state.get("_dm_pre_pick_board", [])
+        if _last:
+            st.markdown("---")
+            st.markdown(
+                '<div style="font-size:9px;font-weight:700;letter-spacing:0.14em;'
+                'text-transform:uppercase;color:rgba(255,255,255,0.32);margin-bottom:5px;">'
+                'What Changed</div>',
+                unsafe_allow_html=True,
             )
-
-            # Per-row Mark drafted controls (top 75 rows to keep the UI snappy)
-            _show_n = 75
-            for _r in _remaining[:_show_n]:
-                _r_name  = _r.get("display_name") or "—"
-                _r_pos   = _r.get("position_group") or "—"
-                _r_con   = _r.get("consensus_rank")
-                _r_apex  = _r.get("apex_rank")
-                _r_cap   = (_r.get("capital_adjusted") or "")[:14]
-                _r_pid   = _r["prospect_id"]
-                _r_utags = " ".join(sorted(st.session_state["user_tags"].get(_r_pid, set())))
-
-                _rc1, _rc2 = st.columns([4, 1])
-                with _rc1:
+            _lp_name = _last.get("name", "—")
+            _lp_pos  = _last.get("pos", "—")
+            _lp_team = _last.get("team", "—")
+            _lp_pick = _last.get("pick", "?")
+            st.markdown(
+                f'<div style="background:rgba(90,184,122,0.08);border:1px solid rgba(90,184,122,0.18);'
+                f'border-left:3px solid #5ab87a;border-radius:0 4px 4px 0;padding:7px 10px;margin-bottom:7px;">'
+                f'<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;font-weight:700;'
+                f'color:rgba(255,255,255,0.85);">#{_lp_pick} {_lp_name} ({_lp_pos})</div>'
+                f'<div style="font-size:10px;color:rgba(255,255,255,0.38);">Drafted by {_lp_team}</div>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+            _cur_top3 = (_remaining or [])[:3]
+            if _cur_top3:
+                st.markdown(
+                    '<div style="font-size:9px;color:rgba(255,255,255,0.30);'
+                    'letter-spacing:0.08em;text-transform:uppercase;margin-bottom:4px;">'
+                    'New Top 3</div>',
+                    unsafe_allow_html=True,
+                )
+                for _wi, _wr in enumerate(_cur_top3, 1):
+                    _was_top3 = any(p.get("pid") == _wr.get("prospect_id") for p in _pre_board)
+                    _new_badge = (
+                        ' <span style="color:#e8a84a;font-size:9px;">NEW</span>'
+                        if not _was_top3 else ""
+                    )
                     st.markdown(
-                        f"**{_r_name}** ({_r_pos}) &nbsp;&nbsp; "
-                        f"Con#{_r_con} · Apex#{_r_apex or '—'}"
-                        + (f" · {_r_cap}" if _r_cap else "")
-                        + (f" · _{_r_utags}_" if _r_utags else ""),
+                        f'<div style="font-size:11px;color:rgba(255,255,255,0.65);">'
+                        f'<b style="color:rgba(255,255,255,0.40);">{_wi}.</b> '
+                        f'{_wr.get("display_name","—")} ({_wr.get("position_group","—")})'
+                        f'{_new_badge}</div>',
                         unsafe_allow_html=True,
                     )
-                with _rc2:
-                    if st.button("Draft ➜", key=f"dm_tab_btn_{_r_pid}"):
-                        _pi = dm_get_next_pick_spec(seasonid=1)
-                        try:
-                            dm_insert_draft_pick(
-                                seasonid=1,
-                                overall_pick=_pi["overall_pick"],
-                                round_number=_pi["round_number"],
-                                pick_in_round=_pi["pick_in_round"],
-                                drafting_team=_dm_team,
-                                prospectid=_r_pid,
-                            )
-                        except ValueError as _ve:
-                            st.error(str(_ve))
-                        else:
-                            st.rerun()
 
-            if len(_remaining) > _show_n:
-                st.caption(
-                    f"… and {len(_remaining) - _show_n} more prospects not shown. "
-                    f"Use the Remaining Board tab in the sidebar Draft Mode for the full list."
+    # ════════════════════════════════════════════════════════════════════════
+    # CENTER — Live Room Board
+    # ════════════════════════════════════════════════════════════════════════
+    with _cc:
+        if not _remaining:
+            st.success("Draft complete — no prospects remaining on board.")
+        else:
+            _n_rem = len(_remaining)
+            _view_label_active = _VIEW_LABELS[_VIEW_OPTS.index(_dm_view)] if _dm_view in _VIEW_OPTS else _dm_view
+            st.markdown(
+                f'<div style="font-size:9px;font-weight:700;letter-spacing:0.14em;'
+                f'text-transform:uppercase;color:rgba(255,255,255,0.32);margin-bottom:4px;">'
+                f'Remaining Board · {_n_rem} prospects · {_view_label_active}</div>',
+                unsafe_allow_html=True,
+            )
+
+            # Per-player computed values for mode-specific columns + explainability
+            _edge_by_pid:     dict[int, int | None]  = {}  # market_edge mode
+            _safety_by_pid:   dict[int, float]       = {}  # safest mode
+            _is_reach_by_pid: dict[int, bool]        = {}  # safest mode
+            _empty_state_msg: str | None             = None
+
+            _sorted_rem = list(_remaining)
+
+            if _dm_view == "best_fit":
+                _tb_full = dm_get_draft_team_board(team_code=_dm_team, seasonid=1, limit=300)
+                if not _tb_full:
+                    _empty_state_msg = (
+                        f"No team board context for {_dm_team}. "
+                        f"Check team_draft_context setup."
+                    )
+                else:
+                    _fit_by_pid = {r["prospect_id"]: (r.get("fit_score") or 0) for r in _tb_full}
+                    _sorted_rem = sorted(
+                        _remaining,
+                        key=lambda r: -(_fit_by_pid.get(r["prospect_id"], 0)),
+                    )
+
+            elif _dm_view == "market_edge":
+                # Market edge = consensus_rank − apex_rank (positive → APEX likes more than market)
+                # Filter: only show players inside team's pick window (next pick + 30).
+                _window_limit = (_team_next_pick + 30) if _team_next_pick else (_overall + 60)
+                _edge_candidates = []
+                for _r in _remaining:
+                    _con_r  = _r.get("consensus_rank")
+                    _apex_r = _r.get("apex_rank")
+                    if _con_r is None or _apex_r is None:
+                        continue
+                    _edge_val = int(_con_r) - int(_apex_r)
+                    _edge_by_pid[_r["prospect_id"]] = _edge_val
+                    if int(_con_r) <= _window_limit and _edge_val > 0:
+                        _edge_candidates.append(_r)
+                if not _edge_candidates:
+                    _pick_anchor = _team_next_pick or _overall
+                    _empty_state_msg = (
+                        f"No players in your pick window (≤ #{_pick_anchor + 30}) "
+                        f"with positive market edge. Expand your horizon or switch to Best Available."
+                    )
+                    _sorted_rem = sorted(
+                        _remaining,
+                        key=lambda r: -(_edge_by_pid.get(r["prospect_id"]) or -9999),
+                    )
+                else:
+                    _sorted_rem = sorted(
+                        _edge_candidates,
+                        key=lambda r: -(_edge_by_pid.get(r["prospect_id"]) or -9999),
+                    )
+
+            elif _dm_view == "safest":
+                # Safest composite: 0.25×availability + 0.20×alignment + 0.20×need
+                #                    + 0.15×fit + 0.20×low_risk
+                _tb_full_s    = dm_get_draft_team_board(team_code=_dm_team, seasonid=1, limit=300)
+                _fit_by_pid_s = {r["prospect_id"]: (r.get("fit_score") or 0) for r in _tb_full_s}
+                _needs_pos_set: set[str] = set()
+                if _tb_full_s:
+                    try:
+                        _raw_nj = _tb_full_s[0].get("needs_json")
+                        _nl_s   = _json_mod.loads(str(_raw_nj)) if _raw_nj else []
+                        _needs_pos_set = {n.get("position", "") for n in _nl_s if isinstance(n, dict)}
+                    except Exception:
+                        pass
+                for _r in _remaining:
+                    _pid_s   = _r["prospect_id"]
+                    _con_s   = float(_r.get("consensus_rank") or 9999)
+                    _div_flg = str(_r.get("divergence_flag") or "").upper()
+                    _pos_s   = str(_r.get("position_group") or "")
+                    _fm_s    = str(_r.get("failure_mode_primary") or "").strip().upper()
+                    _fit_s   = float(_fit_by_pid_s.get(_pid_s) or 0)
+                    # Availability: how safely the player sits before team's next pick
+                    if _team_next_pick:
+                        _avail_delta = float(_team_next_pick) - _con_s
+                        _avail = max(0.0, min(1.0, (_avail_delta + 20.0) / 40.0))
+                    else:
+                        _avail = 0.5
+                    # Alignment: divergence_flag → 0–1
+                    _ALIGN_MAP = {
+                        "ALIGNED":               1.0,
+                        "APEX_HIGH":             0.75,
+                        "APEX_LOW_PVC_STRUCTURAL": 0.55,
+                        "APEX_LOW":              0.25,
+                    }
+                    _align    = _ALIGN_MAP.get(_div_flg, 0.50)
+                    # Need: position fills a team need
+                    _need_sc  = 1.0 if _pos_s in _needs_pos_set else 0.30
+                    # Fit: normalized from fit_score (scale assumed 0–10)
+                    _fit_norm = min(1.0, _fit_s / 10.0) if _fit_s else 0.30
+                    # Low risk: no active failure mode
+                    _low_risk = 0.0 if (_fm_s and _fm_s not in ("", "NONE", "N/A")) else 1.0
+                    _saf = round(
+                        0.25 * _avail + 0.20 * _align + 0.20 * _need_sc
+                        + 0.15 * _fit_norm + 0.20 * _low_risk,
+                        3,
+                    )
+                    _safety_by_pid[_pid_s] = _saf
+                    if _team_next_pick and _con_s > (_team_next_pick + 10):
+                        _is_reach_by_pid[_pid_s] = True
+                _sorted_rem = sorted(
+                    _remaining,
+                    key=lambda r: -_safety_by_pid.get(r["prospect_id"], 0),
                 )
 
-        st.divider()
+            # else "best_available" = default order from view (apex_rank → consensus_rank)
 
-        # ── Draft log ────────────────────────────────────────────────────────
-        st.markdown("#### Draft log")
-        _dm_log = dm_get_drafted_picks(limit=300)
-        if not _dm_log:
-            st.info("No picks recorded yet.")
-        else:
-            _log_rows = []
-            for _lr in _dm_log:
-                _log_rows.append({
-                    "Pick":   f"#{_lr['pick_number']}" + (f" R{_lr['round_number']}" if _lr.get("round_number") else ""),
-                    "Team":   _lr["drafting_team"] or "—",
-                    "Player": _lr["display_name"] or f"pid={_lr['prospect_id']}",
-                    "Pos":    _lr["position_group"] or "?",
-                    "Time":   (_lr["drafted_at"] or "")[:16].replace("T", " "),
-                })
-            st.dataframe(
-                pd.DataFrame(_log_rows),
+            _rem_pids = [r["prospect_id"] for r in _sorted_rem]
+
+            # Mode-level caption / warning
+            if _dm_view == "market_edge":
+                if _empty_state_msg:
+                    st.warning(_empty_state_msg)
+                else:
+                    _pick_anchor = _team_next_pick or _overall
+                    st.caption(
+                        f"Market Edge = consensus rank − APEX rank (positive → APEX values more than scouts). "
+                        f"Filtered to pick window ≤ #{_pick_anchor + 30}. Directional only."
+                    )
+            elif _dm_view == "safest":
+                st.caption(
+                    "Safest: composite of pick-window availability, consensus alignment, "
+                    "team need, fit score, and failure-mode risk."
+                )
+            elif _dm_view == "best_fit":
+                if _empty_state_msg:
+                    st.warning(_empty_state_msg)
+
+            # Build compact display table — schema varies by view
+            _rpg_by_pid: dict[int, float | None] = {}
+            try:
+                for _row in df[["prospect_id", "raw_score"]].itertuples(index=False):
+                    _rpg_by_pid[int(_row.prospect_id)] = (
+                        float(_row.raw_score)
+                        if _row.raw_score is not None and not (isinstance(_row.raw_score, float) and pd.isna(_row.raw_score))
+                        else None
+                    )
+            except Exception:
+                pass
+
+            _rem_table = []
+            for _r in _sorted_rem:
+                _pid_r  = _r["prospect_id"]
+                _con_r  = _r.get("consensus_rank")
+                _apex_r = _r.get("apex_rank")
+                _cap_r  = (_r.get("capital_adjusted") or "—")[:14]
+                _rpg_r  = _rpg_by_pid.get(_pid_r)
+                _row_d: dict = {
+                    "Player": (_r.get("display_name") or "—")[:22],
+                    "Pos":    _r.get("position_group") or "—",
+                    "Con#":   int(_con_r)  if _con_r  is not None else None,
+                    "Apex#":  int(_apex_r) if _apex_r is not None else None,
+                }
+                if _dm_view == "market_edge":
+                    _ev = _edge_by_pid.get(_pid_r)
+                    _row_d["Edge"] = int(_ev) if _ev is not None else None
+                elif _dm_view == "safest":
+                    _row_d["Safety"] = round(_safety_by_pid.get(_pid_r, 0.0), 2)
+                    _row_d["Reach"]  = "!" if _is_reach_by_pid.get(_pid_r, False) else ""
+                else:
+                    _row_d["RPG"]   = round(_rpg_r, 1) if _rpg_r is not None else None
+                    _row_d["Range"] = _cap_r
+                _rem_table.append(_row_d)
+
+            _show_n_center = 150
+            _rem_h = min(_show_n_center, _n_rem + 1) * 38 + 4
+            _col_cfg: dict = {
+                "Con#":  st.column_config.NumberColumn(format="%d"),
+                "Apex#": st.column_config.NumberColumn(format="%d"),
+            }
+            if _dm_view == "market_edge":
+                _col_cfg["Edge"] = st.column_config.NumberColumn(format="%+d")
+            elif _dm_view == "safest":
+                _col_cfg["Safety"] = st.column_config.NumberColumn(format="%.2f")
+            else:
+                _col_cfg["RPG"] = st.column_config.NumberColumn(format="%.1f")
+
+            _rem_ev = st.dataframe(
+                pd.DataFrame(_rem_table[:_show_n_center]),
                 use_container_width=True,
                 hide_index=True,
+                height=min(_rem_h, 1200),
+                on_select="rerun",
+                selection_mode="single-row",
+                key=f"dm_rem_board_g{st.session_state['_dm_nav_gen']}",
+                column_config=_col_cfg,
             )
-            st.caption(
-                "To undo a pick: "
-                "`python -m scripts.reset_drafted_2026 --pick-number N --apply 1`"
+            if (
+                _rem_ev and _rem_ev.selection and _rem_ev.selection.rows
+                and not _dm_nav_just_fired
+            ):
+                _rem_idx = _rem_ev.selection.rows[0]
+                _rem_pid = _rem_pids[_rem_idx] if _rem_idx < len(_rem_pids) else None
+                if _rem_pid and not _locked_pid:
+                    st.session_state["draft_mode_selected_pid"] = _rem_pid
+                    st.session_state["_dm_nav_gen"] = st.session_state["_dm_nav_gen"] + 1
+                    st.session_state["_dm_nav_just_fired"] = True
+                    st.rerun()
+            elif (
+                _rem_ev and _rem_ev.selection and _rem_ev.selection.rows
+                and _locked_pid
+            ):
+                st.caption("Inspector is locked — unlock to change selection.")
+
+            if _n_rem > _show_n_center:
+                st.caption(f"Showing top {_show_n_center} of {_n_rem} remaining.")
+
+            # Compare queue display
+            if _compare_pids:
+                _cq_names = []
+                for _cpid in _compare_pids:
+                    _cr = next((r for r in _remaining if r.get("prospect_id") == _cpid), None)
+                    _cq_names.append(
+                        _cr.get("display_name", f"pid={_cpid}") if _cr else f"pid={_cpid}"
+                    )
+                st.caption(f"Compare queue ({len(_compare_pids)}/4): {', '.join(_cq_names)}")
+                if st.button("Clear compare queue", key="dm_clear_compare"):
+                    st.session_state["draft_mode_compare_pids"] = []
+                    st.rerun()
+
+            # Draft log (collapsed)
+            with st.expander(f"Draft log ({_drafted_n} picks)", expanded=False):
+                _dm_log = dm_get_drafted_picks(limit=300)
+                if not _dm_log:
+                    st.info("No picks recorded yet.")
+                else:
+                    _log_rows = []
+                    for _lr in _dm_log:
+                        _log_rows.append({
+                            "Pick":   f"#{_lr['pick_number']}"
+                                      + (f" R{_lr['round_number']}" if _lr.get("round_number") else ""),
+                            "Team":   _lr["drafting_team"] or "—",
+                            "Player": _lr["display_name"] or f"pid={_lr['prospect_id']}",
+                            "Pos":    _lr["position_group"] or "?",
+                        })
+                    st.dataframe(
+                        pd.DataFrame(_log_rows),
+                        use_container_width=True,
+                        hide_index=True,
+                    )
+                    st.caption(
+                        "Undo: `python -m scripts.reset_drafted_2026 --pick-number N --apply 1`"
+                    )
+
+    # ════════════════════════════════════════════════════════════════════════
+    # RIGHT — Prospect Inspector (sticky)
+    # ════════════════════════════════════════════════════════════════════════
+    with _rc:
+        _is_locked   = _locked_pid is not None
+        _inspect_pid = _locked_pid if _is_locked else _sel_pid
+
+        _lock_hdr, _lock_btn_col = st.columns([3, 1])
+        with _lock_hdr:
+            st.markdown(
+                '<div style="font-size:9px;font-weight:700;letter-spacing:0.14em;'
+                'text-transform:uppercase;color:rgba(255,255,255,0.32);padding-top:6px;">'
+                'Inspector</div>',
+                unsafe_allow_html=True,
             )
+        with _lock_btn_col:
+            if _is_locked:
+                if st.button("Unlock", key="dm_lock_btn", use_container_width=True):
+                    st.session_state["draft_mode_locked_pid"] = None
+                    st.rerun()
+            else:
+                if st.button(
+                    "Lock",
+                    key="dm_lock_btn",
+                    use_container_width=True,
+                    disabled=(_sel_pid is None),
+                ):
+                    st.session_state["draft_mode_locked_pid"] = _sel_pid
+                    st.rerun()
+
+        if not _inspect_pid:
+            st.markdown(
+                '<div style="padding:28px 12px;text-align:center;color:rgba(255,255,255,0.22);'
+                'font-family:\'Barlow\',sans-serif;font-size:12px;line-height:1.5;">'
+                'Click a player in the board<br>to open their profile here.</div>',
+                unsafe_allow_html=True,
+            )
+        else:
+            # Resolve data rows from three sources (priority: remaining board → df → team board)
+            _insp_rem = next(
+                (r for r in (_remaining or []) if r.get("prospect_id") == _inspect_pid),
+                None,
+            )
+            _insp_df_rows = df[df["prospect_id"] == _inspect_pid]
+            _ibr = _insp_df_rows.iloc[0] if not _insp_df_rows.empty else None
+
+            def _g(key: str, fallback=None):
+                v = (_insp_rem or {}).get(key)
+                if v is None and _ibr is not None:
+                    v = _ibr.get(key)
+                if v is None or (isinstance(v, float) and pd.isna(v)):
+                    return fallback
+                return v
+
+            _insp_name   = _g("display_name", f"pid={_inspect_pid}")
+            _insp_pos    = _g("position_group", "—")
+            _insp_con    = _g("consensus_rank")
+            _insp_apex   = _g("apex_rank") or (_ibr.get("auto_apex_rank") if _ibr is not None else None)
+            _insp_tier   = _g("apex_tier") or (_ibr.get("apex_tier") if _ibr is not None else None)
+            _insp_apxs   = _ibr.get("apex_composite") if _ibr is not None else None
+            _insp_rpg    = _ibr.get("raw_score")      if _ibr is not None else None
+            _insp_arch   = _ibr.get("apex_archetype") if _ibr is not None else None
+            _insp_delta  = _ibr.get("auto_apex_delta") if _ibr is not None else None
+            _insp_cap    = _g("capital_adjusted") or "—"
+            _insp_fm     = _g("failure_mode_primary") or ""
+            _insp_divflg = str(_g("divergence_flag") or "").upper()
+
+            if _insp_apxs is not None and isinstance(_insp_apxs, float) and pd.isna(_insp_apxs):
+                _insp_apxs = None
+            if _insp_rpg is not None and isinstance(_insp_rpg, float) and pd.isna(_insp_rpg):
+                _insp_rpg = None
+
+            _TIER_COLORS = {
+                "ELITE": "#f0c040", "DAY1": "#7eb4e2", "DAY2": "#5ab87a",
+                "DAY3": "rgba(255,255,255,0.52)", "UDFA-P": "#a57ee0",
+                "UDFA": "rgba(255,255,255,0.30)",
+            }
+            _tier_c    = _TIER_COLORS.get(str(_insp_tier or "").strip().upper(), "rgba(255,255,255,0.38)")
+            _con_str   = f"#{int(_insp_con)}"   if _insp_con   is not None else "—"
+            _apex_str  = f"#{int(_insp_apex)}"  if _insp_apex  is not None else "—"
+            _rpg_str   = f"{float(_insp_rpg):.1f}"  if _insp_rpg  is not None else "—"
+            _apxs_str  = f"{float(_insp_apxs):.1f}" if _insp_apxs is not None else "—"
+            _delta_str = f"{int(_insp_delta):+d}"    if _insp_delta is not None else "—"
+            _locked_badge = (
+                ' <span style="background:rgba(232,168,74,0.15);border:1px solid rgba(232,168,74,0.30);'
+                'color:#e8a84a;font-size:8px;font-weight:700;letter-spacing:0.08em;'
+                'text-transform:uppercase;padding:1px 5px;border-radius:2px;">LOCKED</span>'
+                if _is_locked else ""
+            )
+
+            # Player header card
+            _tier_chip = (
+                f'<span style="color:{_tier_c};font-family:\'Barlow Condensed\',sans-serif;'
+                f'font-size:10px;font-weight:700;letter-spacing:0.10em;">{_insp_tier}</span>'
+                if _insp_tier else ""
+            )
+            st.markdown(
+                f'<div style="background:#161b22;border:1px solid rgba(255,255,255,0.10);'
+                f'border-radius:5px;padding:11px 13px;margin-bottom:7px;">'
+                f'<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:20px;'
+                f'font-weight:900;letter-spacing:-0.01em;text-transform:uppercase;'
+                f'color:rgba(255,255,255,0.92);line-height:1;margin-bottom:5px;">'
+                f'{_insp_name}{_locked_badge}</div>'
+                f'<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px;">'
+                f'<span style="background:rgba(126,180,226,0.15);border:1px solid rgba(74,144,212,0.42);'
+                f'color:#7eb4e2;font-family:\'Barlow Condensed\',sans-serif;font-size:10px;'
+                f'font-weight:700;letter-spacing:0.10em;padding:2px 6px;border-radius:3px;">'
+                f'{_insp_pos}</span>'
+                f'{_tier_chip}'
+                f'</div>'
+                f'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;">'
+                f'<div><div style="font-size:8px;color:rgba(255,255,255,0.28);'
+                f'letter-spacing:0.08em;text-transform:uppercase;margin-bottom:1px;">Con#</div>'
+                f'<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:15px;'
+                f'font-weight:700;color:rgba(255,255,255,0.78);">{_con_str}</div></div>'
+                f'<div><div style="font-size:8px;color:rgba(255,255,255,0.28);'
+                f'letter-spacing:0.08em;text-transform:uppercase;margin-bottom:1px;">Apex#</div>'
+                f'<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:15px;'
+                f'font-weight:700;color:#e8a84a;">{_apex_str}</div></div>'
+                f'<div><div style="font-size:8px;color:rgba(255,255,255,0.28);'
+                f'letter-spacing:0.08em;text-transform:uppercase;margin-bottom:1px;">RPG</div>'
+                f'<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:15px;'
+                f'font-weight:700;color:#7eb4e2;">{_rpg_str}</div></div>'
+                f'</div>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+
+            # ── 4-bullet structure: Need / Value / Why this fits / Risk ──────
+            _insp_team_row: dict | None = None
+            try:
+                _tb_all = dm_get_draft_team_board(team_code=_dm_team, seasonid=1, limit=300)
+                _insp_team_row = next(
+                    (r for r in _tb_all if r.get("prospect_id") == _inspect_pid), None
+                )
+            except Exception:
+                _insp_team_row = None
+
+            # ① Need — tier-grouped chips from needs_json
+            _needs_raw  = (_insp_team_row or {}).get("needs_json")
+            _needs_html = _render_needs_chips(_needs_raw, _dm_team, _insp_pos)
+
+            # ② Value — capital range + APEX Edge
+            _cap_display = _insp_cap if _insp_cap != "—" else "—"
+            _edge_clause = f" APEX Edge: {_delta_str}." if _insp_delta is not None else ""
+            _value_text  = f"Capital range: {_cap_display}.{_edge_clause}"
+
+            # ③ Why this fits — archetype + fit band/tier + why_for
+            _fit_tier = (_insp_team_row or {}).get("fit_tier") or "—"
+            _fit_band = (_insp_team_row or {}).get("fit_band") or "—"
+            _why_for  = ((_insp_team_row or {}).get("why_for") or "").strip()
+            _arch_str = _insp_arch or "—"
+            _fit_text = f"Archetype: {_arch_str}."
+            if _why_for:
+                _fit_text += f" {_why_for}"
+            elif _fit_tier != "—":
+                _fit_text += f" Fit: {_fit_tier}/{_fit_band}."
+
+            # ④ Risk — FM primary from remaining board
+            _fm_str   = str(_insp_fm).strip()
+            _fm_clean = _fm_str if _fm_str.upper() not in ("", "NONE", "N/A") else ""
+            if _fm_clean:
+                _fm_code_m = re.search(r"(FM-\d+)", _fm_clean)
+                _fm_label  = _fm_code_m.group(1) if _fm_code_m else _fm_clean[:40]
+                _risk_text  = f"Risk flag: {_fm_label}."
+                _risk_color = "#e05c5c"
+            else:
+                _risk_text  = "No failure mode flagged."
+                _risk_color = "rgba(255,255,255,0.28)"
+
+            st.markdown(
+                f'<div style="background:#161b22;border:1px solid rgba(255,255,255,0.08);'
+                f'border-radius:5px;padding:9px 11px;margin-bottom:7px;">'
+                + _bullet("Need",          _needs_html, "#7eb4e2")
+                + _bullet("Value",         _value_text, "#5ab87a")
+                + _bullet("Why this fits", _fit_text,   "#e8a84a")
+                + _bullet("Risk",          _risk_text,  _risk_color)
+                + f'</div>',
+                unsafe_allow_html=True,
+            )
+
+            # ── View-specific explainability line ──────────────────────────────
+            _expl_parts: list[str] = []
+            if _dm_view == "market_edge":
+                _p_edge = _edge_by_pid.get(_inspect_pid)
+                if _p_edge is not None and _insp_con is not None and _insp_apex is not None:
+                    _p_con_i  = int(_insp_con)
+                    _p_apex_i = int(_insp_apex)
+                    if _p_edge > 0:
+                        _expl_parts.append(
+                            f"APEX ranks #{_p_apex_i} vs market #{_p_con_i} — "
+                            f"+{_p_edge} pick edge. Scouts may be undervaluing."
+                        )
+                    elif _p_edge < 0:
+                        _expl_parts.append(
+                            f"Market ranks #{_p_con_i} vs APEX #{_p_apex_i} — "
+                            f"market leads by {abs(_p_edge)} picks (APEX-LOW)."
+                        )
+                    else:
+                        _expl_parts.append(f"Market and APEX aligned at #{_p_con_i}.")
+                else:
+                    _expl_parts.append("Insufficient rank data to compute edge for this player.")
+            elif _dm_view == "safest":
+                _p_saf   = _safety_by_pid.get(_inspect_pid)
+                _p_reach = _is_reach_by_pid.get(_inspect_pid, False)
+                if _p_saf is not None:
+                    _avail_clause = ""
+                    if _team_next_pick and _insp_con is not None:
+                        _gap = _team_next_pick - int(_insp_con)
+                        if _gap >= 5:
+                            _avail_clause = f"Available well before your #{_team_next_pick} pick."
+                        elif _gap >= 0:
+                            _avail_clause = f"Tight window — likely available at #{_team_next_pick}."
+                        else:
+                            _avail_clause = f"Projected gone before #{_team_next_pick}."
+                    _align_label = {
+                        "ALIGNED":               "Consensus aligned",
+                        "APEX_HIGH":             "APEX-HIGH",
+                        "APEX_LOW":              "APEX-LOW",
+                        "APEX_LOW_PVC_STRUCTURAL": "Structural PVC discount",
+                    }.get(_insp_divflg, "Neutral divergence")
+                    _reach_clause = " Reach risk at this slot." if _p_reach else ""
+                    _expl_parts.append(
+                        f"Safety {_p_saf:.2f}."
+                        + (f" {_avail_clause}" if _avail_clause else "")
+                        + f" {_align_label}."
+                        + _reach_clause
+                    )
+
+            if _expl_parts:
+                _expl_accent = "#7eb4e2" if _dm_view == "market_edge" else "#5ab87a"
+                st.markdown(
+                    f'<div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);'
+                    f'border-left:2px solid {_expl_accent};border-radius:0 4px 4px 0;'
+                    f'padding:7px 10px;margin-bottom:7px;font-family:\'Barlow\',sans-serif;'
+                    f'font-size:11px;color:rgba(255,255,255,0.52);line-height:1.5;">'
+                    + " ".join(_expl_parts)
+                    + "</div>",
+                    unsafe_allow_html=True,
+                )
+
+            # ── Draft action buttons ──────────────────────────────────────────
+            st.markdown(
+                '<div style="font-size:9px;font-weight:700;letter-spacing:0.14em;'
+                'text-transform:uppercase;color:rgba(255,255,255,0.32);margin-bottom:4px;">'
+                'Draft Actions</div>',
+                unsafe_allow_html=True,
+            )
+            _da_c1, _da_c2 = st.columns(2)
+            with _da_c1:
+                if st.button(
+                    f"Draft to {_dm_team}",
+                    key=f"dm_draft_cur_{_inspect_pid}",
+                    use_container_width=True,
+                    type="primary",
+                ):
+                    if _do_draft(_inspect_pid, _dm_team):
+                        st.rerun()
+
+            with _da_c2:
+                # On-the-clock team from draft_state is the natural quick-target for other-team picks
+                _quick_team = (
+                    _next_up_team
+                    if (_next_up_team and _next_up_team != _dm_team)
+                    else next((t for t in _dm_all_teams if t != _dm_team), None)
+                )
+                if _quick_team:
+                    if st.button(
+                        f"Draft to {_quick_team}",
+                        key=f"dm_draft_quick_{_inspect_pid}",
+                        use_container_width=True,
+                    ):
+                        if _do_draft(_inspect_pid, _quick_team):
+                            st.rerun()
+
+            _other_opts = [t for t in _dm_all_teams if t != _dm_team]
+            if _other_opts:
+                _sel_other = st.selectbox(
+                    "Draft to team…",
+                    ["— select team —"] + _other_opts,
+                    key=f"dm_other_sel_{_inspect_pid}",
+                    label_visibility="collapsed",
+                )
+                if _sel_other != "— select team —":
+                    if st.button(
+                        f"Confirm: Draft to {_sel_other}",
+                        key=f"dm_other_confirm_{_inspect_pid}_{_sel_other}",
+                        use_container_width=True,
+                    ):
+                        if _do_draft(_inspect_pid, _sel_other):
+                            st.rerun()
+
+            # ── Compare queue ─────────────────────────────────────────────────
+            if len(_compare_pids) < 4 and _inspect_pid not in _compare_pids:
+                if st.button("+ Add to compare", key=f"dm_add_cmp_{_inspect_pid}"):
+                    _compare_pids.append(_inspect_pid)
+                    st.session_state["draft_mode_compare_pids"] = _compare_pids
+                    st.rerun()
+            elif _inspect_pid in _compare_pids:
+                if st.button("- Remove from compare", key=f"dm_rm_cmp_{_inspect_pid}"):
+                    _compare_pids.remove(_inspect_pid)
+                    st.session_state["draft_mode_compare_pids"] = _compare_pids
+                    st.rerun()
+
+            # ── Full profile link ─────────────────────────────────────────────
+            st.divider()
+            if st.button(
+                "Open full profile below",
+                key=f"dm_full_profile_{_inspect_pid}",
+                use_container_width=True,
+            ):
+                st.session_state["selected_pid"]       = _inspect_pid
+                st.session_state["scroll_to_detail"]   = True
+                st.rerun()
 
 
 # ---------------------------------------------------------------------------

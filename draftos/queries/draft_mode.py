@@ -914,3 +914,36 @@ def insert_draft_pick(
             ),
         )
         _conn.commit()
+
+
+def get_all_pick_ownership(seasonid: int = _SEASON_ID) -> dict[int, str]:
+    """
+    Build remaining pick_number → team_id map from all teams' draft_capital_json.
+    Values in draft_capital_json are pick numbers (integers).
+    Picks already recorded in drafted_picks_2026 are excluded.
+    Returns empty dict on any error.
+    """
+    try:
+        with connect() as _conn:
+            teams = _conn.execute(
+                "SELECT team_id, draft_capital_json FROM team_draft_context WHERE is_active=1"
+            ).fetchall()
+            recorded = {
+                r["pick_number"]
+                for r in _conn.execute(
+                    "SELECT pick_number FROM drafted_picks_2026 WHERE season_id=?",
+                    (seasonid,),
+                ).fetchall()
+            }
+        ownership: dict[int, str] = {}
+        for t in teams:
+            try:
+                capital = json.loads(t["draft_capital_json"] or "{}")
+                for _label, pick_num in capital.items():
+                    if isinstance(pick_num, int) and pick_num not in recorded:
+                        ownership[pick_num] = t["team_id"]
+            except Exception:
+                pass
+        return ownership
+    except Exception:
+        return {}
