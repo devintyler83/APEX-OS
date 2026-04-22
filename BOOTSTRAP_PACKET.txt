@@ -10,7 +10,7 @@ Non-negotiables:
 - Provide run order + verification commands
 
 Goal for this chat:
-Session 104: Re-score the 23 JSON-parse-failed prospects from Session 103 using
+Session 106: Full batch APEX re-score (--batch all --force) after investigating Arvell Reese
 
 Authoritative State:
 
@@ -21,7 +21,7 @@ APEX OS is a deterministic draft operating system that turns 16 ranking sources,
 
 ---
 
-Last Updated (UTC): 2026-04-22T21:16:45.595339+00:00
+Last Updated (UTC): 2026-04-22T21:54:39.949190+00:00
 
 ---
 
@@ -42,6 +42,103 @@ Last Updated (UTC): 2026-04-22T21:16:45.595339+00:00
 As of Session 101 (post-fix): DEDUP_GHOST and INACTIVE_SNAPSHOT passes complete. 304 MULTI_ACTIVE real-school clusters remain — require manual review before any further deactivation.
 
 ## Last Completed Milestone
+
+Session 105 close (Sandbox draft overlay — per-session and named-room isolation. Migration 0057.)
+
+Session 105 close:
+- DB writes: YES — Migration 0057 applied: draft_sandbox_picks table + 2 indexes.
+- Schema change: 0057_draft_sandbox_picks.sql (additive only, no destructive changes).
+  Table: draft_sandbox_picks (sandbox_id TEXT, season_id INT, prospect_id INT,
+         sandboxed_at TEXT, note TEXT, PRIMARY KEY(sandbox_id, season_id, prospect_id)).
+  Indexes: idx_sandbox_picks_sandbox_season, idx_sandbox_picks_season_pid.
+- Next migration label: 0058.
+- Files created:
+    draftos/db/migrations/0057_draft_sandbox_picks.sql
+    tests/test_draft_sandbox.py (11 tests, all passing)
+- Files modified:
+    draftos/queries/draft_mode.py — 8 new sandbox helpers added:
+      get_sandbox_picks, get_sandbox_drafted_pids, mark_prospect_sandboxed,
+      delete_sandbox_pick, reset_sandbox, get_remaining_board_sandbox,
+      get_draft_remaining_board_sandbox, get_drafted_count_sandbox.
+      All canonical functions untouched.
+    app/app.py — sandbox overlay wired into Draft Room:
+      SANDBOX_MODE bool flag (default False).
+      sanitize_room_name(raw) + active_sandbox_id() module-level helpers.
+      Per-tab UUID in st.session_state["_sandbox_id"] (auto-isolated per browser tab).
+      Named room support: sidebar text input → "room:{clean_name}" sandbox_id.
+      active_sandbox_id() resolves named room → "room:{name}" or private UUID.
+      _sandbox_id local var re-derived from active_sandbox_id() each render.
+      Read paths (_drafted_n, _remaining) and write paths (_do_draft, _do_undo)
+        all route through sandbox functions when SANDBOX_MODE=True.
+      Sidebar "Sandbox Controls" expander: join/leave room, clear with confirm guard,
+        cleaned name echo after join, shared-room advisory caption.
+      TTL cleanup on first load of each new session (7-day window).
+      Orange [SANDBOX] pill in Draft Room status strip.
+- Doctor: PASSED (post-migration, sandbox table present, canonical tables untouched).
+- Canonical draft behavior: zero behavior change when SANDBOX_MODE=False.
+- drafted_picks_2026: 0 rows (unchanged — sandbox writes never touch canonical table).
+
+## Next Milestone (Single Target)
+
+Session 106: Full batch APEX re-score (--batch all --force) after investigating Arvell Reese
+ELITE→DAY1 drop (-8.8 pts, forty=4.46/ATH=86.6). Gate report: data/exports/s70_rescore_report.txt.
+Run doctor before and after. Export results after re-score.
+
+---
+
+Session 104 close (Marketing site messaging update + Netlify deploy hardening + Streamlit LFS boot fix.)
+
+Session 104 close:
+- DB writes: NONE.
+- Schema change: NONE. Next migration label remains 0049.
+- Files created: web/for-draft-fans.html, apex_os_site_update_pack.md.
+- Files modified: web/apexos-landing.html, netlify.toml, draftos/db/connect.py.
+- Doctor: not re-run (no DB or pipeline changes). Last known good: Session 103 PASSED.
+
+Marketing Site (apex_os_site_update_pack.md as source of truth):
+  web/apexos-landing.html — full homepage rewrite:
+    Nav: Library→Archetypes, added "For Draft Fans", "How It Works" (was "How it works").
+    Hero: new headline, subtitle, subcopy, 4 badges per pack. Visual card unchanged.
+    Product: 3 cards → 4 cards (2×2 quad-grid). New copy per pack.
+    How It Works: new 5-step copy per pack.
+    Signals: APEXHIGH/APEXLOW/ALIGNED/Structural blocks + bridge line. Demo panel unchanged.
+    Archetypes (was Library): id=archetypes, new heading/copy/CTA per pack.
+    For Draft Fans (new section): id=for-draft-fans, full homepage block, CTA→for-draft-fans.html.
+    Surfaces: moved to position 7 (was 5), 3→5 cards per pack, heading/intro updated.
+    Why Trust It (was Who/Users): id=trust, new heading/copy per pack.
+    Final CTA (new): id=cta, centered, two buttons: Open APEX Board + For Draft Fans.
+    Footer: added Archetypes and For Draft Fans links.
+  web/for-draft-fans.html — new standalone page:
+    Sections: hero, what you get (4 cards), draft-week steps (Thu/Fri/Sat), why archetypes,
+    why divergence, closing CTA. Same CSS identity as landing page. Nav links root-relative.
+
+Netlify Deploy Hardening:
+  netlify.toml: added /for-draft-fans → /for-draft-fans.html (200), /open → streamlit (302).
+  Critical fix: /for-draft-fans rule now appears BEFORE the /* catch-all. Without this,
+  the catch-all would rewrite /for-draft-fans → apexos-landing.html, making the page
+  unreachable by pretty URL.
+  web/for-draft-fans.html: all apexos-landing.html hrefs replaced with root-relative paths
+  (/, /#product, /#how, /#signals, /#archetypes, /for-draft-fans). Works correctly on deploy.
+
+Streamlit LFS Boot Fix (draftos/db/connect.py):
+  Root cause identified: data/edge/draftos.sqlite is tracked in Git LFS (.gitattributes).
+  Streamlit Cloud does not fetch LFS objects. The "DB file" on Streamlit Cloud is the 134-byte
+  LFS pointer text file. sqlite3.connect() opens it silently as an empty DB. PATHS.db.exists()
+  returns True on the pointer. Queries then fail: "no such table: prospect_board_snapshots".
+  Fix: added _validate_db(path) to connect.py:
+    Guard 1: reads first 16 bytes; raises RuntimeError with LFS fix instructions if header ≠
+    "SQLite format 3\x00". Catches LFS pointer before any query is attempted.
+    Guard 2: queries sqlite_master; raises RuntimeError listing missing tables if any of
+    {prospect_board_snapshots, prospects, apex_scores, sources, seasons, models} absent.
+  _validate_db() is called from connect(create_ok=False) only — no impact on pipeline writes.
+  Permanent fix still required: move DB out of Git LFS (see Next Milestone).
+
+Known open items carried forward:
+  - 23 failed prospects from Session 103 still need targeted re-score.
+  - Streamlit Cloud will still fail until data/edge/draftos.sqlite is moved out of LFS.
+  - Divergence table mixed label format (APEX HIGH vs APEX_HIGH) — non-blocking.
+
+---
 
 Session 103 close (Full batch APEX re-score — 274/297 scored, 23 JSON parse failures retained prior v2.3 scores; Arvell Reese audit; APEX engine banner fix v2.2→v2.3; netlify.toml for apexsignal.app static deployment.)
 
@@ -1905,13 +2002,20 @@ Prior sessions on record: 12 (DB rebuild), 13 (weekly pipeline), 13b (school/arc
 
 ## Next Milestone (Single Target)
 
-- Session 104: Re-score the 23 JSON-parse-failed prospects from Session 103 using
-  --prospect-ids (comma-separated PIDs). Notable: Peter Woods, Colton Hood, Shedeur Sanders,
-  Donovan Ezeiruaku, Diego Pavia, Drew Allar, Pat Coogan + 16 others. After re-score,
-  run --batch divergence --apply 1 to recompute divergence for those PIDs.
-  Also: complete apexsignal.app static deployment (Netlify or Cloudflare Pages -- manual connect
-  required; netlify.toml is committed and ready). Verify divergence label normalization
-  (APEX HIGH vs APEX_HIGH mixed format in divergence_flags table).
+- Session 105 (two gates, do in order):
+  Gate 1 — Move DB out of Git LFS (REQUIRED before Streamlit Cloud works):
+    git lfs untrack "data/edge/draftos.sqlite"
+    git rm --cached data/edge/draftos.sqlite
+    git add data/edge/draftos.sqlite   # re-add as regular 26MB file
+    git add .gitattributes
+    git commit -m "fix: move draftos.sqlite out of LFS for Streamlit Cloud compatibility"
+    git push
+  Gate 2 — Re-score 23 JSON-parse-failed prospects from Session 103:
+    --prospect-ids (comma-separated PIDs). Notable: Peter Woods, Colton Hood, Shedeur Sanders,
+    Donovan Ezeiruaku, Diego Pavia, Drew Allar, Pat Coogan + 16 others. Cross-check which
+    are is_active=1 first — calibration PIDs do not need re-scoring.
+    After re-score: run --batch divergence --apply 1 to recompute divergence for those PIDs.
+  Deferred: divergence label normalization (APEX HIGH vs APEX_HIGH mixed format).
   Deferred: post-draft audit framework (APEX Framework Section 9).
   Deferred: pick ownership trade editor (dm_pick_overrides state key seeded).
 
@@ -2222,11 +2326,11 @@ Inactive (data preserved): ngs_2026 (source_id=29, is_active=0) — model score,
 
 2) System Snapshot Output
 === DRAFTOS SYSTEM SNAPSHOT ===
-generated_utc: 2026-04-22T21:16:44.854416+00:00
+generated_utc: 2026-04-22T21:54:39.213064+00:00
 
 ## Git
 branch: main
-commit: 4d3cb2d3ca9b49c29bffef3a2e5d79ef57105e2d
+commit: 770992bd694a68400f324288faab48af355cb38f
 status: M draftos/db/__pycache__/connect.cpython-312.pyc
 
 ## Tables
@@ -2237,6 +2341,7 @@ status: M draftos/db/__pycache__/connect.cpython-312.pyc
 - consensus_reconciliation_2026
 - divergence_flags
 - draft_results
+- draft_sandbox_picks
 - drafted_picks_2026
 - historical_comps
 - measurables
@@ -2353,6 +2458,7 @@ status: M draftos/db/__pycache__/connect.cpython-312.pyc
 - 0054_team_context_normalized @ 2026-04-21 07:34:18
 - 0055_drafted_picks_2026 @ 2026-04-21T17:10:25.603193+00:00
 - 0056_draft_views_2026 @ 2026-04-21T19:56:36.839354+00:00
+- 0057_draft_sandbox_picks @ 2026-04-22T21:40:30.257147+00:00
 
 ## Active Season
 no is_active column
@@ -2498,6 +2604,7 @@ no is_active column
 - scripts\verify_packet_manifest.py
 - scripts\verify_snapshot_integrity.py
 - tests\__init__.py
+- tests\test_draft_sandbox.py
 - tests\test_profile_dimensions.py
 
 ## Stub / Deferred Detection
