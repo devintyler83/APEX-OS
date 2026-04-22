@@ -30,6 +30,18 @@ from archetype_defs import ARCHETYPE_DEFS as _ARCHETYPE_DEFS
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
+def is_valid_invalidation(txt: str) -> bool:
+    """Return True only when invalidation text is complete and well-formed."""
+    if not txt:
+        return False
+    t = txt.strip()
+    if len(t) < 60:
+        return False
+    if t[-1] not in ".?!":
+        return False
+    return True
+
+
 def _e(s) -> str:
     return _html_mod.escape(str(s)) if s is not None else ""
 
@@ -721,26 +733,6 @@ def buildteamfithtml(fit: dict | None) -> str:
       </div>
     </div>
 
-    <!-- ③ FIT CONDITIONS -->
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:10px;">
-      <div style="padding:8px 10px; background:rgba(90,184,122,0.07);
-                  border:1px solid rgba(90,184,122,0.18); border-radius:4px;">
-        <div style="font-size:7px; font-weight:700; letter-spacing:0.12em;
-                    text-transform:uppercase; color:#5ab87a; margin-bottom:4px;">
-          Works if
-        </div>
-        <div style="font-size:13px; color:var(--mid); line-height:1.4;">{works_if}</div>
-      </div>
-      <div style="padding:8px 10px; background:rgba(224,92,92,0.07);
-                  border:1px solid rgba(224,92,92,0.18); border-radius:4px;">
-        <div style="font-size:7px; font-weight:700; letter-spacing:0.12em;
-                    text-transform:uppercase; color:#e05c5c; margin-bottom:4px;">
-          Breaks if
-        </div>
-        <div style="font-size:13px; color:var(--mid); line-height:1.4;">{breaks_if}</div>
-      </div>
-    </div>
-
     <!-- ④ WHY IT WORKS -->
     <div class="report-block" style="margin-top:10px;">
       <div class="report-lbl">Why it works</div>
@@ -773,7 +765,7 @@ def buildteamfithtml(fit: dict | None) -> str:
                   text-transform:uppercase; color:var(--dim); margin-bottom:10px;">
         Support metrics
       </div>
-      <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px;">
+      <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px;">
         <div>
           <div style="font-size:9px; font-weight:600; color:var(--dim); margin-bottom:3px; text-transform:uppercase; letter-spacing:0.08em;">Deployment</div>
           <div style="font-size:14px; font-weight:700; color:{dep_color}; line-height:1.2;">
@@ -794,13 +786,6 @@ def buildteamfithtml(fit: dict | None) -> str:
             {fm_label}
           </div>
           <div style="font-size:11px; font-weight:400; color:var(--dim); margin-top:1px;">{fm_num} · not a probability</div>
-        </div>
-        <div>
-          <div style="font-size:9px; font-weight:600; color:var(--dim); margin-bottom:3px; text-transform:uppercase; letter-spacing:0.08em;">Eval confidence</div>
-          <div style="font-size:14px; font-weight:700; color:{conf_color}; line-height:1.2;">
-            {conf_label}
-          </div>
-          <div style="font-size:11px; font-weight:400; color:var(--dim); margin-top:1px;">{conf_pct} · eval depth</div>
         </div>
       </div>
     </div>
@@ -829,12 +814,7 @@ def buildteamfithtml(fit: dict | None) -> str:
         <span style="color:#e07b1a;">Elevated 60–74</span> &nbsp;
         <span style="color:#e05c5c;">Severe 75+</span>
         <br>
-        <span style="color:var(--text); font-weight:600;">Eval confidence</span>
-        &mdash;
-        <span style="color:#5ab87a;">High</span> (&ge;80%) &nbsp;
-        <span style="color:#e8a84a;">Medium</span> (65–79%) &nbsp;
-        <span style="color:#e05c5c;">Low</span> (&lt;65%)
-        &nbsp;· reflects APEX evaluation depth, not fit probability.
+        <span style="color:var(--dim); font-size:11px;">FM severity is not a probability — it reflects how strongly a prospect's known failure mechanisms would be activated by this team context.</span>
       </div>
     </div>
     """
@@ -1972,21 +1952,36 @@ def _build_comps_html(comps: list, archetype_raw: str, rate) -> str:
     )
 
 
-def _build_fm_ref_html(fm_ref_comps: list, fm_labels: list | None = None, pos: str = "") -> str:
+def _build_fm_ref_html(fm_ref_comps: list, fm_labels: list | None = None, pos: str = "", prospect: dict | None = None) -> str:
     if not fm_ref_comps:
-        # No same-position historical bust comps in DB — explain rather than show wrong-position data
-        fm_str = ", ".join(fm_labels) if fm_labels else "this failure mode"
-        pos_str = f" at {pos}" if pos else ""
+        # Derive risk pathways from FM labels and translation_risk instead of showing internal wording
+        _p = prospect or {}
+        translation_risk = _p.get("translation_risk") or ""
+        fm_str = ", ".join(fm_labels) if fm_labels else ""
+        # Extract short bullet sentences from translation_risk
+        _risk_sentences: list[str] = []
+        if translation_risk:
+            _raw_sents = [s.strip() for s in str(translation_risk).split(".") if s.strip()]
+            _risk_sentences = [s + "." for s in _raw_sents[:3]]
+        # Only render section if we have FM labels or risk sentences
+        if not fm_str and not _risk_sentences:
+            return ""
+        _bullets = "".join(
+            f'<div style="display:flex;gap:8px;margin-bottom:6px;">'
+            f'<span style="color:var(--red);flex-shrink:0;font-weight:700;">•</span>'
+            f'<span style="font-size:12px;color:var(--mid);">{_e(s)}</span>'
+            f'</div>'
+            for s in _risk_sentences
+        ) if _risk_sentences else (
+            f'<div style="font-size:12px;color:var(--dim);">'
+            f'Evaluate the failure mechanism directly using the FM definition above.'
+            f'</div>'
+        )
+        _hdr_suffix = f" ({_e(fm_str)})" if fm_str else ""
         return (
             f'<div class="fm-ref-section">'
-            f'<div class="sec-divider red">FM Risk Reference</div>'
-            f'<div class="fm-ref-no-data">'
-            f'<div class="fm-ref-no-data-lbl">No same-position reference records</div>'
-            f'<div class="fm-ref-no-data-text">'
-            f'Historical bust comps for {_e(fm_str)}{_e(pos_str)} are not yet available in the '
-            f'reference database. Evaluate the failure mechanism directly using the FM definition above.'
-            f'</div>'
-            f'</div>'
+            f'<div class="sec-divider red">Risk Pathways{_hdr_suffix}</div>'
+            f'<div style="padding:10px 0;">{_bullets}</div>'
             f'</div>'
         )
 
@@ -2316,11 +2311,13 @@ def _build_scout_pad(d: dict, fm_codes: set, fm_labels: list, tag_list: list) ->
             '</div>'
         )
 
-    # Translation risk (first sentence only)
+    # Translation risk (full first sentence — no truncation)
     trans_display = "—"
     if _v23_present(trans_risk):
         first_sent = str(trans_risk).split(".")[0].strip()
-        trans_display = first_sent[:120] + ("…" if len(first_sent) > 120 else "")
+        if first_sent and not first_sent.endswith("."):
+            first_sent += "."
+        trans_display = first_sent
 
     # Tag pills (reuse .htag classes from existing CSS)
     pills_html = ""
@@ -2358,10 +2355,6 @@ def _build_scout_pad(d: dict, fm_codes: set, fm_labels: list, tag_list: list) ->
         f'<span class="sp-v">{_e(capital)}</span>'
         f'</div>'
         f'<div class="sp-kv">'
-        f'<span class="sp-k">Confidence</span>'
-        f'<span class="sp-v" style="color:{conf_color}">{_e(conf_display)}</span>'
-        f'</div>'
-        f'<div class="sp-kv">'
         f'<span class="sp-k">Archetype / Role</span>'
         f'<span class="sp-v">{_e(arch_role_display)}</span>'
         f'</div>'
@@ -2385,7 +2378,7 @@ def _build_scout_pad(d: dict, fm_codes: set, fm_labels: list, tag_list: list) ->
         f'<span class="sp-v">{_e(apex_rank_str)}</span>'
         f'</div>'
         f'<div class="sp-kv">'
-        f'<span class="sp-k">Δ APEX</span>'
+        f'<span class="sp-k">APEX Edge</span>'
         f'<span class="sp-v" style="color:{dd_color}">{_e(dd_str)}</span>'
         f'</div>'
         f'{market_line_html}'
@@ -2399,7 +2392,7 @@ def _build_scout_pad(d: dict, fm_codes: set, fm_labels: list, tag_list: list) ->
         f'{fm_rows}'
         f'<div class="sp-kv">'
         f'<span class="sp-k">Translation Risk</span>'
-        f'<span class="sp-v" style="font-size:13px;text-align:right;color:var(--mid)">{_e(trans_display)}</span>'
+        f'<span class="sp-v" style="font-size:13px;color:var(--mid);white-space:normal;word-break:break-word;">{_e(trans_display)}</span>'
         f'</div>'
         '</div>'
     )
@@ -2523,7 +2516,15 @@ def _build_top_traits_card(d: dict, pos: str, pos_note: str) -> str:
         )
 
     if not chips:
-        return ""
+        return (
+            '<div class="detail-section" style="margin-bottom:16px;">'
+            '<div class="detail-section-header">Key Position Traits</div>'
+            '<div style="font-size:12px;color:var(--dim);padding:8px 0;">'
+            'Position-specific trait model unavailable for this prospect. '
+            'Football and system traits are shown instead.'
+            '</div>'
+            '</div>'
+        )
 
     note_html = (
         f'<div style="font-size:13px;color:var(--dim);margin-top:10px;padding-top:8px;border-top:1px solid var(--wire);">{_e(pos_note)}</div>'
@@ -2608,18 +2609,18 @@ def build_decision_card(d: dict, fm_codes: set) -> str:
 
     risk_note_html = ""
     if _v23_present(translation_risk):
-        # Use the full first sentence. Only truncate on a word boundary if it
-        # is exceptionally long (>280 chars) to prevent mid-word cutoffs.
         _tr_text = str(translation_risk).strip()
         _first_sent = _tr_text.split(".")[0].strip()
+        if _first_sent and not _first_sent.endswith("."):
+            _first_sent += "."
         if len(_first_sent) > 280:
             _trunc = _first_sent[:280]
-            # Retreat to last word boundary
             _last_space = _trunc.rfind(" ")
             if _last_space > 180:
                 _trunc = _trunc[:_last_space]
             _first_sent = _trunc + "…"
-        risk_note_html = f'<div class="dc-risk-note">{_e(_first_sent)}</div>'
+        if is_valid_invalidation(_first_sent):
+            risk_note_html = f'<div class="dc-risk-note">{_e(_first_sent)}</div>'
 
     # ── Zone 3: Confidence strip ──────────────────────────────────────────────
     _CONF_COLOR = {
@@ -2668,11 +2669,8 @@ def build_decision_card(d: dict, fm_codes: set) -> str:
         f'{risk_note_html}'
         '</div>'
         '</div>'
-        # Zone 3 — Confidence strip
+        # Zone 3 — Summary strip (Archetype Fit + APEX Score; Confidence removed)
         '<div class="dc-strip">'
-        f'<span><span class="dc-strip-lbl">EVAL CONFIDENCE</span>'
-        f'<span class="dc-strip-val" style="color:{conf_color}">{conf_disp}</span></span>'
-        '<span class="dc-sep">·</span>'
         f'<span><span class="dc-strip-lbl">ARCHETYPE FIT</span>'
         f'<span class="dc-strip-val" style="color:{gap_color}">{_e(gap_disp)}</span></span>'
         '<span class="dc-sep">·</span>'
@@ -2793,12 +2791,6 @@ def build_detail_html(d: dict, comps: list, rate, fm_ref_comps: list | None = No
             "UDFA":   ("udfa",  "UDFA",     "Free Agent"),
         }
         tier_cls, tier_text, tier_sub = TIER_MAP.get(tier, ("udfa", tier or "—", ""))
-
-        conf_color_cls = {
-            "Tier A": "green", "A": "green", "High": "green",
-            "Tier B": "amber", "B": "amber", "Medium": "amber",
-            "Tier C": "red",   "C": "red",   "Low": "red",
-        }.get(conf_raw, "dim")
 
         conf_display = {
             "A": "Tier A", "B": "Tier B", "C": "Tier C",
@@ -2964,7 +2956,7 @@ def build_detail_html(d: dict, comps: list, rate, fm_ref_comps: list | None = No
         # Decision card — top of right content pane (APEX-scored prospects only)
         decision_card_html = build_decision_card(d, fm_codes)
 
-        # Summary tab 3-chip stat row: Capital / Archetype Fit / Eval Confidence
+        # Summary tab 2-chip stat row: Draft Capital / Archetype Fit
         _GAP_CHIP_COLOR = {
             "CLEAN": "var(--green)", "SOLID": "var(--cold)",
             "TWEENER": "var(--amber)", "COMPRESSION": "var(--amber)", "NO_FIT": "var(--red)",
@@ -2992,10 +2984,6 @@ def build_detail_html(d: dict, comps: list, rate, fm_ref_comps: list | None = No
             f'<div class="detail-stat-chip">'
             f'<div class="detail-stat-chip-lbl">Archetype Fit</div>'
             f'<div class="detail-stat-chip-val" style="color:{_gap_chip_color};">{_gap_chip_disp}</div>'
-            f'</div>'
-            f'<div class="detail-stat-chip">'
-            f'<div class="detail-stat-chip-lbl">Eval Confidence</div>'
-            f'<div class="detail-stat-chip-val" style="color:{_conf_chip_color};">{_conf_chip_disp}</div>'
             f'</div>'
             '</div>'
         ) if _v23_present(apex_comp) else ""
@@ -3080,7 +3068,7 @@ def build_detail_html(d: dict, comps: list, rate, fm_ref_comps: list | None = No
         if fm_codes:
             fm_ref_html = (
                 '<div class="section-gap"></div>'
-                + _build_fm_ref_html(fm_ref_comps or [], fm_labels, pos)
+                + _build_fm_ref_html(fm_ref_comps or [], fm_labels, pos, prospect=d)
             )
 
         # Capital note
@@ -3136,10 +3124,6 @@ def build_detail_html(d: dict, comps: list, rate, fm_ref_comps: list | None = No
             f'<div class="report-lbl">Draft Capital</div>'
             f'<div class="report-val">{_e(capital_base)}</div>'
             f'{"<div class=\'report-sub\'>" + _e(capital_note) + "</div>" if capital_note else ""}'
-            f'</div>'
-            f'<div class="report-block">'
-            f'<div class="report-lbl">Eval Confidence</div>'
-            f'<div class="report-val" style="color:{_report_conf_color}">{_e(conf_display)}</div>'
             f'</div>'
             f'<div class="report-block">'
             f'<div class="report-lbl">Position Rank</div>'
@@ -3208,11 +3192,7 @@ def build_detail_html(d: dict, comps: list, rate, fm_ref_comps: list | None = No
 
         <div class="conf-row">
           <div class="conf-item">
-            <div class="conf-lbl">Confidence</div>
-            <div class="conf-val {conf_color_cls}">{_e(conf_display)}</div>
-          </div>
-          <div class="conf-item">
-            <div class="conf-lbl">Divergence</div>
+            <div class="conf-lbl">APEX Edge</div>
             <div class="conf-val {div_cls}">{_e(div_text)}</div>
           </div>
         </div>

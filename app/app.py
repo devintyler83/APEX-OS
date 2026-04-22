@@ -1287,7 +1287,7 @@ _TAGS_DISPLAY_MAP: dict[str, str] = {
     "Compression Flag":   "🔀 Tweener",
     "Divergence Alert":   "⚡ Divergence",
     "Scheme Dependent":   "🎯 Scheme Dep.",
-    "Development Bet":    "📈 Dev Bet",
+    "Development Bet":    "⬆️ Dev Bet",
     "Floor Play":         "🛡️ Floor Play",
     "Riser":              "📈 Riser",
     "Faller":             "📉 Faller",
@@ -1999,21 +1999,7 @@ def _render_consensus_card(row) -> None:
     h4.markdown(f"Consensus #{_crank}")
     _ras = row.get("ras_score")
     _ras_str = f"{_ras:.2f}" if _ras is not None and pd.notna(_ras) else "—"
-    st.caption(
-        f"Tier: {row.get('consensus_tier', '—')}   |   "
-        f"Confidence: {row.get('confidence_band', '—')}   |   "
-        f"Sources: {row.get('coverage_count', '—')}   |   "
-        f"RAS: {_ras_str}"
-    )
-    _dflag = row.get("divergence_flag")
-    if _dflag is not None and pd.notna(_dflag) and _dflag == 1:
-        _delta = row.get("divergence_delta")
-        _direction = "higher" if _delta and _delta < 0 else "lower"
-        _delta_abs = abs(_delta) if _delta else "?"
-        st.info(
-            f"⚡ Divergence flag: JFoster ranks this prospect "
-            f"{_direction} than consensus ({_delta_abs} spots)."
-        )
+    st.caption(f"Consensus #{_crank}   |   RAS: {_ras_str}")
     st.caption("*Not yet APEX-scored. Run apex_scoring to generate full profile.*")
 
 
@@ -2236,12 +2222,14 @@ def render_draft_mode(conn=None) -> None:
                 _r_score = _r.get("fit_score") or 0
                 _r_con   = _r.get("consensus_rank")
                 _r_apex  = _r.get("apex_rank")
-                _r_div   = _r.get("divergence_flag") or "ALIGNED"
+                _r_pid_dm = _r.get("prospect_id")
+                _r_utags = " ".join(sorted(st.session_state["user_tags"].get(_r_pid_dm, set())))
                 st.markdown(
                     f"**{_i}. {_r_name}** ({_r_pos}) &nbsp; "
                     f"`{_r_tier}/{_r_band}` &nbsp; "
                     f"Score {_r_score:.1f} · Con#{_r_con} · "
-                    f"Apex#{_r_apex or '—'} · {_r_div}",
+                    f"Apex#{_r_apex or '—'}"
+                    + (f" · _{_r_utags}_" if _r_utags else ""),
                     unsafe_allow_html=True,
                 )
 
@@ -2259,7 +2247,6 @@ def render_draft_mode(conn=None) -> None:
                     "Con#":    _r.get("consensus_rank"),
                     "Apex#":   _r.get("apex_rank"),
                     "Capital": (_r.get("capital_adjusted") or "—")[:16],
-                    "Div":     _r.get("divergence_flag") or "—",
                     "Why For": (_r.get("why_for") or "—")[:40],
                 })
             st.dataframe(
@@ -2295,17 +2282,17 @@ def render_draft_mode(conn=None) -> None:
                 _r_pos   = _r.get("position_group") or "—"
                 _r_con   = _r.get("consensus_rank")
                 _r_apex  = _r.get("apex_rank")
-                _r_div   = _r.get("divergence_flag") or "ALIGNED"
                 _r_cap   = (_r.get("capital_adjusted") or "")[:14]
                 _r_pid   = _r["prospect_id"]
+                _r_utags = " ".join(sorted(st.session_state["user_tags"].get(_r_pid, set())))
 
                 _rc1, _rc2 = st.columns([4, 1])
                 with _rc1:
                     st.markdown(
                         f"**{_r_name}** ({_r_pos}) &nbsp;&nbsp; "
-                        f"Con#{_r_con} · Apex#{_r_apex or '—'} · "
-                        f"{_r_div}"
-                        + (f" · {_r_cap}" if _r_cap else ""),
+                        f"Con#{_r_con} · Apex#{_r_apex or '—'}"
+                        + (f" · {_r_cap}" if _r_cap else "")
+                        + (f" · _{_r_utags}_" if _r_utags else ""),
                         unsafe_allow_html=True,
                     )
                 with _rc2:
@@ -2511,6 +2498,10 @@ if "_nav_gen" not in st.session_state:
 # It gates the selectbox sync so the selectbox can't stomp a nav-driven change.
 _nav_just_fired: bool = bool(st.session_state.pop("_nav_just_fired", False))
 
+# User tags: { prospect_id: set(str) } — in-memory only, no DB writes
+if "user_tags" not in st.session_state:
+    st.session_state["user_tags"] = {}
+
 # Ensure tag_names column exists (defensive fallback)
 if "tag_names" not in df.columns:
     df["tag_names"] = ""
@@ -2543,9 +2534,26 @@ st.caption("APEX OS · 2026 Draft · Session 44 · " + _export_dt.now().strftime
 with st.sidebar:
     st.header("Filters")
 
-    show_low = st.checkbox("Show Low confidence", value=True)
+    with st.expander("📊 How APEX Score Works", expanded=False):
+        st.markdown("""
+**RPG** = Raw Player Grade — player talent independent of position.
 
-    show_divergence_only = st.checkbox("Show divergence flags only (⚡)", value=False)
+**APEX Score** = RPG × PVC — draft asset value.
+
+**PVC (Positional Value Coefficient):**
+
+| Position | PVC |
+|----------|-----|
+| QB, CB, EDGE | 1.00x |
+| WR, OT, S, IDL | 0.90x |
+| ILB, OLB | 0.85x |
+| OG, TE, C | 0.80x |
+| RB | 0.70x |
+
+**APEX Tiers:** ELITE ≥85 · DAY1 ≥70 · DAY2 ≥55 · DAY3 ≥40 · UDFA-P ≥28 · UDFA <28
+
+**APEX Edge** = Consensus rank − APEX rank. Positive = APEX values the player higher than the market.
+""")
 
     show_apex_only = st.checkbox("APEX scored only", value=False)
 
@@ -2566,14 +2574,6 @@ with st.sidebar:
         "Position group",
         options=all_positions,
         default=all_positions,
-    )
-
-    all_tiers = ["Elite", "Strong", "Playable", "Watch"]
-    present_tiers = [t for t in all_tiers if t in df["consensus_tier"].unique()]
-    selected_tiers = st.multiselect(
-        "Consensus tier",
-        options=present_tiers,
-        default=present_tiers,
     )
 
     # APEX tier filter — draft-capital vocabulary, all 6 tiers
@@ -2615,8 +2615,8 @@ with st.sidebar:
         step=10,
     )
 
-    # --- Tag filter — multiselect with AND logic (all selected tags must be present) ---
-    st.markdown("### Tags")
+    # --- System tag filter ---
+    st.markdown("### System Tags")
     _active_tag_defs = _load_active_tag_defs()
     _tag_name_to_label = {
         d["tag_name"]: _TAGS_DISPLAY_MAP.get(d["tag_name"], d["tag_name"])
@@ -2637,32 +2637,21 @@ with st.sidebar:
         if lbl in _tag_label_to_name
     ]
 
-    # --- Tag legend — dynamic: mirrors active tag defs ---
     with st.expander("📖 Tag Legend", expanded=False):
         for _tdef in _active_tag_defs:
             _lbl  = _TAGS_DISPLAY_MAP.get(_tdef["tag_name"], _tdef["tag_name"])
             _desc = (_tdef.get("description") or "").strip()
             st.markdown(f"**{_lbl}** — {_desc}" if _desc else f"**{_lbl}**")
 
-    with st.expander("📊 Positional Value (PVC)", expanded=False):
-        st.markdown("""
-**How position affects draft value:**
-
-| Position | PVC | Impact |
-|----------|-----|--------|
-| QB, CB, EDGE | 1.00x | Premium — no discount |
-| WR, OT, S, IDL | 0.90x | Tier 2 — slight discount |
-| ILB, OLB | 0.85x | Tier 3 — moderate discount |
-| OG, TE, C | 0.80x | Tier 4 — significant discount |
-| RB | 0.70x | Tier 5 — maximum discount |
-
-RPG × PVC = APEX Score
-
-An elite RB (RPG 84) has a lower APEX Score (59) than
-a good CB (RPG 74, APEX 74) because the NFL pays, drafts,
-and replaces running backs differently than cornerbacks.
-This reflects draft economics, not player talent.
-""")
+    # --- User tag filter (in-memory only) ---
+    st.markdown("### My Tags")
+    _USER_TAG_OPTIONS = ["💎 Crush", "💚 Want", "❌ Do Not Want", "👀 Sleeper", "🔻 Overrated", "💰 My Team"]
+    selected_user_tag_labels = st.multiselect(
+        "My tags (any match)",
+        options=_USER_TAG_OPTIONS,
+        default=[],
+        key="user_tag_filter",
+    )
 
     # --- Prospect Detail selectbox — write to selected_pid ---
     st.markdown("---")
@@ -2672,7 +2661,7 @@ This reflects draft economics, not player talent.
     if "detail_reset_n" not in st.session_state:
         st.session_state["detail_reset_n"] = 0
 
-    _det_col_sel, _det_col_clr = st.columns([3, 1])
+    _det_col_sel, _det_col_clr = st.columns([4, 1])
     with _det_col_sel:
         _detail_dropdown = st.selectbox(
             "Select prospect",
@@ -2681,7 +2670,10 @@ This reflects draft economics, not player talent.
             label_visibility="collapsed",
         )
     with _det_col_clr:
-        st.write("")  # vertical alignment spacer
+        st.markdown(
+            '<style>div[data-testid="stButton"] button{white-space:nowrap!important;}</style>',
+            unsafe_allow_html=True,
+        )
         if st.button("Clear", key="detail_clear", use_container_width=True):
             st.session_state["selected_pid"] = None
             st.session_state["detail_reset_n"] += 1
@@ -2718,20 +2710,11 @@ This reflects draft economics, not player talent.
 # ---------------------------------------------------------------------------
 filtered = df.copy()
 
-if not show_low:
-    filtered = filtered[filtered["confidence_band"] != "Low"]
-
-if show_divergence_only:
-    filtered = filtered[filtered["divergence_flag"] == 1]
-
 if show_apex_only and "apex_composite" in filtered.columns:
     filtered = filtered[filtered["apex_composite"].notna()]
 
 if selected_positions:
     filtered = filtered[filtered["position_group"].isin(selected_positions)]
-
-if selected_tiers:
-    filtered = filtered[filtered["consensus_tier"].isin(selected_tiers)]
 
 if selected_apex_tier != "(all)" and "apex_tier" in filtered.columns:
     filtered = filtered[filtered["apex_tier"] == selected_apex_tier]
@@ -2765,6 +2748,15 @@ if selected_tags:
 
     tag_mask = filtered["tag_names"].apply(_has_all_tags)
     filtered = filtered[tag_mask]
+
+# User tag filter — any selected tag must be present in session state for the pid
+if selected_user_tag_labels:
+    _utag_set = set(selected_user_tag_labels)
+    _user_tags_map = st.session_state["user_tags"]
+    _utag_mask = filtered["prospect_id"].apply(
+        lambda pid: bool(_utag_set & _user_tags_map.get(int(pid), set()))
+    )
+    filtered = filtered[_utag_mask]
 
 if sort_by == "APEX Rank":
     filtered = filtered.sort_values(
@@ -2819,23 +2811,15 @@ def _fmt_apex_composite(val) -> str:
 
 
 display = pd.DataFrame()
-display["Rank"]       = filtered["consensus_rank"].astype("Int64")
+display["Consensus"]  = filtered["consensus_rank"].astype("Int64")
 display["Player"]     = filtered["display_name"]
 display["School"]     = filtered["school_canonical"]
 display["Pos"]        = filtered["position_group"]
-display["Score"]      = filtered["consensus_score"].apply(
-    lambda x: round(float(x), 1) if pd.notna(x) else None
-)
-display["Consensus"]  = filtered["consensus_tier"]
-display["Confidence"] = filtered["confidence_band"]
-display["Sources"]    = filtered["sources_present"].astype("Int64")
-display["Coverage"]   = filtered["coverage_count"].astype("Int64")
 display["RAS"]        = filtered["ras_score"].apply(
     lambda x: round(float(x), 1) if pd.notna(x) else None
 )
-display["⚡ Div"]    = filtered.apply(_fmt_div, axis=1)
 display["APEX"]       = filtered["auto_apex_rank"].astype("Int64")
-display["\u0394 APEX"] = filtered["auto_apex_delta"].apply(_fmt_apex_delta)
+display["APEX Edge"]  = filtered["auto_apex_delta"].apply(_fmt_apex_delta)
 
 # RPG — raw score before PVC discount
 if "raw_score" in filtered.columns:
@@ -2856,6 +2840,12 @@ else:
     display["Archetype"]  = "—"
 
 display["Tags"] = filtered["tag_names"].apply(_fmt_tags_text)
+
+# User tags column — read from session state (in-memory only)
+_utags_map = st.session_state["user_tags"]
+display["My Tags"] = filtered["prospect_id"].apply(
+    lambda pid: "  ".join(sorted(_utags_map.get(int(pid), set())))
+)
 
 display["Snapshot"] = (
     filtered["snapshot_date"].str[:10]
@@ -2963,26 +2953,13 @@ def _style_apex_tier(val: str) -> str:
     return APEX_TIER_COLORS.get(val, "")
 
 
-def _highlight_consensus_tier(row: "pd.Series") -> list:
-    """Row-level background tint for Elite and Watch consensus tier rows."""
-    tier = row.get("Consensus", "")
-    if tier == "Elite":
-        bg = "background-color: rgba(240,192,64,0.04)"
-    elif tier == "Watch":
-        bg = "background-color: rgba(224,92,92,0.03)"
-    else:
-        bg = ""
-    return [bg] * len(row)
 
+_NUM_COLS = ["Consensus", "RAS", "APEX", "APEX Score"]
 
-_NUM_COLS = ["Rank", "Score", "Sources", "Coverage", "RAS", "APEX Score"]
-_STR_COLS = ["Player", "School", "Pos", "Consensus", "Confidence", "APEX Tier",
-             "Archetype", "Tags", "Snapshot", "⚡ Div", "\u0394 APEX", "RPG"]
+_STR_COLS = ["Player", "School", "Pos", "APEX Tier", "Archetype", "Tags", "My Tags", "Snapshot", "APEX Edge", "RPG"]
 
 styled = (
     display.style
-    # ── Row-level tier tinting ───────────────────────────────────────────────
-    .apply(_highlight_consensus_tier, axis=1)
     # ── Alignment ──────────────────────────────────────────────────────────
     .set_properties(
         subset=[c for c in _NUM_COLS if c in display.columns],
@@ -2993,11 +2970,8 @@ styled = (
         **{"text-align": "left"}
     )
     # ── Color signals ───────────────────────────────────────────────────────
-    .map(_style_confidence,     subset=["Confidence"])
-    .map(_style_consensus_tier, subset=["Consensus"])
     .map(_style_ras,            subset=["RAS"])
-    .map(_style_divergence,     subset=["⚡ Div"])
-    .map(_style_apex_delta,     subset=["\u0394 APEX"])
+    .map(_style_apex_delta,     subset=["APEX Edge"])
     .map(_style_apex_tier,      subset=["APEX Tier"])
     # ── Table-level properties ───────────────────────────────────────────────
     .set_table_styles([
@@ -3059,7 +3033,6 @@ def _make_bb_styled(sub: pd.DataFrame):
     """
     return (
         sub.style
-        .apply(_highlight_consensus_tier, axis=1)
         .set_properties(
             subset=[c for c in _NUM_COLS if c in sub.columns],
             **{"text-align": "right"},
@@ -3068,11 +3041,8 @@ def _make_bb_styled(sub: pd.DataFrame):
             subset=[c for c in _STR_COLS if c in sub.columns],
             **{"text-align": "left"},
         )
-        .map(_style_confidence,     subset=["Confidence"])
-        .map(_style_consensus_tier, subset=["Consensus"])
         .map(_style_ras,            subset=["RAS"])
-        .map(_style_divergence,     subset=["⚡ Div"])
-        .map(_style_apex_delta,     subset=["\u0394 APEX"])
+        .map(_style_apex_delta,     subset=["APEX Edge"])
         .map(_style_apex_tier,      subset=["APEX Tier"])
         .set_table_styles([
             {
@@ -3123,56 +3093,21 @@ def _make_bb_styled(sub: pd.DataFrame):
     )
 
 
-# ---------------------------------------------------------------------------
-# Column guide (above the board)
-# ---------------------------------------------------------------------------
-with st.expander("📋 Column Guide", expanded=False):
-    st.markdown("""
+# Column guide helpers — rendered inside each board tab below
+_COLUMN_GUIDE_MD = """
 | Column | Description |
 |--------|-------------|
-| Rank | Consensus rank across active sources (weighted by tier) |
-| Score | Weighted consensus score (0–100 scale) |
-| Consensus | Consensus tier: Elite / Strong / Playable / Watch |
-| Confidence | Source coverage × agreement quality (High / Medium / Low) |
-| Sources | Active sources that have ranked this prospect |
-| Coverage | Sources covering this prospect out of active canonical set |
+| Consensus | Consensus rank across all active scout sources |
 | RAS | Relative Athletic Score (scale 2.74–10.0) |
-| ⚡ Div | Divergence flag — APEX vs consensus rank signal (premium positions only) |
-| APEX | Auto-derived APEX rank from apex_composite sort order (manual override takes precedence) |
-| Δ APEX | consensus_rank − APEX rank (positive = APEX values prospect higher than market) |
-| RPG | Raw Player Grade — talent evaluation independent of position. How good is this player as a football player? |
-| APEX Score | APEX composite — RPG adjusted by positional value (PVC). How valuable is this player as a draft asset? |
+| APEX | Model-derived APEX rank |
+| APEX Edge | Consensus rank − APEX rank. Positive = APEX values this player higher than the market. |
+| RPG | Raw Player Grade — how good is this player as a football player? (pre-PVC) |
+| APEX Score | APEX composite — RPG × PVC. How valuable is this player as a draft asset? |
 | APEX Tier | **ELITE** ≥85 · **DAY1** ≥70 · **DAY2** ≥55 · **DAY3** ≥40 · **UDFA-P** ≥28 · **UDFA** <28 |
 | Archetype | How this prospect wins — matched from APEX positional library |
-| Archetype Fit | **Clean Fit** >15 pts · **Solid Fit** 8–15 pts · **Tweener** <8 pts · **No Fit** = concern |
 | Tags | System-generated signals. See Tag Legend in sidebar. |
-""")
-    st.markdown("---")
-    st.markdown("""
-**How RPG and APEX Score Work Together**
-
-APEX OS uses two scores to separate player talent from draft value:
-
-- **RPG (Raw Player Grade)** measures how good a player is at football — independent
-  of what position they play. An elite running back and an elite cornerback with
-  identical trait vectors will have identical RPGs.
-
-- **APEX Score** measures how valuable a player is as a draft pick. It takes the RPG
-  and adjusts it by a Positional Value Coefficient (PVC) that reflects how the NFL
-  actually values each position in the draft economy.
-
-**The PVC multipliers:**
-QB, CB, EDGE = 1.00x (premium) · WR, OT, S, IDL = 0.90x · ILB, OLB = 0.85x · OG, TE, C = 0.80x · RB = 0.70x
-
-**Example:** Jeremiyah Love has elite trait vectors → RPG ~84. But as a running back
-(PVC = 0.70), his APEX Score = ~59. This doesn't mean APEX OS thinks Love is a bad
-player. It means the NFL structurally devalues the RB position, and draft capital
-should reflect that reality.
-
-**When to use which score:**
-- Sorting by **RPG** answers: *"Who are the best football players in this class?"*
-- Sorting by **APEX Score** answers: *"Who are the best draft values in this class?"*
-""")
+| My Tags | Your personal tags (💎 Crush · 💚 Want · 👀 Sleeper · 💰 My Team · etc.) |
+"""
 
 # ---------------------------------------------------------------------------
 # Big Board — grouped HTML table renderer
@@ -3191,24 +3126,19 @@ _BB_TIER_HDR: dict[str, dict] = {
 
 # (col_name, text-align, min-width)
 _BB_VISIBLE_COLS: list[tuple[str, str, str]] = [
-    ("Rank",       "right",  "42px"),
+    ("Consensus",  "right",  "72px"),
     ("Player",     "left",   "160px"),
     ("Pos",        "center", "40px"),
     ("School",     "left",   "120px"),
-    ("Score",      "right",  "48px"),
-    ("Consensus",  "left",   "70px"),
-    ("Confidence", "left",   "74px"),
-    ("Sources",    "right",  "54px"),
-    ("Coverage",   "right",  "62px"),
     ("RAS",        "right",  "42px"),
-    ("\u26a1 Div", "center", "50px"),
     ("APEX",       "right",  "44px"),
-    ("\u0394 APEX","right",  "56px"),
+    ("APEX Edge",  "right",  "66px"),
     ("RPG",        "right",  "40px"),
     ("APEX Score", "right",  "68px"),
     ("APEX Tier",  "center", "64px"),
     ("Archetype",  "left",   "130px"),
     ("Tags",       "left",   "160px"),
+    ("My Tags",    "left",   "130px"),
 ]
 
 
@@ -3225,16 +3155,14 @@ def _esc(s: object) -> str:
 
 def _bb_cell_style(col: str, val: str) -> str:
     """Return the inline CSS style string for a single Big Board data cell."""
-    if col == "Confidence":
-        base = CONFIDENCE_COLORS.get(val, "")
-        return base if base else "color:rgba(255,255,255,0.55)"
     if col == "Consensus":
-        base = _CONSENSUS_TIER_COLORS.get(val, "")
-        return base if base else "color:rgba(255,255,255,0.55)"
-    if col == "\u26a1 Div":
-        return "color:#e8a84a;font-weight:700" if val not in ("", "—", "\u2014") else "color:rgba(255,255,255,0.22)"
-    if col == "\u0394 APEX":
-        if val in ("", "—", "\u2014"):
+        return (
+            "color:rgba(255,255,255,0.38);"
+            "font-family:'Barlow Condensed',sans-serif;"
+            "font-size:14px;font-weight:700"
+        )
+    if col == "APEX Edge":
+        if val in ("", "—", "—"):
             return "color:rgba(255,255,255,0.28)"
         try:
             n = int(val.replace("+", ""))
@@ -3248,12 +3176,6 @@ def _bb_cell_style(col: str, val: str) -> str:
     if col == "APEX Tier":
         raw = APEX_TIER_COLORS.get(val, "")
         return raw if raw else "color:rgba(255,255,255,0.22)"
-    if col == "Rank":
-        return (
-            "color:rgba(255,255,255,0.38);"
-            "font-family:'Barlow Condensed',sans-serif;"
-            "font-size:14px;font-weight:700"
-        )
     if col == "Player":
         return (
             "color:rgba(255,255,255,0.92);"
@@ -3267,6 +3189,7 @@ def _bb_cell_style(col: str, val: str) -> str:
             "font-size:11px;font-weight:700;letter-spacing:0.08em"
         )
     return ""
+
 
 
 def _build_bb_html(disp: pd.DataFrame) -> str:
@@ -3380,7 +3303,30 @@ tab_bb, tab_apex, tab_draft = st.tabs([
 ])
 
 with tab_bb:
-    # ── Stacked grouped render: tier header + selectable dataframe per group ──
+    # ── Collapsible guides ────────────────────────────────────────────────────
+    _tbb_c1, _tbb_c2 = st.columns(2)
+    with _tbb_c1:
+        with st.expander("📋 Column Guide", expanded=False):
+            st.markdown(_COLUMN_GUIDE_MD)
+    with _tbb_c2:
+        with st.expander("📊 How APEX Score Works", expanded=False):
+            st.markdown("""
+**RPG** = Raw Player Grade — player talent, position-independent.
+
+**APEX Score** = RPG × PVC (Positional Value Coefficient).
+
+| Position | PVC |
+|----------|-----|
+| QB, CB, EDGE | 1.00x |
+| WR, OT, S, IDL | 0.90x |
+| ILB, OLB | 0.85x |
+| OG, TE, C | 0.80x |
+| RB | 0.70x |
+
+**APEX Edge**: positive means APEX rates the player higher than the market consensus.
+""")
+
+    # ── Stacked grouped render: collapsible tier sections ────────────────────
     _scored_tier_set = set(_BB_TIER_ORDER)
 
     for _tier in _BB_TIER_ORDER + ["_unscored"]:
@@ -3399,53 +3345,40 @@ with tab_bb:
         _count          = len(_tsub)
         _noun           = "player" if _count == 1 else "players"
 
-        # Tier section header
-        _thdr = _BB_TIER_HDR.get(_tier)
-        if _thdr:
-            _label = _tier if _tier != "_unscored" else "UNSCORED"
-            st.markdown(
-                f'<div class="tier-section-row" style="background:{_thdr["bg"]};'
-                f'border-top:1px solid {_thdr["border"]};'
-                f'border-bottom:1px solid {_thdr["border"]};'
-                f'padding:5px 12px;margin-bottom:0">'
-                f'<span style="color:{_thdr["color"]};'
-                f"font-family:'Barlow Condensed',sans-serif;"
-                f'font-size:9px;font-weight:800;letter-spacing:0.20em;text-transform:uppercase">'
-                f'{_esc(_label)}</span>'
-                f'<span class="tier-section-count">{_count} {_noun}</span>'
-                f'</div>',
-                unsafe_allow_html=True,
+        _label = _tier if _tier != "_unscored" else "UNSCORED"
+        # ELITE starts expanded; all others start collapsed to keep the board compact
+        _default_exp = (_tier == "ELITE")
+        with st.expander(f"{_label}  ·  {_count} {_noun}", expanded=_default_exp):
+            # Per-tier selectable dataframe — height sized to show all rows without
+            # an internal scrollbar so the page-level scroll handles navigation.
+            _tier_height = (_count + 1) * 38 + 4
+            _tevent = st.dataframe(
+                _make_bb_styled(_tsub),
+                column_config={
+                    "Score":       st.column_config.NumberColumn("Score",      format="%.1f"),
+                    "RAS":         st.column_config.NumberColumn("RAS",        format="%.1f"),
+                    "APEX Score":  st.column_config.NumberColumn("APEX Score", format="%.1f"),
+                    "APEX Tier":   st.column_config.TextColumn(
+                                       "APEX Tier", disabled=True,
+                                       help="Draft capital tier — derived from APEX Score.",
+                                   ),
+                    "APEX Edge": st.column_config.TextColumn(
+                                       "APEX Edge",
+                                       help="Consensus rank − APEX rank. Positive = APEX rates higher than market.",
+                                   ),
+                },
+                use_container_width=True,
+                hide_index=True,
+                height=_tier_height,
+                on_select="rerun",
+                selection_mode="single-row",
+                key=f"bb_tier_{_tier}_g{st.session_state['_nav_gen']}",
             )
-
-        # Per-tier selectable dataframe — height sized to show all rows without
-        # an internal scrollbar so the page-level scroll handles navigation.
-        _tier_height = (_count + 1) * 38 + 4
-        _tevent = st.dataframe(
-            _make_bb_styled(_tsub),
-            column_config={
-                "Score":       st.column_config.NumberColumn("Score",      format="%.1f"),
-                "RAS":         st.column_config.NumberColumn("RAS",        format="%.1f"),
-                "APEX Score":  st.column_config.NumberColumn("APEX Score", format="%.1f"),
-                "APEX Tier":   st.column_config.TextColumn(
-                                   "APEX Tier", disabled=True,
-                                   help="Draft capital tier — derived from APEX Score.",
-                               ),
-                "\u0394 APEX": st.column_config.TextColumn(
-                                   "\u0394 APEX",
-                                   help="APEX rank vs consensus rank. Positive = APEX rates higher than market.",
-                               ),
-            },
-            use_container_width=True,
-            hide_index=True,
-            height=_tier_height,
-            on_select="rerun",
-            selection_mode="single-row",
-            key=f"bb_tier_{_tier}_g{st.session_state['_nav_gen']}",
-        )
-        if _tevent and _tevent.selection and _tevent.selection.rows:
-            _sel_idx = _tevent.selection.rows[0]
-            st.session_state["selected_pid"] = int(_tpids[_sel_idx])
-            st.session_state["active_board"] = "bb"
+            if _tevent and _tevent.selection and _tevent.selection.rows:
+                _sel_idx = _tevent.selection.rows[0]
+                st.session_state["selected_pid"] = int(_tpids[_sel_idx])
+                st.session_state["active_board"] = "bb"
+                st.session_state["scroll_to_detail"] = True
 
     _universe_label = "APEX Only" if show_apex_only else "Mixed"
     _universe_color = "#5ab87a" if show_apex_only else "#e8a84a"
@@ -3507,6 +3440,21 @@ color:rgba(255,255,255,0.52);margin-top:4px;">
                 )
 
 with tab_apex:
+    # ── Collapsible guides ────────────────────────────────────────────────────
+    _tap_c1, _tap_c2 = st.columns(2)
+    with _tap_c1:
+        with st.expander("📋 Column Guide", expanded=False):
+            st.markdown(_COLUMN_GUIDE_MD)
+    with _tap_c2:
+        with st.expander("📊 How APEX Score Works", expanded=False):
+            st.markdown("""
+**RPG** = Raw Player Grade — talent, position-independent.
+
+**APEX Score** = RPG × PVC. **APEX Edge** = Consensus rank − APEX rank. Positive = APEX values higher than market.
+
+Tiers: **ELITE** ≥85 · **DAY1** ≥70 · **DAY2** ≥55 · **DAY3** ≥40 · **UDFA-P** ≥28 · **UDFA** <28
+""")
+
     if apex_scored > 0 and "apex_composite" in df.columns:
         apex_df = filtered[filtered["apex_composite"].notna()].copy()
 
@@ -3536,31 +3484,32 @@ with tab_apex:
             ab["Fit"] = "-"
 
         ab["Consensus"]   = apex_df["consensus_rank"].astype("Int64")
-        ab["\u0394 APEX"] = apex_df["auto_apex_delta"].apply(_fmt_apex_delta)
+        ab["APEX Edge"]   = apex_df["auto_apex_delta"].apply(_fmt_apex_delta)
 
-        if "eval_confidence" in apex_df.columns:
-            ab["Eval Conf"] = apex_df["eval_confidence"].fillna("-")
-        else:
-            ab["Eval Conf"] = "-"
 
         if "apex_tags" in apex_df.columns:
             ab["Tags"] = apex_df["apex_tags"].apply(_fmt_tags)
         else:
             ab["Tags"] = ""
 
+        _utags_map_ab = st.session_state["user_tags"]
+        ab["My Tags"] = apex_df["prospect_id"].apply(
+            lambda pid: "  ".join(sorted(_utags_map_ab.get(int(pid), set())))
+        )
+
         _apex_prospect_ids: list[int] = apex_df["prospect_id"].tolist()
         st.session_state["apex_board_pids"] = _apex_prospect_ids
 
         ab = ab.reset_index(drop=True)
 
-        _right_cols_apex = ["APEX Rank", "APEX Score", "Consensus", "\u0394 APEX"]
+        _right_cols_apex = ["APEX Rank", "APEX Score", "Consensus", "APEX Edge"]
         _left_cols_apex  = ["Player", "Pos", "School", "RPG", "APEX Tier", "Archetype",
-                            "Fit", "Eval Conf", "Tags"]
+                            "Fit", "Tags", "My Tags"]
 
         apex_styled = (
             ab.style
             .map(_style_apex_tier,  subset=["APEX Tier"])
-            .map(_style_apex_delta, subset=["\u0394 APEX"])
+            .map(_style_apex_delta, subset=["APEX Edge"])
             .set_properties(subset=_right_cols_apex, **{"text-align": "right"})
             .set_properties(subset=_left_cols_apex,  **{"text-align": "left"})
             .set_table_styles([
@@ -3612,57 +3561,12 @@ with tab_apex:
             _ab_row_idx = ab_event.selection.rows[0]
             st.session_state["selected_pid"] = int(_apex_prospect_ids[_ab_row_idx])
             st.session_state["active_board"] = "apex"
+            st.session_state["scroll_to_detail"] = True
 
         st.caption("💡 Click any row to load the prospect detail panel below.")
     else:
         st.info("No APEX-scored prospects yet. Run apex_scoring to populate this board.")
 
-# ---------------------------------------------------------------------------
-# APEX rank input panel (analyst overrides)
-# ---------------------------------------------------------------------------
-with st.expander("🔧 Set APEX Rank (Analyst Override — optional)", expanded=False):
-    all_names = sorted(df["display_name"].dropna().unique().tolist())
-
-    col1, col2, col3, col4 = st.columns([3, 1, 1, 1])
-    with col1:
-        selected_name = st.selectbox(
-            "Prospect",
-            options=all_names,
-            key="apex_prospect_select",
-        )
-    with col2:
-        apex_rank_input = st.number_input(
-            "Rank",
-            min_value=1,
-            max_value=total_prospects,
-            value=1,
-            step=1,
-            key="apex_rank_input",
-        )
-    with col3:
-        save_clicked = st.button("Save APEX", type="primary")
-    with col4:
-        clear_clicked = st.button("Clear APEX")
-
-    if save_clicked and selected_name:
-        pid_rows = df[df["display_name"] == selected_name]["prospect_id"]
-        if not pid_rows.empty:
-            pid = int(pid_rows.iloc[0])
-            with connect() as conn:
-                save_apex_rank(conn, prospect_id=pid, apex_rank=int(apex_rank_input))
-            st.success(f"Saved: {selected_name} → APEX #{apex_rank_input}")
-            _load_board.clear()
-            st.rerun()
-
-    if clear_clicked and selected_name:
-        pid_rows = df[df["display_name"] == selected_name]["prospect_id"]
-        if not pid_rows.empty:
-            pid = int(pid_rows.iloc[0])
-            with connect() as conn:
-                clear_apex_rank(conn, prospect_id=pid)
-            st.success(f"Cleared APEX rank for {selected_name}")
-            _load_board.clear()
-            st.rerun()
 
 # ---------------------------------------------------------------------------
 # Compare Panel (renders when both A and B are set)
@@ -3685,7 +3589,23 @@ _compare_active = bool(
 )
 
 st.divider()
+# Scroll anchor — JS targets this element when a board row is clicked
+st.markdown('<div id="prospect-detail"></div>', unsafe_allow_html=True)
 st.subheader("📋 Prospect Detail")
+
+# Smooth-scroll to detail when a board row was just selected.
+# Uses components.html (tiny zero-height iframe) because st.markdown strips <script> tags.
+if st.session_state.get("scroll_to_detail"):
+    st.session_state["scroll_to_detail"] = False
+    components.html(
+        """<script>
+        (function() {
+          var el = window.parent.document.getElementById("prospect-detail");
+          if (el) { el.scrollIntoView({ behavior: "smooth", block: "start" }); }
+        })();
+        </script>""",
+        height=0,
+    )
 
 _selected_pid = st.session_state.get("selected_pid")
 
@@ -3796,6 +3716,34 @@ else:
             </div>""",
             unsafe_allow_html=True,
         )
+
+        # ── User tag micro-panel ──────────────────────────────────────────────
+        _USER_TAG_LIST = ["💎 Crush", "💚 Want", "❌ Do Not Want", "👀 Sleeper", "🔻 Overrated", "💰 My Team"]
+        _pid_tags: set[str] = st.session_state["user_tags"].get(_selected_pid, set())
+        st.markdown(
+            '<div style="font-size:9px;font-weight:700;letter-spacing:0.14em;'
+            'text-transform:uppercase;color:rgba(255,255,255,0.32);margin-bottom:4px;">'
+            'My Tags</div>',
+            unsafe_allow_html=True,
+        )
+        _utag_cols = st.columns(len(_USER_TAG_LIST))
+        for _ui, _utag in enumerate(_USER_TAG_LIST):
+            _is_set = _utag in _pid_tags
+            _btn_type = "primary" if _is_set else "secondary"
+            with _utag_cols[_ui]:
+                if st.button(
+                    _utag,
+                    key=f"utag_{_selected_pid}_{_utag}",
+                    type=_btn_type,
+                    use_container_width=True,
+                ):
+                    _cur = st.session_state["user_tags"].get(_selected_pid, set()).copy()
+                    if _utag in _cur:
+                        _cur.discard(_utag)
+                    else:
+                        _cur.add(_utag)
+                    st.session_state["user_tags"][_selected_pid] = _cur
+                    st.rerun()
 
         if _has_apex:
             with connect() as conn:
