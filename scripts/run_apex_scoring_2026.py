@@ -85,6 +85,16 @@ MAX_TOKENS     = 1000
 SEASON_ID      = 1
 API_SLEEP_SEC  = 2   # seconds between API calls (rate limit buffer)
 
+
+def _resolve_api_key() -> str:
+    """Return the Anthropic API key from env, checking canonical names in priority order."""
+    for var in ("ANTHROPIC_API_KEY", "ANTHROPIC_APIKEY", "ANTHROPICAPIKEY"):
+        val = os.environ.get(var, "")
+        if val:
+            return val
+    return ""
+
+
 # ---------------------------------------------------------------------------
 # Position normalization
 # ---------------------------------------------------------------------------
@@ -3159,7 +3169,7 @@ def main() -> None:
     apply     = bool(args.apply)
 
     print("=" * 60)
-    print(f"APEX v2.2 Scoring Engine  |  Season {args.season}")
+    print(f"APEX v2.3 Scoring Engine  |  Season {args.season}")
     print(f"Batch:   {args.batch}")
     print(f"Apply:   {'YES -- DB writes enabled' if apply else 'DRY RUN -- no writes'}")
     print(f"Force:   {args.force}")
@@ -3183,7 +3193,7 @@ def main() -> None:
 
         print(f"Prospect IDs: {pid_list}")
 
-        api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+        api_key = _resolve_api_key()
         if apply and not api_key:
             print("\n[ERROR] ANTHROPIC_API_KEY not set. Required for --prospect-ids.")
             sys.exit(1)
@@ -3215,7 +3225,7 @@ def main() -> None:
         return
 
     # All other batches require API key for actual runs
-    api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+    api_key = _resolve_api_key()
     if apply and not api_key:
         print("\n[ERROR] ANTHROPIC_API_KEY not set in environment.")
         print("  Windows PowerShell: $env:ANTHROPIC_API_KEY = 'sk-ant-...'")
