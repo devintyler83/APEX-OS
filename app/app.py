@@ -138,7 +138,7 @@ _ON_SELECT_AVAILABLE = tuple(
 st.set_page_config(layout="wide", page_title="APEX OS Big Board")
 
 # Landing page gate — activated by APEXOS_SHOW_LANDING=true
-import app_landing as _landing  # noqa: E402
+from . import app_landing as _landing  # noqa: E402
 if _landing.is_enabled() and not _landing.render():
     st.stop()
 
