@@ -26,25 +26,29 @@ As of Session 101 (post-fix): DEDUP_GHOST and INACTIVE_SNAPSHOT passes complete.
 
 ## Last Completed Milestone
 
-Session 106 close (Streamlit Cloud deploy unblocked — requirements.txt, pandas dep, f-string SyntaxError fix.)
+Session 107 close (Full batch APEX re-score complete. Arvell Reese ELITE→DAY1 drop reviewed and accepted. Streamlit Cloud deploy unblocked — sandbox removed, app_landing import fixed.)
 
-Session 106 close:
-- DB writes: NONE.
+Session 107 close:
+- DB writes: NONE (re-score results already in apex_scores from prior scoring run).
 - Schema change: NONE. Next migration label: 0058.
-- Files created: requirements.txt (5 packages: streamlit, pandas, polars, rapidfuzz, python-dotenv).
-- Files modified:
-    pyproject.toml — added pandas to dependencies list.
-    scripts/draftos_detail_iframe_v2.py — precomputed _cap_note_sub to fix SyntaxError:
-      Backslash-escaped quotes inside f-string {…} braces are illegal on Python <3.12.
-      Streamlit Cloud runs 3.11. Fix: extract ternary into variable before f-string.
-- Root cause: Streamlit Cloud uses Python 3.11; repo was 3.12-only syntax at line 3126.
+- Full batch APEX re-score (--batch all --force): COMPLETE.
+- Arvell Reese (#2, pid=16) ELITE→DAY1 drop: REVIEWED AND ACCEPTED.
+    Drop: -8.8 pts. Forty=4.46, ATH=86.6. Measurables context justified the downgrade.
+    Decision: DAY1 score stands. No override applied.
+- Streamlit Cloud deploy fixes:
+    app/app.py — sandbox overlay fully removed (SANDBOX_MODE, sanitize_room_name,
+      active_sandbox_id, all sandbox imports, session-init, pill, sidebar controls).
+      Sandbox functions remain in draft_mode.py (non-breaking, audit history intact).
+    app/app.py — app_landing import fixed: explicit sys.path.insert(0, app/) before
+      bare `import app_landing`, resolves correctly under both
+      `streamlit run app/app.py` (Streamlit Cloud) and `import app.app` (local tests).
 - Doctor: not re-run (no DB or pipeline changes). Last known good: Session 105 PASSED.
 
 ## Next Milestone (Single Target)
 
-Session 107: Full batch APEX re-score (--batch all --force) after investigating Arvell Reese
-ELITE→DAY1 drop (-8.8 pts, forty=4.46/ATH=86.6). Gate report: data/exports/s70_rescore_report.txt.
-Run doctor before and after. Export results after re-score.
+Session 108: Verify Streamlit Cloud deploy is live and error-free. Then prospect_comps
+expansion — seed historical comps for scored prospects (Migration 0047 already applied).
+Run doctor before any DB writes.
 
 ---
 
