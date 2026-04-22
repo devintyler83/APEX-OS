@@ -2589,8 +2589,21 @@ def render_draft_mode(conn=None) -> None:
 
         st.markdown("---")
 
-        # Team board — top 10, clickable
-        _team_rows = dm_get_draft_team_board(team_code=_dm_team, seasonid=1, limit=10)
+        # Team board — top 10, clickable; quality-gated so low-quality prospects
+        # (Con#298 / APEX#161) cannot appear in the curated front door.
+        _team_rows_raw = dm_get_draft_team_board(team_code=_dm_team, seasonid=1, limit=50)
+        _team_rows = [
+            r for r in _team_rows_raw
+            if (r.get("apex_rank") or 9999) <= 120
+            or (r.get("consensus_rank") or 9999) <= 80
+        ]
+        if len(_team_rows) < 5:
+            _team_rows = [
+                r for r in _team_rows_raw
+                if (r.get("apex_rank") or 9999) <= 150
+                or (r.get("consensus_rank") or 9999) <= 100
+            ]
+        _team_rows = _team_rows[:10]
         st.markdown(
             f'<div style="font-size:9px;font-weight:700;letter-spacing:0.14em;'
             f'text-transform:uppercase;color:rgba(255,255,255,0.32);margin-bottom:5px;">'
@@ -2791,24 +2804,27 @@ def render_draft_mode(conn=None) -> None:
                 """
                 Deterministic team-fit scoring.
 
-                Best Fit · Team weights (need dominates):
-                  need_weight  : premium=100  secondary=55  none=0
-                  quality      : 0–50  (blend RPG 60% + APEX rank 40%)
-                  capital      : 0–30  (proximity of player's expected range to team picks)
-                  market       : –15..+15 (APEX edge signal)
-                  risk_penalty : 0..–20 (FM active; larger for win-now)
+                quality_score: log-scale 0–100, APEX-dominant (70/30 APEX/consensus).
+                Top-10 elites carry a large quality gap vs rank-30–80 prospects.
 
-                Best Avail · Team: same components, need weights 20/8/0, quality weight 2×.
+                Best Fit · Team:   q + fit_block * 0.4
+                  fit_block = need_w (100/55/0) + cap_fit (0–20)
+                              + edge_bonus (−10..+25) + risk (0..−15)
+                Best Avail · Team: q + need_adj (20/8/0)
+                              + 0.3×edge_bonus + 0.3×risk
+                  (no capital term — talent-first, light need tilt only)
+
+                Capital fit is strictly non-negative: elite R1 prospects are
+                never penalized because their range sits left of the team's picks.
+                FM penalty is graded (FM-N × 3, capped at 15) so FM-1/FM-4 cannot
+                erase blue-chip status by themselves.
                 """
                 pos       = str(player_row.get("position_group") or "")
                 apex_rank = player_row.get("apex_rank")
+                con_rank  = player_row.get("consensus_rank")
                 cap_str   = str(player_row.get("capital_adjusted") or "")
                 div_flag  = str(player_row.get("divergence_flag") or "").upper()
-                div_mag   = str(player_row.get("divergence_magnitude") or "").upper()
-                fm        = str(player_row.get("failure_mode_primary") or "").upper()
-                n_rem     = max(len(_remaining), 1)
-
-                is_win_now = ("win" in timeline)
+                fm        = str(player_row.get("failure_mode_primary") or "")
 
                 # A) Need weight
                 if pos in premium_pos:
@@ -2826,63 +2842,66 @@ def render_draft_mode(conn=None) -> None:
 
                 need_weight = nw_fit if mode == "best_fit_team" else nw_avail
 
-                # B) Player quality (0–50)
-                rpg_comp  = 0.0
-                if rpg is not None:
-                    rpg_comp = max(0.0, min(50.0, (rpg - 40.0) * (50.0 / 50.0)))
-                apex_comp = 0.0
-                if apex_rank is not None:
-                    apex_comp = max(0.0, (1.0 - (apex_rank - 1) / n_rem) * 25.0)
-                quality = rpg_comp * 0.60 + apex_comp * 0.40
-                # Best Avail mode: double the quality contribution
-                quality_weight = 2.0 if mode == "best_available_team" else 1.0
-                quality_scored = quality * quality_weight
+                # B) Quality — log-scale 0–100, monotone in both ranks.
+                # log10(301) ≈ 2.478 is the denominator (rank 1..300 range).
+                _denom = math.log10(301.0)
+                if apex_rank is not None and apex_rank > 0:
+                    _a_comp = 100.0 - 100.0 * math.log10(float(apex_rank) + 1.0) / _denom
+                else:
+                    _a_comp = 0.0
+                if con_rank is not None and con_rank > 0:
+                    _c_comp = 100.0 - 70.0 * math.log10(float(con_rank) + 1.0) / _denom
+                else:
+                    _c_comp = 0.0
+                quality = 0.7 * _a_comp + 0.3 * _c_comp
 
-                # C) Capital match (0–30)
-                anchor   = _capital_anchor(cap_str)
-                cap_score = 0.0
+                # C) Capital fit — strictly non-negative (0–20).
+                # First pick in team's list: within 12 → +20, within 25 → +15.
+                # Later picks: within 12 → +15, within 25 → +12.
+                # One band late of any pick → +10. Blue chips at 0, not negative.
+                anchor  = _capital_anchor(cap_str)
+                cap_fit = 0.0
                 if team_picks:
-                    dists    = [abs(anchor - p) for p in team_picks]
-                    nearest  = min(dists)
-                    near_pick = min(team_picks, key=lambda p: abs(p - anchor))
-                    reach_gap = near_pick - anchor  # positive = team picking late of expected
-                    if reach_gap > 20:
-                        # Hard reach — discount heavily
-                        cap_score = max(-10.0, 15.0 - reach_gap * 0.8)
-                    elif nearest <= 8:
-                        cap_score = 30.0
-                    elif nearest <= 25:
-                        cap_score = 30.0 - (nearest - 8) * 1.0
-                    else:
-                        cap_score = max(0.0, 15.0 - (nearest - 25) * 0.5)
-                else:
-                    cap_score = 15.0
+                    for _i, _pick in enumerate(sorted(team_picks)):
+                        _dist = abs(anchor - _pick)
+                        if _dist <= 12:
+                            _bonus = 20.0 if _i == 0 else 15.0
+                            cap_fit = max(cap_fit, _bonus)
+                        elif _dist <= 25:
+                            _bonus = 15.0 if _i == 0 else 12.0
+                            cap_fit = max(cap_fit, _bonus)
+                        elif _dist <= 40 and anchor >= _pick:
+                            cap_fit = max(cap_fit, 10.0)
 
-                # D) Market value (−15..+15)
-                _DIV_MAG_MAP = {"MAJOR": 15, "MODERATE": 8, "MINOR": 3}
-                _mag_pts = _DIV_MAG_MAP.get(div_mag, 3)
-                if "APEX_HIGH" in div_flag:
-                    market = float(_mag_pts)
-                elif "APEX_LOW" in div_flag and "PVC_STRUCTURAL" not in div_flag:
-                    market = float(-_mag_pts)
-                else:
-                    market = 0.0
+                # D) APEX edge bonus — clamped −10..+25.
+                # edge = con_rank − apex_rank: positive means APEX likes more than market.
+                edge_val = 0.0
+                if con_rank is not None and apex_rank is not None:
+                    edge_val = float(con_rank) - float(apex_rank)
+                edge_bonus = max(-10.0, min(edge_val, 25.0))
 
-                # E) Risk penalty
-                risk_pen = 0.0
-                _fm_active = fm and fm not in ("", "NONE", "N/A")
-                if _fm_active:
-                    risk_pen = 20.0 if is_win_now else 12.0
+                # E) FM risk penalty — graded, capped at −15.
+                # FM-1 = −3, FM-2 = −6 … FM-5+ = −15. Cannot bury blue-chip status alone.
+                fm_num = 0
+                _fm_match = re.search(r"FM-(\d+)", fm, re.IGNORECASE) if fm else None
+                if _fm_match:
+                    fm_num = int(_fm_match.group(1))
+                risk_pen = -min(fm_num * 3.0, 15.0)
 
-                total = round(need_weight + quality_scored + cap_score + market - risk_pen, 2)
+                # F) Final formula
+                if mode == "best_fit_team":
+                    fit_block = need_weight + cap_fit + edge_bonus + risk_pen
+                    total = quality + fit_block * 0.4
+                else:  # best_available_team
+                    total = quality + need_weight + 0.3 * edge_bonus + 0.3 * risk_pen
+
+                total = round(total, 2)
                 comps = {
                     "need_cat":    need_cat,
                     "need_weight": round(need_weight, 1),
-                    "rpg_comp":    round(rpg_comp, 1),
-                    "apex_comp":   round(apex_comp, 1),
-                    "quality":     round(quality_scored, 1),
-                    "capital":     round(cap_score, 1),
-                    "market":      round(market, 1),
+                    "quality":     round(quality, 1),
+                    "capital":     round(cap_fit, 1),
+                    "edge_bonus":  round(edge_bonus, 1),
                     "risk_penalty": round(risk_pen, 1),
                     "total":       total,
                 }
@@ -2934,21 +2953,15 @@ def render_draft_mode(conn=None) -> None:
                         # Build rationale line for row transparency
                         _nc   = _comps["need_cat"]
                         _caps = str(_r.get("capital_adjusted") or "—")[:12]
-                        _rpg_s = f"RPG {_rpg_t:.1f}" if _rpg_t else ""
                         _fm_s  = str(_r.get("failure_mode_primary") or "").strip()
-                        _fm_tag = ""
-                        if _fm_s and _fm_s.upper() not in ("", "NONE", "N/A"):
-                            import re as _re_rat
-                            _fm_m2 = _re_rat.search(r"(FM-\d+)", _fm_s)
-                            _fm_tag = _fm_m2.group(1) if _fm_m2 else ""
+                        _fm_m2 = re.search(r"(FM-\d+)", _fm_s, re.IGNORECASE) if _fm_s else None
+                        _fm_tag = _fm_m2.group(1) if _fm_m2 else ""
                         _parts = []
                         if _nc != "NONE":
                             _parts.append(f"{_nc.capitalize()} need")
                         _parts.append(_caps)
-                        if _rpg_s:
-                            _parts.append(_rpg_s)
-                        if _comps["market"] > 0:
-                            _parts.append(f"Edge +{int(_comps['market'])}")
+                        if _comps["edge_bonus"] > 0:
+                            _parts.append(f"Edge +{int(_comps['edge_bonus'])}")
                         if _fm_tag:
                             _parts.append(_fm_tag)
                         _team_fit_rationale[_pid_t] = " · ".join(_parts)
@@ -3199,29 +3212,29 @@ def render_draft_mode(conn=None) -> None:
                         _dpid = _dbg_r["prospect_id"]
                         _dc   = _team_fit_comps.get(_dpid, {})
                         _dbg_rows.append({
-                            "Player":    (_dbg_r.get("display_name") or "—")[:20],
-                            "Pos":       _dbg_r.get("position_group") or "—",
-                            "Need":      _dc.get("need_cat", "—"),
-                            "NeedWt":    _dc.get("need_weight", 0),
-                            "RPGc":      _dc.get("rpg_comp", 0),
-                            "APEXc":     _dc.get("apex_comp", 0),
-                            "Quality":   _dc.get("quality", 0),
-                            "Capital":   _dc.get("capital", 0),
-                            "Market":    _dc.get("market", 0),
-                            "RiskPen":   _dc.get("risk_penalty", 0),
-                            "Total":     _dc.get("total", 0),
+                            "Player":   (_dbg_r.get("display_name") or "—")[:20],
+                            "Pos":      _dbg_r.get("position_group") or "—",
+                            "APEX#":    _dbg_r.get("apex_rank"),
+                            "Con#":     _dbg_r.get("consensus_rank"),
+                            "Need":     _dc.get("need_cat", "—"),
+                            "NeedWt":   _dc.get("need_weight", 0),
+                            "Quality":  _dc.get("quality", 0),
+                            "Capital":  _dc.get("capital", 0),
+                            "Edge":     _dc.get("edge_bonus", 0),
+                            "RiskPen":  _dc.get("risk_penalty", 0),
+                            "Total":    _dc.get("total", 0),
                         })
                     st.dataframe(
                         pd.DataFrame(_dbg_rows),
                         use_container_width=True,
                         hide_index=True,
                         column_config={
+                            "APEX#":   st.column_config.NumberColumn(format="%d"),
+                            "Con#":    st.column_config.NumberColumn(format="%d"),
                             "NeedWt":  st.column_config.NumberColumn(format="%.0f"),
-                            "RPGc":    st.column_config.NumberColumn(format="%.1f"),
-                            "APEXc":   st.column_config.NumberColumn(format="%.1f"),
                             "Quality": st.column_config.NumberColumn(format="%.1f"),
                             "Capital": st.column_config.NumberColumn(format="%.1f"),
-                            "Market":  st.column_config.NumberColumn(format="%.1f"),
+                            "Edge":    st.column_config.NumberColumn(format="%.1f"),
                             "RiskPen": st.column_config.NumberColumn(format="%.1f"),
                             "Total":   st.column_config.NumberColumn(format="%.1f"),
                         },
