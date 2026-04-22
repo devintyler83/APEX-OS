@@ -10,7 +10,7 @@ Non-negotiables:
 - Provide run order + verification commands
 
 Goal for this chat:
-Session 103: Full batch re-score (--batch all --force). Investigate Arvell Reese (#2, pid=16)
+Session 104: Re-score the 23 JSON-parse-failed prospects from Session 103 using
 
 Authoritative State:
 
@@ -21,7 +21,7 @@ APEX OS is a deterministic draft operating system that turns 16 ranking sources,
 
 ---
 
-Last Updated (UTC): 2026-04-22T08:40:16.865172+00:00
+Last Updated (UTC): 2026-04-22T18:45:57.495517+00:00
 
 ---
 
@@ -42,6 +42,71 @@ Last Updated (UTC): 2026-04-22T08:40:16.865172+00:00
 As of Session 101 (post-fix): DEDUP_GHOST and INACTIVE_SNAPSHOT passes complete. 304 MULTI_ACTIVE real-school clusters remain — require manual review before any further deactivation.
 
 ## Last Completed Milestone
+
+Session 103 close (Full batch APEX re-score — 274/297 scored, 23 JSON parse failures retained prior v2.3 scores; Arvell Reese audit; APEX engine banner fix v2.2→v2.3; netlify.toml for apexos.app static deployment.)
+
+Session 103 close:
+- DB writes: YES — apex_scores updated for 274 prospects (model_version=apex_v2.3).
+- Schema change: NONE. Next migration label remains 0049.
+- Files created: netlify.toml (publish=web/, rewrites all traffic to apexos-landing.html).
+- Files modified: scripts/run_apex_scoring_2026.py (banner v2.2→v2.3, _resolve_api_key() helper), STATE_SNAPSHOT.md.
+- Doctor: PASSED (post re-score).
+- Export: data/exports/s103_apex_all_rescored.json — 311 rows, 859KB.
+
+APEX Re-Score Results (Session 103 full batch):
+  Scored:  274 / 297 attempted
+  Failed:  23 (JSON parse errors — retained prior valid v2.3 scores, need targeted re-score)
+  Skipped: 0
+  Total board rows (v2.3, non-calibration): 311
+
+  Tier distribution (full board, v2.3):
+    ELITE:  3   (David Bailey EDGE 88.7, Travis Hunter CB 88.4, Fernando Mendoza QB 87.4)
+    DAY1:   30
+    DAY2:   119
+    DAY3:   141
+    UDFA-P: 18
+    Total:  311
+
+  Top 3 by apex_composite:
+    #1 David Bailey   EDGE  88.7  ELITE  (consensus #6)
+    #2 Travis Hunter  CB    88.4  ELITE  (unranked in consensus)
+    #3 Fernando Mendoza QB  87.4  ELITE  (consensus #1)
+
+Arvell Reese Audit (pid=16, consensus #2):
+  Matched archetype: ILB-3 Run-First Enforcer
+  Score trajectory:  87.2 ELITE (pre-S70) → 78.4 DAY1 (S70) → 70.0 DAY1 (S103)
+  Trait suppressor:  v_scheme_vers=5.2 (all other vectors 7.8–9.2)
+  FM stack:          FM-6 Role Mismatch (primary), FM-3 Processing Wall (secondary)
+  Divergence:        APEX LOW MAJOR, rank_delta=-31 (APEX #33 vs consensus #2)
+  Verdict:           MODEL-CORRECT. ILB PVC=0.85 makes ELITE (≥85 composite) mathematically
+                     impossible (requires raw>100). DAY1 70.0 is the structural ceiling.
+                     Divergence is non-actionable per protocol (ILB = non-premium position).
+                     No override applied. If field consensus projects Reese as EDGE,
+                     a position reclassification via ARCHETYPE_OVERRIDES (pid=16, EDGE,
+                     PVC=1.0) would open ELITE range — scouting call, not a model fix.
+
+Engine Banner Fix:
+  scripts/run_apex_scoring_2026.py: "APEX v2.2 Scoring Engine" → "APEX v2.3 Scoring Engine"
+  MODEL_VERSION constant was already correct (apex_v2.3). Banner print was the only stale string.
+  _resolve_api_key() helper added: checks ANTHROPIC_API_KEY → ANTHROPIC_APIKEY → ANTHROPICAPIKEY.
+
+Deployment Config:
+  netlify.toml created: publish=web/, rewrites / and /* → /apexos-landing.html (status=200).
+  Manual step required: connect devintyler83/DraftOS to Netlify or Cloudflare Pages, set
+  custom domain apexos.app. No build step. No CLI tools available in dev environment.
+  Landing page CTAs verified: 5 links all point to https://apexos.streamlit.app/.
+  Streamlit gate logic verified: APEXOS_SHOW_LANDING=true blocks board until dismiss; default
+  (unset) loads board directly.
+
+Known open items from Session 103:
+  - 23 failed prospects need targeted re-score (--prospect-ids or --batch single per PID).
+    Notable: David Bailey (retained Apr-21 score, still ELITE 88.7 — low priority);
+    Peter Woods, Colton Hood, Shedeur Sanders, Donovan Ezeiruaku among others.
+  - Divergence table has mixed label format (APEX HIGH vs APEX_HIGH, space vs underscore) —
+    legacy rows from prior sessions. Non-blocking; query logic handles both.
+  - apexos.app static deployment: manual Netlify/Cloudflare Pages connect required.
+
+---
 
 Session 102 close (APEX OS landing page — web/apexos-landing.html, app/app_landing.py, APEXOS_SHOW_LANDING gate in app.py, canonical intro block in STATE_SNAPSHOT.md + CLAUDE.md.)
 
@@ -1829,14 +1894,15 @@ Prior sessions on record: 12 (DB rebuild), 13 (weekly pipeline), 13b (school/arc
 
 ## Next Milestone (Single Target)
 
-- Session 103: Full batch re-score (--batch all --force). Investigate Arvell Reese (#2, pid=16)
-  ELITE→DAY1 drop (-8.8 pts, measurables context forty=4.46/ATH=86.6). If justified, run
-  --batch all --force. Decision gate report: data/exports/s70_rescore_report.txt.
-  Also: deploy web/apexos-landing.html to apexos.app static host.
-  Post-draft: run reset_drafted_2026.py (dry run first) if test picks need clearing.
-  Deferred (post-draft): prospect_comps expansion, full batch APEX re-score.
-  Deferred (post-draft): post-draft audit framework (APEX Framework Section 9).
-  Deferred (post-draft): pick ownership trade editor (dm_pick_overrides state key seeded).
+- Session 104: Re-score the 23 JSON-parse-failed prospects from Session 103 using
+  --prospect-ids (comma-separated PIDs). Notable: Peter Woods, Colton Hood, Shedeur Sanders,
+  Donovan Ezeiruaku, Diego Pavia, Drew Allar, Pat Coogan + 16 others. After re-score,
+  run --batch divergence --apply 1 to recompute divergence for those PIDs.
+  Also: complete apexos.app static deployment (Netlify or Cloudflare Pages — manual connect
+  required; netlify.toml is committed and ready). Verify divergence label normalization
+  (APEX HIGH vs APEX_HIGH mixed format in divergence_flags table).
+  Deferred: post-draft audit framework (APEX Framework Section 9).
+  Deferred: pick ownership trade editor (dm_pick_overrides state key seeded).
 
 ---
 
@@ -1870,10 +1936,12 @@ SNAPSHOTS: Operational. Latest: snapshot_id=6 (2026-03-18). rows=1001 — PASSED
   compute_source_snapshot_metrics → compute_snapshot_coverage →
   compute_snapshot_confidence → verify_snapshot_integrity
 
-APEX: Operational. 300 v2.3 active non-cal scored + 12 calibration artifacts.
-  Archetype-aware measurables context live (Session 71): MEASURABLES_ARCHETYPE_CONTEXT dict,
-  9 archetypes mapped. _get_measurables_context() updated with archetype_code parameter.
-  716 prospects have measurables data.
+APEX: Operational. 311 v2.3 active non-cal rows + 12 calibration artifacts.
+  Session 103 full batch: 274 re-scored, 23 JSON parse failures (retained prior v2.3 scores).
+  Tier dist: ELITE=3, DAY1=30, DAY2=119, DAY3=141, UDFA-P=18 (total=311).
+  Top 3: David Bailey EDGE 88.7, Travis Hunter CB 88.4, Fernando Mendoza QB 87.4.
+  Engine banner fixed: v2.2→v2.3. _resolve_api_key() helper added.
+  Archetype-aware measurables context live (Session 71). 716 prospects have measurables data.
   Tiers (v2.3 active non-cal, post S90 top-300 expansion):
     ELITE=2, DAY1=31, DAY2=105, DAY3=145, UDFA-P=17 (total active non-cal = 300).
   Divergence (post S90):
@@ -2143,11 +2211,11 @@ Inactive (data preserved): ngs_2026 (source_id=29, is_active=0) — model score,
 
 2) System Snapshot Output
 === DRAFTOS SYSTEM SNAPSHOT ===
-generated_utc: 2026-04-22T08:40:16.175890+00:00
+generated_utc: 2026-04-22T18:45:55.921451+00:00
 
 ## Git
 branch: main
-commit: 17445a44445a8ab93b444a6704b0c69eb237b67f
+commit: 37fe8999259738c0f24408b69037da8b0f5c65e8
 status: clean
 
 ## Tables
