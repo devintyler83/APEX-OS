@@ -17,7 +17,7 @@ Authoritative State:
 1) STATE_SNAPSHOT.md
 # APEX OS State Snapshot
 
-Last Updated (UTC): 2026-04-22T00:01:58.288437+00:00
+Last Updated (UTC): 2026-04-22T00:03:08.761615+00:00
 
 ---
 
@@ -26,6 +26,46 @@ Last Updated (UTC): 2026-04-22T00:01:58.288437+00:00
 - 2026 (season_id=1)
 
 ## Last Completed Milestone
+
+Session 95 close (APEX OS Big Board UI/UX refactor — 8 fixes across app.py and draftos_detail_iframe_v2.py.)
+
+Session 95 close:
+- No DB writes. No schema changes. No migrations. Next migration: 0057.
+- Doctor: PASSED post-session.
+
+UI/UX fixes applied (app/app.py + scripts/draftos_detail_iframe_v2.py):
+
+1. Tier board collapse: Each APEX tier section (ELITE/DAY1/DAY2/DAY3/UDFA-P/UDFA) in tab_bb
+   wrapped in st.expander. ELITE defaults to expanded, all others start collapsed.
+   Dataframe, row-click handler, on_select, and all controls live inside each expander.
+
+2. Row click → detail scroll: Replaced st.markdown(<script>) with components.html(height=0).
+   st.markdown strips <script> tags; components.html renders in a sandboxed iframe that can
+   call window.parent.document.getElementById("prospect-detail").scrollIntoView(...).
+
+3. Confidence fully removed from all detail surfaces:
+   - _build_scout_pad Draft Call block: Confidence sp-kv removed
+   - FIT support metrics: Eval confidence 4th cell removed, grid changed from 4→3 columns
+   - FIT score guide: Eval confidence interpretation row removed
+   - Decision card Zone 3 strip: EVAL CONFIDENCE item removed (now: Archetype Fit + APEX Score)
+   - Left rail conf-row: Confidence item removed; now shows only APEX Edge (divergence)
+   - REPORT tab: Eval Confidence block removed
+
+4. Δ APEX → APEX Edge: scout pad Market View block label updated (sed — Unicode char).
+
+5. Translation Risk truncation fixed: removed 120-char hard cap in _build_scout_pad;
+   added period normalization; replaced text-align:right with white-space:normal +
+   word-break:break-word on the cell so the full sentence renders and wraps cleanly.
+
+6. My Guy → My Team + icons: both _USER_TAG_OPTIONS (sidebar filter) and _USER_TAG_LIST
+   (detail panel toggle buttons) updated to icon-prefixed labels:
+   [💎 Crush, 💚 Want, ❌ Do Not Want, 👀 Sleeper, 🔻 Overrated, 💰 My Team]
+
+7. FIT tab de-duplication: Removed ③ FIT CONDITIONS summary grid (Works if / Breaks if
+   first-item cards). Full ④ Why It Works and ⑤ Why It Could Fail bullet lists remain.
+
+8. Clear button wrapping: sidebar Prospect Detail column ratio changed from [3,1] → [4,1];
+   inline CSS white-space:nowrap added to prevent character wrap on "Clear" label.
 
 Session 94 close (Draft Mode first-class tab + migration 0056 spec views + Phase 2 helpers.)
 
@@ -1837,11 +1877,11 @@ Inactive (data preserved): ngs_2026 (source_id=29, is_active=0) — model score,
 
 2) System Snapshot Output
 === DRAFTOS SYSTEM SNAPSHOT ===
-generated_utc: 2026-04-22T00:01:57.590253+00:00
+generated_utc: 2026-04-22T00:03:08.077160+00:00
 
 ## Git
 branch: main
-commit: ec19b8e35e5beaa03af05896e872e9a6b0945375
+commit: b572e1451a1ef520a4b99434661165bdc9c89189
 status: clean
 
 ## Tables
