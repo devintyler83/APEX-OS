@@ -3118,12 +3118,13 @@ def build_detail_html(d: dict, comps: list, rate, fm_ref_comps: list | None = No
         }
         _report_conf_color = _CONF_REPORT_COLOR.get(str(conf_raw).strip(), "var(--dim)")
         _pos_rank_label = f"#{int(float(pos_rank))} at {pos}" if pos_rank and _v23_present(pos_rank) else "—"
+        _cap_note_sub = f'<div class="report-sub">{_e(capital_note)}</div>' if capital_note else ""
         report_tab_html = (
             f'<div class="sec-divider" style="margin-bottom:16px;">Report Contents</div>'
             f'<div class="report-block">'
             f'<div class="report-lbl">Draft Capital</div>'
             f'<div class="report-val">{_e(capital_base)}</div>'
-            f'{"<div class=\'report-sub\'>" + _e(capital_note) + "</div>" if capital_note else ""}'
+            f'{_cap_note_sub}'
             f'</div>'
             f'<div class="report-block">'
             f'<div class="report-lbl">Position Rank</div>'
