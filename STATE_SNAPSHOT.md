@@ -1,5 +1,9 @@
 # APEX OS State Snapshot
 
+APEX OS is a deterministic draft operating system that turns 16 ranking sources, measurables, and film context into one board you can defend after the draft, not just before it. It is season-scoped (2026, `season_id=1`), migration-safe, and designed for full auditability: every source, score, tag, and override is versioned and traceable. The engine builds a weighted consensus spine, runs deterministic APEX scoring against archetype and measurables libraries, and then layers divergence, tags, and decision cards on top. Public entry points are `https://apexos.app` for the marketing front door and `https://apexos.streamlit.app/` for the live app runtime.
+
+---
+
 Last Updated (UTC): 2026-04-22T08:24:05.697013+00:00
 
 ---
@@ -21,6 +25,22 @@ Last Updated (UTC): 2026-04-22T08:24:05.697013+00:00
 As of Session 101 (post-fix): DEDUP_GHOST and INACTIVE_SNAPSHOT passes complete. 304 MULTI_ACTIVE real-school clusters remain — require manual review before any further deactivation.
 
 ## Last Completed Milestone
+
+Session 102 close (APEX OS landing page — web/apexos-landing.html, app/app_landing.py, APEXOS_SHOW_LANDING gate in app.py, canonical intro block in STATE_SNAPSHOT.md + CLAUDE.md.)
+
+Session 102 close:
+- DB writes: NONE.
+- Schema change: NONE. Next migration label remains 0049.
+- Files created: web/apexos-landing.html, web/README.md, app/app_landing.py.
+- Files modified: app/app.py (landing gate, 3 lines), STATE_SNAPSHOT.md, CLAUDE.md.
+- Landing page: pure HTML/CSS, no build step. Primary CTAs → https://apexos.streamlit.app/.
+- Streamlit gate: set APEXOS_SHOW_LANDING=true to show landing before board; session_state dismiss persists for session duration.
+- Static hosting: web/apexos-landing.html deployable directly to Netlify/Cloudflare Pages at apexos.app.
+- Canonical intro block added to top of STATE_SNAPSHOT.md and CLAUDE.md.
+- Doctor: not re-run (no DB or pipeline changes). Last known good: Session 101 PASSED.
+- Next priority: Session 71 full batch re-score gate (Arvell Reese ELITE→DAY1 investigation).
+
+---
 
 Session 101 close (Prospect Ghost Fix v1 — mechanical dedup/ghost/inactive-snapshot cleanup, season_id=1.)
 
@@ -1792,11 +1812,10 @@ Prior sessions on record: 12 (DB rebuild), 13 (weekly pipeline), 13b (school/arc
 
 ## Next Milestone (Single Target)
 
-- Session 101: Draft night operations. Use the Draft Mode tab to run the live draft.
-  Scoring inversion fixed (S100): quality-dominant formula, non-negative capital fit,
-  Team Board quality gate. Bailey-type elites now score correctly in both Best Fit and
-  Best Avail views. Con#298/APEX#161 players cannot pollute the top-10 Team Board.
-  To use: streamlit run app/app.py → Draft Mode tab → select team → record picks.
+- Session 103: Full batch re-score (--batch all --force). Investigate Arvell Reese (#2, pid=16)
+  ELITE→DAY1 drop (-8.8 pts, measurables context forty=4.46/ATH=86.6). If justified, run
+  --batch all --force. Decision gate report: data/exports/s70_rescore_report.txt.
+  Also: deploy web/apexos-landing.html to apexos.app static host.
   Post-draft: run reset_drafted_2026.py (dry run first) if test picks need clearing.
   Deferred (post-draft): prospect_comps expansion, full batch APEX re-score.
   Deferred (post-draft): post-draft audit framework (APEX Framework Section 9).

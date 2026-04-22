@@ -1,0 +1,1105 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <title>APEX OS — Draft Operating System</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="APEX OS is a deterministic draft operating system that turns 16 sources, measurables, and film into one board you can defend." />
+  <style>
+    :root {
+      --bg: #0b0c10;
+      --bg-alt: #111218;
+      --bg-soft: #151721;
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --fg: #f7f7f7;
+      --fg-muted: #a5acba;
+      --fg-soft: #6b7280;
+      --accent: #22c55e;
+      --accent-soft: rgba(34, 197, 94, 0.08);
+      --accent-strong: #16a34a;
+      --danger: #f97373;
+      --radius: 10px;
+      --shadow-soft: 0 18px 45px rgba(0, 0, 0, 0.4);
+      --font-body: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
+                   "Segoe UI", sans-serif;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      min-height: 100vh;
+      background: radial-gradient(circle at top, #111827 0, #020617 55%, #000000 100%);
+      color: var(--fg);
+      font-family: var(--font-body);
+      line-height: 1.6;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .page {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 24px 16px 64px;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border-subtle);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      backdrop-filter: blur(14px);
+      background: linear-gradient(to bottom,
+        rgba(2, 6, 23, 0.95),
+        rgba(2, 6, 23, 0.85),
+        transparent
+      );
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-mark {
+      width: 26px;
+      height: 26px;
+      border-radius: 8px;
+      background:
+        conic-gradient(from 200deg, #22c55e, #4ade80, #22c55e, #16a34a);
+      box-shadow: 0 0 20px rgba(34, 197, 94, 0.6);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .brand-mark::after {
+      content: "";
+      position: absolute;
+      inset: 5px;
+      border-radius: 6px;
+      background: radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.35), transparent 55%);
+      mix-blend-mode: screen;
+      opacity: 0.8;
+    }
+
+    .brand-text-main {
+      font-weight: 650;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      font-size: 0.9rem;
+    }
+
+    .brand-text-sub {
+      font-size: 0.75rem;
+      color: var(--fg-soft);
+    }
+
+    nav {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      font-size: 0.9rem;
+    }
+
+    nav a {
+      color: var(--fg-muted);
+      padding: 6px 0;
+      border-bottom: 1px solid transparent;
+    }
+
+    nav a:hover {
+      color: var(--fg);
+      border-bottom-color: rgba(148, 163, 184, 0.5);
+    }
+
+    .nav-cta {
+      padding: 7px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.5);
+      color: var(--fg);
+      background: rgba(15, 23, 42, 0.7);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.85rem;
+    }
+
+    .nav-cta span {
+      font-size: 0.95em;
+    }
+
+    .nav-cta:hover {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.3);
+    }
+
+    main {
+      padding-top: 32px;
+      display: flex;
+      flex-direction: column;
+      gap: 64px;
+    }
+
+    .section {
+      scroll-margin-top: 80px;
+    }
+
+    .section-header {
+      margin-bottom: 18px;
+    }
+
+    .section-label {
+      font-size: 0.75rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 6px;
+    }
+
+    .section-title {
+      font-size: 1.6rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+
+    .section-subtitle {
+      font-size: 0.95rem;
+      color: var(--fg-muted);
+      max-width: 640px;
+      margin-top: 4px;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 3fr) minmax(0, 2.7fr);
+      gap: 32px;
+      align-items: center;
+    }
+
+    .hero-title {
+      font-size: clamp(2.2rem, 4vw, 2.9rem);
+      line-height: 1.15;
+      font-weight: 650;
+      letter-spacing: 0.03em;
+      margin-bottom: 16px;
+    }
+
+    .hero-highlight {
+      background: linear-gradient(120deg, #22c55e, #4ade80, #22c55e);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    .hero-subtitle {
+      font-size: 1rem;
+      color: var(--fg-muted);
+      max-width: 460px;
+      margin-bottom: 20px;
+    }
+
+    .hero-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 22px;
+    }
+
+    .badge {
+      padding: 4px 10px;
+      font-size: 0.8rem;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.45);
+      color: var(--fg-muted);
+      background: rgba(15, 23, 42, 0.8);
+    }
+
+    .badge-strong {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+      color: #bbf7d0;
+    }
+
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 18px;
+      border-radius: 999px;
+      border: none;
+      background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+      color: #022c22;
+      font-size: 0.95rem;
+      font-weight: 600;
+      box-shadow: 0 18px 35px rgba(34, 197, 94, 0.4);
+      cursor: pointer;
+      text-decoration: none;
+      min-width: 180px;
+    }
+
+    .btn-primary:hover {
+      filter: brightness(1.05);
+      transform: translateY(-0.5px);
+    }
+
+    .btn-ghost {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 9px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      font-size: 0.85rem;
+      color: var(--fg-muted);
+      background: rgba(15, 23, 42, 0.6);
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    .btn-ghost:hover {
+      border-color: rgba(148, 163, 184, 0.7);
+      color: var(--fg);
+    }
+
+    .hero-secondary-note {
+      font-size: 0.8rem;
+      color: var(--fg-soft);
+      margin-top: 8px;
+    }
+
+    .hero-visual {
+      border-radius: 16px;
+      padding: 16px 16px 18px;
+      background: radial-gradient(circle at top left, rgba(34, 197, 94, 0.16), transparent 55%),
+                  radial-gradient(circle at bottom, rgba(15, 23, 42, 0.9), #020617 70%);
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      box-shadow: var(--shadow-soft);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-visual-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      font-size: 0.78rem;
+      color: var(--fg-soft);
+    }
+
+    .hero-tag-pill {
+      padding: 3px 9px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      background: rgba(15, 23, 42, 0.9);
+      font-size: 0.75rem;
+    }
+
+    .hero-visual-main {
+      border-radius: 12px;
+      background: rgba(15, 23, 42, 0.98);
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      padding: 12px 12px 10px;
+      display: grid;
+      grid-template-columns: 1.8fr 2.2fr;
+      gap: 10px;
+      font-size: 0.78rem;
+    }
+
+    .dv-label {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      color: var(--fg-soft);
+      margin-bottom: 4px;
+    }
+
+    .dv-name {
+      font-size: 0.9rem;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .dv-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 8px;
+      color: var(--fg-soft);
+    }
+
+    .tag-pill {
+      padding: 3px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(248, 250, 252, 0.14);
+      font-size: 0.7rem;
+    }
+
+    .tag-pill-strong {
+      border-color: rgba(239, 68, 68, 0.9);
+      color: #fecaca;
+      background: rgba(127, 29, 29, 0.6);
+    }
+
+    .dv-chip {
+      font-size: 0.7rem;
+      padding: 2px 7px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      color: var(--fg-soft);
+    }
+
+    .dv-metric-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+
+    .dv-metric-label {
+      font-size: 0.7rem;
+      color: var(--fg-soft);
+      width: 80px;
+      flex-shrink: 0;
+    }
+
+    .dv-metric-value {
+      font-weight: 600;
+      font-size: 0.8rem;
+    }
+
+    .dv-bar-track {
+      flex: 1;
+      height: 5px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.9);
+      overflow: hidden;
+    }
+
+    .dv-bar-fill {
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #22c55e, #4ade80);
+    }
+
+    .dv-explainer {
+      font-size: 0.75rem;
+      color: var(--fg-soft);
+      border-top: 1px dashed rgba(148, 163, 184, 0.4);
+      padding-top: 6px;
+      margin-top: 4px;
+    }
+
+    .dv-explainer strong {
+      color: #bbf7d0;
+      font-weight: 500;
+    }
+
+    .triplet-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .card {
+      border-radius: var(--radius);
+      border: 1px solid var(--border-subtle);
+      background: radial-gradient(circle at top left, rgba(15, 23, 42, 0.96), #020617);
+      padding: 14px 14px 16px;
+      font-size: 0.9rem;
+    }
+
+    .card-title {
+      font-size: 0.98rem;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .card-body {
+      color: var(--fg-muted);
+      margin-bottom: 8px;
+      font-size: 0.9rem;
+    }
+
+    .card-note {
+      font-size: 0.78rem;
+      color: var(--fg-soft);
+    }
+
+    .steps {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 8px;
+    }
+
+    .step {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 12px;
+      align-items: flex-start;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid rgba(31, 41, 55, 0.9);
+      background: linear-gradient(135deg, rgba(17, 24, 39, 0.96), rgba(15, 23, 42, 0.96));
+    }
+
+    .step-number {
+      width: 22px;
+      height: 22px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      color: var(--fg-soft);
+    }
+
+    .step-main-title {
+      font-size: 0.92rem;
+      font-weight: 550;
+    }
+
+    .step-text {
+      font-size: 0.86rem;
+      color: var(--fg-muted);
+    }
+
+    .step-text small {
+      display: block;
+      color: var(--fg-soft);
+      font-size: 0.78rem;
+      margin-top: 2px;
+    }
+
+    .split {
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+      gap: 18px;
+      align-items: flex-start;
+    }
+
+    .list-tight {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      font-size: 0.88rem;
+      color: var(--fg-muted);
+    }
+
+    .list-tight li strong {
+      color: var(--fg);
+      font-weight: 500;
+    }
+
+    .demo-panel {
+      border-radius: 12px;
+      border: 1px solid var(--border-subtle);
+      background: rgba(15, 23, 42, 0.98);
+      padding: 12px;
+      font-size: 0.8rem;
+    }
+
+    .demo-heading {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+
+    .demo-title {
+      font-weight: 550;
+    }
+
+    .demo-sub {
+      font-size: 0.75rem;
+      color: var(--fg-soft);
+    }
+
+    .demo-meta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 8px;
+      color: var(--fg-soft);
+    }
+
+    .demo-chip {
+      padding: 2px 7px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.45);
+      background: rgba(15, 23, 42, 0.9);
+      font-size: 0.72rem;
+    }
+
+    .demo-chip-tag {
+      border-color: rgba(34, 197, 94, 0.8);
+      color: #bbf7d0;
+      background: rgba(22, 163, 74, 0.16);
+    }
+
+    .demo-explainer {
+      font-size: 0.78rem;
+      color: var(--fg-muted);
+      border-top: 1px dashed rgba(148, 163, 184, 0.5);
+      padding-top: 6px;
+    }
+
+    .card-tag {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      color: var(--fg-soft);
+      margin-bottom: 4px;
+    }
+
+    .bullets {
+      list-style: disc;
+      padding-left: 18px;
+      font-size: 0.88rem;
+      color: var(--fg-muted);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .bullets li strong {
+      color: var(--fg);
+      font-weight: 500;
+    }
+
+    .pill-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .pill {
+      padding: 6px 11px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.6);
+      background: rgba(15, 23, 42, 0.8);
+      font-size: 0.8rem;
+      color: var(--fg-soft);
+    }
+
+    footer {
+      border-top: 1px solid var(--border-subtle);
+      margin-top: 40px;
+      padding-top: 18px;
+      font-size: 0.8rem;
+      color: var(--fg-soft);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .footer-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .footer-links a {
+      color: var(--fg-soft);
+      text-decoration: none;
+    }
+
+    .footer-links a:hover {
+      color: var(--fg-muted);
+      text-decoration: underline;
+    }
+
+    @media (max-width: 920px) {
+      header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+      }
+
+      nav {
+        width: 100%;
+        justify-content: space-between;
+      }
+
+      .hero {
+        grid-template-columns: minmax(0, 1fr);
+      }
+
+      .hero-visual {
+        order: -1;
+      }
+
+      .triplet-grid {
+        grid-template-columns: minmax(0, 1fr);
+      }
+
+      .split {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+
+    @media (max-width: 640px) {
+      header {
+        position: static;
+      }
+
+      nav {
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .hero-actions {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .page {
+        padding-inline: 14px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <a href="#top" class="brand">
+        <div class="brand-mark" aria-hidden="true"></div>
+        <div>
+          <div class="brand-text-main">APEX OS</div>
+          <div class="brand-text-sub">Draft operating system</div>
+        </div>
+      </a>
+      <nav>
+        <a href="#product">Product</a>
+        <a href="#how">How it works</a>
+        <a href="#signals">Signals</a>
+        <a href="#library">Library</a>
+        <a href="https://apexos.streamlit.app/" class="nav-cta" target="_blank" rel="noopener noreferrer">
+          <span>Open APEX Board</span>
+        </a>
+      </nav>
+    </header>
+
+    <main id="top">
+      <!-- Hero -->
+      <section class="section hero" aria-labelledby="hero-title">
+        <div>
+          <h1 id="hero-title" class="hero-title">
+            APEX OS —
+            <span class="hero-highlight">the draft operating system</span>
+          </h1>
+          <p class="hero-subtitle">
+            A deterministic engine that turns 16 sources, measurables, and film notes
+            into one draft board you can defend after the picks are made.
+          </p>
+
+          <div class="hero-badges">
+            <span class="badge badge-strong">Deterministic scoring</span>
+            <span class="badge">Divergence engine</span>
+            <span class="badge">Decision cards &amp; PDFs</span>
+          </div>
+
+          <div class="hero-actions">
+            <a class="btn-primary" href="https://apexos.streamlit.app/" target="_blank" rel="noopener noreferrer">
+              Open APEX Board
+            </a>
+            <a class="btn-ghost" href="#product">
+              <span>See how the OS works</span>
+            </a>
+          </div>
+          <p class="hero-secondary-note">
+            APEX OS 2026 · Season-scoped, migration-safe, and versioned for auditability.
+          </p>
+        </div>
+
+        <aside class="hero-visual" aria-label="Example divergence view">
+          <div class="hero-visual-header">
+            <span>APEX Decision Card · CB</span>
+            <span class="hero-tag-pill">APEXHIGH · MAJOR</span>
+          </div>
+          <div class="hero-visual-main">
+            <div>
+              <div class="dv-label">Prospect</div>
+              <div class="dv-name">Daylen Everette · CB-3 Press Man</div>
+              <div class="dv-meta">
+                <span class="dv-chip">Consensus #88</span>
+                <span class="dv-chip">APEX #31</span>
+                <span class="tag-pill tag-pill-strong">Divergence Alert</span>
+                <span class="tag-pill">Dev Bet</span>
+                <span class="tag-pill">Elite RAS</span>
+              </div>
+
+              <div class="dv-metric-row">
+                <span class="dv-metric-label">APEX score</span>
+                <div class="dv-bar-track">
+                  <div class="dv-bar-fill" style="width: 74%;"></div>
+                </div>
+                <span class="dv-metric-value">74.2</span>
+              </div>
+
+              <div class="dv-metric-row">
+                <span class="dv-metric-label">Tier</span>
+                <span class="dv-metric-value">DAY1 · Cornerstone</span>
+              </div>
+              <div class="dv-metric-row">
+                <span class="dv-metric-label">Capital</span>
+                <span class="dv-metric-value">R1 mid – R2 top</span>
+              </div>
+            </div>
+            <div>
+              <div class="dv-label">FM risk snapshot</div>
+              <div class="dv-meta">
+                <span class="tag-pill">FM-2 Conditional</span>
+                <span class="tag-pill">FM-4 Medical Flag</span>
+              </div>
+              <p class="dv-explainer">
+                <strong>APEX favors</strong> the CB‑3 Press Man Corner archetype and elite
+                short‑area quickness. The market is pricing him as a CB‑5 projection
+                with more scheme dependence than the tape and measurables support.
+              </p>
+            </div>
+          </div>
+        </aside>
+      </section>
+
+      <!-- Product overview -->
+      <section id="product" class="section" aria-labelledby="product-title">
+        <div class="section-header">
+          <div class="section-label">Product</div>
+          <h2 id="product-title" class="section-title">One system, three jobs</h2>
+          <p class="section-subtitle">
+            APEX OS is not another mock draft. It is the spine that keeps your evaluation
+            process consistent, deterministic, and auditable through the full draft cycle.
+          </p>
+        </div>
+
+        <div class="triplet-grid">
+          <article class="card">
+            <h3 class="card-title">Consensus spine</h3>
+            <p class="card-body">
+              Ingest 16 ranking sources, normalize names, schools, and positions, and
+              build a weighted consensus baseline per prospect and per position group.
+            </p>
+            <p class="card-note">
+              Season-scoped to 2026 with source and position canonicalization baked into the pipeline.
+            </p>
+          </article>
+          <article class="card">
+            <h3 class="card-title">Deterministic APEX scores</h3>
+            <p class="card-body">
+              Score every prospect against archetype libraries, measurables context, and
+              failure modes to produce one composite, tier label, and capital band.
+            </p>
+            <p class="card-note">
+              No stochastic sampling in scoring; every run is versioned and reproducible.
+            </p>
+          </article>
+          <article class="card">
+            <h3 class="card-title">Decision layer</h3>
+            <p class="card-body">
+              Render decision cards with tier, capital, divergence, FM tags, historical comps,
+              and a draft day call ready to drop into your deck.
+            </p>
+            <p class="card-note">
+              The same card layout powers the in-app right pane and exported PDFs.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <!-- How it works -->
+      <section id="how" class="section" aria-labelledby="how-title">
+        <div class="section-header">
+          <div class="section-label">Pipeline</div>
+          <h2 id="how-title" class="section-title">How APEX OS builds your board</h2>
+          <p class="section-subtitle">
+            Each layer has exactly one job, from raw CSVs to a draft-ready snapshot.
+            The pipeline is deterministic, versioned, and season-scoped.
+          </p>
+        </div>
+
+        <div class="steps">
+          <div class="step">
+            <div class="step-number">1</div>
+            <div>
+              <h3 class="step-main-title">Ingest &amp; canonicalize</h3>
+              <p class="step-text">
+                APEX ingests rankings and measurables from 16 sources, normalizes names,
+                schools, and positions, and filters to an 861-player universe.
+                <small>Legacy rows are retained for audit, but never leak into active queries.</small>
+              </p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-number">2</div>
+            <div>
+              <h3 class="step-main-title">Consensus baseline</h3>
+              <p class="step-text">
+                Build a season-aware consensus table, weighting sources by tier and excluding
+                model-only feeds so algorithmic scores never contaminate scout rankings.
+              </p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-number">3</div>
+            <div>
+              <h3 class="step-main-title">Deterministic scoring</h3>
+              <p class="step-text">
+                Run each prospect through position-specific archetype libraries, measurables
+                gates, and failure modes to generate a single APEX score, tier, and capital range.
+                <small>Same inputs, same output, every run — all tied to a model version.</small>
+              </p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-number">4</div>
+            <div>
+              <h3 class="step-main-title">Divergence &amp; tags</h3>
+              <p class="step-text">
+                Compare APEX vs consensus to create structured divergence flags, compression
+                tags, development bets, and scheme-dependent markers, each with a text explanation.
+              </p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-number">5</div>
+            <div>
+              <h3 class="step-main-title">Snapshot &amp; export</h3>
+              <p class="step-text">
+                Lock pre-draft snapshots, export boards and PDFs, and ship a packet that
+                makes your decisions explainable after the draft, not just before it.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top:16px;">
+          <a class="btn-primary" href="https://apexos.streamlit.app/" target="_blank" rel="noopener noreferrer">
+            See the live APEX Board
+          </a>
+        </div>
+      </section>
+
+      <!-- Signals -->
+      <section id="signals" class="section" aria-labelledby="signals-title">
+        <div class="section-header">
+          <div class="section-label">Signals</div>
+          <h2 id="signals-title" class="section-title">Signals, not vibes</h2>
+          <p class="section-subtitle">
+            Every disagreement with the market is gated, labeled, and logged — or it doesn't ship.
+            Divergence is a first-class object, not a side effect.
+          </p>
+        </div>
+
+        <div class="split">
+          <div>
+            <ul class="list-tight">
+              <li>
+                <strong>APEXHIGH / APEXLOW with strength tiers.</strong>
+                Rank deltas and coverage thresholds determine whether a disagreement is
+                MAJOR, MODERATE, or structural noise.
+              </li>
+              <li>
+                <strong>System tags from rules, not hunches.</strong>
+                Compression, Development Bet, Scheme Dependent, Elite RAS, Poor RAS, and more
+                are triggered from rule sets, then accepted or dismissed.
+              </li>
+              <li>
+                <strong>Explanations stored with the data.</strong>
+                Each divergence carries a text reason tied to archetype and failure mechanisms,
+                not just a number.
+              </li>
+              <li>
+                <strong>State is always current.</strong>
+                Weekly pipeline runs recompute divergence with the latest sources and APEX scores,
+                and doctor checks confirm snapshot integrity.
+              </li>
+            </ul>
+          </div>
+          <aside class="demo-panel" aria-label="Divergence example">
+            <div class="demo-heading">
+              <div>
+                <div class="demo-title">Divergence Alert · CB</div>
+                <div class="demo-sub">APEX vs Consensus · 2026 snapshot</div>
+              </div>
+              <span class="demo-chip demo-chip-tag">APEXHIGH · MAJOR</span>
+            </div>
+            <div class="demo-meta-row">
+              <span class="demo-chip">Prospect: Kamari Ramsey · S-3</span>
+              <span class="demo-chip">Consensus #89</span>
+              <span class="demo-chip">APEX #60</span>
+              <span class="demo-chip">Tag: Development Bet</span>
+            </div>
+            <p class="demo-explainer">
+              APEX prices the S‑3 Multiplier Safety archetype and FM‑2 Conditional risk as
+              a R3 capital floor. The market is still treating him as a late Day‑3 projection.
+            </p>
+          </aside>
+        </div>
+      </section>
+
+      <!-- Surfaces -->
+      <section id="surfaces" class="section" aria-labelledby="surfaces-title">
+        <div class="section-header">
+          <div class="section-label">Surfaces</div>
+          <h2 id="surfaces-title" class="section-title">Everything hangs off one board</h2>
+          <p class="section-subtitle">
+            APEX OS ships multiple surfaces — board, detail panel, and reports — all driven
+            by the same deterministic engine and tags.
+          </p>
+        </div>
+
+        <div class="triplet-grid">
+          <article class="card">
+            <div class="card-tag">Surface</div>
+            <h3 class="card-title">APEX Board</h3>
+            <p class="card-body">
+              Big Board and APEX Board tabs with unified filters, tag legends, tier coloring,
+              and click-through to a right-hand detail panel.
+            </p>
+            <p class="card-note">
+              Built for quick scan and triage — tag filters, column guide, and APEX vs consensus
+              columns clearly separated.
+            </p>
+          </article>
+          <article class="card">
+            <div class="card-tag">Surface</div>
+            <h3 class="card-title">Prospect Detail Panel</h3>
+            <p class="card-body">
+              Six-tab right pane with summary, traits, risk, comps, notes, and report views,
+              plus a decision card pinned at the top.
+            </p>
+            <p class="card-note">
+              Custom HTML/JS, not Streamlit tabs, so layout and height estimation are predictable.
+            </p>
+          </article>
+          <article class="card">
+            <div class="card-tag">Surface</div>
+            <h3 class="card-title">Reports &amp; PDFs</h3>
+            <p class="card-body">
+              Prizm-style PDF generator with trait bars, historical comps, divergence narrative,
+              and FM legend that match the app exactly.
+            </p>
+            <p class="card-note">
+              One-click exports designed to drop straight into draft decks and post-draft audits.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <!-- Library & audit -->
+      <section id="library" class="section" aria-labelledby="library-title">
+        <div class="section-header">
+          <div class="section-label">Library</div>
+          <h2 id="library-title" class="section-title">Built for audits, not demos</h2>
+          <p class="section-subtitle">
+            APEX OS is designed to survive regime changes. Every source, score, tag, and override
+            is traceable.
+          </p>
+        </div>
+
+        <ul class="bullets">
+          <li>
+            <strong>Season-scoped design.</strong>
+            All queries are tied to the 2026 season. No cross-season leakage or
+            silent rollovers.
+          </li>
+          <li>
+            <strong>Additive migrations only.</strong>
+            Schema changes are versioned and backwards compatible by design — no destructive edits.
+          </li>
+          <li>
+            <strong>Overrides are visible.</strong>
+            Analyst overrides are logged with rationale, not applied silently.
+          </li>
+          <li>
+            <strong>Backups before writes.</strong>
+            Weekly pipeline runs include backups, snapshot metrics, and a doctor check
+            before anything is committed.
+          </li>
+        </ul>
+      </section>
+
+      <!-- Who it's for -->
+      <section id="who" class="section" aria-labelledby="who-title">
+        <div class="section-header">
+          <div class="section-label">Users</div>
+          <h2 id="who-title" class="section-title">Who APEX OS is for</h2>
+          <p class="section-subtitle">
+            If you just want another mock draft, APEX OS is overkill.
+            If you want an operating system for how you evaluate, it's exactly the right size.
+          </p>
+        </div>
+
+        <ul class="bullets">
+          <li>
+            <strong>Analysts and GMs</strong> who care about <em>why</em> the board says what it says,
+            not just the order.
+          </li>
+          <li>
+            <strong>Shops</strong> that want a single source of truth that survives coaching and
+            front office changes.
+          </li>
+          <li>
+            <strong>Anyone</strong> who expects to defend a draft in a room full of skeptics and
+            wants a trail for every call.
+          </li>
+        </ul>
+
+        <div class="pill-row">
+          <span class="pill">Deterministic by design</span>
+          <span class="pill">Audit-friendly</span>
+          <span class="pill">Draft-room ready</span>
+        </div>
+
+        <div style="margin-top:16px;">
+          <a class="btn-primary" href="https://apexos.streamlit.app/" target="_blank" rel="noopener noreferrer">
+            Open APEX Board
+          </a>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div>
+        <strong>APEX OS</strong> · Deterministic draft operating system
+      </div>
+      <div class="footer-links">
+        <a href="#how">Pipeline</a>
+        <a href="#signals">Signals</a>
+        <a href="https://apexos.streamlit.app/" target="_blank" rel="noopener noreferrer">App</a>
+      </div>
+    </footer>
+  </div>
+</body>
+</html>
