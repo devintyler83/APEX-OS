@@ -17,7 +17,7 @@ Authoritative State:
 1) STATE_SNAPSHOT.md
 # APEX OS State Snapshot
 
-Last Updated (UTC): 2026-04-22T03:46:46.983948+00:00
+Last Updated (UTC): 2026-04-22T04:06:19.129182+00:00
 
 ---
 
@@ -26,6 +26,55 @@ Last Updated (UTC): 2026-04-22T03:46:46.983948+00:00
 - 2026 (season_id=1)
 
 ## Last Completed Milestone
+
+Session 99 close (Draft Mode fan-experience patch — 6-pass: UI undo picks, draft log grades, drafted-player inspector, View feedback, What Changed signal, on_click reliability fix.)
+
+Session 99 close:
+- No DB writes. No schema changes. No migrations. Next migration: 0057.
+- Doctor: not re-run (no DB changes this session).
+- Files modified: app/app.py, draftos/queries/draft_mode.py
+
+Draft Mode fan-experience patch (6 passes):
+
+PASS 1 — UI Undo: delete_draft_pick(pick_number, season_id) added to draft_mode.py.
+  Deletes a single row from drafted_picks_2026; no backup (UI simulation path).
+  Draft Log: "↩ Clear Last Pick (#N)" button above log (one-click, on_click callback).
+  Per-row: most-recent pick = "Undo #N" (one click); older picks = "Undo #N…" then
+  Confirm/Cancel. _do_undo() clears DB row + session state (last_pick, drafted_inspect_pid).
+
+PASS 2 — Drafted Player Inspector: dm_drafted_inspect_pid session state key.
+  Inspector priority: Lock > drafted_view > board hover.
+  "View #N" button in Draft Log (on_click) sets dm_drafted_inspect_pid.
+  Inspector header changes to "Inspector · DRAFTED". Lock button → "← Board" (dismiss).
+  Clear button clears all three sources. Drafted player resolves from df (big board),
+  not _remaining — works after player leaves the remaining board.
+  Drafted player card: DRAFTED badge, pick#, team, 3 grades, verdict, rationale, Undo button.
+
+PASS 3 — Draft Log Grades: per-row grade computation using big board df + team board.
+  Player Grade (A+ through F) from apex_composite thresholds:
+    A+≥85, A≥75, A−≥70, B+≥65, B≥60, B−≥55, C+≥48, C≥40, D≥28, F<28.
+  APEX Value Grade from delta = actual_pick − auto_apex_rank:
+    A+(≥+30)=Monster Steal, A(≥+15)=Steal, B+(≥+7)=Good Value, B(−6..+6)=Fair Value,
+    C+(≤−7)=Slight Reach, C(≤−15)=Reach, D(≤−25)=Big Reach, F(≤−35)=Extreme Reach.
+  Team Fit Grade from positional need tier × fit_tier:
+    PREMIUM+IDEAL/STRONG=A, PREMIUM+VIABLE=B+, SECONDARY+IDEAL/STRONG=B+,
+    SECONDARY+VIABLE=B, NONE+IDEAL/STRONG=C+, NONE+VIABLE=C.
+  _build_draft_verdict() → one-word verdict: STEAL/PREMIUM PICK/SOLID PICK/REACH/etc.
+  _build_rationale_line() → one-sentence fan-facing rationale.
+  Draft log redesigned from st.dataframe to custom HTML cards with interactive buttons.
+
+PASS 4 — Fan-Facing Rationale: one-line rationale per pick in draft log + drafted inspector.
+  Combines player quality, APEX delta magnitude, and team fit tier into readable sentence.
+
+PASS 5 — What Changed post-pick signal: Player Grade + APEX Value Grade + verdict label
+  added to the post-pick card. Computed and stored in draft_mode_last_pick at draft time.
+  Verdict color: green=steal, blue=value, amber=reach, red=big reach.
+
+PASS 6 — Reliability fix: all draft log buttons converted from inline st.button + st.rerun()
+  to on_click callback factory pattern (_make_view_cb, _make_undo_cb, etc.). Prevents silent
+  failures from triple-nested context (column → expander → column → button). st.toast()
+  fires on View click ("Inspector → {name}") for always-visible feedback regardless of scroll.
+  "View #N" button changes to "✓ Viewing" (primary type) for the active row.
 
 Session 98 close (Draft Mode trust patch — 5-pass: Clear button, 5-view split, deterministic fit scoring, Score+Why board columns, debug expander; ghost PID dedup in model_outputs.)
 
@@ -1975,11 +2024,11 @@ Inactive (data preserved): ngs_2026 (source_id=29, is_active=0) — model score,
 
 2) System Snapshot Output
 === DRAFTOS SYSTEM SNAPSHOT ===
-generated_utc: 2026-04-22T03:46:46.240432+00:00
+generated_utc: 2026-04-22T04:06:18.425815+00:00
 
 ## Git
 branch: main
-commit: ce5bc82b678875a07463df23bfd2925b17e35e11
+commit: 6653fd05aa70d0075f874f178b6a63be83eda907
 status: clean
 
 ## Tables
