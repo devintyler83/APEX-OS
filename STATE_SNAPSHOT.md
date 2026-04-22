@@ -26,6 +26,28 @@ As of Session 101 (post-fix): DEDUP_GHOST and INACTIVE_SNAPSHOT passes complete.
 
 ## Last Completed Milestone
 
+Session 106 close (Streamlit Cloud deploy unblocked — requirements.txt, pandas dep, f-string SyntaxError fix.)
+
+Session 106 close:
+- DB writes: NONE.
+- Schema change: NONE. Next migration label: 0058.
+- Files created: requirements.txt (5 packages: streamlit, pandas, polars, rapidfuzz, python-dotenv).
+- Files modified:
+    pyproject.toml — added pandas to dependencies list.
+    scripts/draftos_detail_iframe_v2.py — precomputed _cap_note_sub to fix SyntaxError:
+      Backslash-escaped quotes inside f-string {…} braces are illegal on Python <3.12.
+      Streamlit Cloud runs 3.11. Fix: extract ternary into variable before f-string.
+- Root cause: Streamlit Cloud uses Python 3.11; repo was 3.12-only syntax at line 3126.
+- Doctor: not re-run (no DB or pipeline changes). Last known good: Session 105 PASSED.
+
+## Next Milestone (Single Target)
+
+Session 107: Full batch APEX re-score (--batch all --force) after investigating Arvell Reese
+ELITE→DAY1 drop (-8.8 pts, forty=4.46/ATH=86.6). Gate report: data/exports/s70_rescore_report.txt.
+Run doctor before and after. Export results after re-score.
+
+---
+
 Session 105 close (Sandbox draft overlay — per-session and named-room isolation. Migration 0057.)
 
 Session 105 close:
@@ -60,12 +82,6 @@ Session 105 close:
 - Doctor: PASSED (post-migration, sandbox table present, canonical tables untouched).
 - Canonical draft behavior: zero behavior change when SANDBOX_MODE=False.
 - drafted_picks_2026: 0 rows (unchanged — sandbox writes never touch canonical table).
-
-## Next Milestone (Single Target)
-
-Session 106: Full batch APEX re-score (--batch all --force) after investigating Arvell Reese
-ELITE→DAY1 drop (-8.8 pts, forty=4.46/ATH=86.6). Gate report: data/exports/s70_rescore_report.txt.
-Run doctor before and after. Export results after re-score.
 
 ---
 
