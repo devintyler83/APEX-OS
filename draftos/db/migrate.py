@@ -118,7 +118,7 @@ def migrate() -> None:
     schema_path = PATHS.root / "draftos" / "db" / "schema.sql"
     migrations_dir = PATHS.root / "draftos" / "db" / "migrations"
 
-    with connect() as conn:
+    with connect(create_ok=True) as conn:
         ensure_meta_table(conn)
 
         # Bootstrap schema snapshot once.

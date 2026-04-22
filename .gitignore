@@ -12,8 +12,7 @@ __pycache__/
 .env
 .env.*
 
-# DraftOS local data (NEVER commit)
-data/edge/draftos.sqlite
+# DraftOS data — exports and imports are local only
 data/exports/backups/
 data/imports/
 
@@ -27,21 +26,20 @@ exports/*.csv
 exports/reports/
 reports/
 
-# SQLite backups
+# SQLite backups and variants — never commit these
 data/edge/backups/
 data/edge/draftos.backup.*
 data/edge/draftos_*.sqlite
 data/edge/*.backup.*
 data/edge/*.sqlite.backup.*
+data/edge/draftos.sqlite.backup*
 
-# Local DB
-data/edge/*.sqlite
-
-# DraftOS generated artifacts
-draftos.sqlite
-*.sqlite
+# SQLite journal files
 *.sqlite-wal
 *.sqlite-shm
+
+# Root-level stray sqlite files — never commit these
+/*.sqlite
 
 exports/
 exports/packets/
@@ -53,9 +51,11 @@ GATE_TRACKER.md
 
 # Python
 __pycache__/
-*.pyc# --- DraftOS local artifacts / handoff packets (do not commit) ---
+*.pyc
+
+# --- DraftOS local artifacts / handoff packets (do not commit) ---
 DRAFTOS_MIGRATION_EXPORT_*.txt
-draftos.sqlite
+/draftos.sqlite
 _handoff_*/
 _session_close_*/
 exports/packets/
@@ -69,7 +69,6 @@ Universal_Rules/
 ProjectMemory.docx
 *.docx
 data/*.json
-data/edge/
 scripts/run_apex_scoring_2026.backup_*.py
 debug_render.html
 scripts/_card_test_output.html
@@ -83,3 +82,4 @@ draftos.egg-info/
 output/
 scripts/draftos_detail_iframe_v2-old.py
 scripts/*.bak_mojibake
+data/backups/
