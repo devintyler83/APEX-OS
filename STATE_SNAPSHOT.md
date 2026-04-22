@@ -1,6 +1,6 @@
 # APEX OS State Snapshot
 
-APEX OS is a deterministic draft operating system that turns 16 ranking sources, measurables, and film context into one board you can defend after the draft, not just before it. It is season-scoped (2026, `season_id=1`), migration-safe, and designed for full auditability: every source, score, tag, and override is versioned and traceable. The engine builds a weighted consensus spine, runs deterministic APEX scoring against archetype and measurables libraries, and then layers divergence, tags, and decision cards on top. Public entry points are `https://apexos.app` for the marketing front door and `https://apexos.streamlit.app/` for the live app runtime.
+APEX OS is a deterministic draft operating system that turns 16 ranking sources, measurables, and film context into one board you can defend after the draft, not just before it. It is season-scoped (2026, `season_id=1`), migration-safe, and designed for full auditability: every source, score, tag, and override is versioned and traceable. The engine builds a weighted consensus spine, runs deterministic APEX scoring against archetype and measurables libraries, and then layers divergence, tags, and decision cards on top. Public entry points are `https://apexsignal.app` for the marketing front door and `https://apexsignal.streamlit.app/` for the live app runtime.
 
 ---
 
@@ -26,7 +26,7 @@ As of Session 101 (post-fix): DEDUP_GHOST and INACTIVE_SNAPSHOT passes complete.
 
 ## Last Completed Milestone
 
-Session 103 close (Full batch APEX re-score — 274/297 scored, 23 JSON parse failures retained prior v2.3 scores; Arvell Reese audit; APEX engine banner fix v2.2→v2.3; netlify.toml for apexos.app static deployment.)
+Session 103 close (Full batch APEX re-score — 274/297 scored, 23 JSON parse failures retained prior v2.3 scores; Arvell Reese audit; APEX engine banner fix v2.2→v2.3; netlify.toml for apexsignal.app static deployment.)
 
 Session 103 close:
 - DB writes: YES — apex_scores updated for 274 prospects (model_version=apex_v2.3).
@@ -75,9 +75,9 @@ Engine Banner Fix:
 
 Deployment Config:
   netlify.toml created: publish=web/, rewrites / and /* → /apexos-landing.html (status=200).
-  Manual step required: connect devintyler83/DraftOS to Netlify or Cloudflare Pages, set
-  custom domain apexos.app. No build step. No CLI tools available in dev environment.
-  Landing page CTAs verified: 5 links all point to https://apexos.streamlit.app/.
+  Manual step required: connect devintyler83/APEX-OS to Netlify or Cloudflare Pages, set
+  custom domain apexsignal.app. No build step. No CLI tools available in dev environment.
+  Landing page CTAs verified: 5 links all point to https://apexsignal.streamlit.app/.
   Streamlit gate logic verified: APEXOS_SHOW_LANDING=true blocks board until dismiss; default
   (unset) loads board directly.
 
@@ -98,7 +98,7 @@ Known open items from Session 103:
     PIDs that correctly do not need re-scoring. True active failures TBD in Session 104.
   - Divergence table has mixed label format (APEX HIGH vs APEX_HIGH, space vs underscore) --
     legacy rows from prior sessions. Non-blocking; query logic handles both.
-  - apexos.app static deployment: manual Netlify/Cloudflare Pages connect required.
+  - apexsignal.app static deployment: netlify.toml committed, CTAs updated to apexsignal.streamlit.app. Manual Netlify connect required.
 
 ---
 
@@ -109,9 +109,9 @@ Session 102 close:
 - Schema change: NONE. Next migration label remains 0049.
 - Files created: web/apexos-landing.html, web/README.md, app/app_landing.py.
 - Files modified: app/app.py (landing gate, 3 lines), STATE_SNAPSHOT.md, CLAUDE.md.
-- Landing page: pure HTML/CSS, no build step. Primary CTAs → https://apexos.streamlit.app/.
+- Landing page: pure HTML/CSS, no build step. Primary CTAs → https://apexsignal.streamlit.app/.
 - Streamlit gate: set APEXOS_SHOW_LANDING=true to show landing before board; session_state dismiss persists for session duration.
-- Static hosting: web/apexos-landing.html deployable directly to Netlify/Cloudflare Pages at apexos.app.
+- Static hosting: web/apexos-landing.html deployable directly to Netlify/Cloudflare Pages at apexsignal.app.
 - Canonical intro block added to top of STATE_SNAPSHOT.md and CLAUDE.md.
 - Doctor: not re-run (no DB or pipeline changes). Last known good: Session 101 PASSED.
 - Next priority: Session 71 full batch re-score gate (Arvell Reese ELITE→DAY1 investigation).
@@ -1892,7 +1892,7 @@ Prior sessions on record: 12 (DB rebuild), 13 (weekly pipeline), 13b (school/arc
   --prospect-ids (comma-separated PIDs). Notable: Peter Woods, Colton Hood, Shedeur Sanders,
   Donovan Ezeiruaku, Diego Pavia, Drew Allar, Pat Coogan + 16 others. After re-score,
   run --batch divergence --apply 1 to recompute divergence for those PIDs.
-  Also: complete apexos.app static deployment (Netlify or Cloudflare Pages — manual connect
+  Also: complete apexsignal.app static deployment (Netlify or Cloudflare Pages -- manual connect
   required; netlify.toml is committed and ready). Verify divergence label normalization
   (APEX HIGH vs APEX_HIGH mixed format in divergence_flags table).
   Deferred: post-draft audit framework (APEX Framework Section 9).

@@ -1,6 +1,6 @@
 # CLAUDE.md — DraftOS Persistent Instructions
 
-APEX OS is a deterministic draft operating system that turns 16 ranking sources, measurables, and film context into one board you can defend after the draft, not just before it. It is season-scoped (2026, `season_id=1`), migration-safe, and designed for full auditability: every source, score, tag, and override is versioned and traceable. The engine builds a weighted consensus spine, runs deterministic APEX scoring against archetype and measurables libraries, and then layers divergence, tags, and decision cards on top. Public entry points are `https://apexos.app` for the marketing front door and `https://apexos.streamlit.app/` for the live app runtime.
+APEX OS is a deterministic draft operating system that turns 16 ranking sources, measurables, and film context into one board you can defend after the draft, not just before it. It is season-scoped (2026, `season_id=1`), migration-safe, and designed for full auditability: every source, score, tag, and override is versioned and traceable. The engine builds a weighted consensus spine, runs deterministic APEX scoring against archetype and measurables libraries, and then layers divergence, tags, and decision cards on top. Public entry points are `https://apexsignal.app` for the marketing front door and `https://apexsignal.streamlit.app/` for the live app runtime.
 
 ---
 
