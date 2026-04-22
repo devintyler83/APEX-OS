@@ -10,6 +10,47 @@ Last Updated (UTC): 2026-04-22T01:18:10.854496+00:00
 
 ## Last Completed Milestone
 
+Session 98 close (Draft Mode trust patch — 5-pass: Clear button, 5-view split, deterministic fit scoring, Score+Why board columns, debug expander; ghost PID dedup in model_outputs.)
+
+Session 98 close:
+- No DB writes. No schema changes. No migrations. Next migration: 0057.
+- Doctor: not re-run (no DB changes).
+- Files modified: app/app.py, draftos/queries/model_outputs.py
+
+Draft Mode trust patch (5 passes, all in render_draft_mode / get_big_board):
+
+PASS 1 — Inspector Clear button: 3-column header layout [2.2, 1, 1]. Clears
+  draft_mode_selected_pid + draft_mode_locked_pid on click. Disabled when
+  nothing is selected or locked.
+
+PASS 2 — 5 view modes: "best_available", "best_available_team", "best_fit_team",
+  "market_edge", "safest". Stale-key guards coerce "best_value" → "market_edge"
+  and "best_fit" → "best_fit_team".
+
+PASS 3 — Deterministic _compute_team_fit_score(): replaces opaque DB fit_score.
+  Components: need_weight (premium=100/secondary=55/none=0 for best_fit_team;
+  20/8/0 for best_available_team) + quality (RPG × 60% + APEX rank × 40%) +
+  capital (pick proximity vs anchor) + market (divergence bonus/penalty) −
+  risk_penalty (FM active). Returns (total, components_dict). Validated: CB
+  scores 27.8, EDGE/WR score 118–133 for SF (premium needs OT/EDGE/WR).
+
+PASS 4 — Score + Why columns in team-context board modes. Column config:
+  Score as NumberColumn (%.1f), Why as TextColumn (medium width). Rationale
+  string: "Primary need · R2 Top · RPG 84.2 · Edge +8 · FM-2".
+
+PASS 5 — Debug expander below board (team-context modes only): "Scoring debug
+  — top 15" shows Player/Pos/Need/NeedWt/RPGc/APEXc/Quality/Capital/Market/
+  RiskPen/Total as a DataFrame.
+
+Ghost PID dedup (model_outputs.py get_big_board()): KC Concepcion (pid=3516)
+  and D'Angelo Ponds (pid=4347) were LB ghost PID splits showing as UNSCORED
+  duplicates. Python-layer dedup: after tag assignment, filter out any unscored
+  row whose display_name matches an already-scored row. No DB write required.
+
+Compare panel: divergence_magnitude is categorical (MINOR/MODERATE/MAJOR) —
+  fixed ValueError by using str() not int(). Metric label renamed "Divergence".
+  import re moved outside for-loop to fix syntax error.
+
 Session 97 close (Draft Room 7-point spec — draft_state, Market Edge, Safest composite, Need chips, header polish, explainability lines, empty states.)
 
 Session 97 close:
@@ -1602,13 +1643,13 @@ Prior sessions on record: 12 (DB rebuild), 13 (weekly pipeline), 13b (school/arc
 
 ## Next Milestone (Single Target)
 
-- Session 98: Draft night operations. Use the Draft Mode tab to run the live draft.
-  Draft Room 3-panel is complete and functional. Pick ownership map live from draft_state.
-  Market Edge, Safest, Best Fit, Best Available views all operational.
+- Session 99: Draft night operations. Use the Draft Mode tab to run the live draft.
+  Draft Room trust patch complete (S98). 5-view modes operational, deterministic scoring
+  validated (CB 27.8 vs EDGE/WR 118–133 for SF). Ghost PIDs deduped.
   To use: streamlit run app/app.py → Draft Mode tab → select team hat → record picks.
   Validate board after each round: python -m scripts.validate_reactive_board_2026.
   Post-draft: run reset_drafted_2026.py (dry run first) if test picks need clearing.
-  Deferred (post-draft): prospect_comps expansion for newly scored prospects.
+  Deferred (post-draft): prospect_comps expansion, full batch APEX re-score.
   Deferred (post-draft): post-draft audit framework (APEX Framework Section 9).
   Deferred (post-draft): pick ownership trade editor (dm_pick_overrides state key seeded).
 
