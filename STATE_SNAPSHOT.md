@@ -81,11 +81,22 @@ Deployment Config:
   Streamlit gate logic verified: APEXOS_SHOW_LANDING=true blocks board until dismiss; default
   (unset) loads board directly.
 
+Calibration Contamination Fix (also Session 103):
+  Root cause: 14 stale apex_scores rows for is_active=0 prospects had is_calibration_artifact=0,
+  polluting top-board queries that omit the p.is_active=1 join. Scoring layer was correct.
+  Fix 1: UPDATE is_calibration_artifact=1 for 11 calibration PIDs (Travis Hunter, Shedeur Sanders,
+    Donovan Ezeiruaku, Carson Schwesinger, Tyleik Williams, Nick Emmanwori, Armand Membou,
+    Tate Ratledge, Jared Wilson, Chris Paul, Trevor Etienne) -- v2.3 rows had wrong flag.
+  Fix 2: DELETE apex_scores + divergence_flags for 3 dedup ghost PIDs (3559, 4318, 4323).
+  Post-fix: 297 rows with is_active=1 AND is_calibration_artifact=0. Doctor: PASSED.
+  Script: scripts/fix_apex_calibration_flags_s103.py (idempotent, dry-run verified).
+  Clean top-3: David Bailey EDGE 88.7 ELITE | Fernando Mendoza QB 87.4 ELITE | Jermod McCoy CB 82.1 DAY1.
+
 Known open items from Session 103:
-  - 23 failed prospects need targeted re-score (--prospect-ids or --batch single per PID).
-    Notable: David Bailey (retained Apr-21 score, still ELITE 88.7 — low priority);
-    Peter Woods, Colton Hood, Shedeur Sanders, Donovan Ezeiruaku among others.
-  - Divergence table has mixed label format (APEX HIGH vs APEX_HIGH, space vs underscore) —
+  - 23 failed prospects need targeted re-score. Cross-check which of the 23 are is_active=1
+    before scheduling re-score; some (Shedeur Sanders, Donovan Ezeiruaku, etc.) are calibration
+    PIDs that correctly do not need re-scoring. True active failures TBD in Session 104.
+  - Divergence table has mixed label format (APEX HIGH vs APEX_HIGH, space vs underscore) --
     legacy rows from prior sessions. Non-blocking; query logic handles both.
   - apexos.app static deployment: manual Netlify/Cloudflare Pages connect required.
 
