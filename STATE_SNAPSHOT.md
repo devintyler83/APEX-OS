@@ -1,6 +1,6 @@
 # APEX OS State Snapshot
 
-Last Updated (UTC): 2026-04-22T04:06:19.129182+00:00
+Last Updated (UTC): 2026-04-22T04:07:14.541548+00:00
 
 ---
 
@@ -9,6 +9,50 @@ Last Updated (UTC): 2026-04-22T04:06:19.129182+00:00
 - 2026 (season_id=1)
 
 ## Last Completed Milestone
+
+Session 100 close (Draft Mode scoring inversion fix — quality-dominant formula, non-negative capital fit, Team Board quality gate.)
+
+Session 100 close:
+- No DB writes. No schema changes. No migrations. Next migration: 0057.
+- Doctor: not re-run (no DB changes this session).
+- Files modified: app/app.py
+
+Draft Mode scoring inversion fix (4 targeted edits to render_draft_mode / _compute_team_fit_score):
+
+FIX 1 — Log-scale quality_score replacing linear RPG/APEX blend (0-50):
+  New: quality = 0.7 × apex_component + 0.3 × consensus_component, 0-100 range.
+  apex_component  = 100 - 100 × log10(apex_rank+1) / log10(301).
+  consensus_comp  = 100 - 70  × log10(con_rank+1)  / log10(301).
+  Bailey (APEX#1, Con#6): quality=84.3. Rank-40 EDGE: quality=40.3.
+  Old formula: Bailey ~22, rank-40 ~15 — gap was 7 pts, now 44 pts.
+
+FIX 2 — Capital fit strictly non-negative (0-20):
+  Removed reach_gap > 20 branch that applied max(-10, 15 - reach_gap × 0.8).
+  R1 elites with team picks at R2/R3 now get cap_fit=0 (not -2.6 to -10).
+  Graded by pick proximity: first team pick ≤12 away → +20, ≤25 → +15;
+  later picks ≤12 → +15, ≤25 → +12; one band late → +10.
+
+FIX 3 — Formula restructured around quality as anchor:
+  Best Fit · Team:  total = q + fit_block × 0.4
+    fit_block = need_w (100/55/0) + cap_fit + edge_bonus + risk_pen
+  Best Avail · Team: total = q + need_adj (20/8/0) + 0.3×edge + 0.3×risk
+    (no capital term — talent-first)
+  Bailey Best Fit: 84.3 + (100+0+5+0)×0.4 = 126.3.
+  Best R2 capital-fit EDGE: 40.3 + (100+20+5+0)×0.4 = 90.3.
+  Inversion gone.
+
+FIX 4 — FM penalty graded instead of binary:
+  Old: FM active → -20 (win-now) or -12. Could bury blue chips.
+  New: -min(fm_num × 3, 15). FM-1=-3, FM-4=-12, FM-5+=-15.
+
+FIX 5 — Left-panel Team Board quality gate:
+  Fetches 50 rows from DB (was 10), filters apex_rank ≤ 120 OR con_rank ≤ 80
+  (fallback: 150/100 if <5 pass), then slices to 10 for display.
+  Con#298/APEX#161 WRs no longer appear in the curated front door.
+
+Debug expander updated: RPGc/APEXc/Market columns replaced with APEX#/Con#/Edge
+matching the new component breakdown. Rationale builder updated: market → edge_bonus,
+RPG line removed.
 
 Session 99 close (Draft Mode fan-experience patch — 6-pass: UI undo picks, draft log grades, drafted-player inspector, View feedback, What Changed signal, on_click reliability fix.)
 
@@ -1692,11 +1736,11 @@ Prior sessions on record: 12 (DB rebuild), 13 (weekly pipeline), 13b (school/arc
 
 ## Next Milestone (Single Target)
 
-- Session 99: Draft night operations. Use the Draft Mode tab to run the live draft.
-  Draft Room trust patch complete (S98). 5-view modes operational, deterministic scoring
-  validated (CB 27.8 vs EDGE/WR 118–133 for SF). Ghost PIDs deduped.
-  To use: streamlit run app/app.py → Draft Mode tab → select team hat → record picks.
-  Validate board after each round: python -m scripts.validate_reactive_board_2026.
+- Session 101: Draft night operations. Use the Draft Mode tab to run the live draft.
+  Scoring inversion fixed (S100): quality-dominant formula, non-negative capital fit,
+  Team Board quality gate. Bailey-type elites now score correctly in both Best Fit and
+  Best Avail views. Con#298/APEX#161 players cannot pollute the top-10 Team Board.
+  To use: streamlit run app/app.py → Draft Mode tab → select team → record picks.
   Post-draft: run reset_drafted_2026.py (dry run first) if test picks need clearing.
   Deferred (post-draft): prospect_comps expansion, full batch APEX re-score.
   Deferred (post-draft): post-draft audit framework (APEX Framework Section 9).
