@@ -1,9 +1,15 @@
 [build]
   publish = "web"
 
-# /app and /board → live Streamlit deployment (302 so it stays updatable)
+# External app shortcuts (302 so the target URL stays updatable)
 [[redirects]]
   from   = "/app"
+  to     = "https://apexsignal.streamlit.app/"
+  status = 302
+  force  = true
+
+[[redirects]]
+  from   = "/open"
   to     = "https://apexsignal.streamlit.app/"
   status = 302
   force  = true
@@ -14,7 +20,13 @@
   status = 302
   force  = true
 
-# Serve landing page for all other paths
+# Static pages — must come before the catch-all
+[[redirects]]
+  from   = "/for-draft-fans"
+  to     = "/for-draft-fans.html"
+  status = 200
+
+# Root and catch-all → landing page
 [[redirects]]
   from   = "/"
   to     = "/apexos-landing.html"

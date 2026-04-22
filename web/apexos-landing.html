@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <title>APEX OS — Draft Operating System</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="APEX OS is a deterministic draft operating system that turns 16 sources, measurables, and film into one board you can defend." />
+  <meta name="description" content="APEX OS is a deterministic draft operating system that turns 16 sources, measurables, archetypes, and film into one board you can build, defend, and own." />
   <style>
     :root {
       --bg: #0b0c10;
@@ -113,7 +113,7 @@
     nav {
       display: flex;
       align-items: center;
-      gap: 18px;
+      gap: 14px;
       font-size: 0.9rem;
     }
 
@@ -185,6 +185,21 @@
       margin-top: 4px;
     }
 
+    .section-body {
+      font-size: 0.92rem;
+      color: var(--fg-muted);
+      max-width: 640px;
+      margin-top: 12px;
+      line-height: 1.65;
+    }
+
+    .bridge-text {
+      font-size: 0.88rem;
+      color: var(--fg-soft);
+      margin-top: 14px;
+      line-height: 1.6;
+    }
+
     .hero {
       display: grid;
       grid-template-columns: minmax(0, 3fr) minmax(0, 2.7fr);
@@ -211,7 +226,15 @@
       font-size: 1rem;
       color: var(--fg-muted);
       max-width: 460px;
+      margin-bottom: 10px;
+    }
+
+    .hero-subcopy {
+      font-size: 0.9rem;
+      color: var(--fg-soft);
+      max-width: 460px;
       margin-bottom: 20px;
+      line-height: 1.65;
     }
 
     .hero-badges {
@@ -425,6 +448,12 @@
       gap: 16px;
     }
 
+    .quad-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+
     .card {
       border-radius: var(--radius);
       border: 1px solid var(--border-subtle);
@@ -610,6 +639,30 @@
       color: var(--fg-soft);
     }
 
+    .cta-section {
+      text-align: center;
+      padding: 48px 32px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border-subtle);
+      background: radial-gradient(circle at top, rgba(34, 197, 94, 0.08), transparent 60%),
+                  radial-gradient(circle at top left, rgba(15, 23, 42, 0.96), #020617);
+    }
+
+    .cta-title {
+      font-size: clamp(1.5rem, 3vw, 2rem);
+      font-weight: 650;
+      letter-spacing: 0.02em;
+      margin-bottom: 12px;
+    }
+
+    .cta-body {
+      font-size: 1rem;
+      color: var(--fg-muted);
+      max-width: 520px;
+      margin: 0 auto 24px;
+      line-height: 1.6;
+    }
+
     footer {
       border-top: 1px solid var(--border-subtle);
       margin-top: 40px;
@@ -663,6 +716,10 @@
         grid-template-columns: minmax(0, 1fr);
       }
 
+      .quad-grid {
+        grid-template-columns: minmax(0, 1fr);
+      }
+
       .split {
         grid-template-columns: minmax(0, 1fr);
       }
@@ -686,6 +743,10 @@
       .page {
         padding-inline: 14px;
       }
+
+      .cta-section {
+        padding: 32px 20px;
+      }
     }
   </style>
 </head>
@@ -701,9 +762,10 @@
       </a>
       <nav>
         <a href="#product">Product</a>
-        <a href="#how">How it works</a>
+        <a href="#how">How It Works</a>
         <a href="#signals">Signals</a>
-        <a href="#library">Library</a>
+        <a href="#archetypes">Archetypes</a>
+        <a href="for-draft-fans.html">For Draft Fans</a>
         <a href="https://apexsignal.streamlit.app/" class="nav-cta" target="_blank" rel="noopener noreferrer">
           <span>Open APEX Board</span>
         </a>
@@ -711,22 +773,25 @@
     </header>
 
     <main id="top">
-      <!-- Hero -->
+
+      <!-- ═══ HERO ═══ -->
       <section class="section hero" aria-labelledby="hero-title">
         <div>
           <h1 id="hero-title" class="hero-title">
-            APEX OS —
-            <span class="hero-highlight">the draft operating system</span>
+            APEX OS — <span class="hero-highlight">the draft operating system</span> for people who want to build a board — not just read one.
           </h1>
           <p class="hero-subtitle">
-            A deterministic engine that turns 16 sources, measurables, and film notes
-            into one draft board you can defend after the picks are made.
+            APEX OS takes the rankings, measurables, archetypes, film notes, and market noise around the NFL Draft and turns them into one clean board you can actually defend.
+          </p>
+          <p class="hero-subcopy">
+            Most draft content tells you what the market thinks. APEX OS tells you where the market may be wrong. Every prospect gets an archetype, trait profile, risk map, capital band, and divergence signal.
           </p>
 
           <div class="hero-badges">
             <span class="badge badge-strong">Deterministic scoring</span>
+            <span class="badge">Archetypes over vibes</span>
             <span class="badge">Divergence engine</span>
-            <span class="badge">Decision cards &amp; PDFs</span>
+            <span class="badge">Built for fans, creators, analysts</span>
           </div>
 
           <div class="hero-actions">
@@ -734,7 +799,7 @@
               Open APEX Board
             </a>
             <a class="btn-ghost" href="#product">
-              <span>See how the OS works</span>
+              <span>See how it works</span>
             </a>
           </div>
           <p class="hero-secondary-note">
@@ -792,59 +857,51 @@
         </aside>
       </section>
 
-      <!-- Product overview -->
+      <!-- ═══ PRODUCT ═══ -->
       <section id="product" class="section" aria-labelledby="product-title">
         <div class="section-header">
           <div class="section-label">Product</div>
-          <h2 id="product-title" class="section-title">One system, three jobs</h2>
+          <h2 id="product-title" class="section-title">Not another mock draft. The system behind the mock.</h2>
           <p class="section-subtitle">
-            APEX OS is not another mock draft. It is the spine that keeps your evaluation
-            process consistent, deterministic, and auditable through the full draft cycle.
+            APEX OS is not here to spit out another list and call it insight. It is the logic, structure, and evidence layer behind your board — the system that turns scattered draft inputs into one consistent, independent evaluation process.
           </p>
         </div>
 
-        <div class="triplet-grid">
+        <div class="quad-grid">
           <article class="card">
             <h3 class="card-title">Consensus spine</h3>
             <p class="card-body">
-              Ingest 16 ranking sources, normalize names, schools, and positions, and
-              build a weighted consensus baseline per prospect and per position group.
-            </p>
-            <p class="card-note">
-              Season-scoped to 2026 with source and position canonicalization baked into the pipeline.
+              APEX ingests active source rankings, normalizes the player universe, and builds a weighted market baseline. That gives you the real draft price before the system adds its own opinion.
             </p>
           </article>
           <article class="card">
-            <h3 class="card-title">Deterministic APEX scores</h3>
+            <h3 class="card-title">Archetype engine</h3>
             <p class="card-body">
-              Score every prospect against archetype libraries, measurables context, and
-              failure modes to produce one composite, tier label, and capital band.
-            </p>
-            <p class="card-note">
-              No stochastic sampling in scoring; every run is versioned and reproducible.
+              Every prospect is scored into a clear archetype label, trait profile, and failure-mode risk map. You are not just comparing WR vs WR or CB vs CB. You are comparing how different types of players actually win.
             </p>
           </article>
           <article class="card">
-            <h3 class="card-title">Decision layer</h3>
+            <h3 class="card-title">Divergence signals</h3>
             <p class="card-body">
-              Render decision cards with tier, capital, divergence, FM tags, historical comps,
-              and a draft day call ready to drop into your deck.
+              Once APEX has its own evaluation, it compares that view to consensus and flags where the system is meaningfully higher or lower. That gap is the whole game: hidden value, overhyped bets, and real edges you can actually explain.
             </p>
-            <p class="card-note">
-              The same card layout powers the in-app right pane and exported PDFs.
+          </article>
+          <article class="card">
+            <h3 class="card-title">Decision surfaces</h3>
+            <p class="card-body">
+              Big Board, APEX Board, Prospect Detail, Scout Pad, and decision-card outputs all sit on top of the same engine. One prospect, one system, multiple ways to work the board.
             </p>
           </article>
         </div>
       </section>
 
-      <!-- How it works -->
+      <!-- ═══ HOW IT WORKS ═══ -->
       <section id="how" class="section" aria-labelledby="how-title">
         <div class="section-header">
           <div class="section-label">Pipeline</div>
-          <h2 id="how-title" class="section-title">How APEX OS builds your board</h2>
+          <h2 id="how-title" class="section-title">One board. Many inputs. One opinion.</h2>
           <p class="section-subtitle">
-            Each layer has exactly one job, from raw CSVs to a draft-ready snapshot.
-            The pipeline is deterministic, versioned, and season-scoped.
+            APEX OS takes in the draft world's noise, cleans it up, and turns it into a usable operating system. The process is deterministic by design, so the same inputs always produce the same output.
           </p>
         </div>
 
@@ -852,52 +909,45 @@
           <div class="step">
             <div class="step-number">1</div>
             <div>
-              <h3 class="step-main-title">Ingest &amp; canonicalize</h3>
+              <h3 class="step-main-title">Build the market baseline</h3>
               <p class="step-text">
-                APEX ingests rankings and measurables from 16 sources, normalizes names,
-                schools, and positions, and filters to an 861-player universe.
-                <small>Legacy rows are retained for audit, but never leak into active queries.</small>
+                Source rankings are ingested, normalized, deduplicated, and weighted into one consensus spine. That is not the product — it is the market price the product reacts to.
               </p>
             </div>
           </div>
           <div class="step">
             <div class="step-number">2</div>
             <div>
-              <h3 class="step-main-title">Consensus baseline</h3>
+              <h3 class="step-main-title">Score the player independently</h3>
               <p class="step-text">
-                Build a season-aware consensus table, weighting sources by tier and excluding
-                model-only feeds so algorithmic scores never contaminate scout rankings.
+                APEX evaluates the prospect from first principles using archetypes, trait vectors, measurables context, and failure modes. It does not just remix outside opinions with nicer formatting.
               </p>
             </div>
           </div>
           <div class="step">
             <div class="step-number">3</div>
             <div>
-              <h3 class="step-main-title">Deterministic scoring</h3>
+              <h3 class="step-main-title">Assign the football identity</h3>
               <p class="step-text">
-                Run each prospect through position-specific archetype libraries, measurables
-                gates, and failure modes to generate a single APEX score, tier, and capital range.
-                <small>Same inputs, same output, every run — all tied to a model version.</small>
+                Every player gets an archetype label that defines the way he wins, plus an archetype-fit quality signal like Clean, Solid, Tweener, Compression, or No Fit. That is what turns player ranking into actual football evaluation.
               </p>
             </div>
           </div>
           <div class="step">
             <div class="step-number">4</div>
             <div>
-              <h3 class="step-main-title">Divergence &amp; tags</h3>
+              <h3 class="step-main-title">Surface the disagreement</h3>
               <p class="step-text">
-                Compare APEX vs consensus to create structured divergence flags, compression
-                tags, development bets, and scheme-dependent markers, each with a text explanation.
+                The system compares APEX rank to consensus rank and labels the delta as APEXHIGH, APEXLOW, ALIGNED, or structural. That is where the real tension lives.
               </p>
             </div>
           </div>
           <div class="step">
             <div class="step-number">5</div>
             <div>
-              <h3 class="step-main-title">Snapshot &amp; export</h3>
+              <h3 class="step-main-title">Turn it into decisions</h3>
               <p class="step-text">
-                Lock pre-draft snapshots, export boards and PDFs, and ship a packet that
-                makes your decisions explainable after the draft, not just before it.
+                The board, detail panel, tags, Scout Pad, and decision cards make the evaluation usable on draft week. You are not reading theory. You are working a board.
               </p>
             </div>
           </div>
@@ -910,14 +960,13 @@
         </div>
       </section>
 
-      <!-- Signals -->
+      <!-- ═══ SIGNALS ═══ -->
       <section id="signals" class="section" aria-labelledby="signals-title">
         <div class="section-header">
           <div class="section-label">Signals</div>
-          <h2 id="signals-title" class="section-title">Signals, not vibes</h2>
+          <h2 id="signals-title" class="section-title">This is where you find your edge.</h2>
           <p class="section-subtitle">
-            Every disagreement with the market is gated, labeled, and logged — or it doesn't ship.
-            Divergence is a first-class object, not a side effect.
+            The best output in APEX OS is not the score by itself. It is the moment where the system's independent evaluation and the market's price stop agreeing.
           </p>
         </div>
 
@@ -925,26 +974,25 @@
           <div>
             <ul class="list-tight">
               <li>
-                <strong>APEXHIGH / APEXLOW with strength tiers.</strong>
-                Rank deltas and coverage thresholds determine whether a disagreement is
-                MAJOR, MODERATE, or structural noise.
+                <strong>APEXHIGH.</strong>
+                APEX sees a player materially better than the market does. These are your flag-plant prospects, your my-guys list, and the names you want circled before the board starts moving.
               </li>
               <li>
-                <strong>System tags from rules, not hunches.</strong>
-                Compression, Development Bet, Scheme Dependent, Elite RAS, Poor RAS, and more
-                are triggered from rule sets, then accepted or dismissed.
+                <strong>APEXLOW.</strong>
+                The market is pricing a player higher than APEX is willing to go. These are your bust fades, over-drafted bets, or players whose translation risk is bigger than the hype.
               </li>
               <li>
-                <strong>Explanations stored with the data.</strong>
-                Each divergence carries a text reason tied to archetype and failure mechanisms,
-                not just a number.
+                <strong>ALIGNED.</strong>
+                Sometimes the system and the market land in the same spot. That matters too. Agreement can be conviction, not boredom.
               </li>
               <li>
-                <strong>State is always current.</strong>
-                Weekly pipeline runs recompute divergence with the latest sources and APEX scores,
-                and doctor checks confirm snapshot integrity.
+                <strong>Structural.</strong>
+                Some divergence is expected because of positional value or archetype economics, not because the market is wrong. APEX makes that distinction explicit so you do not chase fake edges.
               </li>
             </ul>
+            <p class="bridge-text">
+              Every divergence comes with a reason. No black box. No just-trust-the-model. Just traceable logic tied to archetype, traits, and risk.
+            </p>
           </div>
           <aside class="demo-panel" aria-label="Divergence example">
             <div class="demo-heading">
@@ -968,118 +1016,119 @@
         </div>
       </section>
 
-      <!-- Surfaces -->
+      <!-- ═══ ARCHETYPES (was Library) ═══ -->
+      <section id="archetypes" class="section" aria-labelledby="archetypes-title">
+        <div class="section-header">
+          <div class="section-label">Archetypes</div>
+          <h2 id="archetypes-title" class="section-title">Stop ranking names. Start ranking player types.</h2>
+          <p class="section-subtitle">
+            APEX OS is built on canonical archetypes across positions, each with its own trait weights, mechanisms, and failure paths. That means a speed-bend EDGE is not scored like a power-counter EDGE, and a route technician WR is not scored like a contested-catch specialist just because both share a position label.
+          </p>
+        </div>
+        <p class="section-body">
+          This is the unlock for smart fans. Once you understand archetypes, you stop asking "is this player good?" and start asking "what kind of player is he, how does that type usually translate, and is the market pricing that correctly?"
+        </p>
+        <p class="section-body">
+          Every archetype also lives next to real hit paths, partial hit paths, and bust paths. That matters because APEX is not trying to win the draft internet for one weekend — it is trying to make calls that can still hold up after the league tells us who was right.
+        </p>
+        <div style="margin-top: 18px;">
+          <a class="btn-ghost" href="for-draft-fans.html">Explore Archetypes</a>
+        </div>
+      </section>
+
+      <!-- ═══ FOR DRAFT FANS (new) ═══ -->
+      <section id="for-draft-fans" class="section" aria-labelledby="fan-title">
+        <div class="section-header">
+          <div class="section-label">For Draft Fans</div>
+          <h2 id="fan-title" class="section-title">If you're the fan with 20 tabs open on draft week, this is your home base.</h2>
+          <p class="section-subtitle">
+            APEX OS lets you take the rankings, measurables, clips, notes, and random rabbit holes you are already obsessing over and turn them into one board that actually has structure.
+          </p>
+        </div>
+        <p class="section-body">
+          Every prospect gets an archetype, APEX score, tier, capital band, risk map, and consensus comparison, so you can move from "I have a feeling" to "I have a case."
+        </p>
+        <p class="section-body">
+          You are not here to copy the media board. You are here to find the players the market is missing, understand why they might hit or miss, and build your own board with more rigor than most public draft content ever reaches.
+        </p>
+        <ul class="bullets" style="margin-top: 16px;">
+          <li>Find your <strong>APEXHIGH</strong> guys at every position and plant your flags before the draft starts.</li>
+          <li>Filter by archetype and capital band to build a <strong>rounds 3–5 my-guys list</strong>.</li>
+          <li>Use Prospect Detail and Scout Pad as your <strong>on-the-clock notes</strong> when your team picks.</li>
+          <li>Learn the historical hit and bust paths tied to each archetype instead of falling for highlight clips and combine theater.</li>
+        </ul>
+        <div style="margin-top: 18px;">
+          <a class="btn-primary" href="for-draft-fans.html">Go to For Draft Fans</a>
+        </div>
+      </section>
+
+      <!-- ═══ SURFACES ═══ -->
       <section id="surfaces" class="section" aria-labelledby="surfaces-title">
         <div class="section-header">
           <div class="section-label">Surfaces</div>
-          <h2 id="surfaces-title" class="section-title">Everything hangs off one board</h2>
+          <h2 id="surfaces-title" class="section-title">One engine. Multiple ways to work the board.</h2>
           <p class="section-subtitle">
-            APEX OS ships multiple surfaces — board, detail panel, and reports — all driven
-            by the same deterministic engine and tags.
+            The board is the entry point, but the value is in how each surface turns the same underlying evaluation into a different draft-week job.
           </p>
         </div>
 
         <div class="triplet-grid">
           <article class="card">
             <div class="card-tag">Surface</div>
+            <h3 class="card-title">Big Board</h3>
+            <p class="card-body">
+              See the market, your filters, tags, and overall board state in one view.
+            </p>
+          </article>
+          <article class="card">
+            <div class="card-tag">Surface</div>
             <h3 class="card-title">APEX Board</h3>
             <p class="card-body">
-              Big Board and APEX Board tabs with unified filters, tag legends, tier coloring,
-              and click-through to a right-hand detail panel.
-            </p>
-            <p class="card-note">
-              Built for quick scan and triage — tag filters, column guide, and APEX vs consensus
-              columns clearly separated.
+              Sort by the independent APEX opinion and find where your system is willing to be aggressive.
             </p>
           </article>
           <article class="card">
             <div class="card-tag">Surface</div>
-            <h3 class="card-title">Prospect Detail Panel</h3>
+            <h3 class="card-title">Prospect Detail</h3>
             <p class="card-body">
-              Six-tab right pane with summary, traits, risk, comps, notes, and report views,
-              plus a decision card pinned at the top.
-            </p>
-            <p class="card-note">
-              Custom HTML/JS, not Streamlit tabs, so layout and height estimation are predictable.
+              Open the full profile: archetype, trait bars, failure modes, comps, divergence, and capital context.
             </p>
           </article>
           <article class="card">
             <div class="card-tag">Surface</div>
-            <h3 class="card-title">Reports &amp; PDFs</h3>
+            <h3 class="card-title">Scout Pad</h3>
             <p class="card-body">
-              Prizm-style PDF generator with trait bars, historical comps, divergence narrative,
-              and FM legend that match the app exactly.
+              Quick-glance draft-week view with Draft Call, Market View, Risk Snapshot, Flags, and Draft Day Take.
             </p>
-            <p class="card-note">
-              One-click exports designed to drop straight into draft decks and post-draft audits.
+          </article>
+          <article class="card">
+            <div class="card-tag">Surface</div>
+            <h3 class="card-title">Decision Cards</h3>
+            <p class="card-body">
+              Condensed prospect calls you can actually use while the picks are happening.
             </p>
           </article>
         </div>
       </section>
 
-      <!-- Library & audit -->
-      <section id="library" class="section" aria-labelledby="library-title">
+      <!-- ═══ WHY TRUST IT (was Who) ═══ -->
+      <section id="trust" class="section" aria-labelledby="trust-title">
         <div class="section-header">
-          <div class="section-label">Library</div>
-          <h2 id="library-title" class="section-title">Built for audits, not demos</h2>
-          <p class="section-subtitle">
-            APEX OS is designed to survive regime changes. Every source, score, tag, and override
-            is traceable.
-          </p>
+          <div class="section-label">Why Trust It</div>
+          <h2 id="trust-title" class="section-title">Because every hot take should be traceable.</h2>
         </div>
-
-        <ul class="bullets">
-          <li>
-            <strong>Season-scoped design.</strong>
-            All queries are tied to the 2026 season. No cross-season leakage or
-            silent rollovers.
-          </li>
-          <li>
-            <strong>Additive migrations only.</strong>
-            Schema changes are versioned and backwards compatible by design — no destructive edits.
-          </li>
-          <li>
-            <strong>Overrides are visible.</strong>
-            Analyst overrides are logged with rationale, not applied silently.
-          </li>
-          <li>
-            <strong>Backups before writes.</strong>
-            Weekly pipeline runs include backups, snapshot metrics, and a doctor check
-            before anything is committed.
-          </li>
-        </ul>
-      </section>
-
-      <!-- Who it's for -->
-      <section id="who" class="section" aria-labelledby="who-title">
-        <div class="section-header">
-          <div class="section-label">Users</div>
-          <h2 id="who-title" class="section-title">Who APEX OS is for</h2>
-          <p class="section-subtitle">
-            If you just want another mock draft, APEX OS is overkill.
-            If you want an operating system for how you evaluate, it's exactly the right size.
-          </p>
-        </div>
-
-        <ul class="bullets">
-          <li>
-            <strong>Analysts and GMs</strong> who care about <em>why</em> the board says what it says,
-            not just the order.
-          </li>
-          <li>
-            <strong>Shops</strong> that want a single source of truth that survives coaching and
-            front office changes.
-          </li>
-          <li>
-            <strong>Anyone</strong> who expects to defend a draft in a room full of skeptics and
-            wants a trail for every call.
-          </li>
-        </ul>
+        <p class="section-body">
+          APEX OS is deterministic, versioned, and audit-friendly by design. The same inputs produce the same output, every override is logged, and the entire system is built to be checked against what actually happens after the draft.
+        </p>
+        <p class="section-body">
+          That matters for teams, but it matters for fans too. It means your strongest takes are not just louder — they are cleaner, more falsifiable, and easier to improve over time.
+        </p>
 
         <div class="pill-row">
           <span class="pill">Deterministic by design</span>
           <span class="pill">Audit-friendly</span>
           <span class="pill">Draft-room ready</span>
+          <span class="pill">Version-controlled</span>
         </div>
 
         <div style="margin-top:16px;">
@@ -1088,6 +1137,23 @@
           </a>
         </div>
       </section>
+
+      <!-- ═══ FINAL CTA (new) ═══ -->
+      <section id="cta" class="section cta-section" aria-labelledby="cta-title">
+        <h2 id="cta-title" class="cta-title">Stop reading everyone else's board. Build one.</h2>
+        <p class="cta-body">
+          Use APEX OS to find your archetype bets, pressure-test consensus, and walk into draft weekend with a board that feels like yours.
+        </p>
+        <div class="hero-actions" style="justify-content: center;">
+          <a class="btn-primary" href="https://apexsignal.streamlit.app/" target="_blank" rel="noopener noreferrer">
+            Open APEX Board
+          </a>
+          <a class="btn-ghost" href="for-draft-fans.html">
+            For Draft Fans
+          </a>
+        </div>
+      </section>
+
     </main>
 
     <footer>
@@ -1097,6 +1163,8 @@
       <div class="footer-links">
         <a href="#how">Pipeline</a>
         <a href="#signals">Signals</a>
+        <a href="#archetypes">Archetypes</a>
+        <a href="for-draft-fans.html">For Draft Fans</a>
         <a href="https://apexsignal.streamlit.app/" target="_blank" rel="noopener noreferrer">App</a>
       </div>
     </footer>

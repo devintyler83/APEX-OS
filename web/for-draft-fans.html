@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <title>For Draft Fans — APEX OS</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Build your board. Find your guys. Defend every call. APEX OS for NFL Draft fans who want more than rankings and mock drafts." />
+  <style>
+    :root {
+      --bg: #0b0c10;
+      --bg-alt: #111218;
+      --bg-soft: #151721;
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --fg: #f7f7f7;
+      --fg-muted: #a5acba;
+      --fg-soft: #6b7280;
+      --accent: #22c55e;
+      --accent-soft: rgba(34, 197, 94, 0.08);
+      --accent-strong: #16a34a;
+      --danger: #f97373;
+      --radius: 10px;
+      --shadow-soft: 0 18px 45px rgba(0, 0, 0, 0.4);
+      --font-body: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
+                   "Segoe UI", sans-serif;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      min-height: 100vh;
+      background: radial-gradient(circle at top, #111827 0, #020617 55%, #000000 100%);
+      color: var(--fg);
+      font-family: var(--font-body);
+      line-height: 1.6;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .page {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 24px 16px 64px;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border-subtle);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      backdrop-filter: blur(14px);
+      background: linear-gradient(to bottom,
+        rgba(2, 6, 23, 0.95),
+        rgba(2, 6, 23, 0.85),
+        transparent
+      );
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-mark {
+      width: 26px;
+      height: 26px;
+      border-radius: 8px;
+      background:
+        conic-gradient(from 200deg, #22c55e, #4ade80, #22c55e, #16a34a);
+      box-shadow: 0 0 20px rgba(34, 197, 94, 0.6);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .brand-mark::after {
+      content: "";
+      position: absolute;
+      inset: 5px;
+      border-radius: 6px;
+      background: radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.35), transparent 55%);
+      mix-blend-mode: screen;
+      opacity: 0.8;
+    }
+
+    .brand-text-main {
+      font-weight: 650;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      font-size: 0.9rem;
+    }
+
+    .brand-text-sub {
+      font-size: 0.75rem;
+      color: var(--fg-soft);
+    }
+
+    nav {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      font-size: 0.9rem;
+    }
+
+    nav a {
+      color: var(--fg-muted);
+      padding: 6px 0;
+      border-bottom: 1px solid transparent;
+    }
+
+    nav a:hover {
+      color: var(--fg);
+      border-bottom-color: rgba(148, 163, 184, 0.5);
+    }
+
+    nav a[aria-current="page"] {
+      color: var(--fg);
+    }
+
+    .nav-cta {
+      padding: 7px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.5);
+      color: var(--fg);
+      background: rgba(15, 23, 42, 0.7);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.85rem;
+    }
+
+    .nav-cta span {
+      font-size: 0.95em;
+    }
+
+    .nav-cta:hover {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.3);
+    }
+
+    main {
+      padding-top: 32px;
+      display: flex;
+      flex-direction: column;
+      gap: 64px;
+    }
+
+    .section {
+      scroll-margin-top: 80px;
+    }
+
+    .section-header {
+      margin-bottom: 18px;
+    }
+
+    .section-label {
+      font-size: 0.75rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 6px;
+    }
+
+    .section-title {
+      font-size: 1.6rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+
+    .section-subtitle {
+      font-size: 0.95rem;
+      color: var(--fg-muted);
+      max-width: 640px;
+      margin-top: 4px;
+    }
+
+    .section-body {
+      font-size: 0.92rem;
+      color: var(--fg-muted);
+      max-width: 640px;
+      margin-top: 12px;
+      line-height: 1.65;
+    }
+
+    .page-hero {
+      padding-bottom: 8px;
+    }
+
+    .page-hero-label {
+      font-size: 0.75rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 10px;
+    }
+
+    .page-hero-title {
+      font-size: clamp(2rem, 4vw, 2.8rem);
+      line-height: 1.15;
+      font-weight: 650;
+      letter-spacing: 0.03em;
+      margin-bottom: 16px;
+      max-width: 720px;
+    }
+
+    .page-hero-highlight {
+      background: linear-gradient(120deg, #22c55e, #4ade80, #22c55e);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    .page-hero-subtitle {
+      font-size: 1rem;
+      color: var(--fg-muted);
+      max-width: 580px;
+      line-height: 1.65;
+    }
+
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 18px;
+      border-radius: 999px;
+      border: none;
+      background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+      color: #022c22;
+      font-size: 0.95rem;
+      font-weight: 600;
+      box-shadow: 0 18px 35px rgba(34, 197, 94, 0.4);
+      cursor: pointer;
+      text-decoration: none;
+      min-width: 180px;
+    }
+
+    .btn-primary:hover {
+      filter: brightness(1.05);
+      transform: translateY(-0.5px);
+    }
+
+    .btn-ghost {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 9px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      font-size: 0.85rem;
+      color: var(--fg-muted);
+      background: rgba(15, 23, 42, 0.6);
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    .btn-ghost:hover {
+      border-color: rgba(148, 163, 184, 0.7);
+      color: var(--fg);
+    }
+
+    .quad-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .card {
+      border-radius: var(--radius);
+      border: 1px solid var(--border-subtle);
+      background: radial-gradient(circle at top left, rgba(15, 23, 42, 0.96), #020617);
+      padding: 14px 14px 16px;
+      font-size: 0.9rem;
+    }
+
+    .card-title {
+      font-size: 0.98rem;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .card-body {
+      color: var(--fg-muted);
+      font-size: 0.9rem;
+    }
+
+    .steps {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 8px;
+    }
+
+    .step {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 12px;
+      align-items: flex-start;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid rgba(31, 41, 55, 0.9);
+      background: linear-gradient(135deg, rgba(17, 24, 39, 0.96), rgba(15, 23, 42, 0.96));
+    }
+
+    .step-number {
+      width: 22px;
+      height: 22px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      color: var(--fg-soft);
+      flex-shrink: 0;
+    }
+
+    .step-main-title {
+      font-size: 0.92rem;
+      font-weight: 550;
+    }
+
+    .step-text {
+      font-size: 0.86rem;
+      color: var(--fg-muted);
+    }
+
+    .bullets {
+      list-style: disc;
+      padding-left: 18px;
+      font-size: 0.88rem;
+      color: var(--fg-muted);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .bullets li strong {
+      color: var(--fg);
+      font-weight: 500;
+    }
+
+    .cta-section {
+      text-align: center;
+      padding: 48px 32px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border-subtle);
+      background: radial-gradient(circle at top, rgba(34, 197, 94, 0.08), transparent 60%),
+                  radial-gradient(circle at top left, rgba(15, 23, 42, 0.96), #020617);
+    }
+
+    .cta-title {
+      font-size: clamp(1.4rem, 3vw, 1.9rem);
+      font-weight: 650;
+      letter-spacing: 0.02em;
+      margin-bottom: 12px;
+      max-width: 600px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .cta-body {
+      font-size: 1rem;
+      color: var(--fg-muted);
+      max-width: 520px;
+      margin: 0 auto 24px;
+      line-height: 1.6;
+    }
+
+    footer {
+      border-top: 1px solid var(--border-subtle);
+      margin-top: 40px;
+      padding-top: 18px;
+      font-size: 0.8rem;
+      color: var(--fg-soft);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .footer-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .footer-links a {
+      color: var(--fg-soft);
+      text-decoration: none;
+    }
+
+    .footer-links a:hover {
+      color: var(--fg-muted);
+      text-decoration: underline;
+    }
+
+    @media (max-width: 920px) {
+      header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+      }
+
+      nav {
+        width: 100%;
+        justify-content: space-between;
+      }
+
+      .quad-grid {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+
+    @media (max-width: 640px) {
+      header {
+        position: static;
+      }
+
+      nav {
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .hero-actions {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .page {
+        padding-inline: 14px;
+      }
+
+      .cta-section {
+        padding: 32px 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <a href="/" class="brand">
+        <div class="brand-mark" aria-hidden="true"></div>
+        <div>
+          <div class="brand-text-main">APEX OS</div>
+          <div class="brand-text-sub">Draft operating system</div>
+        </div>
+      </a>
+      <nav>
+        <a href="/#product">Product</a>
+        <a href="/#how">How It Works</a>
+        <a href="/#signals">Signals</a>
+        <a href="/#archetypes">Archetypes</a>
+        <a href="/for-draft-fans" aria-current="page">For Draft Fans</a>
+        <a href="https://apexsignal.streamlit.app/" class="nav-cta" target="_blank" rel="noopener noreferrer">
+          <span>Open APEX Board</span>
+        </a>
+      </nav>
+    </header>
+
+    <main id="top">
+
+      <!-- ═══ HERO ═══ -->
+      <section class="section page-hero" aria-labelledby="page-title">
+        <div class="page-hero-label">For Draft Fans</div>
+        <h1 id="page-title" class="page-hero-title">
+          Build your board. Find your guys. <span class="page-hero-highlight">Defend every call.</span>
+        </h1>
+        <p class="page-hero-subtitle">
+          APEX OS is for the fan who wants more than rankings and mock drafts. It gives you a system for understanding what kind of prospect a player is, how he wins, where he breaks, and whether the market is pricing him correctly.
+        </p>
+      </section>
+
+      <!-- ═══ WHAT YOU ACTUALLY GET ═══ -->
+      <section id="what-you-get" class="section" aria-labelledby="get-title">
+        <div class="section-header">
+          <div class="section-label">What You Get</div>
+          <h2 id="get-title" class="section-title">What you actually get</h2>
+        </div>
+
+        <div class="quad-grid">
+          <article class="card">
+            <h3 class="card-title">A real football identity for every prospect</h3>
+            <p class="card-body">
+              Every player gets an archetype label, not just a spot on a list. That means you can see whether a prospect is a route technician, speed-bend rusher, anticipatory lockdown corner, raw projection, or something in between.
+            </p>
+          </article>
+          <article class="card">
+            <h3 class="card-title">A cleaner way to find edges</h3>
+            <p class="card-body">
+              APEX does not just tell you who it likes. It shows you where it disagrees with consensus and by how much. That is how you find true flag plants instead of just reposting the same names everyone else already loves.
+            </p>
+          </article>
+          <article class="card">
+            <h3 class="card-title">A risk map, not just a ranking</h3>
+            <p class="card-body">
+              The system carries failure-mode logic, archetype fit quality, and historical translation context so you can understand not just upside, but how the bet can die.
+            </p>
+          </article>
+          <article class="card">
+            <h3 class="card-title">Usable draft-week surfaces</h3>
+            <p class="card-body">
+              The board, Prospect Detail panel, Scout Pad, and decision cards turn deeper evaluation into something you can actually use on Thursday, Friday, and Saturday.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <!-- ═══ HOW TO USE IT ON DRAFT WEEK ═══ -->
+      <section id="draft-week" class="section" aria-labelledby="week-title">
+        <div class="section-header">
+          <div class="section-label">Draft Week</div>
+          <h2 id="week-title" class="section-title">How to use it on draft week</h2>
+        </div>
+
+        <div class="steps">
+          <div class="step">
+            <div class="step-number">1</div>
+            <div>
+              <h3 class="step-main-title">Thursday — Build your first-round conviction board.</h3>
+              <p class="step-text">
+                Find the premium-position prospects where APEX is higher or lower than consensus and decide who you are willing to stand on.
+              </p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-number">2</div>
+            <div>
+              <h3 class="step-main-title">Friday — Hunt the value pocket.</h3>
+              <p class="step-text">
+                Filter for APEXHIGH players in the Day 2 range, especially the archetypes the market tends to flatten together.
+              </p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-number">3</div>
+            <div>
+              <h3 class="step-main-title">Saturday — Start swinging on translation bets.</h3>
+              <p class="step-text">
+                This is where archetype understanding matters most, because late-round value usually comes from player types the market misreads, not from familiar names.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══ WHY ARCHETYPES MATTER ═══ -->
+      <section id="why-archetypes" class="section" aria-labelledby="arch-title">
+        <div class="section-header">
+          <div class="section-label">Archetypes</div>
+          <h2 id="arch-title" class="section-title">Why archetypes matter to fans</h2>
+        </div>
+        <p class="section-body">
+          Most fan boards still rank players like every WR, EDGE, or CB is being asked the same question. APEX does not do that.
+        </p>
+        <p class="section-body">
+          It treats positions as families of different player types, each with their own mechanics, thresholds, and failure paths. That changes the whole conversation.
+        </p>
+        <p class="section-body">
+          Instead of "I like this guy more than consensus," you get to say, "the market is pricing this archetype wrong, and here is why this specific prospect fits the hit path better than people realize."
+        </p>
+      </section>
+
+      <!-- ═══ WHY DIVERGENCE MATTERS ═══ -->
+      <section id="why-divergence" class="section" aria-labelledby="div-title">
+        <div class="section-header">
+          <div class="section-label">Divergence</div>
+          <h2 id="div-title" class="section-title">Why divergence matters</h2>
+        </div>
+        <p class="section-body">
+          Consensus is useful, but it is still the market. If all you do is follow it, you are not finding signal — you are buying the same stock after everyone else already ran it up.
+        </p>
+        <p class="section-body">
+          APEX exists to create an independent opinion first, then compare that opinion to consensus after the fact. That comparison is the point.
+        </p>
+        <p class="section-body">
+          When APEX and consensus diverge, you get something worth thinking about.
+        </p>
+      </section>
+
+      <!-- ═══ CLOSING CTA ═══ -->
+      <section id="cta" class="section cta-section" aria-labelledby="cta-title">
+        <h2 id="cta-title" class="cta-title">If you're serious enough to make your own board, you're serious enough to use a real system.</h2>
+        <p class="cta-body">
+          Open APEX Board and start building something sharper than another recycled top 100.
+        </p>
+        <div class="hero-actions" style="justify-content: center;">
+          <a class="btn-primary" href="https://apexsignal.streamlit.app/" target="_blank" rel="noopener noreferrer">
+            Open APEX Board
+          </a>
+          <a class="btn-ghost" href="/#archetypes">
+            Explore Archetypes
+          </a>
+        </div>
+      </section>
+
+    </main>
+
+    <footer>
+      <div>
+        <strong>APEX OS</strong> · Deterministic draft operating system
+      </div>
+      <div class="footer-links">
+        <a href="/#how">Pipeline</a>
+        <a href="/#signals">Signals</a>
+        <a href="/#archetypes">Archetypes</a>
+        <a href="/for-draft-fans">For Draft Fans</a>
+        <a href="https://apexsignal.streamlit.app/" target="_blank" rel="noopener noreferrer">App</a>
+      </div>
+    </footer>
+  </div>
+</body>
+</html>
