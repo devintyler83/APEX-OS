@@ -916,6 +916,24 @@ def insert_draft_pick(
         _conn.commit()
 
 
+def delete_draft_pick(pick_number: int, season_id: int = _SEASON_ID) -> bool:
+    """
+    Delete a single drafted pick by pick_number from drafted_picks_2026.
+    Returns True if exactly one row was deleted, False otherwise.
+    Used by the UI undo path — no backup taken (pick was just inserted this session).
+    """
+    try:
+        with connect() as conn:
+            result = conn.execute(
+                "DELETE FROM drafted_picks_2026 WHERE season_id=? AND pick_number=?",
+                (season_id, pick_number),
+            )
+            conn.commit()
+            return result.rowcount > 0
+    except Exception:
+        return False
+
+
 def get_all_pick_ownership(seasonid: int = _SEASON_ID) -> dict[int, str]:
     """
     Build remaining pick_number → team_id map from all teams' draft_capital_json.

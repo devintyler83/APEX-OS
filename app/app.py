@@ -55,6 +55,7 @@ from draftos.queries.draft_mode import (
     get_next_pick as dm_get_next_pick_spec,
     insert_draft_pick as dm_insert_draft_pick,
     get_all_pick_ownership as dm_get_all_pick_ownership,
+    delete_draft_pick as dm_delete_draft_pick,
 )
 
 # Streamlit ≥ 1.35 supports on_select / selection_mode on st.dataframe
@@ -2254,10 +2255,17 @@ def render_draft_mode(conn=None) -> None:
         ("_dm_pre_pick_board",      []),
         ("_dm_view_snapshot",       "best_available"),
         ("dm_pick_overrides",       {}),  # {pick_number: team_id} for trade editor
+        ("dm_drafted_inspect_pid",  None),  # PID of drafted player opened from draft log
+        ("dm_undo_confirm_pick",    None),  # pick_number awaiting undo confirm (non-last picks)
     ]
     for _sk, _sv in _STATE_DEFAULTS:
         if _sk not in st.session_state:
             st.session_state[_sk] = _sv
+
+    # Toast feedback for View click — consumed once per click, always visible regardless of scroll
+    _view_toast_name = st.session_state.pop("dm_view_toast", None)
+    if _view_toast_name:
+        st.toast(f"Inspector → {_view_toast_name}", icon="👁")
 
     # Pop nav-just-fired sentinel — same pattern as main board nav guards.
     _dm_nav_just_fired: bool = bool(st.session_state.pop("_dm_nav_just_fired", False))
@@ -2294,6 +2302,140 @@ def render_draft_mode(conn=None) -> None:
     # ── Remaining board (read once) ──────────────────────────────────────────
     _remaining = dm_get_draft_remaining_board(seasonid=1, limit=300)
 
+    # ── Draft grade helpers ──────────────────────────────────────────────────
+
+    def _compute_player_grade(apex_composite) -> str:
+        """Letter grade for overall player quality from apex_composite."""
+        if apex_composite is None:
+            return "—"
+        v = float(apex_composite)
+        if v >= 85: return "A+"
+        if v >= 75: return "A"
+        if v >= 70: return "A−"
+        if v >= 65: return "B+"
+        if v >= 60: return "B"
+        if v >= 55: return "B−"
+        if v >= 48: return "C+"
+        if v >= 40: return "C"
+        if v >= 28: return "D"
+        return "F"
+
+    def _compute_apex_value_grade(actual_pick, auto_apex_rank) -> tuple[str, str]:
+        """
+        Grade how much value the team got versus APEX board position.
+        Returns (letter_grade, verdict_label).
+        delta > 0 = drafted later than APEX expected = value/steal.
+        delta < 0 = drafted earlier than APEX expected = reach.
+        """
+        if actual_pick is None or auto_apex_rank is None:
+            return "—", "—"
+        delta = int(actual_pick) - int(auto_apex_rank)
+        if delta >= 30: return "A+", "Monster Steal"
+        if delta >= 15: return "A",  "Steal"
+        if delta >= 7:  return "B+", "Good Value"
+        if delta >= -6: return "B",  "Fair Value"
+        if delta >= -14: return "C+", "Slight Reach"
+        if delta >= -24: return "C",  "Reach"
+        if delta >= -35: return "D",  "Big Reach"
+        return "F", "Extreme Reach"
+
+    def _compute_team_fit_grade(pos: str, needs_json_str, fit_tier: str | None, fit_band: str | None) -> str:
+        """
+        Grade team fit: combines positional need tier with fit_tier from team board.
+        needs_json_str: raw JSON string from team board row.
+        fit_tier: 'IDEAL', 'STRONG', 'VIABLE', or None.
+        """
+        import json as _jmod
+        need_tier = "NONE"
+        try:
+            if needs_json_str:
+                nl = _jmod.loads(str(needs_json_str))
+                for n in nl:
+                    if str(n.get("position", "")).upper() == pos.upper():
+                        t = str(n.get("tier", "")).upper()
+                        if t in ("PREMIUM", "SECONDARY"):
+                            need_tier = t
+                            break
+        except Exception:
+            pass
+        ft = str(fit_tier or "").upper()
+        fb = str(fit_band or "").upper()
+        if need_tier == "PREMIUM":
+            if ft in ("IDEAL", "STRONG"): return "A"
+            if ft == "VIABLE":            return "B+"
+            if fb in ("A", "B"):          return "B"
+            return "B−"
+        if need_tier == "SECONDARY":
+            if ft in ("IDEAL", "STRONG"): return "B+"
+            if ft == "VIABLE":            return "B"
+            if fb in ("A", "B"):          return "B−"
+            return "C+"
+        # no positional need
+        if ft in ("IDEAL", "STRONG"):     return "C+"
+        if ft == "VIABLE":                return "C"
+        return "D"
+
+    def _build_draft_verdict(pg: str, avg: str, tfg: str) -> str:
+        """One-word verdict from the three grades."""
+        _grade_val = {"A+": 7, "A": 6, "A−": 5.5, "B+": 5, "B": 4, "B−": 3.5,
+                      "C+": 3, "C": 2, "D": 1, "F": 0, "—": -1}
+        pv = _grade_val.get(pg, -1)
+        av = _grade_val.get(avg, -1)
+        tv = _grade_val.get(tfg, -1)
+        if av >= 6 and pv >= 5:        return "STEAL"
+        if pv >= 6 and tv >= 5:        return "PREMIUM PICK"
+        if pv >= 5 and av >= 5 and tv >= 4: return "SOLID PICK"
+        if av <= 2 and pv >= 5:        return "REACH"
+        if pv >= 5 and tv >= 4:        return "GOOD PICK"
+        if pv >= 4 and av >= 4:        return "FAIR VALUE"
+        if av <= 1:                    return "QUESTIONABLE"
+        return "AVERAGE PICK"
+
+    def _build_rationale_line(name: str, pos: str, team: str, pick_num, pg: str, avg: str, tfg: str, apex_delta: int | None) -> str:
+        """One-line fan-facing rationale for a draft pick."""
+        _grade_val = {"A+": 7, "A": 6, "A−": 5.5, "B+": 5, "B": 4, "B−": 3.5,
+                      "C+": 3, "C": 2, "D": 1, "F": 0, "—": -1}
+        pv = _grade_val.get(pg, -1)
+        av = _grade_val.get(avg, -1)
+        tv = _grade_val.get(tfg, -1)
+        parts: list[str] = []
+        if pv >= 6:    parts.append(f"Elite {pos} talent")
+        elif pv >= 5:  parts.append(f"High-quality {pos}")
+        elif pv >= 4:  parts.append(f"Solid {pos} prospect")
+        elif pv >= 2:  parts.append(f"Developmental {pos}")
+        else:          parts.append(f"Depth {pos}")
+        if apex_delta is not None:
+            if av >= 6:    parts.append(f"drafted {abs(apex_delta)} spots after APEX expected — clear steal")
+            elif av >= 5:  parts.append(f"drafted slightly after APEX expected — good value")
+            elif av >= 4:  parts.append("fair value by APEX")
+            elif av >= 3:  parts.append(f"drafted {abs(apex_delta)} spots ahead of APEX — mild reach")
+            elif av >= 2:  parts.append(f"drafted {abs(apex_delta)} spots ahead of APEX — notable reach")
+            else:          parts.append(f"drafted well ahead of APEX expectation — significant reach")
+        if tv >= 5:    parts.append(f"premium fit for {team}")
+        elif tv >= 4:  parts.append(f"good scheme fit for {team}")
+        elif tv >= 3:  parts.append(f"secondary need for {team}")
+        else:          parts.append(f"limited positional fit for {team}")
+        return "; ".join(parts) + "."
+
+    # ── Undo helper ──────────────────────────────────────────────────────────
+
+    def _do_undo(pick_number: int) -> bool:
+        """Delete a drafted pick and clear related session state."""
+        ok = dm_delete_draft_pick(pick_number=pick_number, season_id=1)
+        if ok:
+            # Clear undo confirm sentinel
+            st.session_state["dm_undo_confirm_pick"] = None
+            # Clear last_pick if it was the undone pick
+            _lp = st.session_state.get("draft_mode_last_pick")
+            if _lp and _lp.get("pick") == pick_number:
+                st.session_state["draft_mode_last_pick"] = None
+            # Clear drafted inspect if it was viewing the undone player
+            _dpid = st.session_state.get("dm_drafted_inspect_pid")
+            if _dpid:
+                # check if this was the undone pick's player
+                st.session_state["dm_drafted_inspect_pid"] = None
+        return ok
+
     # ── Draft action helper ──────────────────────────────────────────────────
     def _do_draft(pid: int, team_code: str) -> bool:
         _pi = dm_get_next_pick_spec(seasonid=1)
@@ -2315,13 +2457,32 @@ def render_draft_mode(conn=None) -> None:
                 prospectid=pid,
             )
             _picked = next((r for r in (_remaining or []) if r.get("prospect_id") == pid), {})
+            # Compute grades at draft time using big-board data
+            _df_pick_rows = df[df["prospect_id"] == pid]
+            _df_pick_row  = _df_pick_rows.iloc[0] if not _df_pick_rows.empty else None
+            _pick_apex_c  = (_df_pick_row.get("apex_composite") if _df_pick_row is not None else None)
+            _pick_auto_ar = (_df_pick_row.get("auto_apex_rank")  if _df_pick_row is not None else None)
+            if _pick_apex_c is not None and pd.isna(float(_pick_apex_c)):
+                _pick_apex_c = None
+            if _pick_auto_ar is not None and pd.isna(float(_pick_auto_ar)):
+                _pick_auto_ar = None
+            _pick_pg            = _compute_player_grade(_pick_apex_c)
+            _pick_avg, _pick_vd = _compute_apex_value_grade(_pi["overall_pick"], _pick_auto_ar)
+            _pick_delta         = (
+                int(_pi["overall_pick"]) - int(_pick_auto_ar)
+                if _pick_auto_ar is not None else None
+            )
             st.session_state["draft_mode_last_pick"] = {
-                "pid":   pid,
-                "team":  team_code,
-                "pick":  _pi["overall_pick"],
-                "round": _pi["round_number"],
-                "name":  _picked.get("display_name", f"pid={pid}"),
-                "pos":   _picked.get("position_group", "—"),
+                "pid":         pid,
+                "team":        team_code,
+                "pick":        _pi["overall_pick"],
+                "round":       _pi["round_number"],
+                "name":        _picked.get("display_name", f"pid={pid}"),
+                "pos":         _picked.get("position_group", "—"),
+                "player_grade":     _pick_pg,
+                "apex_value_grade": _pick_avg,
+                "apex_verdict":     _pick_vd,
+                "apex_delta":       _pick_delta,
             }
             st.session_state["_dm_pre_pick_board"] = _pre_top3
             if st.session_state["draft_mode_selected_pid"] == pid:
@@ -2496,16 +2657,46 @@ def render_draft_mode(conn=None) -> None:
                 'What Changed</div>',
                 unsafe_allow_html=True,
             )
-            _lp_name = _last.get("name", "—")
-            _lp_pos  = _last.get("pos", "—")
-            _lp_team = _last.get("team", "—")
-            _lp_pick = _last.get("pick", "?")
+            _lp_name  = _last.get("name", "—")
+            _lp_pos   = _last.get("pos", "—")
+            _lp_team  = _last.get("team", "—")
+            _lp_pick  = _last.get("pick", "?")
+            _lp_pg    = _last.get("player_grade", "—")
+            _lp_avg   = _last.get("apex_value_grade", "—")
+            _lp_vd    = _last.get("apex_verdict", "—")
+            # verdict color
+            _vd_colors = {
+                "Monster Steal": "#5ab87a", "Steal": "#5ab87a", "Good Value": "#7eb4e2",
+                "Fair Value": "rgba(255,255,255,0.52)", "Slight Reach": "#e8a84a",
+                "Reach": "#e8a84a", "Big Reach": "#e05c5c", "Extreme Reach": "#e05c5c", "—": "rgba(255,255,255,0.28)",
+            }
+            _vd_color = _vd_colors.get(_lp_vd, "rgba(255,255,255,0.28)")
+            _lp_grade_html = ""
+            if _lp_pg != "—" or _lp_avg != "—":
+                def _wc_gc(g: str) -> str:
+                    if g.startswith("A"): return "#5ab87a"
+                    if g.startswith("B"): return "#7eb4e2"
+                    if g.startswith("C"): return "#e8a84a"
+                    if g in ("D", "F"):   return "#e05c5c"
+                    return "rgba(255,255,255,0.38)"
+                _lp_grade_html = (
+                    f'<div style="display:flex;gap:5px;align-items:center;margin-top:4px;flex-wrap:wrap;">'
+                    f'<span style="font-size:9px;color:rgba(255,255,255,0.30);">Player</span>'
+                    f'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:12px;font-weight:800;color:{_wc_gc(_lp_pg)};">{_lp_pg}</span>'
+                    f'<span style="font-size:9px;color:rgba(255,255,255,0.18);">·</span>'
+                    f'<span style="font-size:9px;color:rgba(255,255,255,0.30);">APEX Value</span>'
+                    f'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:12px;font-weight:800;color:{_wc_gc(_lp_avg)};">{_lp_avg}</span>'
+                    f'<span style="font-size:9px;color:rgba(255,255,255,0.18);">·</span>'
+                    f'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:10px;font-weight:700;color:{_vd_color};letter-spacing:0.06em;">{_lp_vd}</span>'
+                    f'</div>'
+                )
             st.markdown(
                 f'<div style="background:rgba(90,184,122,0.08);border:1px solid rgba(90,184,122,0.18);'
                 f'border-left:3px solid #5ab87a;border-radius:0 4px 4px 0;padding:7px 10px;margin-bottom:7px;">'
                 f'<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;font-weight:700;'
                 f'color:rgba(255,255,255,0.85);">#{_lp_pick} {_lp_name} ({_lp_pos})</div>'
                 f'<div style="font-size:10px;color:rgba(255,255,255,0.38);">Drafted by {_lp_team}</div>'
+                f'{_lp_grade_html}'
                 f'</div>',
                 unsafe_allow_html=True,
             )
@@ -3036,49 +3227,192 @@ def render_draft_mode(conn=None) -> None:
                         },
                     )
 
-            # Draft log (collapsed)
-            with st.expander(f"Draft log ({_drafted_n} picks)", expanded=False):
+            # Draft log (expanded when picks exist)
+            with st.expander(f"Draft log ({_drafted_n} picks)", expanded=(_drafted_n > 0)):
                 _dm_log = dm_get_drafted_picks(limit=300)
                 if not _dm_log:
                     st.info("No picks recorded yet.")
                 else:
-                    _log_rows = []
+                    # Build team board lookup for fit grades (one call per unique drafting team)
+                    _log_teams   = list({r["drafting_team"] for r in _dm_log if r.get("drafting_team")})
+                    _team_boards: dict[str, list[dict]] = {}
+                    for _lt in _log_teams:
+                        try:
+                            _team_boards[_lt] = dm_get_draft_team_board(team_code=_lt, seasonid=1, limit=300)
+                        except Exception:
+                            _team_boards[_lt] = []
+
+                    # Most-recent pick_number (for one-click undo)
+                    _most_recent_pick = min(r["pick_number"] for r in _dm_log)  # dm_log is DESC
+
+                    _undo_confirm = st.session_state.get("dm_undo_confirm_pick")
+
+                    # Clear Last Pick button (above log)
+                    _last_pick_num = _dm_log[0]["pick_number"] if _dm_log else None
+                    if _last_pick_num is not None:
+                        def _clear_last_cb(_pn=_last_pick_num):
+                            def _cb():
+                                _do_undo(_pn)
+                            return _cb
+                        st.button(
+                            f"↩ Clear Last Pick (#{_last_pick_num})",
+                            key="dm_clear_last_pick",
+                            on_click=_clear_last_cb(),
+                            use_container_width=True,
+                        )
+
+                    # Render each pick row
                     for _lr in _dm_log:
-                        _log_rows.append({
-                            "Pick":   f"#{_lr['pick_number']}"
-                                      + (f" R{_lr['round_number']}" if _lr.get("round_number") else ""),
-                            "Team":   _lr["drafting_team"] or "—",
-                            "Player": _lr["display_name"] or f"pid={_lr['prospect_id']}",
-                            "Pos":    _lr["position_group"] or "?",
-                        })
-                    st.dataframe(
-                        pd.DataFrame(_log_rows),
-                        use_container_width=True,
-                        hide_index=True,
-                    )
-                    st.caption(
-                        "Undo: `python -m scripts.reset_drafted_2026 --pick-number N --apply 1`"
-                    )
+                        _lr_pick  = _lr["pick_number"]
+                        _lr_rnd   = _lr.get("round_number")
+                        _lr_team  = _lr["drafting_team"] or "—"
+                        _lr_name  = _lr["display_name"]  or f"pid={_lr['prospect_id']}"
+                        _lr_pos   = _lr["position_group"] or "?"
+                        _lr_pid   = _lr["prospect_id"]
+
+                        # Compute grades from big board
+                        _lr_df_rows = df[df["prospect_id"] == _lr_pid]
+                        _lr_ibr     = _lr_df_rows.iloc[0] if not _lr_df_rows.empty else None
+                        _lr_apex_c  = (_lr_ibr.get("apex_composite") if _lr_ibr is not None else None)
+                        _lr_auto_ar = (_lr_ibr.get("auto_apex_rank")  if _lr_ibr is not None else None)
+                        if _lr_apex_c  is not None and pd.isna(float(_lr_apex_c)):  _lr_apex_c  = None
+                        if _lr_auto_ar is not None and pd.isna(float(_lr_auto_ar)): _lr_auto_ar = None
+                        _lr_pg            = _compute_player_grade(_lr_apex_c)
+                        _lr_avg, _lr_vd   = _compute_apex_value_grade(_lr_pick, _lr_auto_ar)
+                        _lr_delta         = (int(_lr_pick) - int(_lr_auto_ar)) if _lr_auto_ar is not None else None
+
+                        # Team fit grade from team board lookup
+                        _lr_tb_rows = _team_boards.get(_lr_team, [])
+                        _lr_tb_row  = next((r for r in _lr_tb_rows if r.get("prospect_id") == _lr_pid), None)
+                        _lr_fit_t   = (_lr_tb_row or {}).get("fit_tier")
+                        _lr_fit_b   = (_lr_tb_row or {}).get("fit_band")
+                        _lr_needs   = (_lr_tb_row or {}).get("needs_json")
+                        _lr_tfg     = _compute_team_fit_grade(_lr_pos, _lr_needs, _lr_fit_t, _lr_fit_b)
+                        _lr_verdict = _build_draft_verdict(_lr_pg, _lr_avg, _lr_tfg)
+                        _lr_ratio   = _build_rationale_line(_lr_name, _lr_pos, _lr_team, _lr_pick, _lr_pg, _lr_avg, _lr_tfg, _lr_delta)
+
+                        # Grade color helpers
+                        def _gcolor(g: str) -> str:
+                            if g.startswith("A"): return "#5ab87a"
+                            if g.startswith("B"): return "#7eb4e2"
+                            if g.startswith("C"): return "#e8a84a"
+                            if g in ("D", "F"):   return "#e05c5c"
+                            return "rgba(255,255,255,0.38)"
+
+                        _rnd_label = f" R{_lr_rnd}" if _lr_rnd else ""
+                        st.markdown(
+                            f'<div style="background:#161b22;border:1px solid rgba(255,255,255,0.08);'
+                            f'border-radius:4px;padding:8px 10px;margin-bottom:5px;">'
+                            f'<div style="display:flex;align-items:baseline;gap:6px;margin-bottom:4px;">'
+                            f'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:10px;'
+                            f'font-weight:700;color:rgba(255,255,255,0.35);">#{_lr_pick}{_rnd_label}</span>'
+                            f'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;'
+                            f'font-weight:800;color:rgba(255,255,255,0.90);">{_lr_name}</span>'
+                            f'<span style="font-size:9px;color:rgba(255,255,255,0.38);">{_lr_pos} · {_lr_team}</span>'
+                            f'</div>'
+                            f'<div style="display:flex;gap:6px;margin-bottom:4px;flex-wrap:wrap;">'
+                            + f'<span style="font-size:9px;letter-spacing:0.06em;color:rgba(255,255,255,0.30);">Player</span>'
+                            + f'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:12px;font-weight:700;color:{_gcolor(_lr_pg)};">{_lr_pg}</span>'
+                            + f'<span style="font-size:9px;color:rgba(255,255,255,0.15);">·</span>'
+                            + f'<span style="font-size:9px;letter-spacing:0.06em;color:rgba(255,255,255,0.30);">APEX</span>'
+                            + f'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:12px;font-weight:700;color:{_gcolor(_lr_avg)};">{_lr_avg}</span>'
+                            + f'<span style="font-size:9px;color:rgba(255,255,255,0.15);">·</span>'
+                            + f'<span style="font-size:9px;letter-spacing:0.06em;color:rgba(255,255,255,0.30);">Fit</span>'
+                            + f'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:12px;font-weight:700;color:{_gcolor(_lr_tfg)};">{_lr_tfg}</span>'
+                            + f'<span style="font-size:9px;color:rgba(255,255,255,0.15);">·</span>'
+                            + f'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:10px;font-weight:700;'
+                              f'color:#e8a84a;letter-spacing:0.06em;">{_lr_verdict}</span>'
+                            + f'</div>'
+                            + f'<div style="font-size:10px;color:rgba(255,255,255,0.42);line-height:1.4;">{_lr_ratio}</div>'
+                            + f'</div>',
+                            unsafe_allow_html=True,
+                        )
+
+                        # View + Undo buttons per row (flat — no nested columns)
+                        _is_last_pick    = (_lr_pick == _last_pick_num)
+                        _is_viewing_this = (st.session_state.get("dm_drafted_inspect_pid") == _lr_pid)
+
+                        def _make_view_cb(_pid=_lr_pid, _name=_lr_name):
+                            def _cb():
+                                st.session_state["dm_drafted_inspect_pid"] = _pid
+                                st.session_state["draft_mode_selected_pid"] = None
+                                st.session_state["draft_mode_locked_pid"]   = None
+                                st.session_state["dm_view_toast"]           = _name
+                            return _cb
+
+                        _view_label = f"✓ Viewing" if _is_viewing_this else f"View #{_lr_pick}"
+                        st.button(
+                            _view_label,
+                            key=f"dm_log_view_{_lr_pick}",
+                            on_click=_make_view_cb(),
+                            use_container_width=True,
+                            type="primary" if _is_viewing_this else "secondary",
+                        )
+
+                        if _undo_confirm == _lr_pick and not _is_last_pick:
+                            def _make_yes_cb(_pn=_lr_pick):
+                                def _cb():
+                                    _do_undo(_pn)
+                                return _cb
+                            def _make_no_cb():
+                                def _cb():
+                                    st.session_state["dm_undo_confirm_pick"] = None
+                                return _cb
+                            st.button(
+                                f"Confirm undo #{_lr_pick}?",
+                                key=f"dm_undo_yes_{_lr_pick}",
+                                on_click=_make_yes_cb(),
+                                use_container_width=True,
+                            )
+                            st.button(
+                                "Cancel",
+                                key=f"dm_undo_no_{_lr_pick}",
+                                on_click=_make_no_cb(),
+                                use_container_width=True,
+                            )
+                        else:
+                            def _make_undo_cb(_pn=_lr_pick, _last=_is_last_pick):
+                                def _cb():
+                                    if _last:
+                                        _do_undo(_pn)
+                                    else:
+                                        st.session_state["dm_undo_confirm_pick"] = _pn
+                                return _cb
+                            st.button(
+                                f"Undo #{_lr_pick}" if _is_last_pick else f"Undo #{_lr_pick}…",
+                                key=f"dm_log_undo_{_lr_pick}",
+                                on_click=_make_undo_cb(),
+                                use_container_width=True,
+                            )
 
     # ════════════════════════════════════════════════════════════════════════
     # RIGHT — Prospect Inspector (sticky)
     # ════════════════════════════════════════════════════════════════════════
     with _rc:
-        _is_locked   = _locked_pid is not None
-        _inspect_pid = _locked_pid if _is_locked else _sel_pid
+        _is_locked        = _locked_pid is not None
+        _drafted_view_pid = st.session_state.get("dm_drafted_inspect_pid")
+        _is_drafted_view  = (_drafted_view_pid is not None and not _is_locked)
+        _inspect_pid      = _locked_pid if _is_locked else (_drafted_view_pid if _is_drafted_view else _sel_pid)
 
         _lock_hdr, _lock_btn_col, _clear_btn_col = st.columns([2.2, 1, 1])
         with _lock_hdr:
+            _insp_label = "Inspector"
+            if _is_drafted_view:
+                _insp_label = "Inspector · DRAFTED"
             st.markdown(
-                '<div style="font-size:9px;font-weight:700;letter-spacing:0.14em;'
-                'text-transform:uppercase;color:rgba(255,255,255,0.32);padding-top:6px;">'
-                'Inspector</div>',
+                f'<div style="font-size:9px;font-weight:700;letter-spacing:0.14em;'
+                f'text-transform:uppercase;color:rgba(255,255,255,0.32);padding-top:6px;">'
+                f'{_insp_label}</div>',
                 unsafe_allow_html=True,
             )
         with _lock_btn_col:
             if _is_locked:
                 if st.button("Unlock", key="dm_lock_btn", use_container_width=True):
                     st.session_state["draft_mode_locked_pid"] = None
+                    st.rerun()
+            elif _is_drafted_view:
+                if st.button("← Board", key="dm_lock_btn", use_container_width=True):
+                    st.session_state["dm_drafted_inspect_pid"] = None
                     st.rerun()
             else:
                 if st.button(
@@ -3090,22 +3424,23 @@ def render_draft_mode(conn=None) -> None:
                     st.session_state["draft_mode_locked_pid"] = _sel_pid
                     st.rerun()
         with _clear_btn_col:
-            _has_selection = (_sel_pid is not None or _locked_pid is not None)
+            _has_selection = (_sel_pid is not None or _locked_pid is not None or _drafted_view_pid is not None)
             if st.button(
                 "Clear",
                 key="dm_insp_clear",
                 use_container_width=True,
                 disabled=not _has_selection,
             ):
-                st.session_state["draft_mode_selected_pid"] = None
-                st.session_state["draft_mode_locked_pid"]   = None
+                st.session_state["draft_mode_selected_pid"]  = None
+                st.session_state["draft_mode_locked_pid"]    = None
+                st.session_state["dm_drafted_inspect_pid"]   = None
                 st.rerun()
 
         if not _inspect_pid:
             st.markdown(
                 '<div style="padding:28px 12px;text-align:center;color:rgba(255,255,255,0.22);'
                 'font-family:\'Barlow\',sans-serif;font-size:12px;line-height:1.5;">'
-                'Click a player in the board<br>to open their profile here.</div>',
+                'Click a player in the board or<br>a name in the draft log.</div>',
                 unsafe_allow_html=True,
             )
         else:
@@ -3160,6 +3495,79 @@ def render_draft_mode(conn=None) -> None:
                 'text-transform:uppercase;padding:1px 5px;border-radius:2px;">LOCKED</span>'
                 if _is_locked else ""
             )
+
+            # ── Drafted player context card ────────────────────────────────────
+            if _is_drafted_view:
+                # Find the draft log row for this player
+                _dv_log = dm_get_drafted_picks(limit=300)
+                _dv_row = next((r for r in _dv_log if r.get("prospect_id") == _inspect_pid), None)
+                if _dv_row:
+                    _dv_pick  = _dv_row["pick_number"]
+                    _dv_rnd   = _dv_row.get("round_number")
+                    _dv_team  = _dv_row["drafting_team"] or "—"
+                    _dv_rnd_s = f" · R{_dv_rnd}" if _dv_rnd else ""
+                    # Compute grades for this drafted pick
+                    _dv_pg           = _compute_player_grade(_insp_apxs)
+                    _dv_avg, _dv_vd  = _compute_apex_value_grade(_dv_pick, _insp_apex)
+                    _dv_delta        = (int(_dv_pick) - int(_insp_apex)) if _insp_apex is not None else None
+                    # Team fit grade — look up team board for drafting team (not hat team)
+                    _dv_tb_rows: list[dict] = []
+                    try:
+                        _dv_tb_rows = dm_get_draft_team_board(team_code=_dv_team, seasonid=1, limit=300)
+                    except Exception:
+                        pass
+                    _dv_tb_row  = next((r for r in _dv_tb_rows if r.get("prospect_id") == _inspect_pid), None)
+                    _dv_fit_t   = (_dv_tb_row or {}).get("fit_tier")
+                    _dv_fit_b   = (_dv_tb_row or {}).get("fit_band")
+                    _dv_needs   = (_dv_tb_row or {}).get("needs_json")
+                    _dv_tfg     = _compute_team_fit_grade(_insp_pos, _dv_needs, _dv_fit_t, _dv_fit_b)
+                    _dv_verdict = _build_draft_verdict(_dv_pg, _dv_avg, _dv_tfg)
+                    _dv_ratio   = _build_rationale_line(_insp_name, _insp_pos, _dv_team, _dv_pick, _dv_pg, _dv_avg, _dv_tfg, _dv_delta)
+
+                    def _dv_gcolor(g: str) -> str:
+                        if g.startswith("A"): return "#5ab87a"
+                        if g.startswith("B"): return "#7eb4e2"
+                        if g.startswith("C"): return "#e8a84a"
+                        if g in ("D", "F"):   return "#e05c5c"
+                        return "rgba(255,255,255,0.38)"
+
+                    st.markdown(
+                        f'<div style="background:rgba(90,184,122,0.07);border:1px solid rgba(90,184,122,0.22);'
+                        f'border-left:3px solid #5ab87a;border-radius:0 4px 4px 0;padding:9px 11px;margin-bottom:7px;">'
+                        f'<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;">'
+                        f'<span style="background:rgba(90,184,122,0.15);border:1px solid rgba(90,184,122,0.32);'
+                        f'color:#5ab87a;font-family:\'Barlow Condensed\',sans-serif;font-size:9px;font-weight:700;'
+                        f'letter-spacing:0.10em;padding:1px 6px;border-radius:2px;">DRAFTED</span>'
+                        f'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:12px;font-weight:700;'
+                        f'color:rgba(255,255,255,0.70);">Pick #{_dv_pick}{_dv_rnd_s} · {_dv_team}</span>'
+                        f'</div>'
+                        f'<div style="display:flex;gap:8px;margin-bottom:5px;flex-wrap:wrap;align-items:center;">'
+                        + f'<span style="font-size:9px;color:rgba(255,255,255,0.30);">Player</span>'
+                        + f'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:14px;font-weight:800;color:{_dv_gcolor(_dv_pg)};">{_dv_pg}</span>'
+                        + f'<span style="font-size:9px;color:rgba(255,255,255,0.18);">·</span>'
+                        + f'<span style="font-size:9px;color:rgba(255,255,255,0.30);">APEX Value</span>'
+                        + f'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:14px;font-weight:800;color:{_dv_gcolor(_dv_avg)};">{_dv_avg}</span>'
+                        + f'<span style="font-size:9px;color:rgba(255,255,255,0.18);">·</span>'
+                        + f'<span style="font-size:9px;color:rgba(255,255,255,0.30);">Team Fit</span>'
+                        + f'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:14px;font-weight:800;color:{_dv_gcolor(_dv_tfg)};">{_dv_tfg}</span>'
+                        + f'</div>'
+                        + f'<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:11px;font-weight:700;'
+                          f'color:#e8a84a;letter-spacing:0.06em;margin-bottom:4px;">{_dv_verdict}</div>'
+                        + f'<div style="font-size:10px;color:rgba(255,255,255,0.45);line-height:1.4;">{_dv_ratio}</div>'
+                        + f'</div>',
+                        unsafe_allow_html=True,
+                    )
+                    # Undo button in drafted inspector view
+                    def _insp_undo_cb(_pn=_dv_pick):
+                        def _cb():
+                            _do_undo(_pn)
+                        return _cb
+                    st.button(
+                        f"↩ Undo Pick #{_dv_pick}",
+                        key=f"dm_insp_undo_{_dv_pick}",
+                        on_click=_insp_undo_cb(),
+                        use_container_width=True,
+                    )
 
             # Player header card
             _tier_chip = (
