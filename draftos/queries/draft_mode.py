@@ -934,6 +934,244 @@ def delete_draft_pick(pick_number: int, season_id: int = _SEASON_ID) -> bool:
         return False
 
 
+# ─────────────────────────────────────────────────────────────
+# Sandbox overlay — draft_sandbox_picks (Migration 0057)
+#
+# These helpers provide isolated "drafted" state per sandbox_id (typically a UUID
+# assigned per browser session). Sandbox marks are purely additive: they hide
+# prospects from the remaining board for one session only.
+#
+# Precedence rule:
+#   Canonical drafted_picks_2026 always takes priority. If a prospect is
+#   canonically drafted, it is removed from the board regardless of sandbox state.
+#   Sandbox marks can only *add* to the set of hidden prospects — they cannot
+#   restore a canonically-drafted prospect to the board.
+#
+# Canonical functions (mark_prospect_drafted, insert_draft_pick, etc.) are
+# untouched and remain the sole write path for real draft night picks.
+# ─────────────────────────────────────────────────────────────
+
+def get_sandbox_picks(
+    sandbox_id: str,
+    season_id: int = _SEASON_ID,
+) -> list[dict]:
+    """
+    Return all sandbox-drafted prospects for this sandbox_id and season.
+
+    These are marks written by mark_prospect_sandboxed(), not from canonical
+    drafted_picks_2026. Returns a list of dicts with keys:
+      sandbox_id, season_id, prospect_id, sandboxed_at, note,
+      display_name, position_group.
+
+    Returns [] on any error or if the sandbox table doesn't exist yet.
+    """
+    try:
+        with connect() as conn:
+            rows = conn.execute(
+                """
+                SELECT sb.sandbox_id, sb.season_id, sb.prospect_id,
+                       sb.sandboxed_at, sb.note,
+                       p.display_name, p.position_group
+                FROM draft_sandbox_picks sb
+                LEFT JOIN prospects p ON p.prospect_id = sb.prospect_id
+                WHERE sb.sandbox_id = ?
+                  AND sb.season_id  = ?
+                ORDER BY sb.sandboxed_at ASC
+                """,
+                (sandbox_id, season_id),
+            ).fetchall()
+            return [dict(r) for r in rows]
+    except Exception:
+        return []
+
+
+def get_sandbox_drafted_pids(
+    sandbox_id: str,
+    season_id: int = _SEASON_ID,
+) -> set[int]:
+    """
+    Return the set of prospect_ids sandbox-drafted in this session.
+
+    Fast path used by remaining-board overlay functions to post-filter results.
+    Returns empty set on any error.
+    """
+    try:
+        with connect() as conn:
+            rows = conn.execute(
+                "SELECT prospect_id FROM draft_sandbox_picks WHERE sandbox_id=? AND season_id=?",
+                (sandbox_id, season_id),
+            ).fetchall()
+            return {r["prospect_id"] for r in rows}
+    except Exception:
+        return set()
+
+
+def mark_prospect_sandboxed(
+    sandbox_id: str,
+    prospect_id: int,
+    note: str | None = None,
+    season_id: int = _SEASON_ID,
+) -> str:
+    """
+    Mark a prospect as sandbox-drafted for this sandbox_id.
+
+    Writes to draft_sandbox_picks ONLY. The canonical drafted_picks_2026 table
+    is never touched. Idempotent: INSERT OR REPLACE so calling twice is safe.
+
+    Returns:
+      "OK: prospect_id=N sandboxed."    on success
+      "REJECT: already canonically drafted at pick #N."  if canonical pick exists
+      "ERROR: ..."                        on unexpected DB error
+    """
+    try:
+        with connect() as conn:
+            # Guard: don't sandbox something that's canonically drafted — it's redundant
+            # and would be confusing. Still safe, but give caller a clear signal.
+            canonical = conn.execute(
+                "SELECT pick_number FROM drafted_picks_2026 WHERE season_id=? AND prospect_id=?",
+                (season_id, prospect_id),
+            ).fetchone()
+            if canonical:
+                return (
+                    f"REJECT: prospect_id={prospect_id} already canonically drafted "
+                    f"at pick #{canonical['pick_number']}. No sandbox mark needed."
+                )
+
+            conn.execute(
+                """
+                INSERT OR REPLACE INTO draft_sandbox_picks
+                    (sandbox_id, season_id, prospect_id, sandboxed_at, note)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (sandbox_id, season_id, prospect_id, _utc_now_iso(), note or None),
+            )
+            conn.commit()
+        return f"OK: prospect_id={prospect_id} sandboxed."
+    except Exception as exc:
+        return f"ERROR: {exc}"
+
+
+def delete_sandbox_pick(
+    sandbox_id: str,
+    prospect_id: int,
+    season_id: int = _SEASON_ID,
+) -> bool:
+    """
+    Remove a single sandbox mark for this sandbox_id + prospect_id.
+
+    Returns True if a row was deleted, False otherwise (no-op if not found).
+    """
+    try:
+        with connect() as conn:
+            result = conn.execute(
+                "DELETE FROM draft_sandbox_picks WHERE sandbox_id=? AND season_id=? AND prospect_id=?",
+                (sandbox_id, season_id, prospect_id),
+            )
+            conn.commit()
+            return result.rowcount > 0
+    except Exception:
+        return False
+
+
+def reset_sandbox(
+    sandbox_id: str,
+    season_id: int = _SEASON_ID,
+) -> int:
+    """
+    Clear all sandbox marks for this sandbox_id and season.
+
+    Returns the number of rows deleted. Safe to call when sandbox is empty.
+    Does NOT touch canonical drafted_picks_2026.
+    """
+    try:
+        with connect() as conn:
+            result = conn.execute(
+                "DELETE FROM draft_sandbox_picks WHERE sandbox_id=? AND season_id=?",
+                (sandbox_id, season_id),
+            )
+            conn.commit()
+            return result.rowcount
+    except Exception:
+        return 0
+
+
+def get_remaining_board_sandbox(
+    sandbox_id: str,
+    position_filter: list[str] | None = None,
+    tier_filter: str | None = None,
+    div_filter: str | None = None,
+    sort_by: str = "consensus",
+    limit: int = 100,
+    season_id: int = _SEASON_ID,
+) -> list[dict]:
+    """
+    Remaining board with sandbox overlay applied.
+
+    Reads the canonical remaining board (v_draft_targets_remaining_2026, which already
+    excludes canonically-drafted prospects), then additionally filters out any prospect
+    in this sandbox session's sandbox picks.
+
+    Precedence: canonical picks removed first (via view), sandbox picks removed second.
+    A prospect canonically drafted cannot be restored by the sandbox — it simply won't
+    appear in v_draft_targets_remaining_2026 at all.
+
+    All filter and sort semantics are identical to get_remaining_board().
+    """
+    # Fetch the canonical remaining board (already excludes canonical picks)
+    rows = get_remaining_board(
+        position_filter=position_filter,
+        tier_filter=tier_filter,
+        div_filter=div_filter,
+        sort_by=sort_by,
+        limit=limit + 500,   # over-fetch so sandbox filtering doesn't starve the result
+        season_id=season_id,
+    )
+
+    # Overlay: remove sandbox-drafted prospects
+    sandbox_pids = get_sandbox_drafted_pids(sandbox_id, season_id)
+    if sandbox_pids:
+        rows = [r for r in rows if r["prospect_id"] not in sandbox_pids]
+
+    return rows[:limit]
+
+
+def get_draft_remaining_board_sandbox(
+    sandbox_id: str,
+    season_id: int = _SEASON_ID,
+    limit: int = 300,
+) -> list[dict]:
+    """
+    Spec-path remaining board (get_draft_remaining_board) with sandbox overlay.
+
+    Same semantics as get_remaining_board_sandbox() but reads from the spec-path
+    v_draft_remaining_2026 via get_draft_remaining_board().
+
+    Precedence: canonical picks excluded first (via view), sandbox picks excluded second.
+    """
+    rows = get_draft_remaining_board(seasonid=season_id, limit=limit + 500)
+
+    sandbox_pids = get_sandbox_drafted_pids(sandbox_id, season_id)
+    if sandbox_pids:
+        rows = [r for r in rows if r["prospect_id"] not in sandbox_pids]
+
+    return rows[:limit]
+
+
+def get_drafted_count_sandbox(
+    sandbox_id: str,
+    season_id: int = _SEASON_ID,
+) -> int:
+    """
+    Total count of picked prospects for a sandbox session:
+    canonical picks + sandbox-only picks (union, no double-counting).
+    """
+    canonical_n = get_drafted_count(season_id)
+    sandbox_n   = len(get_sandbox_drafted_pids(sandbox_id, season_id))
+    # Canonical picks are already excluded from sandbox view so there's no overlap
+    # to subtract — sandbox marks that overlap canonical are rejected at write time.
+    return canonical_n + sandbox_n
+
+
 def get_all_pick_ownership(seasonid: int = _SEASON_ID) -> dict[int, str]:
     """
     Build remaining pick_number → team_id map from all teams' draft_capital_json.

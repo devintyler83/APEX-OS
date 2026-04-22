@@ -56,7 +56,79 @@ from draftos.queries.draft_mode import (
     insert_draft_pick as dm_insert_draft_pick,
     get_all_pick_ownership as dm_get_all_pick_ownership,
     delete_draft_pick as dm_delete_draft_pick,
+    # Sandbox overlay helpers (Migration 0057)
+    mark_prospect_sandboxed as dm_mark_sandboxed,
+    delete_sandbox_pick as dm_delete_sandbox_pick,
+    reset_sandbox as dm_reset_sandbox,
+    get_sandbox_picks as dm_get_sandbox_picks,
+    get_sandbox_drafted_pids as dm_get_sandbox_drafted_pids,
+    get_remaining_board_sandbox as dm_get_remaining_board_sandbox,
+    get_draft_remaining_board_sandbox as dm_get_draft_remaining_board_sandbox,
+    get_drafted_count_sandbox as dm_get_drafted_count_sandbox,
 )
+
+# ─────────────────────────────────────────────────────────────
+# SANDBOX DRAFT MODE
+#
+# When SANDBOX_MODE = True:
+#   - Each Streamlit browser session gets a unique sandbox_id (UUID stored in
+#     st.session_state["_sandbox_id"]) — private tab sandbox, fully isolated.
+#   - Users may optionally join a named room: sidebar text input → "room:{clean_name}".
+#     All tabs sharing the same named room see the same sandbox picks.
+#   - The active sandbox_id is resolved by active_sandbox_id():
+#       named room → "room:{clean_name}"
+#       private    → per-tab UUID
+#   - Drafted marks go to draft_sandbox_picks only; canonical drafted_picks_2026 is
+#     never written.
+#   - Remaining board reads exclude both canonical picks and this session's sandbox picks.
+#   - A [SANDBOX] badge appears in the Draft Mode status strip.
+#
+# When SANDBOX_MODE = False (default / production):
+#   - All behavior is identical to before this feature was added. Zero code-path changes.
+#   - sandbox helpers are imported but never called.
+#
+# To enable: flip the constant below, restart the app, open a fresh browser tab.
+# ─────────────────────────────────────────────────────────────
+SANDBOX_MODE: bool = False
+
+
+def sanitize_room_name(raw: str) -> str:
+    """
+    Clean a user-supplied room name to a safe sandbox_id component.
+
+    Rules applied in order:
+      - strip leading/trailing whitespace
+      - lowercase
+      - spaces → hyphens
+      - strip any character outside [a-z0-9_-]
+      - truncate to 40 characters
+
+    Returns empty string if nothing valid remains after cleaning.
+    """
+    import re as _re
+    s = raw.strip().lower().replace(" ", "-")
+    s = _re.sub(r"[^a-z0-9_-]", "", s)
+    return s[:40]
+
+
+def active_sandbox_id() -> str:
+    """
+    Resolve the currently active sandbox_id string from session state.
+
+    Precedence:
+      1. If sandbox_room_name in session_state is a non-empty valid string after
+         sanitize_room_name(), return "room:{clean_name}" — the shared named room.
+      2. Otherwise return the per-tab UUID from "_sandbox_id" — private tab sandbox.
+
+    The "room:" prefix namespaces shared rooms away from private UUIDs so they can
+    never collide even if a user types a 36-char string that looks like a UUID.
+
+    Only meaningful when SANDBOX_MODE = True. Returns "" if session state not initialized.
+    """
+    clean = sanitize_room_name(st.session_state.get("sandbox_room_name", ""))
+    if clean:
+        return f"room:{clean}"
+    return st.session_state.get("_sandbox_id", "")
 
 # Streamlit ≥ 1.35 supports on_select / selection_mode on st.dataframe
 _ON_SELECT_AVAILABLE = tuple(
@@ -2248,6 +2320,32 @@ def render_draft_mode(conn=None) -> None:
             f'</div>'
         )
 
+    # ── Sandbox session init ─────────────────────────────────────────────────
+    # Derive a stable per-browser-tab UUID when sandbox mode is enabled.
+    # st.session_state is already isolated per Streamlit connection, so this UUID
+    # naturally gives each tab an independent sandbox without any extra logic.
+    if SANDBOX_MODE and "_sandbox_id" not in st.session_state:
+        import uuid as _uuid_mod
+        st.session_state["_sandbox_id"] = str(_uuid_mod.uuid4())
+        # TTL cleanup: purge sandbox rows older than 7 days on first load of each new session.
+        # Runs at most once per browser tab — the guard above fires only on first load.
+        try:
+            with connect() as _ttl_conn:
+                _ttl_conn.execute(
+                    "DELETE FROM draft_sandbox_picks WHERE sandboxed_at < datetime('now', '-7 days')"
+                )
+                _ttl_conn.commit()
+        except Exception:
+            pass  # TTL failure is non-fatal; old rows are invisible, just slightly wasteful
+    # Seed room-name and confirm keys on first load (idempotent).
+    if SANDBOX_MODE:
+        if "sandbox_room_name" not in st.session_state:
+            st.session_state["sandbox_room_name"] = ""
+        if "sandbox_clear_confirm" not in st.session_state:
+            st.session_state["sandbox_clear_confirm"] = False
+    # active_sandbox_id() resolves named room → "room:{name}" or private UUID.
+    _sandbox_id: str | None = active_sandbox_id() if SANDBOX_MODE else None
+
     # ── Canonical state keys ─────────────────────────────────────────────────
     _STATE_DEFAULTS: list[tuple[str, object]] = [
         ("draft_mode_selected_pid", None),
@@ -2299,13 +2397,23 @@ def render_draft_mode(conn=None) -> None:
     _overall        = _pick_info["overall_pick"]
     _round_num      = _pick_info["round_number"]
     _pick_in        = _pick_info["pick_in_round"]
-    _drafted_n      = dm_get_drafted_count()
+    # When sandbox mode is on, drafted_count includes canonical + this session's sandbox marks.
+    _drafted_n = (
+        dm_get_drafted_count_sandbox(_sandbox_id, season_id=1)
+        if SANDBOX_MODE and _sandbox_id
+        else dm_get_drafted_count()
+    )
     # pick_ownership: {remaining_pick_number: team_id} — excludes already-drafted picks
     _pick_ownership = dm_get_all_pick_ownership(seasonid=1)
     _next_up_team   = _pick_ownership.get(_overall)  # team on the clock per capital map
 
     # ── Remaining board (read once) ──────────────────────────────────────────
-    _remaining = dm_get_draft_remaining_board(seasonid=1, limit=300)
+    # Sandbox mode: additionally hide prospects marked in this session's sandbox.
+    _remaining = (
+        dm_get_draft_remaining_board_sandbox(_sandbox_id, season_id=1, limit=300)
+        if SANDBOX_MODE and _sandbox_id
+        else dm_get_draft_remaining_board(seasonid=1, limit=300)
+    )
 
     # ── Draft grade helpers ──────────────────────────────────────────────────
 
@@ -2425,8 +2533,21 @@ def render_draft_mode(conn=None) -> None:
     # ── Undo helper ──────────────────────────────────────────────────────────
 
     def _do_undo(pick_number: int) -> bool:
-        """Delete a drafted pick and clear related session state."""
-        ok = dm_delete_draft_pick(pick_number=pick_number, season_id=1)
+        """Delete a drafted pick and clear related session state.
+
+        In sandbox mode: pick_number is ignored; undo removes the most recent
+        sandbox mark by pid (stored in draft_mode_last_pick).
+        In canonical mode: unchanged — deletes from drafted_picks_2026 by pick_number.
+        """
+        if SANDBOX_MODE and _sandbox_id:
+            # Sandbox undo: remove by pid, not pick_number
+            _lp = st.session_state.get("draft_mode_last_pick")
+            _pid_to_undo = _lp.get("pid") if _lp else None
+            if _pid_to_undo is None:
+                return False
+            ok = dm_delete_sandbox_pick(_sandbox_id, _pid_to_undo, season_id=1)
+        else:
+            ok = dm_delete_draft_pick(pick_number=pick_number, season_id=1)
         if ok:
             # Clear undo confirm sentinel
             st.session_state["dm_undo_confirm_pick"] = None
@@ -2453,14 +2574,21 @@ def render_draft_mode(conn=None) -> None:
                 }
                 for r in (_remaining or [])[:3]
             ]
-            dm_insert_draft_pick(
-                seasonid=1,
-                overall_pick=_pi["overall_pick"],
-                round_number=_pi["round_number"],
-                pick_in_round=_pi["pick_in_round"],
-                drafting_team=team_code,
-                prospectid=pid,
-            )
+            if SANDBOX_MODE and _sandbox_id:
+                # Sandbox write path: mark prospect in session-isolated table only.
+                # Canonical drafted_picks_2026 is never touched.
+                result = dm_mark_sandboxed(_sandbox_id, pid, season_id=1)
+                if not result.startswith("OK"):
+                    raise ValueError(result)
+            else:
+                dm_insert_draft_pick(
+                    seasonid=1,
+                    overall_pick=_pi["overall_pick"],
+                    round_number=_pi["round_number"],
+                    pick_in_round=_pi["pick_in_round"],
+                    drafting_team=team_code,
+                    prospectid=pid,
+                )
             _picked = next((r for r in (_remaining or []) if r.get("prospect_id") == pid), {})
             # Compute grades at draft time using big-board data
             _df_pick_rows = df[df["prospect_id"] == pid]
@@ -2526,8 +2654,13 @@ def render_draft_mode(conn=None) -> None:
 
         # Status strip: on-the-clock team + pick number + drafted count
         _clock_label = f"On the clock: {_next_up_team}" if _next_up_team else "On the clock"
+        _sandbox_pill = (
+            _pill("SANDBOX", "#f5a623", "rgba(245,166,35,0.12)", "rgba(245,166,35,0.28)")
+            if SANDBOX_MODE else ""
+        )
         st.markdown(
             f'<div style="display:flex;flex-wrap:wrap;gap:5px;margin:5px 0 8px;">'
+            + _sandbox_pill
             + _pill(_clock_label, "#5ab87a", "rgba(90,184,122,0.12)", "rgba(90,184,122,0.28)")
             + _pill(f"Next #{_overall} · R{_round_num} P{_pick_in}",
                     "rgba(255,255,255,0.52)", "rgba(255,255,255,0.05)", "rgba(255,255,255,0.09)")
@@ -4158,6 +4291,95 @@ st.caption("APEX OS · 2026 Draft · Session 44 · " + _export_dt.now().strftime
 # ---------------------------------------------------------------------------
 with st.sidebar:
     st.header("Filters")
+
+    # ── Sandbox Controls ─────────────────────────────────────────────────────
+    # Visible only when SANDBOX_MODE = True.
+    # Room resolution: active_sandbox_id() returns either "room:{name}" (named room)
+    # or the per-tab private UUID. All reads/writes in the Draft Room use that value.
+    if SANDBOX_MODE:
+        # Resolve active room label for display
+        _sb_clean_room = sanitize_room_name(st.session_state.get("sandbox_room_name", ""))
+        _sb_active_id  = f"room:{_sb_clean_room}" if _sb_clean_room else st.session_state.get("_sandbox_id", "")
+        _sb_is_named   = bool(_sb_clean_room)
+        _sb_mode_label = f"room:{_sb_clean_room}" if _sb_is_named else "private"
+
+        with st.expander("🔶 Sandbox Controls", expanded=_sb_is_named):
+            # Current room status line
+            st.markdown(
+                f'<div style="font-size:11px;color:rgba(255,255,255,0.55);margin-bottom:6px;">'
+                f'Current room: <code style="color:#f5a623;">{_sb_mode_label}</code></div>',
+                unsafe_allow_html=True,
+            )
+
+            # Pick count for the currently active sandbox_id
+            _sb_n = len(dm_get_sandbox_drafted_pids(_sb_active_id, season_id=1)) if _sb_active_id else 0
+            st.caption(f"{_sb_n} sandbox pick(s) in this room.")
+
+            st.divider()
+
+            # ── Named room join / leave ──────────────────────────────────────
+            st.markdown(
+                '<div style="font-size:10px;font-weight:700;letter-spacing:0.10em;'
+                'text-transform:uppercase;color:rgba(255,255,255,0.35);margin-bottom:4px;">'
+                'Join a named room</div>',
+                unsafe_allow_html=True,
+            )
+            _sb_room_input = st.text_input(
+                "Room name",
+                value=st.session_state.get("sandbox_room_name", ""),
+                max_chars=40,
+                placeholder="e.g. alpha or mock-2026",
+                label_visibility="collapsed",
+                key="sb_room_name_input",
+            )
+            st.caption("Named rooms are shared with anyone using the same room name.")
+            _sb_join_col, _sb_leave_col = st.columns(2)
+            with _sb_join_col:
+                if st.button("Join room", use_container_width=True):
+                    _cleaned = sanitize_room_name(_sb_room_input)
+                    if _cleaned:
+                        st.session_state["sandbox_room_name"] = _cleaned
+                        st.session_state["sandbox_clear_confirm"] = False
+                        st.rerun()
+                    else:
+                        st.warning("Room name must contain at least one letter or digit.")
+            with _sb_leave_col:
+                if st.button("Private room", use_container_width=True, disabled=not _sb_is_named):
+                    st.session_state["sandbox_room_name"] = ""
+                    st.session_state["sandbox_clear_confirm"] = False
+                    st.rerun()
+            # Show the cleaned room name after a successful join so the user sees
+            # what normalization produced (e.g. "Alpha Room!!!" → "room:alpha-room").
+            if _sb_is_named:
+                st.caption(f"Joined as: room:{_sb_clean_room}")
+
+            st.divider()
+
+            # ── Clear sandbox ────────────────────────────────────────────────
+            st.markdown(
+                '<div style="font-size:10px;font-weight:700;letter-spacing:0.10em;'
+                'text-transform:uppercase;color:rgba(255,255,255,0.35);margin-bottom:4px;">'
+                'Clear current sandbox</div>',
+                unsafe_allow_html=True,
+            )
+            if _sb_n == 0:
+                st.caption("No picks to clear.")
+            elif not st.session_state.get("sandbox_clear_confirm"):
+                if st.button("Clear sandbox", use_container_width=True):
+                    st.session_state["sandbox_clear_confirm"] = True
+                    st.rerun()
+            else:
+                st.warning(f"Clear all {_sb_n} pick(s) from **{_sb_mode_label}**?")
+                _sb_yes_col, _sb_no_col = st.columns(2)
+                with _sb_yes_col:
+                    if st.button("Yes, clear", use_container_width=True):
+                        dm_reset_sandbox(_sb_active_id, season_id=1)
+                        st.session_state["sandbox_clear_confirm"] = False
+                        st.rerun()
+                with _sb_no_col:
+                    if st.button("Cancel", use_container_width=True):
+                        st.session_state["sandbox_clear_confirm"] = False
+                        st.rerun()
 
     with st.expander("📊 How APEX Score Works", expanded=False):
         st.markdown("""
