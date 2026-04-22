@@ -1,6 +1,6 @@
 # APEX OS State Snapshot
 
-Last Updated (UTC): 2026-04-22T04:07:14.541548+00:00
+Last Updated (UTC): 2026-04-22T06:00:00+00:00
 
 ---
 
@@ -8,7 +8,63 @@ Last Updated (UTC): 2026-04-22T04:07:14.541548+00:00
 
 - 2026 (season_id=1)
 
+## Doctor / Maintenance Tools
+
+| Command | Purpose |
+|---------|---------|
+| `sqlite3 data/edge/draftos.sqlite < prospect_ghosts_doctor.sql` | Read-only invariant checks: active-PID dupes, board ghosts, dedup rows, inactive leaks. |
+| `python -m scripts.fix_prospect_ghosts2026` | Dry-run classifier — prints all DEDUP_GHOST / INACTIVE_SNAPSHOT / MULTI_ACTIVE issues with planned actions. Read-only. |
+| `python -m scripts.fix_prospect_ghosts2026 --name "Player Name"` | Same, filtered to one player. |
+| `python -m scripts.apply_prospect_ghost_fixes2026 --apply 0` | Shows exact patch plan (deactivations + snapshot deletes). No writes. |
+| `python -m scripts.apply_prospect_ghost_fixes2026 --apply 1` | **Execute fixes.** Requires: (1) run the DB backup command printed by the script, (2) set `ALLOW_WRITES = True` inside the script. MULTI_ACTIVE clusters are never auto-fixed — they require manual review. |
+
+As of Session 101 (post-fix): DEDUP_GHOST and INACTIVE_SNAPSHOT passes complete. 304 MULTI_ACTIVE real-school clusters remain — require manual review before any further deactivation.
+
 ## Last Completed Milestone
+
+Session 101 close (Prospect Ghost Fix v1 — mechanical dedup/ghost/inactive-snapshot cleanup, season_id=1.)
+
+Session 101 close:
+- DB writes: YES — 609 prospect deactivations, 111 snapshot row deletions.
+- Schema change: prospect_ghost_fixes2026 audit table created (additive, IF NOT EXISTS).
+- Next migration label: 0049 (no migration needed — audit table created in-script).
+- Doctor: PASSED (post-fix).
+- Files modified: scripts/apply_prospect_ghost_fixes2026.py, STATE_SNAPSHOT.md.
+
+Prospect Ghost Fix v1 — mechanical pass only (no multi-active real-school cluster changes):
+
+SCOPE:
+  DEDUP_GHOST (609 prospects deactivated):
+    UPDATE prospects SET is_active=0 for all school_canonical LIKE '__dedup_%' or '__ghost_%'.
+    Deleted any snapshot rows those PIDs held.
+  INACTIVE_SNAPSHOT (13 prospects, 41 snapshot rows deleted):
+    Prospects already is_active=0 with real schools that had leaked into snapshot rows.
+    Removed from prospect_board_snapshot_rows only (no is_active change needed).
+  MULTI_ACTIVE (304 clusters): printed, NOT touched. Require manual review per session 101 spec.
+
+PROCESS:
+  - DB backup: data/edge/draftos_ghostfix_backup.sqlite (25MB, pre-fix).
+  - Dry run (--apply 0): confirmed 609 deactivations, 111 snapshot deletes, 0 multi-active writes.
+  - Spot-checked: Arvell Reese (pid=16 canonical preserved, 3 dedup pids deactivated),
+    Treydan Stukes (pid=160 canonical preserved, 9 snapshot rows cleared across 5 ghost PIDs),
+    TJ Parker (pid=27 canonical preserved, pid=644 LB ghost cleared from 6 snapshots),
+    Domonique Orange (pid=110 canonical preserved, 3 dedup deactivated, multi-active pid=1153
+    printed but not touched).
+  - Applied (--apply 1): deactivations=609, snapshot_deletes=111.
+  - Idempotency verified: second run → deactivations=0, snapshot_deletes=0.
+  - Audit table prospect_ghost_fixes2026: 720 rows (609 deactivate_prospect + 111 delete_snapshot_row).
+
+DOCTOR RESULTS (post-fix):
+  CHECK 1 (active PID dupes): unchanged — multi-active real-school pairs still present (expected).
+  CHECK 2 (multi-PID in snapshots): 349 distinct PIDs remaining — all from multi-active clusters (expected).
+  CHECK 3b (dedup rows in snapshots): 0 (was 70). CLEARED.
+  CHECK 4 (inactive PIDs in snapshots): 0 (was 41). CLEARED.
+
+NEXT:
+  Multi-active real-school cluster resolution (304 clusters) — Session 102+ when ready.
+  Requires per-cluster review: the LB-ghost pattern (one real-position PID + one LB PID,
+  same school) accounts for the majority; a separate targeted pass can deactivate LB
+  duplicates where the player's canonical position is clearly non-LB.
 
 Session 100 close (Draft Mode scoring inversion fix — quality-dominant formula, non-negative capital fit, Team Board quality gate.)
 
