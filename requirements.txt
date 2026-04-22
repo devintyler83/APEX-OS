@@ -1,0 +1,5 @@
+streamlit
+pandas
+polars
+rapidfuzz
+python-dotenv

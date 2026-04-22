@@ -10,6 +10,7 @@ requires-python = ">=3.12"
 
 dependencies = [
   "streamlit",
+  "pandas",
   "polars",
   "rapidfuzz",
   "python-dotenv",
