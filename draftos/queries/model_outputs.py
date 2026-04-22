@@ -424,6 +424,14 @@ def get_big_board(
     for row in board:
         row["tag_names"] = tags_by_pid.get(row["prospect_id"], "") or ""
 
+    # Remove ghost duplicate PIDs: unscored rows where a scored sibling with the same
+    # display_name already exists (LB ghost PID splits, prior-ingest duplicates).
+    _scored_names = {r["display_name"] for r in board if r.get("apex_composite") is not None}
+    board = [
+        r for r in board
+        if r.get("apex_composite") is not None or r["display_name"] not in _scored_names
+    ]
+
     return board
 
 

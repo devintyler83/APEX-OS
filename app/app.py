@@ -2382,8 +2382,20 @@ def render_draft_mode(conn=None) -> None:
             )
 
         # View toggle
-        _VIEW_OPTS   = ["best_available", "best_fit", "market_edge", "safest"]
-        _VIEW_LABELS = ["Best Available", "Best Fit", "Market Edge", "Safest"]
+        _VIEW_OPTS   = [
+            "best_available",
+            "best_available_team",
+            "best_fit_team",
+            "market_edge",
+            "safest",
+        ]
+        _VIEW_LABELS = [
+            "Best Available",
+            "Best Avail · Team",
+            "Best Fit · Team",
+            "Market Edge",
+            "Safest",
+        ]
         st.markdown(
             '<div style="font-size:9px;font-weight:700;letter-spacing:0.14em;'
             'text-transform:uppercase;color:rgba(255,255,255,0.32);margin-bottom:3px;">'
@@ -2392,10 +2404,13 @@ def render_draft_mode(conn=None) -> None:
         )
         # Capture view before rendering radio — needed to detect view-switch and bust board key.
         _dm_view_before_radio = _dm_view
-        # Guard: if stored view is stale key "best_value" (pre-rename), coerce to "market_edge".
+        # Stale-key guards for pre-rename mode keys.
         if _dm_view_before_radio == "best_value":
             _dm_view_before_radio = "market_edge"
             st.session_state["draft_mode_view"] = "market_edge"
+        if _dm_view_before_radio == "best_fit":
+            _dm_view_before_radio = "best_fit_team"
+            st.session_state["draft_mode_view"] = "best_fit_team"
         _view_label = st.radio(
             "dm_view_radio",
             _VIEW_LABELS,
@@ -2532,26 +2547,224 @@ def render_draft_mode(conn=None) -> None:
                 unsafe_allow_html=True,
             )
 
+            # ── Team needs (parsed once, shared across team-context modes) ──────
+            def _parse_team_needs(team_rows: list[dict]) -> tuple[set, set, str]:
+                """Return (premium_pos, secondary_pos, timeline) from team board rows."""
+                _prem, _sec, _tl = set(), set(), "development"
+                if not team_rows:
+                    return _prem, _sec, _tl
+                try:
+                    _nj = _json_mod.loads(str(team_rows[0].get("needs_json") or "[]"))
+                    for _n in _nj:
+                        _t = str(_n.get("tier") or "").upper()
+                        _p = str(_n.get("position") or "")
+                        if _t == "PREMIUM":
+                            _prem.add(_p)
+                        elif _t == "SECONDARY":
+                            _sec.add(_p)
+                    _tl = str(team_rows[0].get("development_timeline") or "development").lower()
+                except Exception:
+                    pass
+                return _prem, _sec, _tl
+
+            def _capital_anchor(cap_str: str) -> int:
+                """Map capital_adjusted string to a representative pick number."""
+                s = str(cap_str or "").upper()
+                if "1-10" in s:          return 5
+                if "12-22" in s:         return 17
+                if "16-25" in s or "18-25" in s: return 22
+                if "22-32" in s or "25-32" in s: return 28
+                if "R1 LATE" in s:       return 28
+                if s.startswith("R1"):   return 24
+                if "R2 TOP" in s or "R2 EARLY" in s: return 36
+                if "R2 MID" in s:        return 50
+                if "R2 LATE" in s:       return 58
+                if s.startswith("R2"):   return 44
+                if "R3 TOP" in s or "R3 EARLY" in s: return 68
+                if "R3 MID" in s:        return 80
+                if s.startswith("R3"):   return 75
+                if s.startswith("R4"):   return 112
+                if s.startswith("R5") or s.startswith("R6"): return 160
+                if s.startswith("R7") or "UDFA" in s: return 225
+                return 150
+
+            def _compute_team_fit_score(
+                player_row: dict,
+                rpg: float | None,
+                premium_pos: set,
+                secondary_pos: set,
+                team_picks: list,
+                timeline: str,
+                mode: str,
+            ) -> tuple[float, dict]:
+                """
+                Deterministic team-fit scoring.
+
+                Best Fit · Team weights (need dominates):
+                  need_weight  : premium=100  secondary=55  none=0
+                  quality      : 0–50  (blend RPG 60% + APEX rank 40%)
+                  capital      : 0–30  (proximity of player's expected range to team picks)
+                  market       : –15..+15 (APEX edge signal)
+                  risk_penalty : 0..–20 (FM active; larger for win-now)
+
+                Best Avail · Team: same components, need weights 20/8/0, quality weight 2×.
+                """
+                pos       = str(player_row.get("position_group") or "")
+                apex_rank = player_row.get("apex_rank")
+                cap_str   = str(player_row.get("capital_adjusted") or "")
+                div_flag  = str(player_row.get("divergence_flag") or "").upper()
+                div_mag   = str(player_row.get("divergence_magnitude") or "").upper()
+                fm        = str(player_row.get("failure_mode_primary") or "").upper()
+                n_rem     = max(len(_remaining), 1)
+
+                is_win_now = ("win" in timeline)
+
+                # A) Need weight
+                if pos in premium_pos:
+                    need_cat = "PREMIUM"
+                    nw_fit   = 100.0
+                    nw_avail = 20.0
+                elif pos in secondary_pos:
+                    need_cat = "SECONDARY"
+                    nw_fit   = 55.0
+                    nw_avail = 8.0
+                else:
+                    need_cat = "NONE"
+                    nw_fit   = 0.0
+                    nw_avail = 0.0
+
+                need_weight = nw_fit if mode == "best_fit_team" else nw_avail
+
+                # B) Player quality (0–50)
+                rpg_comp  = 0.0
+                if rpg is not None:
+                    rpg_comp = max(0.0, min(50.0, (rpg - 40.0) * (50.0 / 50.0)))
+                apex_comp = 0.0
+                if apex_rank is not None:
+                    apex_comp = max(0.0, (1.0 - (apex_rank - 1) / n_rem) * 25.0)
+                quality = rpg_comp * 0.60 + apex_comp * 0.40
+                # Best Avail mode: double the quality contribution
+                quality_weight = 2.0 if mode == "best_available_team" else 1.0
+                quality_scored = quality * quality_weight
+
+                # C) Capital match (0–30)
+                anchor   = _capital_anchor(cap_str)
+                cap_score = 0.0
+                if team_picks:
+                    dists    = [abs(anchor - p) for p in team_picks]
+                    nearest  = min(dists)
+                    near_pick = min(team_picks, key=lambda p: abs(p - anchor))
+                    reach_gap = near_pick - anchor  # positive = team picking late of expected
+                    if reach_gap > 20:
+                        # Hard reach — discount heavily
+                        cap_score = max(-10.0, 15.0 - reach_gap * 0.8)
+                    elif nearest <= 8:
+                        cap_score = 30.0
+                    elif nearest <= 25:
+                        cap_score = 30.0 - (nearest - 8) * 1.0
+                    else:
+                        cap_score = max(0.0, 15.0 - (nearest - 25) * 0.5)
+                else:
+                    cap_score = 15.0
+
+                # D) Market value (−15..+15)
+                _DIV_MAG_MAP = {"MAJOR": 15, "MODERATE": 8, "MINOR": 3}
+                _mag_pts = _DIV_MAG_MAP.get(div_mag, 3)
+                if "APEX_HIGH" in div_flag:
+                    market = float(_mag_pts)
+                elif "APEX_LOW" in div_flag and "PVC_STRUCTURAL" not in div_flag:
+                    market = float(-_mag_pts)
+                else:
+                    market = 0.0
+
+                # E) Risk penalty
+                risk_pen = 0.0
+                _fm_active = fm and fm not in ("", "NONE", "N/A")
+                if _fm_active:
+                    risk_pen = 20.0 if is_win_now else 12.0
+
+                total = round(need_weight + quality_scored + cap_score + market - risk_pen, 2)
+                comps = {
+                    "need_cat":    need_cat,
+                    "need_weight": round(need_weight, 1),
+                    "rpg_comp":    round(rpg_comp, 1),
+                    "apex_comp":   round(apex_comp, 1),
+                    "quality":     round(quality_scored, 1),
+                    "capital":     round(cap_score, 1),
+                    "market":      round(market, 1),
+                    "risk_penalty": round(risk_pen, 1),
+                    "total":       total,
+                }
+                return total, comps
+
             # Per-player computed values for mode-specific columns + explainability
             _edge_by_pid:     dict[int, int | None]  = {}  # market_edge mode
             _safety_by_pid:   dict[int, float]       = {}  # safest mode
             _is_reach_by_pid: dict[int, bool]        = {}  # safest mode
+            _team_fit_scores: dict[int, float]       = {}  # best_fit_team / best_available_team
+            _team_fit_comps:  dict[int, dict]        = {}  # component breakdown for debug
+            _team_fit_rationale: dict[int, str]      = {}  # one-line rationale per player
             _empty_state_msg: str | None             = None
 
             _sorted_rem = list(_remaining)
 
-            if _dm_view == "best_fit":
-                _tb_full = dm_get_draft_team_board(team_code=_dm_team, seasonid=1, limit=300)
-                if not _tb_full:
+            if _dm_view in ("best_fit_team", "best_available_team"):
+                _tb_ctx = dm_get_draft_team_board(team_code=_dm_team, seasonid=1, limit=5)
+                if not _tb_ctx:
                     _empty_state_msg = (
                         f"No team board context for {_dm_team}. "
-                        f"Check team_draft_context setup."
+                        f"Run build_team_context_2026.py first."
                     )
                 else:
-                    _fit_by_pid = {r["prospect_id"]: (r.get("fit_score") or 0) for r in _tb_full}
+                    _prem_pos, _sec_pos, _timeline = _parse_team_needs(_tb_ctx)
+                    # Load RPG from big board df once
+                    _rpg_by_pid2: dict[int, float | None] = {}
+                    try:
+                        for _row2 in df[["prospect_id", "raw_score"]].itertuples(index=False):
+                            _rpg_by_pid2[int(_row2.prospect_id)] = (
+                                float(_row2.raw_score)
+                                if _row2.raw_score is not None
+                                and not (isinstance(_row2.raw_score, float) and pd.isna(_row2.raw_score))
+                                else None
+                            )
+                    except Exception:
+                        pass
+
+                    for _r in _remaining:
+                        _pid_t = _r["prospect_id"]
+                        _rpg_t = _rpg_by_pid2.get(_pid_t)
+                        _score, _comps = _compute_team_fit_score(
+                            _r, _rpg_t, _prem_pos, _sec_pos,
+                            _team_picks, _timeline, _dm_view,
+                        )
+                        _team_fit_scores[_pid_t] = _score
+                        _team_fit_comps[_pid_t]  = _comps
+
+                        # Build rationale line for row transparency
+                        _nc   = _comps["need_cat"]
+                        _caps = str(_r.get("capital_adjusted") or "—")[:12]
+                        _rpg_s = f"RPG {_rpg_t:.1f}" if _rpg_t else ""
+                        _fm_s  = str(_r.get("failure_mode_primary") or "").strip()
+                        _fm_tag = ""
+                        if _fm_s and _fm_s.upper() not in ("", "NONE", "N/A"):
+                            import re as _re_rat
+                            _fm_m2 = _re_rat.search(r"(FM-\d+)", _fm_s)
+                            _fm_tag = _fm_m2.group(1) if _fm_m2 else ""
+                        _parts = []
+                        if _nc != "NONE":
+                            _parts.append(f"{_nc.capitalize()} need")
+                        _parts.append(_caps)
+                        if _rpg_s:
+                            _parts.append(_rpg_s)
+                        if _comps["market"] > 0:
+                            _parts.append(f"Edge +{int(_comps['market'])}")
+                        if _fm_tag:
+                            _parts.append(_fm_tag)
+                        _team_fit_rationale[_pid_t] = " · ".join(_parts)
+
                     _sorted_rem = sorted(
                         _remaining,
-                        key=lambda r: -(_fit_by_pid.get(r["prospect_id"], 0)),
+                        key=lambda r: -_team_fit_scores.get(r["prospect_id"], 0),
                     )
 
             elif _dm_view == "market_edge":
@@ -2587,23 +2800,17 @@ def render_draft_mode(conn=None) -> None:
             elif _dm_view == "safest":
                 # Safest composite: 0.25×availability + 0.20×alignment + 0.20×need
                 #                    + 0.15×fit + 0.20×low_risk
-                _tb_full_s    = dm_get_draft_team_board(team_code=_dm_team, seasonid=1, limit=300)
-                _fit_by_pid_s = {r["prospect_id"]: (r.get("fit_score") or 0) for r in _tb_full_s}
+                _tb_full_s    = dm_get_draft_team_board(team_code=_dm_team, seasonid=1, limit=5)
                 _needs_pos_set: set[str] = set()
                 if _tb_full_s:
-                    try:
-                        _raw_nj = _tb_full_s[0].get("needs_json")
-                        _nl_s   = _json_mod.loads(str(_raw_nj)) if _raw_nj else []
-                        _needs_pos_set = {n.get("position", "") for n in _nl_s if isinstance(n, dict)}
-                    except Exception:
-                        pass
+                    _prem_s, _sec_s, _ = _parse_team_needs(_tb_full_s)
+                    _needs_pos_set = _prem_s | _sec_s
                 for _r in _remaining:
                     _pid_s   = _r["prospect_id"]
                     _con_s   = float(_r.get("consensus_rank") or 9999)
                     _div_flg = str(_r.get("divergence_flag") or "").upper()
                     _pos_s   = str(_r.get("position_group") or "")
                     _fm_s    = str(_r.get("failure_mode_primary") or "").strip().upper()
-                    _fit_s   = float(_fit_by_pid_s.get(_pid_s) or 0)
                     # Availability: how safely the player sits before team's next pick
                     if _team_next_pick:
                         _avail_delta = float(_team_next_pick) - _con_s
@@ -2617,16 +2824,11 @@ def render_draft_mode(conn=None) -> None:
                         "APEX_LOW_PVC_STRUCTURAL": 0.55,
                         "APEX_LOW":              0.25,
                     }
-                    _align    = _ALIGN_MAP.get(_div_flg, 0.50)
-                    # Need: position fills a team need
-                    _need_sc  = 1.0 if _pos_s in _needs_pos_set else 0.30
-                    # Fit: normalized from fit_score (scale assumed 0–10)
-                    _fit_norm = min(1.0, _fit_s / 10.0) if _fit_s else 0.30
-                    # Low risk: no active failure mode
+                    _align   = _ALIGN_MAP.get(_div_flg, 0.50)
+                    _need_sc = 1.0 if _pos_s in _needs_pos_set else 0.30
                     _low_risk = 0.0 if (_fm_s and _fm_s not in ("", "NONE", "N/A")) else 1.0
                     _saf = round(
-                        0.25 * _avail + 0.20 * _align + 0.20 * _need_sc
-                        + 0.15 * _fit_norm + 0.20 * _low_risk,
+                        0.25 * _avail + 0.20 * _align + 0.20 * _need_sc + 0.20 * _low_risk,
                         3,
                     )
                     _safety_by_pid[_pid_s] = _saf
@@ -2654,11 +2856,25 @@ def render_draft_mode(conn=None) -> None:
             elif _dm_view == "safest":
                 st.caption(
                     "Safest: composite of pick-window availability, consensus alignment, "
-                    "team need, fit score, and failure-mode risk."
+                    "team need, and failure-mode risk."
                 )
-            elif _dm_view == "best_fit":
+            elif _dm_view == "best_fit_team":
                 if _empty_state_msg:
                     st.warning(_empty_state_msg)
+                else:
+                    _picks_str = " · ".join(f"#{p}" for p in (_team_picks[:3] or [_overall]))
+                    st.caption(
+                        f"Best Fit · Team: need weight (Premium +100 / Secondary +55) "
+                        f"+ quality + capital fit to {_picks_str} + APEX edge − FM risk."
+                    )
+            elif _dm_view == "best_available_team":
+                if _empty_state_msg:
+                    st.warning(_empty_state_msg)
+                else:
+                    st.caption(
+                        "Best Avail · Team: talent-first with light team-need adjustment. "
+                        "Premium need = +20 bonus, secondary = +8."
+                    )
 
             # Build compact display table — schema varies by view
             _rpg_by_pid: dict[int, float | None] = {}
@@ -2691,10 +2907,52 @@ def render_draft_mode(conn=None) -> None:
                 elif _dm_view == "safest":
                     _row_d["Safety"] = round(_safety_by_pid.get(_pid_r, 0.0), 2)
                     _row_d["Reach"]  = "!" if _is_reach_by_pid.get(_pid_r, False) else ""
+                elif _dm_view in ("best_fit_team", "best_available_team"):
+                    _row_d["Score"] = _team_fit_scores.get(_pid_r, 0.0)
+                    _row_d["Why"]   = _team_fit_rationale.get(_pid_r, "")[:40]
                 else:
                     _row_d["RPG"]   = round(_rpg_r, 1) if _rpg_r is not None else None
                     _row_d["Range"] = _cap_r
                 _rem_table.append(_row_d)
+
+            # ── Compare queue strip (above board table) ───────────────────────
+            _cq_pid_to_name: dict[int, str] = {
+                r["prospect_id"]: r.get("display_name", f"pid={r['prospect_id']}")
+                for r in _remaining
+            }
+            # Drop stale PIDs no longer in remaining pool
+            _cq_clean = [p for p in _compare_pids if p in _cq_pid_to_name]
+            if _cq_clean != _compare_pids:
+                st.session_state["draft_mode_compare_pids"] = _cq_clean
+                _compare_pids = _cq_clean
+
+            _cq_strip_l, _cq_strip_r = st.columns([5, 1])
+            with _cq_strip_l:
+                if _compare_pids:
+                    _cq_name_list = [_cq_pid_to_name.get(p, f"pid={p}") for p in _compare_pids]
+                    st.markdown(
+                        f'<div style="font-size:10px;color:rgba(255,255,255,0.55);'
+                        f'padding:3px 0;line-height:1.4;">'
+                        f'<span style="font-size:8px;font-weight:700;letter-spacing:0.12em;'
+                        f'text-transform:uppercase;color:rgba(255,255,255,0.28);">'
+                        f'Compare queue ({len(_compare_pids)}/4)</span>'
+                        f'&nbsp;&nbsp;{", ".join(_cq_name_list)}</div>',
+                        unsafe_allow_html=True,
+                    )
+                else:
+                    st.markdown(
+                        '<div style="font-size:10px;color:rgba(255,255,255,0.28);padding:3px 0;">'
+                        '<span style="font-size:8px;font-weight:700;letter-spacing:0.12em;'
+                        'text-transform:uppercase;">Compare queue (0/4)</span>'
+                        '&nbsp;&nbsp;Add players from the board to compare.</div>',
+                        unsafe_allow_html=True,
+                    )
+            with _cq_strip_r:
+                if _compare_pids and st.button(
+                    "Clear", key="dm_clear_compare", use_container_width=True
+                ):
+                    st.session_state["draft_mode_compare_pids"] = []
+                    st.rerun()
 
             _show_n_center = 150
             _rem_h = min(_show_n_center, _n_rem + 1) * 38 + 4
@@ -2706,6 +2964,9 @@ def render_draft_mode(conn=None) -> None:
                 _col_cfg["Edge"] = st.column_config.NumberColumn(format="%+d")
             elif _dm_view == "safest":
                 _col_cfg["Safety"] = st.column_config.NumberColumn(format="%.2f")
+            elif _dm_view in ("best_fit_team", "best_available_team"):
+                _col_cfg["Score"] = st.column_config.NumberColumn("Score", format="%.1f")
+                _col_cfg["Why"]   = st.column_config.TextColumn("Why", width="medium")
             else:
                 _col_cfg["RPG"] = st.column_config.NumberColumn(format="%.1f")
 
@@ -2739,18 +3000,41 @@ def render_draft_mode(conn=None) -> None:
             if _n_rem > _show_n_center:
                 st.caption(f"Showing top {_show_n_center} of {_n_rem} remaining.")
 
-            # Compare queue display
-            if _compare_pids:
-                _cq_names = []
-                for _cpid in _compare_pids:
-                    _cr = next((r for r in _remaining if r.get("prospect_id") == _cpid), None)
-                    _cq_names.append(
-                        _cr.get("display_name", f"pid={_cpid}") if _cr else f"pid={_cpid}"
+            # PASS 5 — Debug scoring table (team-context modes only)
+            if _dm_view in ("best_fit_team", "best_available_team") and _team_fit_comps:
+                with st.expander("🔬 Scoring debug — top 15", expanded=False):
+                    _dbg_rows = []
+                    for _dbg_r in _sorted_rem[:15]:
+                        _dpid = _dbg_r["prospect_id"]
+                        _dc   = _team_fit_comps.get(_dpid, {})
+                        _dbg_rows.append({
+                            "Player":    (_dbg_r.get("display_name") or "—")[:20],
+                            "Pos":       _dbg_r.get("position_group") or "—",
+                            "Need":      _dc.get("need_cat", "—"),
+                            "NeedWt":    _dc.get("need_weight", 0),
+                            "RPGc":      _dc.get("rpg_comp", 0),
+                            "APEXc":     _dc.get("apex_comp", 0),
+                            "Quality":   _dc.get("quality", 0),
+                            "Capital":   _dc.get("capital", 0),
+                            "Market":    _dc.get("market", 0),
+                            "RiskPen":   _dc.get("risk_penalty", 0),
+                            "Total":     _dc.get("total", 0),
+                        })
+                    st.dataframe(
+                        pd.DataFrame(_dbg_rows),
+                        use_container_width=True,
+                        hide_index=True,
+                        column_config={
+                            "NeedWt":  st.column_config.NumberColumn(format="%.0f"),
+                            "RPGc":    st.column_config.NumberColumn(format="%.1f"),
+                            "APEXc":   st.column_config.NumberColumn(format="%.1f"),
+                            "Quality": st.column_config.NumberColumn(format="%.1f"),
+                            "Capital": st.column_config.NumberColumn(format="%.1f"),
+                            "Market":  st.column_config.NumberColumn(format="%.1f"),
+                            "RiskPen": st.column_config.NumberColumn(format="%.1f"),
+                            "Total":   st.column_config.NumberColumn(format="%.1f"),
+                        },
                     )
-                st.caption(f"Compare queue ({len(_compare_pids)}/4): {', '.join(_cq_names)}")
-                if st.button("Clear compare queue", key="dm_clear_compare"):
-                    st.session_state["draft_mode_compare_pids"] = []
-                    st.rerun()
 
             # Draft log (collapsed)
             with st.expander(f"Draft log ({_drafted_n} picks)", expanded=False):
@@ -2783,7 +3067,7 @@ def render_draft_mode(conn=None) -> None:
         _is_locked   = _locked_pid is not None
         _inspect_pid = _locked_pid if _is_locked else _sel_pid
 
-        _lock_hdr, _lock_btn_col = st.columns([3, 1])
+        _lock_hdr, _lock_btn_col, _clear_btn_col = st.columns([2.2, 1, 1])
         with _lock_hdr:
             st.markdown(
                 '<div style="font-size:9px;font-weight:700;letter-spacing:0.14em;'
@@ -2805,6 +3089,17 @@ def render_draft_mode(conn=None) -> None:
                 ):
                     st.session_state["draft_mode_locked_pid"] = _sel_pid
                     st.rerun()
+        with _clear_btn_col:
+            _has_selection = (_sel_pid is not None or _locked_pid is not None)
+            if st.button(
+                "Clear",
+                key="dm_insp_clear",
+                use_container_width=True,
+                disabled=not _has_selection,
+            ):
+                st.session_state["draft_mode_selected_pid"] = None
+                st.session_state["draft_mode_locked_pid"]   = None
+                st.rerun()
 
         if not _inspect_pid:
             st.markdown(
@@ -3069,16 +3364,47 @@ def render_draft_mode(conn=None) -> None:
                             st.rerun()
 
             # ── Compare queue ─────────────────────────────────────────────────
-            if len(_compare_pids) < 4 and _inspect_pid not in _compare_pids:
-                if st.button("+ Add to compare", key=f"dm_add_cmp_{_inspect_pid}"):
-                    _compare_pids.append(_inspect_pid)
-                    st.session_state["draft_mode_compare_pids"] = _compare_pids
-                    st.rerun()
-            elif _inspect_pid in _compare_pids:
-                if st.button("- Remove from compare", key=f"dm_rm_cmp_{_inspect_pid}"):
-                    _compare_pids.remove(_inspect_pid)
-                    st.session_state["draft_mode_compare_pids"] = _compare_pids
-                    st.rerun()
+            st.markdown(
+                '<div style="font-size:9px;font-weight:700;letter-spacing:0.14em;'
+                'text-transform:uppercase;color:rgba(255,255,255,0.28);'
+                'margin:8px 0 4px;">Compare queue</div>',
+                unsafe_allow_html=True,
+            )
+            if _compare_pids:
+                for _qi, _qpid in enumerate(_compare_pids):
+                    _qr = next((r for r in _remaining if r.get("prospect_id") == _qpid), None)
+                    _qname = _qr.get("display_name", f"pid={_qpid}") if _qr else f"pid={_qpid}"
+                    _is_current = (_qpid == _inspect_pid)
+                    _qcol_name, _qcol_btn = st.columns([5, 1])
+                    with _qcol_name:
+                        _name_color = "#e8a84a" if _is_current else "rgba(255,255,255,0.62)"
+                        st.markdown(
+                            f'<div style="font-size:11px;color:{_name_color};'
+                            f'padding:2px 0;line-height:1.4;">{_qname}</div>',
+                            unsafe_allow_html=True,
+                        )
+                    with _qcol_btn:
+                        if st.button("×", key=f"dm_cq_rm_{_qpid}_{_qi}", use_container_width=True):
+                            _cq2 = list(st.session_state["draft_mode_compare_pids"])
+                            if _qpid in _cq2:
+                                _cq2.remove(_qpid)
+                            st.session_state["draft_mode_compare_pids"] = _cq2
+                            st.rerun()
+            else:
+                st.caption("Empty — add from the board.")
+
+            if _inspect_pid not in _compare_pids:
+                if len(_compare_pids) < 4:
+                    if st.button(
+                        "+ Add to compare",
+                        key=f"dm_add_cmp_{_inspect_pid}",
+                        use_container_width=True,
+                    ):
+                        _compare_pids.append(_inspect_pid)
+                        st.session_state["draft_mode_compare_pids"] = _compare_pids
+                        st.rerun()
+                else:
+                    st.info("Compare queue full (4/4). Remove a player to add another.")
 
             # ── Full profile link ─────────────────────────────────────────────
             st.divider()
@@ -3090,6 +3416,133 @@ def render_draft_mode(conn=None) -> None:
                 st.session_state["selected_pid"]       = _inspect_pid
                 st.session_state["scroll_to_detail"]   = True
                 st.rerun()
+
+    # ════════════════════════════════════════════════════════════════════════
+    # COMPARE PANEL — full-width, below 3-column layout
+    # Renders when 2+ players are in compare queue.
+    # ════════════════════════════════════════════════════════════════════════
+    _cmp_pids = list(st.session_state.get("draft_mode_compare_pids", []))
+    st.markdown("---")
+    _cmp_hdr_l, _cmp_hdr_r = st.columns([6, 1])
+    with _cmp_hdr_l:
+        st.markdown(
+            f'<div style="font-size:9px;font-weight:700;letter-spacing:0.14em;'
+            f'text-transform:uppercase;color:rgba(255,255,255,0.32);margin-bottom:2px;">'
+            f'Compare Panel ({len(_cmp_pids)}/4)</div>',
+            unsafe_allow_html=True,
+        )
+    with _cmp_hdr_r:
+        if _cmp_pids and st.button("Clear all", key="dm_cmp_panel_clear", use_container_width=True):
+            st.session_state["draft_mode_compare_pids"] = []
+            st.rerun()
+
+    if len(_cmp_pids) < 2:
+        st.caption("Select 2–4 players from the Inspector to compare side by side.")
+    else:
+        # Resolve rows: remaining board first, fall back to big-board df
+        _cmp_resolved = []
+        for _cpid in _cmp_pids:
+            _rem_r = next((r for r in (_remaining or []) if r.get("prospect_id") == _cpid), None)
+            _df_r  = None
+            try:
+                _df_sub = df[df["prospect_id"] == _cpid]
+                _df_r   = _df_sub.iloc[0] if not _df_sub.empty else None
+            except Exception:
+                pass
+            if _rem_r or _df_r is not None:
+                _cmp_resolved.append((_cpid, _rem_r, _df_r))
+
+        if not _cmp_resolved:
+            st.caption("No data found for queued players.")
+        else:
+            import re as _re_cmp
+            _TIER_COLORS_CMP = {
+                "ELITE": "#f0c040", "DAY1": "#7eb4e2", "DAY2": "#5ab87a",
+                "DAY3": "rgba(255,255,255,0.52)", "UDFA-P": "#a57ee0",
+                "UDFA": "rgba(255,255,255,0.30)",
+            }
+            _cmp_cols = st.columns(len(_cmp_resolved))
+            for _ci, (_cpid, _rem_r, _df_r) in enumerate(_cmp_resolved):
+                def _g(key, fallback=None, _r=_rem_r, _d=_df_r):
+                    v = (_r or {}).get(key)
+                    if v is None and _d is not None:
+                        v = _d.get(key)
+                    if v is None or (isinstance(v, float) and pd.isna(v)):
+                        return fallback
+                    return v
+
+                _cn    = _g("display_name", f"pid={_cpid}")
+                _pos   = _g("position_group", "—")
+                _tier  = str(_g("apex_tier") or "").strip().upper()
+                _con   = _g("consensus_rank")
+                _apxr  = _g("apex_rank")
+                _apxs  = _g("apex_composite")
+                _rpg   = _g("raw_score")
+                _cap   = str(_g("capital_adjusted") or "—")
+                _fm    = str(_g("failure_mode_primary") or "").strip()
+                _ras   = _g("ras_score")
+                _div   = _g("divergence_magnitude")
+
+                _tc = _TIER_COLORS_CMP.get(_tier, "rgba(255,255,255,0.35)")
+                _is_insp = (_cpid == st.session_state.get("draft_mode_selected_pid"))
+
+                with _cmp_cols[_ci]:
+                    _border = "rgba(232,168,74,0.45)" if _is_insp else "rgba(255,255,255,0.10)"
+                    st.markdown(
+                        f'<div style="background:#161b22;border:1px solid {_border};'
+                        f'border-radius:5px;padding:10px 12px;margin-bottom:6px;">'
+                        f'<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:16px;'
+                        f'font-weight:900;letter-spacing:-0.01em;text-transform:uppercase;'
+                        f'color:rgba(255,255,255,0.92);line-height:1.1;margin-bottom:4px;">'
+                        f'{_cn}</div>'
+                        f'<div style="display:flex;gap:4px;flex-wrap:wrap;">'
+                        f'<span style="background:rgba(126,180,226,0.15);border:1px solid rgba(74,144,212,0.42);'
+                        f'color:#7eb4e2;font-family:\'Barlow Condensed\',sans-serif;font-size:9px;'
+                        f'font-weight:700;letter-spacing:0.10em;padding:1px 5px;border-radius:3px;">'
+                        f'{_pos}</span>'
+                        + (
+                            f'<span style="color:{_tc};font-family:\'Barlow Condensed\',sans-serif;'
+                            f'font-size:9px;font-weight:700;letter-spacing:0.08em;">{_tier}</span>'
+                            if _tier else ""
+                        )
+                        + f'</div></div>',
+                        unsafe_allow_html=True,
+                    )
+
+                    _con_str  = f"#{int(_con)}"    if _con  is not None else "—"
+                    _apxr_str = f"#{int(_apxr)}"   if _apxr is not None else "—"
+                    _apxs_str = f"{float(_apxs):.1f}" if _apxs is not None else "—"
+                    _rpg_str  = f"{float(_rpg):.1f}"  if _rpg  is not None else "—"
+                    _ras_str  = f"{float(_ras):.1f}"   if _ras  is not None else "—"
+                    _div_str  = str(_div) if _div is not None else "—"
+                    _fm_short = ""
+                    if _fm and _fm.upper() not in ("", "NONE", "N/A"):
+                        _fm_m = _re_cmp.search(r"(FM-\d+)", _fm)
+                        _fm_short = _fm_m.group(1) if _fm_m else _fm[:12]
+
+                    st.metric("Consensus", _con_str)
+                    st.metric("APEX Rank", _apxr_str)
+                    st.metric("APEX Score", _apxs_str)
+                    st.metric("RPG", _rpg_str)
+                    st.metric("RAS", _ras_str)
+                    st.metric("Divergence", _div_str)
+                    if _fm_short:
+                        st.markdown(
+                            f'<div style="font-size:10px;color:#e05c5c;margin-top:2px;">'
+                            f'Risk: {_fm_short}</div>',
+                            unsafe_allow_html=True,
+                        )
+                    st.markdown(
+                        f'<div style="font-size:10px;color:rgba(255,255,255,0.38);'
+                        f'margin-top:2px;">Capital: {_cap}</div>',
+                        unsafe_allow_html=True,
+                    )
+                    if st.button("× Remove", key=f"dm_cmp_rm2_{_cpid}_{_ci}", use_container_width=True):
+                        _cq3 = list(st.session_state.get("draft_mode_compare_pids", []))
+                        if _cpid in _cq3:
+                            _cq3.remove(_cpid)
+                        st.session_state["draft_mode_compare_pids"] = _cq3
+                        st.rerun()
 
 
 # ---------------------------------------------------------------------------
@@ -3357,7 +3810,7 @@ with st.sidebar:
         "Show top N by consensus rank",
         min_value=10,
         max_value=total_prospects,
-        value=min(250, total_prospects),
+        value=min(300, total_prospects),
         step=10,
     )
 
@@ -4491,27 +4944,21 @@ else:
                     st.session_state["user_tags"][_selected_pid] = _cur
                     st.rerun()
 
+        # Load APEX detail early — needed for Generate Mini Player Card handler
+        _detail = None
         if _has_apex:
             with connect() as conn:
                 _detail = get_apex_detail(conn, prospect_id=_selected_pid)
             if _detail:
-                # Supplement with board row data for header and bullet generation
                 if not _detail.get("consensus_rank"):
                     _detail["consensus_rank"] = _pr.get("consensus_rank")
                 if not _detail.get("confidence_band"):
                     _detail["confidence_band"] = _pr.get("confidence_band")
-                # Expose board-side RAS for detail card (ras_total from ras table)
                 _detail["ras_score"] = _pr.get("ras_score")
-                # Expose auto_apex_delta for divergence narrative
                 _detail["auto_apex_delta"] = _pr.get("auto_apex_delta")
-                _render_apex_detail(_detail)
-            else:
-                st.warning("APEX detail record not found despite apex_composite being set.")
-        else:
-            _render_consensus_card(_pr)
 
-        # Generate Report button — PNG share card via export_png pipeline
-        if st.button("📄 Generate Report", key=f"png_{_selected_pid}"):
+        # Generate Mini Player Card — near top of Player Detail
+        if st.button("📄 Generate Mini Player Card", key=f"png_{_selected_pid}"):
             # Build prospect dict from detail record + board row.
             # _detail is populated for APEX prospects; _pr (board row) covers all.
             _prospect_dict = {
@@ -4595,6 +5042,14 @@ else:
                         st.error(f"Card generation failed: {_e}")
                 except Exception as _e:
                     st.error(f"Card generation failed: {_e}")
+
+        # Render APEX detail or consensus card
+        if _has_apex and _detail:
+            _render_apex_detail(_detail)
+        elif _has_apex:
+            st.warning("APEX detail record not found despite apex_composite being set.")
+        else:
+            _render_consensus_card(_pr)
 
 # ---------------------------------------------------------------------------
 # Draft Mode tab — wired to render_draft_mode() (defined above in this file)
