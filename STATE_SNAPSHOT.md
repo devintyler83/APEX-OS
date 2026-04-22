@@ -10,6 +10,63 @@ Last Updated (UTC): 2026-04-22T01:16:43.455673+00:00
 
 ## Last Completed Milestone
 
+Session 97 close (Draft Room 7-point spec — draft_state, Market Edge, Safest composite, Need chips, header polish, explainability lines, empty states.)
+
+Session 97 close:
+- No DB writes. No schema changes. No migrations. Next migration: 0057.
+- Doctor: PASSED (no new DB changes to verify).
+- Files modified: app/app.py, draftos/queries/draft_mode.py
+
+Draft Room 7-point spec implemented (render_draft_mode in app/app.py):
+
+1. draft_state: get_all_pick_ownership() added to draft_mode.py. Reads all teams'
+   draft_capital_json, excludes picks already in drafted_picks_2026, returns
+   {pick_number: team_id}. In render_draft_mode, _pick_ownership, _next_up_team,
+   _team_picks, _team_next_pick computed once up front. State key dm_pick_overrides
+   seeded ({}) for future trade editor. All pick display reads from draft_state only.
+
+2. Market Edge mode: Computes consensus_rank − apex_rank in Python for every player.
+   Filters to consensus_rank ≤ team_next_pick + 30 with positive edge only.
+   Board shows Edge column (%+d format). st.warning() empty state when no players
+   in window. Caption distinguishes pick-window filter from global view.
+
+3. Safest composite: 0.25×availability + 0.20×alignment + 0.20×need + 0.15×fit +
+   0.20×low_risk. Availability decays as pick gap shrinks (team's next pick).
+   Alignment uses divergence_flag: ALIGNED=1.0, APEX_HIGH=0.75,
+   APEX_LOW_PVC_STRUCTURAL=0.55, APEX_LOW=0.25. Reach flagged when
+   consensus_rank > team_next_pick + 10. Board shows Safety (%.2f) + Reach (!) columns.
+
+4. Need UI: _render_needs_chips() parses needs_json, groups by PREMIUM/SECONDARY/DEPTH
+   tier, renders colored pill chips. Matching position highlighted green. Replaces raw
+   string "needs" bullet in inspector.
+
+5. Header polish: _norm_token() converts 4-3_zone → 4-3 Zone, win_now → Win Now.
+   On-the-clock team shown in green pill (On the clock: LV). Team's remaining picks
+   displayed as #27 · #58.
+
+6. Explainability lines: Per-view one-liner in inspector. Market Edge:
+   "APEX ranks #X vs market #Y — +N pick edge. Scouts may be undervaluing."
+   Safest: "Safety 0.72. Available well before your #27 pick. Consensus aligned."
+   Reach appended when flagged.
+
+7. Empty/error states: Market Edge warns when no players in window. Best Fit warns
+   when team board returns no rows.
+
+Session 96 close (Draft Room 3-panel refactor — Passes 1/2/3 + interaction correctness pass.)
+
+Session 96 close:
+- No DB writes. No schema changes. No migrations. Next migration: 0057.
+- Files modified: app/app.py
+
+Draft Room 3-panel refactor (render_draft_mode, ~700 lines):
+- Pass 1: 3-column layout [1.2, 2.2, 1.6], 6 state keys, _dm_nav_gen pattern.
+- Pass 2: _do_draft() helper, draft-to-current/other-team, compare queue with +/- buttons.
+- Pass 3: 4-bullet inspector (Need/Value/Why this fits/Risk), team status pills, compact
+  board schema, "What Changed" module, view toggle (4 modes).
+- Interaction correctness pass: view-switch key bust, lock semantics fix (_is_locked =
+  locked_pid is not None), _do_draft coupled lock/sel fix, compare queue purge on draft,
+  "Best Value" → "Market Edge" rename with stale-key coercion guard.
+
 Session 95 close (APEX OS Big Board UI/UX refactor — 8 fixes across app.py and draftos_detail_iframe_v2.py.)
 
 Session 95 close:
@@ -1545,15 +1602,15 @@ Prior sessions on record: 12 (DB rebuild), 13 (weekly pipeline), 13b (school/arc
 
 ## Next Milestone (Single Target)
 
-- Session 95: Draft night operations. Use the Draft Mode tab in the app to record picks.
-  Team hat selectbox → team board (v_draft_team_board_2026) + remaining board
-  (v_draft_remaining_2026) + per-row "Draft ➜" buttons → insert_draft_pick() → live log.
+- Session 98: Draft night operations. Use the Draft Mode tab to run the live draft.
+  Draft Room 3-panel is complete and functional. Pick ownership map live from draft_state.
+  Market Edge, Safest, Best Fit, Best Available views all operational.
+  To use: streamlit run app/app.py → Draft Mode tab → select team hat → record picks.
   Validate board after each round: python -m scripts.validate_reactive_board_2026.
   Post-draft: run reset_drafted_2026.py (dry run first) if test picks need clearing.
   Deferred (post-draft): prospect_comps expansion for newly scored prospects.
-  Deferred (post-draft): position_rank_label format inconsistency ("LB #1" vs "#1 at LB").
-  Deferred (post-draft): full team_fit surface integration (app.py pick-fit panel, detail iframe).
   Deferred (post-draft): post-draft audit framework (APEX Framework Section 9).
+  Deferred (post-draft): pick ownership trade editor (dm_pick_overrides state key seeded).
 
 ---
 
