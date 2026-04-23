@@ -83,3 +83,6 @@ output/
 scripts/draftos_detail_iframe_v2-old.py
 scripts/*.bak_mojibake
 data/backups/
+
+# Root-level DB backup dumps — large, local only
+backups/
