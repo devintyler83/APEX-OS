@@ -241,18 +241,11 @@ CALIBRATION_OVERRIDES: dict[str, dict] = {
         "school":       "UCLA",
         "display_name": "Carson Schwesinger",
     },
-    "Travis Hunter": {
-        "prospect_id":  455,    # corrected Session 26 (was 885=Travis Kelce)
-        "position":     "CB",
-        "school":       "Colorado",
-        "display_name": "Travis Hunter",
-    },
-    "Shedeur Sanders": {
-        "prospect_id":  230,    # corrected Session 26 (was 813=Tyler Allgeier)
-        "position":     "QB",
-        "school":       "Colorado",
-        "display_name": "Shedeur Sanders",
-    },
+    # Travis Hunter (pid=455) removed S110 — 2025 draftee, hard boundary violation.
+    # apex_scores rows purged by purge_non2026_apex_scores.py. Do NOT re-add.
+
+    # Shedeur Sanders (pid=230) removed S110 — 2025 draftee, hard boundary violation.
+    # apex_scores rows purged by purge_non2026_apex_scores.py. Do NOT re-add.
     "Armand Membou": {
         "prospect_id":  1371,   # corrected Session 26 (was 1717=Danny Striggow)
         "position":     "OT",
@@ -267,12 +260,8 @@ CALIBRATION_OVERRIDES: dict[str, dict] = {
     },
     # Gunnar Helm (pid=313) removed — 2025 draftee, cross-season contamination.
     # Ghost row introduced via spamml (TEN NFL rows) + stale PFF list. Do NOT re-score.
-    "Trevor Etienne": {
-        "prospect_id":  304,    # corrected Session 26 (was 838=Kaimi Fairbairn)
-        "position":     "RB",
-        "school":       "Georgia",
-        "display_name": "Trevor Etienne",
-    },
+    # Trevor Etienne (pid=304) removed S110 — 2024 draftee, hard boundary violation.
+    # apex_scores rows purged by purge_non2026_apex_scores.py. Do NOT re-add.
     "Nick Emmanwori": {
         "prospect_id":  1278,   # corrected Session 26 (was 1591=Jordan Clark)
         "position":     "S",
@@ -285,12 +274,8 @@ CALIBRATION_OVERRIDES: dict[str, dict] = {
         "school":       "Boston College",
         "display_name": "Donovan Ezeiruaku",
     },
-    "Tyleik Williams": {
-        "prospect_id":  1050,   # corrected Session 26 (was 1405=Tj Sanders)
-        "position":     "IDL",
-        "school":       "Ohio State",
-        "display_name": "Tyleik Williams",
-    },
+    # Tyleik Williams (pid=1050) removed S110 — 2025 draftee, hard boundary violation.
+    # apex_scores rows purged by purge_non2026_apex_scores.py. Do NOT re-add.
     "Chris Paul": {
         "prospect_id":  504,    # corrected Session 26 (was 916=Demario Douglas)
         "position":     "C",
@@ -306,6 +291,40 @@ CALIBRATION_OVERRIDES: dict[str, dict] = {
 }
 
 CALIBRATION_PROSPECTS = list(CALIBRATION_OVERRIDES.keys())
+
+# ---------------------------------------------------------------------------
+# Hard boundary: non-2026 prospect IDs that must never receive season_id=1 scores
+# ---------------------------------------------------------------------------
+# Includes: (a) 2025/2024 draftees previously used as calibration anchors,
+# and (b) stale wrong-pid rows from the pre-Session-26 CALIBRATION_OVERRIDES
+# corrections that have now been purged from apex_scores.
+# Any future scoring run that accidentally targets these pids will be blocked
+# at write time with a loud error — no silent writes, no API calls wasted.
+NON_2026_PROSPECT_PIDS: frozenset[int] = frozenset({
+    # Non-2026 draftees (Group B) — removed from CALIBRATION_OVERRIDES S110
+    455,   # Travis Hunter (2025, CB/WR, Colorado)
+    230,   # Shedeur Sanders (2025, QB, Colorado)
+    304,   # Trevor Etienne (2024, RB, Georgia)
+    1050,  # Tyleik Williams (2025, IDL, Ohio State)
+    313,   # Gunnar Helm (2025 ghost, TE — spamml row, never re-score)
+    # Stale wrong-pid rows (Group A) — garbage pids from pre-S26 calibration
+    813,   # Tyler Allgeier (was wrong pid for Sanders)
+    885,   # Travis Kelce (was wrong pid for Travis Hunter)
+    838,   # Kaimi Fairbairn (was wrong pid for Trevor Etienne)
+    1717,  # Danny Striggow (was wrong pid for Armand Membou)
+    1254,  # Logan Webb (was wrong pid for Tate Ratledge)
+    1591,  # Jordan Clark (was wrong pid for Nick Emmanwori)
+    1405,  # Tj Sanders (was wrong pid for Tyleik Williams)
+    916,   # Demario Douglas (was wrong pid for Chris Paul Jr.)
+    1736,  # Ethan Downs (was wrong pid for Jared Wilson)
+    450,   # Jason Marshall ghost
+    842,   # Younghoe Koo / Helm ghost
+    # S-position ghost PIDs (cleaned S110 via clean_s_ghost_pids.py)
+    3567,  # Kamari Ramsey ghost (LB bootstrap duplicate; canonical pid=148)
+    3570,  # VJ Payne ghost (LB bootstrap duplicate; canonical pid=182)
+    3694,  # Bishop Fitzgerald ghost (LB bootstrap duplicate; canonical pid=306)
+    239,   # Keionte Scott S ghost (scored off wrong pid; canonical CB pid=338)
+})
 
 # ---------------------------------------------------------------------------
 # Archetype correction overrides
@@ -1233,6 +1252,84 @@ ARCHETYPE_OVERRIDES: dict[int, dict] = {
     # ---------------------------------------------------------------------------
     # Session 89 overrides
     # ---------------------------------------------------------------------------
+
+    # ---------------------------------------------------------------------------
+    # Session 110 overrides — S-4 Coverage Safety population
+    # ---------------------------------------------------------------------------
+    # S-4 Coverage Safety was chronically underpopulated (only Taaffe at 53.0 DAY3).
+    # Three prospects reviewed and re-routed from S-3/S-5 misassignments via PAA.
+    # All three win through structured zone execution rather than multiplier deployment.
+
+    # Louis Moore — S (pid=193). S-4 Coverage Safety.
+    # TWEENER gap active; v_athleticism=4.8 structural constraint.
+    # Primary mechanism: ball-tracking anticipation in structured coverage zones.
+    # 6 INT leading Big Ten confirms zone-reading production at elite competition level.
+    # S-3 Multiplier Safety rejected: physical tools insufficient for multiplier deployment.
+    # S-5 Raw Projection rejected: production and zone-reading are confirmed, not developmental.
+    193: {
+        "forced_archetype":    "S-4",
+        "archetype_label":     "S-4 Coverage Safety",
+        "archetype_direction": (
+            "Assigned archetype: S-4 Coverage Safety\n\n"
+            "Rationale: Moore's primary win mechanism is zone-reading and ball-tracking in "
+            "structured coverage assignments — S-4 Coverage Safety. Production evidence: "
+            "6 INT leading Big Ten confirms zone anticipation against elite competition. "
+            "Do NOT assign S-3 Multiplier Safety — physical tools (v_athleticism=4.8, TWEENER gap) "
+            "are insufficient for multiplier deployment (run force, man-coverage floor, "
+            "post-snap adjustment range). S-3 requires physical versatility Moore does not have. "
+            "Do NOT assign S-5 Raw Projection — production and zone-reading mechanism are "
+            "confirmed, not developmental. S-4 correctly captures the profile: structured zone "
+            "coverage with anticipatory ball-tracking as the primary win mechanism. "
+            "Score against S-4 archetype weights. Eval Confidence: Tier B."
+        ),
+        "eval_confidence":     "Tier B",
+    },
+
+    # Jakobe Thomas — S (pid=238). S-4 Coverage Safety.
+    # FM-6 Role Mismatch primary: single-high ball tracker, not a multiplier.
+    # Primary mechanism: deep zone execution and single-high anticipatory coverage.
+    # S-3 Multiplier Safety rejected: does not confirm the physical range or run-force
+    # willingness required for multiplier deployment.
+    238: {
+        "forced_archetype":    "S-4",
+        "archetype_label":     "S-4 Coverage Safety",
+        "archetype_direction": (
+            "Assigned archetype: S-4 Coverage Safety\n\n"
+            "Rationale: Thomas's primary win mechanism is single-high ball tracking and "
+            "anticipatory deep zone coverage — S-4 Coverage Safety. "
+            "Do NOT assign S-3 Multiplier Safety — multiplier deployment requires confirmed "
+            "run-force willingness and post-snap assignment adjustment range that Thomas does "
+            "not demonstrate. Single-high deployment is the correct NFL projection. "
+            "FM-6 Role Mismatch is primary: value is structure-dependent — organizations "
+            "deploying him as a multiplier (run-support, man-coverage rotation) generate the "
+            "bust from their own scheme misread of a single-high specialist profile. "
+            "Score against S-4 archetype weights. Eval Confidence: Tier B."
+        ),
+        "eval_confidence":     "Tier B",
+        "fm_flags":            ["FM-6 Role Mismatch (primary)"],
+    },
+
+    # Jalen Stroman — S (pid=824). S-4 Coverage Safety.
+    # Slot coverage specialist; limited deep-third range.
+    # Primary mechanism: condensed-zone coverage execution in intermediate assignments.
+    # S-3 rejected: multiplier requires deep-third capability Stroman does not confirm.
+    # S-5 rejected: slot coverage mechanism is confirmed, not developmental.
+    824: {
+        "forced_archetype":    "S-4",
+        "archetype_label":     "S-4 Coverage Safety",
+        "archetype_direction": (
+            "Assigned archetype: S-4 Coverage Safety\n\n"
+            "Rationale: Stroman's primary win mechanism is condensed-zone coverage in "
+            "intermediate assignments — S-4 Coverage Safety. Slot coverage specialist profile. "
+            "Do NOT assign S-3 Multiplier Safety — deep-third range is limited; multiplier "
+            "deployment requires confirmed deep coverage capability Stroman does not demonstrate. "
+            "Do NOT assign S-5 Raw Projection — slot coverage mechanism is confirmed, not "
+            "developmental. S-4 correctly captures structured zone execution as the primary "
+            "win mechanism with deployment constrained to intermediate coverage zones. "
+            "Score against S-4 archetype weights. Eval Confidence: Tier B."
+        ),
+        "eval_confidence":     "Tier B",
+    },
 
     # Jacob Rodriguez — ILB (pid=19). Archetype corrected S89: ILB-2 Coverage Eraser -> ILB-1 Green Dot Anchor.
     # DB writes applied S89 via seed_rodriguez_s89.py --apply 1. Do NOT re-run seed script.
@@ -2193,6 +2290,14 @@ def _score_prospect(
     school       = override["school"]
     display_name = override["display_name"]
 
+    # Hard boundary: never write season_id=1 scores for non-2026 prospects.
+    if prospect_id in NON_2026_PROSPECT_PIDS:
+        print(
+            f"\n[BLOCKED] pid={prospect_id} ({display_name}) is in NON_2026_PROSPECT_PIDS. "
+            f"Non-2026 draftees must not receive season_id=1 apex_scores. Skipping."
+        )
+        return False, backed_up
+
     print(f"\n{'='*60}")
     print(f"  {display_name}  |  {position}  |  {school}")
     print(f"  prospect_id={prospect_id}  model={MODEL_VERSION}")
@@ -2516,6 +2621,7 @@ def _run_top50(
           ON p.prospect_id = r.prospect_id
          AND p.season_id   = r.season_id
         WHERE r.season_id = ?
+          AND p.is_active = 1
         ORDER BY r.consensus_rank ASC
         LIMIT 50
         """,

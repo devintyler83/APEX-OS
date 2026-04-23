@@ -199,6 +199,113 @@ def main() -> None:
         else:
             print("pvc_archetype_weights: table missing (run build_pvc_archetype_weights.py)")
 
+    # -----------------------------------------------------------------------
+    # Non-2026 universe boundary check (added S110)
+    # Rule 1: no is_active=0 + is_calibration_artifact=0 prospect may have
+    #         a season_id=1 apex_scores row. These are garbage or stale
+    #         wrong-pid rows that must be purged.
+    # Rule 2: no prospect in the known NON_2026_PROSPECT_PIDS list may have
+    #         any season_id=1 apex_scores row, calibration or otherwise.
+    # -----------------------------------------------------------------------
+    NON_2026_PIDS = (
+        455, 230, 304, 1050, 313,           # non-2026 draftees (Group B)
+        813, 885, 838, 1717, 1254, 1591,    # stale wrong-pid rows (Group A)
+        1405, 916, 1736, 450, 842,
+        3567, 3570, 3694, 239,              # S ghost pids (cleaned S110)
+    )
+
+    with connect() as conn:
+        conn.row_factory = __import__("sqlite3").Row
+
+        # Rule 1
+        ghost_rows = conn.execute("""
+            SELECT p.prospect_id, p.display_name, COUNT(*) AS cnt
+            FROM apex_scores s
+            JOIN prospects p ON p.prospect_id = s.prospect_id
+            WHERE s.season_id = 1
+              AND p.is_active = 0
+              AND s.is_calibration_artifact = 0
+            GROUP BY p.prospect_id
+            ORDER BY p.prospect_id
+        """).fetchall()
+
+        if ghost_rows:
+            names = ", ".join(
+                f"pid={r['prospect_id']} {r['display_name']} ({r['cnt']} rows)"
+                for r in ghost_rows
+            )
+            raise SystemExit(
+                f"FAIL [non-2026 boundary]: {len(ghost_rows)} inactive non-calibration "
+                f"prospect(s) have season_id=1 apex_scores: {names}. "
+                f"Run: python -m scripts.purge_non2026_apex_scores --apply 1"
+            )
+
+        # Rule 2
+        placeholders = ",".join("?" * len(NON_2026_PIDS))
+        blocked_rows = conn.execute(
+            f"""
+            SELECT p.prospect_id, p.display_name, COUNT(*) AS cnt
+            FROM apex_scores s
+            JOIN prospects p ON p.prospect_id = s.prospect_id
+            WHERE s.season_id = 1
+              AND s.prospect_id IN ({placeholders})
+            GROUP BY p.prospect_id
+            """,
+            NON_2026_PIDS,
+        ).fetchall()
+
+        if blocked_rows:
+            names = ", ".join(
+                f"pid={r['prospect_id']} {r['display_name']} ({r['cnt']} rows)"
+                for r in blocked_rows
+            )
+            raise SystemExit(
+                f"FAIL [non-2026 boundary]: {len(blocked_rows)} blocked prospect(s) "
+                f"have season_id=1 apex_scores: {names}. "
+                f"Run: python -m scripts.purge_non2026_apex_scores --apply 1"
+            )
+
+        print(
+            f"non-2026 boundary: OK "
+            f"(0 inactive-non-cal violations, 0 blocked-pid violations)"
+        )
+
+    # -----------------------------------------------------------------------
+    # Ghost PID check (added S110)
+    # Fail if any display_name has more than one active prospect with a
+    # season_id=1 apex_scores row. This catches ghost pids that slipped
+    # through clean_s_ghost_pids.py or were re-activated by mistake.
+    # -----------------------------------------------------------------------
+    with connect() as conn:
+        conn.row_factory = __import__("sqlite3").Row
+
+        dup_scored = conn.execute("""
+            SELECT p.display_name, COUNT(DISTINCT p.prospect_id) AS n_pids
+            FROM apex_scores s
+            JOIN prospects p ON p.prospect_id = s.prospect_id
+            WHERE s.season_id = 1
+              AND p.is_active = 1
+              AND s.is_calibration_artifact = 0
+            GROUP BY p.display_name
+            HAVING COUNT(DISTINCT p.prospect_id) > 1
+            ORDER BY n_pids DESC
+        """).fetchall()
+
+        if dup_scored:
+            detail = ", ".join(
+                f"{r['display_name']} ({r['n_pids']} pids)"
+                for r in dup_scored
+            )
+            # WARNING only — these are pre-existing ghost pids from early bootstrap batches
+            # that were scored before is_active filters were enforced. Each case needs
+            # individual investigation before deactivation. See clean_s_ghost_pids.py pattern.
+            print(
+                f"WARN [ghost pid check]: {len(dup_scored)} display_name(s) have multiple "
+                f"active scored pids for season_id=1: {detail}"
+            )
+        else:
+            print(f"ghost pid check: OK (no display_name has multiple active scored pids)")
+
     print("OK: doctor checks passed")
 
 
