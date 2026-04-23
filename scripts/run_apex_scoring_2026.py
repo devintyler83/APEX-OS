@@ -551,6 +551,56 @@ ARCHETYPE_OVERRIDES: dict[int, dict] = {
             "floor). These are separate outputs."
         ),
     },
+
+    # Mansoor Delane — CB (pid=39). PAA gate evaluation S116.
+    # Prior model output CB-3 Press Man Corner was incorrect. Full PAA gate confirms CB-1
+    # Anticipatory Lockdown. Coverage=95th pct, Zone=93rd, Man/Press=90th, QB Rating=56.2
+    # across 2450 snaps vs 80th pct competition. FM-2 flag from raw metrics withdrawn —
+    # outcome data eliminates zone/man gap concern. Scheme versatile across multiple systems.
+    # Arm length structural cap (30 inches, 10th pct) is a matchup-specific ceiling, not a
+    # mechanism discount. Eval Confidence: Tier A.
+    39: {
+        "forced_archetype":    "CB-1",
+        "archetype_label":     "CB-1 Anticipatory Lockdown",
+        "archetype_rationale": (
+            "S116 full PAA gate evaluation. CB-3 REJECTED — model output was incorrect. "
+            "Delane wins through anticipatory route-reading mechanism, not athletic-primary press. "
+            "Coverage=95th pct, Zone=93rd pct, Man/Press=90th pct, QB Rating=56.2 across 2450 "
+            "snaps vs 80th pct competition. Reads route combinations pre-snap, positions in "
+            "throwing lanes before QB release. Five targets in final four games — opponent behavior "
+            "confirms CB-1 mechanism has shut down throw volume. "
+            "FM-2 flag from raw metrics WITHDRAWN — outcome data eliminates zone/man gap concern. "
+            "Scheme versatility confirmed across Virginia Tech zone and LSU man systems — no "
+            "landing spot gate required. "
+            "Arm length structural cap: 30-inch arms (10th pct). Competitive Toughness and "
+            "Injury/Durability vectors reflect contested-catch limitation vs 6-3+ boundary "
+            "receivers — not a mechanism discount. "
+            "Production elite: 8 career INTs, 27 PDs, under 27pct completion rate on 200+ "
+            "coverage snaps. Score at CB-1 Production ceiling. "
+            "Eval Confidence: Tier A."
+        ),
+        "eval_confidence":     "Tier A",
+        "capital_range":       "R1 Picks 11-25",
+        "fm_flags":            [],
+        "placed_session":      116,
+        "bust_warning": (
+            "No primary failure mode at archetype level. Arm length structural cap (30 inches, 10th "
+            "pct) creates matchup-specific disadvantage vs 6-3+ boundary receivers in contested-catch "
+            "situations. This is a matchup ceiling, not a mechanism or capital discount."
+        ),
+        "paa_findings": {
+            "Q1": "CLEAR — Coverage=95th pct, QB Rating=56.2 across 2450 snaps vs 80th pct SOS",
+            "Q2": "CLEAR — Man/Press=90th pct, Zone=93rd pct; outcome data eliminates FM-2 concern",
+            "Q3": "CLEAR — five targets in final four games = opponent behavior confirmation of CB-1",
+            "Q4": "CLEAR — pre-snap route combo reads, throwing lane positioning before QB release",
+            "Archetype_correction": "CB-3 REJECTED S116 — anticipatory-primary, not athletic-primary",
+            "FM2_withdrawn": "Raw metrics gap resolved by outcome data — zone/man gap was measurement artifact",
+            "Scheme_versatility": "CONFIRMED — Virginia Tech zone + LSU man systems; no landing spot gate",
+            "Arm_cap": "30-inch arms (10th pct) — matchup ceiling vs 6-3+ receivers; not mechanism flag",
+            "Archetype_lock": "CB-1 Anticipatory Lockdown confirmed S116",
+        },
+    },
+
     35: {
         "name": "Chris Johnson",
         "position": "CB",
@@ -581,24 +631,53 @@ ARCHETYPE_OVERRIDES: dict[int, dict] = {
             "suppresses to Picks 22-32 / Top R2. APEX_HIGH is the right directional call."
         ),
     },
+    # D'Angelo Ponds — CB (pid=3236). PAA gate re-evaluation S116.
+    # Prior label CB-3 Press Man Corner was an archetype mismatch — mechanism is anticipatory
+    # concept-reading (CB-1), not athletic-primary press (CB-3). Full PAA gate confirms CB-1.
+    # Reclassified S116. Prior APEX_LOW divergence was archetype-correction artifact, not score
+    # inflation. Size (5-8.5, 182 lbs, short arms) creates deployment dependency, not mechanism
+    # uncertainty. Mandatory Landing Spot Note: Cover 3 best fit; pure man-coverage boundary
+    # scheme triggers FM-6. Eval Confidence: Tier A on mechanism.
     3236: {
-        "forced_archetype":  "CB-3 Press Man Corner",
-        "archetype_direction": (
-            "Assigned archetype: CB-3 Press Man Corner — CB-1 Development Pathway Confirmed\n\n"
-            "Rationale: Ponds wins through physical superiority at the line — length, "
-            "burst, and press dominance. His primary winning mechanism is athleticism, "
-            "not spatial intelligence or zone reading. "
-            "CB-1 development pathway is confirmed: technique is trending upward year-over-year, "
-            "and processing is developing, but not yet Tier A confirmed against top-25 competition. "
-            "The CB-1 pathway flag is a ceiling expander, not a reclassification — it signals "
-            "his technique is trending toward CB-1 mechanism. "
-            "Do NOT score as CB-2 Zone Architect — he is not a spatial processor reading "
-            "the quarterback. CB-2 overweights scheme dependency he does not yet possess. "
-            "Score against CB-3 archetype weights (Athleticism bumped to 26%). "
-            "Eval Confidence: Tier B. Capital range: R1 Picks 16-32 / Early R2. "
-            "Tier A (Picks 1-15) accessible if PAA Q4 processing confirmation clears. "
-            "The CB-1 development pathway flag MUST appear in the archetype field or tags."
+        "forced_archetype":    "CB-1",
+        "archetype_label":     "CB-1 Anticipatory Lockdown",
+        "archetype_rationale": (
+            "S116 PAA gate re-evaluation. CB-3 Press Man Corner REJECTED — archetype was incorrect. "
+            "Ponds wins through anticipatory concept-reading, not athletic-primary press mechanism. "
+            "Coverage=100th pct, Man/Press=97th pct, Zone=90th pct, QB rating=55.9 across 2146 "
+            "snaps vs 80th pct competition confirms CB-1 mechanism. Pre-snap RPO diagnosis confirmed "
+            "on tape (Oregon Peach Bowl). This is anticipatory processing, not zone assignment "
+            "execution. Do NOT score as CB-2 Zone Architect — mechanism is not spatial zone reading. "
+            "Do NOT score as CB-3 — athletic-primary mechanism is not the win driver. "
+            "Prior APEX_LOW divergence of -95 is an ARCHETYPE MISMATCH ARTIFACT — CB-3 label "
+            "produced a lower APEX score than CB-1 mechanism warrants. "
+            "Size structural cap: 5ft 8.5in, 182 lbs, short arms. Contested-catch limitation vs "
+            "6-3+ boundary receivers — scores in Injury/Durability and Competitive Toughness. "
+            "Near-zero slot reps: CB-4 secondary trait documented for deployment flexibility. "
+            "Mandatory Landing Spot Note: Cover 3 best fit. Pure man-coverage boundary scheme "
+            "creates FM-6 risk given size. Eval Confidence: Tier A on mechanism."
         ),
+        "eval_confidence":     "Tier A",
+        "capital_range":       "R1 Picks 11-25 — size deployment gate required above R1 Picks 1-10",
+        "fm_flags":            ["FM-6 Role Mismatch (conditional — boundary man-coverage scheme + size mismatch)"],
+        "placed_session":      116,
+        "bust_warning": (
+            "FM-6 conditional: pure man-coverage boundary scheme with 5-8.5, 182 lbs, short arms "
+            "creates contested-catch structural disadvantage vs 6-3+ receivers. Deployment in Cover 3 "
+            "or zone-primary system removes FM-6 risk. Near-zero slot experience means slot "
+            "deployment is untested — CB-4 secondary trait acknowledged but not scored."
+        ),
+        "paa_findings": {
+            "Q1": "CLEAR — Coverage=100th pct, Man/Press=97th pct, Zone=90th pct vs 80th pct SOS",
+            "Q2": "CLEAR — QB rating 55.9 across 2146 snaps confirms elite coverage outcomes",
+            "Q3": "CLEAR — anticipatory concept-reading confirmed; pre-snap RPO diagnosis (Oregon Peach Bowl)",
+            "Q4": "CLEAR — CB-1 mechanism confirmed; prior CB-3 label was archetype mismatch",
+            "Archetype_correction": "CB-3 REJECTED S116 — anticipatory-primary, not athletic-primary",
+            "Divergence_reclassify": "Prior APEX_LOW -95 = archetype mismatch artifact; not score inflation",
+            "Size_structural": "5-8.5/182 lbs/short arms — deployment dependency, not mechanism uncertainty",
+            "Landing_spot":   "MANDATORY — Cover 3 best fit; man-coverage boundary + size = FM-6",
+            "Archetype_lock": "CB-1 Anticipatory Lockdown confirmed S116",
+        },
     },
 
     # ---------------------------------------------------------------------------
@@ -910,48 +989,174 @@ ARCHETYPE_OVERRIDES: dict[int, dict] = {
     },
 
     # ---------------------------------------------------------------------------
+    # Session 116 overrides (CB PAA gate batch)
+    # ---------------------------------------------------------------------------
+
+    # Keionte Scott — CB (pid=338). PAA gate evaluation S116.
+    # CB-4 Slot Specialist confirmed. CB-3 Press Man Corner REJECTED (model drift without lock).
+    # Age flag critical: turns 25 in August, six college seasons of mileage — finished product,
+    # no development premium. QB rating 80.8 = honest coverage ceiling. Value prop: run defense
+    # + blitz package (5 sacks 2025) + zone slot instincts. NOT outside boundary deployment.
+    # FM-6 Mandatory Landing Spot Note: zone-heavy scheme required. Added lock S116 to prevent
+    # model from assigning CB-3 (which destroys PVC via 0.68 weight vs 1.201 for CB-4).
+    338: {
+        "forced_archetype":    "CB-4",
+        "archetype_label":     "CB-4 Slot Specialist",
+        "archetype_rationale": (
+            "S116 PAA gate evaluation. CB-4 Slot Specialist confirmed. CB-3 Press Man Corner "
+            "REJECTED — Scott wins in zone slot coverage, not outside press dominance. "
+            "FM-2 flag from prior session WITHDRAWN: Man/Press=84th pct, Zone=79th pct. "
+            "Value proposition: run defense (90th pct outcome) + blitz package (5 sacks 2025) "
+            "+ zone slot instincts. NOT an outside boundary corner — deployment in boundary "
+            "press man destroys value. "
+            "Age flag CRITICAL: turns 25 in August. Six college seasons of mileage. Finished "
+            "product — no development premium. Dev Trajectory scored flat. Price current "
+            "ability only. "
+            "Tackling: 20pct missed tackle rate caps tackling Competitive Toughness component. "
+            "Run Defense outcome (90th pct) scores separately and stays high — motor is real, "
+            "technique is poor. QB rating 80.8 reflects honest coverage ceiling. "
+            "FM-6 Mandatory Landing Spot Note: zone-heavy scheme, creative sub-package "
+            "deployment required. Cover 1 man-heavy or boundary-primary defense = "
+            "organizational FM-6 before first snap. "
+            "Eval Confidence: Tier A (finished product, no projection uncertainty)."
+        ),
+        "eval_confidence":     "Tier A",
+        "capital_range":       "R3 Late — R4 Early (age discount + FM-6 deployment risk)",
+        "fm_flags":            ["FM-6 Role Mismatch (mandatory — zone slot deployment required)"],
+        "placed_session":      116,
+        "bust_warning": (
+            "FM-6 mandatory: boundary man-coverage or Cover 1 system destroys CB-4 slot value "
+            "before first snap. 25-year-old finished product — no upside premium. Price the "
+            "present ability in zone-slot deployment, not a projection."
+        ),
+        "paa_findings": {
+            "Q1": "CLEAR — zone slot production confirmed, run defense 90th pct outcome",
+            "Q2": "CLEAR — FM-2 withdrawn: Man/Press=84th pct, Zone=79th pct",
+            "Q3": "CLEAR — CB-4 mechanism confirmed vs competition",
+            "Q4": "CLEAR — slot zone processing confirmed as primary mechanism",
+            "CB3_rejected": "CB-3 REJECTED — Scott does not win through outside press dominance",
+            "Age_flag": "CRITICAL — turns 25 in August, six college seasons, no development premium",
+            "Run_defense": "ELITE outcome (90th pct) — but 20pct missed tackle rate, motor high technique low",
+            "Blitz_value": "5 sacks 2025 in blitz package — real but context-dependent",
+            "FM6_mandatory": "LANDING SPOT NOTE REQUIRED — zone-heavy scheme, NOT boundary man",
+            "Archetype_lock": "CB-4 Slot Specialist locked S116 to prevent model drift to CB-3",
+        },
+    },
+
+    # Keith Abney — CB (pid=74). PAA gate evaluation S116.
+    # CB-2 confirmed (man coverage floor >60 confirmed, PAA all four gates clear).
+    # Prior CB-4 Slot Specialist label superseded by full PAA gate data. CB-2 correctly
+    # captures man coverage floor + zone primary mechanism. FM-1 risk eliminated via Q3
+    # resolution (QB rating 58.1 vs 78th pct). FM-6 Mandatory Landing Spot Note: heavy
+    # Cover 1 man scheme is capital destruction. XP-4 active (dev trajectory above base CB-2).
+    74: {
+        "forced_archetype":    "CB-2",
+        "archetype_label":     "CB-2 Zone Architect",
+        "archetype_rationale": (
+            "S116 full PAA gate evaluation. CB-4 Slot Specialist label superseded. CB-2 Zone "
+            "Architect confirmed. PAA all four gates CLEAR. "
+            "Man coverage floor confirmed above 60 (Man/Press=79th pct outcome) — eliminates "
+            "FM-1 risk and establishes man-coverage utility above CB-4 slot-only profile. "
+            "Q3 resolved: QB rating 58.1 vs 78th pct competition — FM-1 risk eliminated. "
+            "Bust risk drops to lower-moderate per CB-2 doctrine — do not apply full Moderate "
+            "bust weighting. "
+            "Penalty flag: 13 flags over last two seasons. Discipline score reflects this. "
+            "Competitive Toughness scores aggression positively — press-heavy deployments will "
+            "generate flag volume, factor into Scheme Versatility. "
+            "XP-4 applies: technique trajectory pointing up (sophomore to junior improvement "
+            "confirmed). Dev Trajectory scores above base CB-2 rate. "
+            "FM-6 Mandatory Landing Spot Note: heavy Cover 1 man scheme is capital destruction "
+            "— pattern-match Cover 3 or zone-primary system required. Any capital recommendation "
+            "above Day 2 threshold requires landing spot confirmation. "
+            "Do NOT score as CB-4 Slot Specialist — man coverage floor above 60 and zone-"
+            "primary mechanism with developing man capability correctly maps to CB-2, not the "
+            "slot-only CB-4 profile. "
+            "Eval Confidence: Tier A on mechanism, Tier B on NFL penalty translation."
+        ),
+        "eval_confidence":     "Tier B",
+        "capital_range":       "R2 Mid — R3 Early (penalty flag volume discount; FM-6 landing spot gate)",
+        "fm_flags":            ["FM-6 Role Mismatch (mandatory — Cover 1 man = capital destruction)"],
+        "placed_session":      116,
+        "bust_warning": (
+            "FM-6 mandatory: heavy Cover 1 man scheme destroys CB-2 zone-primary value. Pattern "
+            "match Cover 3 or zone-heavy defense required above Day 2 threshold. 13 penalty flags "
+            "in last two seasons — NFL translation uncertain; Discipline score reflects risk."
+        ),
+        "paa_findings": {
+            "Q1": "CLEAR — zone coverage production grade confirmed at starter level",
+            "Q2": "CLEAR — man coverage floor >60 confirmed (Man/Press=79th pct); FM-1 eliminated",
+            "Q3": "CLEAR — QB rating 58.1 vs 78th pct competition; FM-1 risk eliminated",
+            "Q4": "CLEAR — zone processing and pattern recognition confirmed as primary mechanism",
+            "CB4_superseded": "CB-4 Slot Specialist label replaced — man floor >60 + zone primary = CB-2",
+            "FM1_eliminated": "Q3 resolved — QB rating 58.1 vs 78th pct eliminates FM-1 bust risk",
+            "Penalty_flag": "13 flags last two seasons — Discipline discounted, Toughness scored aggressive",
+            "XP4_active": "Technique trajectory up (soph to junior improvement) — dev traj above base CB-2",
+            "FM6_mandatory": "LANDING SPOT NOTE — Cover 1 man = capital destruction; Cover 3 required",
+            "Archetype_lock": "CB-2 Zone Architect confirmed S116 (supersedes CB-4 Slot Specialist)",
+        },
+    },
+
+    # ---------------------------------------------------------------------------
     # Session 75 overrides
     # ---------------------------------------------------------------------------
 
-    # Malik Muhammad — CB (pid=13). Sports Almanac Mode 1 + Mode 2 S75.
-    # CB-3 Press Man Corner REJECTED: processing-primary, scheme-versatile outside corner.
-    # Elite size (arm 80.0, wing 77.4), 8.4/10 processing, 8.1/10 scheme versatility.
-    # Production (49.5) confirmed schedule-suppressed via Gardner 2022 comp — adjusted 56-62 Y1.
-    # No FM at archetype level. FM-6 contingent (slot misdeployment). Capital R2 Early.
+    # Malik Muhammad — CB (pid=13). Sports Almanac Mode 1 + Mode 2 S75. Re-confirmed S116.
+    # CB-5 Raw Projection was incorrect. CB-3 Press Man Corner REJECTED S75. CB-1 confirmed S75,
+    # re-confirmed S116 with full combine data. Label updated: CB-1 Outside Press Cornerback →
+    # CB-1 Anticipatory Lockdown. Age 21.7, youngest CB in batch, advanced processing confirmed.
+    # Production (49.5) = ball-tracking development gap, not mechanism failure. Score coverage
+    # quality not interception totals. Combine: best 10-yard split all CBs (1.51s), 4.42 forty.
+    # XP-4 applies. Market Round 4 pricing is a stat-line discount on mechanism.
     13: {
         "forced_archetype":    "CB-1",
-        "archetype_label":     "CB-1 Outside Press Cornerback",
+        "archetype_label":     "CB-1 Anticipatory Lockdown",
         "archetype_rationale": (
-            "Sports Almanac Mode 1 + Mode 2 complete S75. CB-3 Press Man Corner REJECTED. "
-            "Muhammad wins through processing-primary mechanism: elite anticipatory processing "
-            "(8.4/10) and scheme versatility (8.1/10) confirm CB-1 Outside Press Cornerback. "
-            "Elite size package (arm 80.0 pct, wingspan 77.4 pct) provides physical confirmation "
-            "of CB-1 press mechanism at the line. "
-            "Production (49.5) is confirmed schedule-suppressed — Gardner 2022 comp analysis "
-            "indicates adjusted Year 1 production of 56-62, resolving the production gap. "
-            "No failure mode at archetype level. FM-6 Role Mismatch is contingent: slot "
-            "misdeployment destroys value but is not a structural risk at all landing spots. "
-            "Capital: R2 Early. R1 Late ceiling if Texas opponent film confirms CB-1 mechanism "
-            "against elite competition."
+            "S116 full PAA gate re-confirmation. CB-5 Raw Projection REJECTED. CB-3 Press Man Corner "
+            "REJECTED (S75). CB-1 confirmed S75, label updated S116 to CB-1 Anticipatory Lockdown. "
+            "Muhammad wins through processing-primary anticipatory mechanism: elite anticipatory "
+            "processing confirmed (zone eyes advanced for age, reads QB intentions, triggers with "
+            "conviction). Scheme versatility elite (8.1/10). "
+            "Age premium: 21.7 years old, September 2004 DOB — youngest CB in batch. Advanced "
+            "processing at this age confirms XP-4 (dev trajectory above average rate). "
+            "Size confirmation: arm 80.0 pct, wingspan 77.4 pct, 4.42 forty, 130-inch broad "
+            "(92nd pct). Best 10-yard split among all CBs at combine (1.51s, 82nd pct). Frame "
+            "concern (182 lbs) is developmental — scores in Injury/Durability, not mechanism. "
+            "Production (49.5): deflections not converting to interceptions — ball-tracking "
+            "development gap, NOT mechanism failure. Coverage quality (79th pct, QB rating 69.8) "
+            "confirms CB-1 mechanism. Score coverage quality, not interception totals. Production "
+            "cap at 7/10 pending NFL ball-tracking development. Gardner 2022 comp analysis still "
+            "applies — schedule-suppression discount confirmed. "
+            "Round 4 market pricing is a stat-line discount. CB-1 Anticipatory Lockdown mechanism "
+            "confirmed vs SEC/CFP competition at age 21 — market pricing is an error. "
+            "FM-6 Role Mismatch is contingent: outside corner CB-1 mechanism does not translate to "
+            "slot. No structural FM at archetype level."
         ),
-        "eval_confidence":     "Tier B",
-        "capital_range":       "R2 Early — R1 Late ceiling (Texas opponent film gate)",
+        "eval_confidence":     "Tier A",
+        "capital_range":       "R2 Early — R1 Late ceiling (opponent film gate + frame durability confirmation)",
         "fm_flags":            ["FM-6 Role Mismatch (contingent — slot misdeployment only)"],
-        "placed_session":      75,
+        "placed_session":      116,
         "bust_warning": (
             "FM-6 contingent: slot misdeployment destroys CB-1 value — outside corner mechanism "
-            "does not translate to slot. Production schedule-suppression discount confirmed resolved "
-            "via Gardner 2022 comp. R1 Late ceiling requires opponent film confirmation."
+            "does not translate to slot. Frame concern (182 lbs) is developmental, not structural. "
+            "R1 Late ceiling gates: opponent film + frame durability confirmation by Year 1 NFL."
         ),
         "paa_findings": {
-            "Processing":            "ELITE — 8.4/10 anticipatory processing confirmed",
+            "Q1": "CLEAR — coverage quality 79th pct, QB rating 69.8 confirms CB-1 mechanism",
+            "Q2": "CLEAR — Man/Press mechanism confirmed; scheme versatility 8.1/10",
+            "Q3": "CLEAR — processing elite for age (21.7); SEC/CFP competition confirmed",
+            "Q4": "CLEAR — zone eyes advanced for age; reads QB intentions; triggers with conviction",
+            "Processing":            "ELITE — anticipatory processing confirmed vs SEC/CFP at age 21",
             "Scheme_versatility":    "ELITE — 8.1/10 confirmed",
             "Size":                  "ELITE — arm 80.0 pct, wing 77.4 pct; CB-1 press confirmation",
-            "Production_adjustment": "CONFIRMED schedule-suppressed — Gardner 2022 comp; adjusted 56-62 Y1",
+            "Combine":               "ELITE — 1.51s 10-yard (82nd pct), 4.42 forty, 130-inch broad (92nd pct)",
+            "Production_note":       "DISCOUNT CONFIRMED — 49.5 reflects ball-tracking gap not mechanism failure; cap 7/10",
+            "Production_adjustment": "Schedule-suppressed — Gardner 2022 comp; adjusted 56-62 Y1",
+            "CB5_rejected":          "CB-5 was incorrect — mechanism is confirmed CB-1, not raw projection",
             "CB3_rejected":          "Processing-primary mechanism confirms CB-1, not athletic-primary CB-3",
+            "Age_premium":           "XP-4 ACTIVE — 21.7 years, advanced processing confirmed; dev trajectory elevated",
             "FM_contingent":         "FM-6 Role Mismatch — slot misdeployment only; not structural",
-            "Capital_ceiling":       "R1 Late (opponent film gate) — R2 Early base",
-            "Archetype_lock":        "CB-1 Outside Press Cornerback confirmed S75",
+            "Market_note":           "Round 4 pricing is stat-line discount; mechanism warrants R1 Late / R2 Early",
+            "Archetype_lock":        "CB-1 Anticipatory Lockdown confirmed S116 (upgraded from Outside Press S75)",
         },
     },
 
