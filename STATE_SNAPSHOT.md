@@ -26,41 +26,61 @@ As of Session 101 (post-fix): DEDUP_GHOST and INACTIVE_SNAPSHOT passes complete.
 
 ## Last Completed Milestone
 
-Session 108 close (Migration 0058 contract_history table. OTC ingest complete. Archetype classification pass. Verification query confirms cap% distribution by archetype — PVC calibration signal live.)
+Session 109 close (PVC archetype weight system: pvc_archetype_weights table, engine integration,
+doctor check. Migration 0059 historical_comps v2. CB-1 comp seed batch complete.)
 
-Session 108 close:
+Session 109 close:
 - DB writes: YES.
-- Schema change: Migration 0058 applied (contract_history table + 4 indexes).
-  Next migration label: 0059.
-- New table: contract_history
-    28,355 unique rows ingested from 14 OTC position CSVs (2016+ window).
-    Dollar/percentage columns parsed to REAL at ingest. Position group derived from filename.
-    UNIQUE index on (player, team, year_signed, position_group) — idempotent on re-run.
-    LT+RT merged to OT, LG+RG merged to OG.
+- Schema change: Migration 0059 applied (historical_comps v2 — additive columns).
+  Next migration label: 0060.
+- Migration 0059 adds: season_id, nfl_team, draft_year, outcome, primary_fm, secondary_fm,
+  era_flag, pvc_eligible, position_note, notes. Backfills outcome=translation_outcome,
+  primary_fm=fm_code. Sets pvc_eligible=1 for 4 known modern-era CB-1 records.
+  Unique index updated: (player_name, archetype_code) → (player_name, archetype_code, season_id).
 - New scripts:
-    scripts/ingest_contract_history.py — 14 CSV ingest, --apply 0/1, DB backup before write.
-    scripts/classify_contracts_from_comps.py — matches historical_comps player_name to
-      contract_history via normalized name + position-aware filter. 276 exact + 2 fuzzy
-      matches → 764 rows classified (archetype_code + confidence=HIGH + source=historical_comps).
-      EXCLUSION_LIST hook at top for bad fuzzy matches. WHERE archetype_code IS NULL guard —
-      never overwrites existing classifications.
-- Key verification output (archetype avg cap%, 2016+):
-    QB-1: 13.24%  EDGE-1: 6.65%  S-3: 5.08%  OT-1: 5.17%  CB-1: 4.00%
-    CB signals: CB-1 (4.0%) well below EDGE-1 (6.65%) — market prices CB tier-1 like EDGE tier-2.
-    S-3 Multiplier (5.08%) > S-1 (3.07%) — market confirms highest-paid S archetype.
-    RB-3/RB-4: <1.1% — suppressed, consistent with RB PVC=0.70x.
-- Unmatched log: data/exports/classification_unmatched.txt
-    72 unmatched: pre-2016 retirees (Manning, Aikman, Moss, etc.), OLB/EDGE dual-map already
-    caught in EDGE pass, position mismatches (Garrett Bolles as C, Elgton Jenkins as C), test rows.
-- Doctor: PASSED post-session.
+    scripts/seed_cb1_comps_s108_batch2.py — seeds 10 CB-1 historical comps (Tier 1: Sanders,
+      Sherman, Law, Woodson, Ramsey; Tier 2: Asomugha, Madison, Surtain II, Lattimore, Alexander).
+      Embeds migration 0059 check-and-apply. INSERT OR IGNORE idempotency.
+      Verification gate: total=14, pvc_eligible_n>=8, high_conf_n>=8 — all PASSED.
+    scripts/build_pvc_archetype_weights.py — builds pvc_archetype_weights table from
+      contract_history. 65 rows across 12 position groups. Calibration passes:
+        A) outlier shrink (small-n archetypes toward position median)
+        B) QB-1 hard ceiling clamp (no QB archetype may exceed QB-1 weight)
+        C) EDGE-4 hard clamp to EDGE-2 (contamination guardrail — Garrett/Hutchinson pending)
+        D) OG-2 manual trust downgrade (sample contamination, trusted=0)
+      ILB/OLB normalized to LB key at write time.
+- New table: pvc_archetype_weights
+    65 rows: position_group, archetype_code, weight, n_contracts, avg_cap_pct,
+             min_cap_pct, max_cap_pct, trusted, notes.
+    trusted=1: 52 rows. trusted=0: 13 rows (small-n + OG-2 manual).
+    Key values: QB-1=1.301, EDGE-1=1.130, CB-1=1.272, EDGE-4=1.011 (clamped), QB-3=1.301 (clamped).
+- contract_history manual reclassifications:
+    10 rows updated for Ramsey, Sherman, Lattimore, Alexander (CB-2/CB-3 → CB-1).
+    Jalen Ramsey CB-1 comp (comp_id=560): mechanism text merged, FM-5 added.
+    Old Ramsey CB-3 record (comp_id=27) deleted.
+- Engine changes (draftos/apex/engine.py — bumped to v2.3):
+    get_archetype_weight(conn, position_group, archetype_code) -> float
+      Looks up trusted=1 row from pvc_archetype_weights. ILB/OLB → LB normalization.
+      Returns 1.0 if no trusted row found.
+    get_archetype_pvc(conn, position_group, archetype_code) -> float
+      Returns position_pvc * archetype_weight, rounded to 4 decimal places.
+      Falls back to position_pvc alone if no trusted row exists.
+- Scoring pipeline (scripts/run_apex_scoring_2026.py):
+    get_archetype_pvc imported. Scoring block now extracts archetype code from
+    apex_data["archetype"] (first dash-token), applies archetype-aware PVC branch.
+    Fallback to get_pvc(position) when no parseable archetype code in response.
+    compute_apex_composite import removed (inlined as round(raw_score * pvc, 1)).
+- Doctor check added (scripts/doctor.py):
+    pvc_archetype_weights table: row count, trusted/untrusted split, untrusted detail.
+    Sample join: top-20 scored prospects → weights table, reports unmatched rows.
+    Known unmatched: Spencer Fano (position_group=OL, no OL key in weights — graceful fallback).
+- Doctor: PASSED.
 
 ## Next Milestone (Single Target)
 
-Session 109: PVC calibration analysis — use archetype-level cap% distribution from
-contract_history to evaluate whether CB/EDGE/OT positional PVC modifiers are warranted.
-Primary question: does CB-1 at 4.0% vs EDGE-1 at 6.65% justify a CB PVC reduction from 1.0x?
-Extend archetype classification to non-comps players (Option B: rule-based pass).
-Run doctor before any DB writes.
+Session 110: Full board re-score (--batch all --force) using archetype-weighted PVC.
+Investigate Arvell Reese (#2, pid=16) ELITE→DAY1 signal before running.
+After re-score: update snapshot, export, verify divergence distribution.
 
 ---
 
