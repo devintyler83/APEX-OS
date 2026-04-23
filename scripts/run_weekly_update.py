@@ -209,6 +209,23 @@ def main() -> None:
         run(pymod("scripts.publish_latest_packet"))
         run(pymod("scripts.verify_packet_manifest", "--latest", "1"))
 
+    # 20) CB DIAGNOSTICS (read-only, non-blocking)
+    # Runs after all writes and packet steps so diagnostics always reflect the
+    # freshest scored state. Failures here do not abort the pipeline.
+    # season_id mapping: draft_year 2026 → season_id 1 (only active season).
+    _SEASON_ID_MAP = {2026: 1}
+    season_id = _SEASON_ID_MAP.get(season, 1)
+    _sid = str(season_id)
+    for _diag_mod in (
+        "scripts.cb_divergence_snapshot",
+        "scripts.cb4_tweener_audit",
+        "scripts.cb3_fm1_stresstest",
+    ):
+        try:
+            run(pymod(_diag_mod, "--season-id", _sid))
+        except Exception as exc:  # noqa: BLE001
+            print(f"WARN: CB diagnostic {_diag_mod} failed (non-blocking): {exc}")
+
     print("OK: weekly pipeline completed successfully.")
 
 
