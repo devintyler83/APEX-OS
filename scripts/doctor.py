@@ -128,6 +128,77 @@ def main() -> None:
         _require("v_draft_remaining_2026" in views,   "view v_draft_remaining_2026 missing (migration 0056)")
         _require("v_draft_team_board_2026" in views,  "view v_draft_team_board_2026 missing (migration 0056)")
 
+        # PVC archetype weights sanity check
+        if "pvc_archetype_weights" in tables:
+            w_total = conn.execute(
+                "SELECT COUNT(*) AS n FROM pvc_archetype_weights;"
+            ).fetchone()["n"]
+            w_trusted = conn.execute(
+                "SELECT COUNT(*) AS n FROM pvc_archetype_weights WHERE trusted = 1;"
+            ).fetchone()["n"]
+            w_untrusted = w_total - w_trusted
+            _require(w_total >= 60, f"pvc_archetype_weights: only {w_total} rows (expected >=60)")
+            print(f"pvc_archetype_weights: {w_total} rows  trusted={w_trusted}  untrusted={w_untrusted}")
+
+            if w_untrusted > 0:
+                untrusted_rows = conn.execute(
+                    """
+                    SELECT position_group, archetype_code, weight, n_contracts, notes
+                    FROM pvc_archetype_weights
+                    WHERE trusted = 0
+                    ORDER BY position_group, archetype_code;
+                    """
+                ).fetchall()
+                for ur in untrusted_rows:
+                    note = ur["notes"] or ""
+                    print(
+                        f"  untrusted: {ur['position_group']}/{ur['archetype_code']}"
+                        f"  w={ur['weight']:.3f}  n={ur['n_contracts']}"
+                        f"  ({note[:60]})"
+                    )
+
+            # Sample join: scored prospects -> weights table
+            # ILB/OLB mapped to LB to match normalization in the weights builder.
+            sample = conn.execute(
+                """
+                SELECT p.display_name,
+                       p.position_group,
+                       substr(a.matched_archetype, 1, instr(a.matched_archetype || ' ', ' ') - 1) AS archetype_code,
+                       w.weight,
+                       w.trusted
+                FROM apex_scores a
+                JOIN prospects p ON p.prospect_id = a.prospect_id
+                LEFT JOIN pvc_archetype_weights w
+                  ON w.position_group = CASE
+                       WHEN p.position_group IN ('ILB','OLB') THEN 'LB'
+                       ELSE p.position_group
+                     END
+                 AND w.archetype_code = substr(a.matched_archetype, 1,
+                       instr(a.matched_archetype || ' ', ' ') - 1)
+                WHERE a.season_id = 1
+                  AND a.matched_archetype IS NOT NULL
+                  AND p.is_active = 1
+                ORDER BY a.apex_composite DESC
+                LIMIT 20;
+                """
+            ).fetchall()
+
+            scored_with_weight = sum(1 for r in sample if r["weight"] is not None)
+            scored_without_weight = sum(1 for r in sample if r["weight"] is None)
+            print(
+                f"pvc_archetype_weights join (top-20 scored sample): "
+                f"matched={scored_with_weight}  unmatched={scored_without_weight}"
+            )
+            if scored_without_weight > 0:
+                for r in sample:
+                    if r["weight"] is None:
+                        print(
+                            f"  no weight: {r['display_name']} "
+                            f"{r['position_group']}/{r['archetype_code']}"
+                        )
+        else:
+            print("pvc_archetype_weights: table missing (run build_pvc_archetype_weights.py)")
+
     print("OK: doctor checks passed")
 
 

@@ -69,7 +69,7 @@ import anthropic
 from draftos.db.connect import connect
 from draftos.apex.engine import (
     get_pvc,
-    compute_apex_composite,
+    get_archetype_pvc,
     compute_apex_tier,
     compute_divergence,
 )
@@ -2349,9 +2349,23 @@ def _score_prospect(
         print(f"  [RAW response]:\n{raw[:400]}")
         return False, backed_up
 
-    pvc            = get_pvc(position)
     raw_score      = float(apex_data["raw_score"])
-    apex_composite = compute_apex_composite(raw_score, position)
+
+    # Extract archetype code from Claude response ("CB-1 Elite Corner" -> "CB-1")
+    _resp_arch = (apex_data.get("archetype") or "").strip()
+    _resp_arch_parts = _resp_arch.split()
+    _resp_arch_code = (
+        _resp_arch_parts[0]
+        if _resp_arch_parts and "-" in _resp_arch_parts[0]
+        else None
+    )
+
+    if _resp_arch_code:
+        pvc = get_archetype_pvc(conn, position, _resp_arch_code)
+    else:
+        pvc = get_pvc(position)
+
+    apex_composite = round(raw_score * pvc, 1)
     apex_tier      = compute_apex_tier(apex_composite)
 
     # Capital range must derive from PVC-adjusted apex_composite, not raw_score (RPG).

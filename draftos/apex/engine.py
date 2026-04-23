@@ -1,9 +1,11 @@
 """
-APEX v2.2 deterministic math layer.
+APEX v2.3 deterministic math layer.
 No AI calls. Pure computation only.
 
 Functions:
   get_pvc(position_group) -> float
+  get_archetype_weight(conn, position_group, archetype_code) -> float
+  get_archetype_pvc(conn, position_group, archetype_code) -> float
   compute_apex_composite(raw_score, position_group) -> float
   compute_apex_tier(apex_composite) -> str
   compute_divergence(apex_composite, consensus_rank, apex_tier, consensus_tier) -> dict
@@ -52,6 +54,36 @@ def get_pvc(position_group: str) -> float:
     if not position_group:
         return 0.80
     return PVC_TABLE.get(position_group.upper(), 0.80)
+
+
+# ILB/OLB stored as LB in pvc_archetype_weights (weight builder normalizes them)
+_LB_NORM: frozenset[str] = frozenset({"ILB", "OLB"})
+
+
+def _weights_position_key(position_group: str) -> str:
+    return "LB" if position_group.upper() in _LB_NORM else position_group.upper()
+
+
+def get_archetype_weight(conn, position_group: str, archetype_code: str) -> float:
+    """Return archetype weight multiplier from pvc_archetype_weights (trusted=1 rows only).
+    Returns 1.0 if no trusted row found (falls back to position-group PVC)."""
+    if not position_group or not archetype_code:
+        return 1.0
+    wt_pos = _weights_position_key(position_group)
+    row = conn.execute(
+        "SELECT weight FROM pvc_archetype_weights "
+        "WHERE position_group=? AND archetype_code=? AND trusted=1",
+        (wt_pos, archetype_code),
+    ).fetchone()
+    return row[0] if row else 1.0
+
+
+def get_archetype_pvc(conn, position_group: str, archetype_code: str) -> float:
+    """Return position_pvc * archetype_weight, rounded to 4 decimal places.
+    Falls back to position_pvc alone if no trusted archetype row exists."""
+    position_pvc = get_pvc(position_group)
+    archetype_weight = get_archetype_weight(conn, position_group, archetype_code)
+    return round(position_pvc * archetype_weight, 4)
 
 
 def compute_apex_composite(raw_score: float, position_group: str) -> float:
