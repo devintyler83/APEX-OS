@@ -340,31 +340,80 @@ ARCHETYPE_OVERRIDES: dict[int, dict] = {
     # Keys rebuilt Session 15: all IDs verified against current DB (post-Session 12 rebuild).
     # Previous keys used stale pre-rebuild IDs; all 8 entries corrected here.
     16: {
-        # Arvell Reese — Session 71: ILB-3 Run-First Enforcer.
-        # Pipeline correction: DB=EDGE (S62 consolidation artifact). Mechanism analysis confirms ILB-3.
-        # S70 scored as EDGE-4/FM-1 (wrong library). S71 gate scored as EDGE-1/FM-3 (still wrong library).
-        # Correct classification: ILB-3. Run defense Blk Shed=99, Anchor=98, HitPow=97. Coverage=39.4 (structural).
-        # TOP50_POSITION_OVERRIDES[16]="ILB" reinstated to route scoring against ILB library.
-        "archetype_label":    "ILB-3 Run-First Enforcer",
+        # Arvell Reese — ILB-3 Run-First Enforcer. PROSPECT_HANDOFF_BLOCK applied S110.
+        # Pipeline history: DB=EDGE (S62 consolidation artifact).
+        #   S70: scored EDGE-4 (wrong library). S71: gate re-scored EDGE-1 (still wrong).
+        #   S71: TOP50_POSITION_OVERRIDES[16]="ILB" reinstated; re-scored ILB-3 raw=82.4 DAY1.
+        #   S110: forced_archetype added, full vector floor caps injected from handoff block.
+        # No EDGE archetype_override to clear — prior EDGE scores were library-routing errors,
+        # not archetype_override contamination. Current score is ILB-3 via ILB library. Re-score
+        # with forced_archetype + vector caps to anchor against the S110 handoff block.
+        "forced_archetype":    "ILB-3",
+        "archetype_label":     "ILB-3 Run-First Enforcer",
         "archetype_rationale": (
-            "Reese's primary win mechanism is run-gap enforcement via elite hand technique and anchor "
-            "(Block Shedding 99, Anchor 98, Hit Power 97). YaTA 2.0, 2nd among P4 LBs — run-stopping "
-            "mechanism is Tier A confirmed. 4.46 forty at 241 lbs is elite ILB athleticism "
-            "(95th+ percentile at position) and scores as a competitive toughness asset, NOT a speed-arc ceiling. "
-            "Coverage grade 39.4 (Zone 31, Man 53) is a structural scheme constraint — route to SchemeVers, "
-            "not Processing. This is not a coverage LB with developmental upside in coverage; "
-            "this is a run defender who has been correctly not deployed in coverage. "
-            "Pass-rush production (22/27 pressures, 8 sacks in first 8 games) is context-dependent "
-            "(QB spy, package deployment) — do not price as every-down EDGE mechanism. "
-            "Primary bust risk: FM-6 (Role Mismatch) — organizations deploying him as a coverage-first "
-            "ILB in a coverage-demanding scheme generate the bust from their own misread of the profile. "
-            "Secondary risk: FM-3 limited (PA bite 100%, late route ID) — coverage-specific processing "
-            "floor, not a positional Processing Wall. "
-            "Landing spot is a mandatory capital modifier: run-first schemes (gap-sound, two-high) "
-            "unlock full value; coverage-demanding schemes (Tampa 2, pattern-match heavy) structurally "
-            "limit him to a rotational role regardless of run-stopping ability."
+            "S110 HANDOFF BLOCK ACTIVE. Reese's primary win mechanism is run-gap enforcement "
+            "via elite hand technique and anchor (Block Shedding 99, Anchor 98, Hit Power 97). "
+            "YaTA 2.0 (2nd among P4 LBs) — run-stopping mechanism is Tier A confirmed. "
+            "4.46 forty at 241 lbs is elite ILB athleticism (95th+ pct at position) and scores "
+            "as a competitive toughness asset, NOT a speed-arc ceiling. "
+            "Coverage grade 39.4 (Zone 31, Man 53) is a structural scheme constraint — route to "
+            "SchemeVers, not Processing. Coverage is absent by design, not by failure. "
+            "Pass-rush production (22/27 pressures, 8 sacks in 8 games) is context-dependent "
+            "(QB spy, package deployment) — do NOT price as every-down EDGE mechanism. "
+            "\n\nVECTOR FLOOR CAPS (S110 handoff):\n"
+            "Processing & Instincts: 7.0 (PAA Q3 PARTIAL — run fits anticipatory, coverage reactive; "
+            "cap holds at 7 pending coverage development; downside cap 6 if recognition gap structural). "
+            "Athleticism: 8.5 (4.46/241 confirmed, 95th pct speed, 89.0 ATH composite; "
+            "COD unconfirmed — combine agility '—'; do NOT exceed 8.5 without combine confirmation). "
+            "Scheme Versatility: 6.0 [PAA Q4 CAP ACTIVE — FM-2 Watch; coverage untested by design; "
+            "cap holds until NFL coverage confirmation]. "
+            "Competitive Toughness: 8.0 (motor elite confirmed, YaTA 2.0, Blk Shed 99, Anchor 98, Hit Pow 97). "
+            "Character & Intangibles: 7.0 (no C1 flags; C2 implied 7-8; C3 unconfirmed; "
+            "Schwesinger Rule NOT activated — pending formal C2/C3 confirmation post-draft visits). "
+            "Dev Trajectory: 7.5 (upward arc confirmed — late-season eye discipline, counter development; "
+            "960 career snaps, significant runway; ILB Development Timeline Rule: Year 3 minimum). "
+            "Production: 7.0 (PAA Q1 PASS player-generated; PAA Q2 PASS vs Penn State/Michigan OL; "
+            "Scheme Production Flag NOT triggered on run defense; pass production blitz artifact). "
+            "Injury & Durability: 7.5 (no significant injury history; 960 snaps — limited wear, "
+            "durability unconfirmed by volume)."
+            "\n\nPAA STATUS: Q1 PASS | Q2 PASS | Q3 PARTIAL (run anticipatory, coverage reactive) | "
+            "Q4 FLAG (FM-2 Watch, SchemeVers capped 6.0, coverage absent by design not failure)."
+            "\n\nCOMPS: Dont'a Hightower (ILB-3, scheme-protected enforcer) hit/primary; "
+            "Jihaad Campbell 2025 (EDGE-DNA hybrid, ILB-4 arc) developmental; "
+            "Kwon Alexander (FM-2/FM-6 compound) bust comp."
+            "\n\nILB-4 CANDIDACY NOTE: DEVELOPMENTAL tag only — NOT scored. "
+            "Upgrade conditions: NFL Year 1 confirms multi-alignment deployment + "
+            "zone recognition develops to functional threshold + DC invests in hybrid deployment."
+            "\n\nMANDATORY LANDING SPOT NOTE REQUIRED before any capital rec above Round 2: "
+            "must confirm base personnel usage ≥40%, DC deployment intent, "
+            "sub-package protection plan for coverage limitations."
         ),
-        "fm_flags": ["FM-6", "FM-3-limited"],
+        "eval_confidence":     "Tier B",
+        "capital_range":       "R1 Picks 21-32 / Early R2 (scheme confirmed) — R2 Picks 33-50 (unconfirmed)",
+        "fm_flags":            ["FM-2 Scheme Ghost (primary)", "FM-6 Role Mismatch (secondary — organizational)", "FM-3 Processing Wall (watch)"],
+        "placed_session":      110,
+        "bust_warning": (
+            "FM-2 Scheme Ghost primary: Run-First Enforcer in nickel-heavy or coverage-demanding "
+            "scheme destroys value. Prevention: scheme alignment confirmation pre-commitment. "
+            "FM-6 Role Mismatch secondary (XP-2 applies — organizational, not player-generated): "
+            "drafted as EDGE, deployed in wrong role. "
+            "FM-3 watch: coverage recognition gap may be developmental or structural — "
+            "confirmed at Year 2 re-evaluation minimum."
+        ),
+        "paa_findings": {
+            "Q1_run_generated":    "PASS — player-generated at run-stop level confirmed",
+            "Q2_vs_NFL_comp":      "PASS — production held vs. Penn State, Michigan OL",
+            "Q3_anticipatory":     "PARTIAL — run fits anticipatory; coverage reactive; cap Processing 7.0",
+            "Q4_coverage":         "FLAG ACTIVE — FM-2 Watch; SchemeVers capped 6.0; coverage absent by design",
+            "Run_mechanism":       "TIER A — Blk Shed 99, Anchor 98, Hit Pow 97, YaTA 2.0 (2nd P4 LBs)",
+            "Athleticism":         "ELITE — 4.46/241, 95th pct speed, 89.0 ATH composite; COD unconfirmed",
+            "Coverage":            "STRUCTURAL CONSTRAINT — Zone 31, Man 53, grade 39.4; not absent by failure",
+            "Pass_rush":           "CONTEXT-DEPENDENT — blitz package artifact; not every-down EDGE mechanism",
+            "Schwesinger_Rule":    "NOT ACTIVATED — pending formal C2/C3 post-draft confirmation",
+            "ILB4_candidacy":      "DEVELOPMENTAL TAG ONLY — not scored; NFL Year 1 confirmation required",
+            "Landing_spot":        "MANDATORY NOTE REQUIRED — base pct ≥40%, DC deployment intent confirmed",
+        },
+        "v_scheme_vers_cap":   6.0,
     },
     80: {
         "forced_archetype":  "EDGE-4 Athletic Dominator",
