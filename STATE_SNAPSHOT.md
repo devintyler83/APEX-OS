@@ -26,8 +26,60 @@ As of Session 101 (post-fix): DEDUP_GHOST and INACTIVE_SNAPSHOT passes complete.
 
 ## Last Completed Milestone
 
-Session 109 close (PVC archetype weight system: pvc_archetype_weights table, engine integration,
-doctor check. Migration 0059 historical_comps v2. CB-1 comp seed batch complete.)
+Session 110 close (DB identity-hygiene pass complete. S-position calibration complete.
+Arvell Reese ILB-3 handoff block applied. Global ghost PID cleanup enforced.)
+
+Session 110 close:
+- DB writes: YES.
+- Schema change: NONE. Next migration label: 0060.
+- Active prospects: 1293 → 1170 (123 ghost pids deactivated).
+- apex_scores: 369 → 359 rows (10 ghost/stale rows deleted total across session).
+
+Key work completed:
+1. NON-2026 BOUNDARY ENFORCEMENT (scripts/purge_non2026_apex_scores.py):
+   - Deleted 20 stale apex_scores rows for non-2026 draftees (Group A/B pids).
+   - Removed Travis Hunter, Shedeur Sanders, Trevor Etienne, Tyleik Williams from
+     CALIBRATION_OVERRIDES. NON_2026_PROSPECT_PIDS frozenset added to scoring script.
+   - Doctor: Rule 1 (no inactive non-cal prospects with S1 scores) + Rule 2 (blocked pids).
+
+2. S-POSITION GHOST CLEANUP (scripts/clean_s_ghost_pids.py):
+   - Deactivated 25 S/CB/LB ghost pids. Deleted 4 stale S apex_scores rows.
+   - Ghost pids added to NON_2026_PROSPECT_PIDS.
+
+3. S-4 ARCHETYPE CALIBRATION:
+   - ARCHETYPE_OVERRIDES added: Louis Moore (pid=193) S-4, Jakobe Thomas (pid=238) S-4,
+     Jalen Stroman (pid=824) S-4.
+   - Scored: Moore raw=64.2 comp=50.4 DAY3, Thomas raw=61.4 comp=48.2 DAY3,
+     Stroman raw=58.7 comp=46.1 DAY3. All eff_pvc=0.7848 (0.90 × S-4 weight 0.872).
+   - Michael Taaffe (pid=310) re-scored as S-3 raw=63.7 comp=57.8 (engine chose S-3).
+
+4. ARVELL REESE ILB-3 HANDOFF BLOCK (pid=16):
+   - Full S110 handoff block injected into ARCHETYPE_OVERRIDES entry.
+   - forced_archetype: "ILB-3". v_scheme_vers_cap=6.0 (PAA Q4 FLAG).
+   - Vector floor caps: Processing=7.0, Athleticism=8.5, SchemeVers=6.0, Toughness=8.0.
+   - Re-scored: raw=72.8, comp=61.9, DAY2. Down from S71 82.4/70.0 (SchemeVers cap fired).
+   - Capital: R1 Picks 21-32 / Early R2 (scheme confirmed).
+
+5. GLOBAL IDENTITY-HYGIENE PASS (scripts/global_ghost_pid_cleanup.py):
+   - 111 (display_name, position_group) pairs with multiple active pids → 0.
+   - 123 ghost pids deactivated (high-numbered late-ingest duplicates).
+   - 6 stale apex_scores rows deleted (all high-pid ghosts of correctly scored canonicals).
+   - Canonical rule: lowest scored pid → else lowest pid.
+   - Doctor: identity-hygiene check upgraded from WARN to hard FAIL.
+
+6. S-4/S-5 PVC ARCH-WEIGHT CONSISTENCY PASS:
+   - S-5 band (8 prospects): all re-scored to eff_pvc=0.6597 (0.90 × 0.733).
+     McNeil-Warren=44.3, Payne=38.5, Nwankpa=38.3, Huskey=36.8, Johnson=36.3,
+     Nwokobia=36.1, Fitzgerald=34.5, Clark=34.2.
+   - doctor_pvc_preview.py: added is_active=1 filter (was showing inactive ghost rows),
+     added S-4 band, LEGACY? flag for pre-arch-weight scores.
+
+7. New scripts committed: purge_non2026_apex_scores.py, clean_s_ghost_pids.py,
+   global_ghost_pid_cleanup.py, doctor_pvc_preview.py.
+
+Remaining LEGACY? bands (eff_pvc == base_pvc, no arch-weight applied):
+  S-1 (Downs), S-2 (Kilgore, Haulcy), S-3 (Thieneman, Ramsey, Wheatley, Smith),
+  full RB band, full ILB band.
 
 Session 109 close:
 - DB writes: YES.
@@ -78,9 +130,12 @@ Session 109 close:
 
 ## Next Milestone (Single Target)
 
-Session 110: Full board re-score (--batch all --force) using archetype-weighted PVC.
-Investigate Arvell Reese (#2, pid=16) ELITE→DAY1 signal before running.
-After re-score: update snapshot, export, verify divergence distribution.
+Session 111: Full board arch-weight PVC consistency pass.
+Re-score all LEGACY? bands (S-1/S-2/S-3, full RB band, full ILB band) with --batch all --force
+to apply archetype-weighted PVC to all remaining pre-weight-system scores.
+After re-score: update snapshot, verify divergence distribution, export.
+Also: evaluate Taaffe S-3 re-classification (was S-4 calibration anchor) — add ARCHETYPE_OVERRIDE
+for S-4 if S-3 assignment is not defensible on mechanism.
 
 ---
 
