@@ -26,6 +26,55 @@ As of Session 101 (post-fix): DEDUP_GHOST and INACTIVE_SNAPSHOT passes complete.
 
 ## Last Completed Milestone
 
+Session 112 close (Full board arch-weight PVC re-score complete. 286 prospects at apex_v2.3. Divergence recomputed. Doctor PASSED.)
+
+Session 112 close:
+- DB writes: YES.
+- Schema change: NONE. Next migration label: 0060.
+- Active prospects: 1170 (unchanged).
+- apex_scores: 286 active non-calibration rows at apex_v2.3 (was 284 pre-session; Abney and Sadiq upgraded from v2.2).
+
+Key work completed:
+1. FULL BOARD ARCH-WEIGHT PVC RE-SCORE (--batch all --force --apply 1):
+   - 287 prospects queued; 269 scored in first pass, 18 JSON parse failures.
+   - Retries: 16/18 wrote on first retry. Keith Abney (pid=74) and Kenyon Sadiq (pid=62)
+     required a third attempt (persistent JSON parse errors on prior runs); both written.
+   - Final: 286 prospects at apex_v2.3. All prior LEGACY? bands now have arch-weight PVC applied.
+
+2. TIER DISTRIBUTION (S112, 286 active non-calibration at apex_v2.3):
+   ELITE=15, DAY1=31, DAY2=68, DAY3=97, UDFA-P=69, UDFA=6.
+   ELITE count jump (2→15 vs S90) driven by CB-1/CB-4/QB-1/EDGE-1/WR-1 arch-weights >1.0.
+
+3. NOTABLE SCORE CHANGES:
+   - Fernando Mendoza (QB-1): raw=87.3, pvc=1.301, composite=113.6, ELITE.
+   - Arvell Reese (ILB-3): raw=73.2, pvc=0.85, composite=62.2, DAY2. STABLE (S110=61.9).
+   - Keith Abney (CB): engine re-classified CB-3→CB-4 Slot Specialist. composite=85.8, ELITE.
+     (Was CB-3 DAY2 65.4 at apex_v2.2 — CB-4 arch-weight 1.201 is why.)
+   - Kenyon Sadiq (TE-2): composite=72.7, DAY1 (was DAY2 62.7 at apex_v2.2).
+
+4. RESIDUAL LEGACY? FLAGS (false positives, not actionable):
+   - Arvell Reese (ILB-3) and Zion Young (ILB-3): eff_pvc==base_pvc=0.85.
+     ILB-3 arch-weight is trusted=0 → engine falls back to base PVC. Correct behavior.
+
+5. DIVERGENCE RECOMPUTED (286 prospects):
+   ALIGNED=35, APEX_HIGH=120, APEX_LOW=39, APEX_LOW_PVC_STRUCTURAL=92.
+   D'Angelo Ponds (pid=3236) excluded — no consensus rank row (known quirk).
+
+6. CLEANUP ITEM IDENTIFIED (not yet actioned):
+   Cade Klubnik ghost PIDs: pid=112 (EDGE, active, has v2.3 apex_score EDGE-5 UDFA-P)
+   and pid=4468 (LB, active, no apex_score). Both causing false divergence signals.
+   Action required next session: deactivate pid=112 and pid=4468, delete apex_scores row
+   for pid=112, recompute divergence.
+
+7. Doctor: PASSED (post-rescore).
+
+Next Milestone (Session 113):
+- Deactivate Klubnik ghost PIDs (112, 4468) and delete pid=112 apex_scores row.
+- Recompute divergence after Klubnik cleanup.
+- Export full board: apex_all_scored_session112.json + apex_top300_board_session112.csv.
+- Run tag triggers (run_tag_triggers_2026.py) and triage new recs.
+- Pre-draft snapshot (board is now ready — all 286 at arch-weight apex_v2.3).
+
 Session 111 close (Legacy PVC audit complete. Full re-score command block generated for 251 rows. No DB writes.)
 
 Session 111 close:
