@@ -4,7 +4,7 @@ APEX OS is a deterministic draft operating system that turns 16 ranking sources,
 
 ---
 
-Last Updated (UTC): 2026-04-22T23:37:24.420659+00:00
+Last Updated (UTC): 2026-04-22T18:00:00.000000+00:00
 
 ---
 
@@ -26,28 +26,40 @@ As of Session 101 (post-fix): DEDUP_GHOST and INACTIVE_SNAPSHOT passes complete.
 
 ## Last Completed Milestone
 
-Session 107 close (Full batch APEX re-score complete. Arvell Reese ELITE→DAY1 drop reviewed and accepted. Streamlit Cloud deploy unblocked — sandbox removed, app_landing import fixed.)
+Session 108 close (Migration 0058 contract_history table. OTC ingest complete. Archetype classification pass. Verification query confirms cap% distribution by archetype — PVC calibration signal live.)
 
-Session 107 close:
-- DB writes: NONE (re-score results already in apex_scores from prior scoring run).
-- Schema change: NONE. Next migration label: 0058.
-- Full batch APEX re-score (--batch all --force): COMPLETE.
-- Arvell Reese (#2, pid=16) ELITE→DAY1 drop: REVIEWED AND ACCEPTED.
-    Drop: -8.8 pts. Forty=4.46, ATH=86.6. Measurables context justified the downgrade.
-    Decision: DAY1 score stands. No override applied.
-- Streamlit Cloud deploy fixes:
-    app/app.py — sandbox overlay fully removed (SANDBOX_MODE, sanitize_room_name,
-      active_sandbox_id, all sandbox imports, session-init, pill, sidebar controls).
-      Sandbox functions remain in draft_mode.py (non-breaking, audit history intact).
-    app/app.py — app_landing import fixed: explicit sys.path.insert(0, app/) before
-      bare `import app_landing`, resolves correctly under both
-      `streamlit run app/app.py` (Streamlit Cloud) and `import app.app` (local tests).
-- Doctor: not re-run (no DB or pipeline changes). Last known good: Session 105 PASSED.
+Session 108 close:
+- DB writes: YES.
+- Schema change: Migration 0058 applied (contract_history table + 4 indexes).
+  Next migration label: 0059.
+- New table: contract_history
+    28,355 unique rows ingested from 14 OTC position CSVs (2016+ window).
+    Dollar/percentage columns parsed to REAL at ingest. Position group derived from filename.
+    UNIQUE index on (player, team, year_signed, position_group) — idempotent on re-run.
+    LT+RT merged to OT, LG+RG merged to OG.
+- New scripts:
+    scripts/ingest_contract_history.py — 14 CSV ingest, --apply 0/1, DB backup before write.
+    scripts/classify_contracts_from_comps.py — matches historical_comps player_name to
+      contract_history via normalized name + position-aware filter. 276 exact + 2 fuzzy
+      matches → 764 rows classified (archetype_code + confidence=HIGH + source=historical_comps).
+      EXCLUSION_LIST hook at top for bad fuzzy matches. WHERE archetype_code IS NULL guard —
+      never overwrites existing classifications.
+- Key verification output (archetype avg cap%, 2016+):
+    QB-1: 13.24%  EDGE-1: 6.65%  S-3: 5.08%  OT-1: 5.17%  CB-1: 4.00%
+    CB signals: CB-1 (4.0%) well below EDGE-1 (6.65%) — market prices CB tier-1 like EDGE tier-2.
+    S-3 Multiplier (5.08%) > S-1 (3.07%) — market confirms highest-paid S archetype.
+    RB-3/RB-4: <1.1% — suppressed, consistent with RB PVC=0.70x.
+- Unmatched log: data/exports/classification_unmatched.txt
+    72 unmatched: pre-2016 retirees (Manning, Aikman, Moss, etc.), OLB/EDGE dual-map already
+    caught in EDGE pass, position mismatches (Garrett Bolles as C, Elgton Jenkins as C), test rows.
+- Doctor: PASSED post-session.
 
 ## Next Milestone (Single Target)
 
-Session 108: Verify Streamlit Cloud deploy is live and error-free. Then prospect_comps
-expansion — seed historical comps for scored prospects (Migration 0047 already applied).
+Session 109: PVC calibration analysis — use archetype-level cap% distribution from
+contract_history to evaluate whether CB/EDGE/OT positional PVC modifiers are warranted.
+Primary question: does CB-1 at 4.0% vs EDGE-1 at 6.65% justify a CB PVC reduction from 1.0x?
+Extend archetype classification to non-comps players (Option B: rule-based pass).
 Run doctor before any DB writes.
 
 ---
