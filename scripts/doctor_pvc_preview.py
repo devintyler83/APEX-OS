@@ -2,34 +2,23 @@ import sqlite3
 
 DB_PATH = "data/edge/draftos.sqlite"
 
-# Curated test set: adjust PIDs/names to your actual table
-TEST_PLAYERS = [
+# Archetype bands to sample (2 rows each, top by apex_composite)
+TEST_ARCHETYPES = [
     # CB spectrum
-    ("CB-1", None),   # archetype-only filter
-    ("CB-3", None),
-    ("CB-4", None),
-    ("CB-5", None),
+    "CB-1", "CB-2", "CB-3", "CB-4", "CB-5",
     # EDGE spectrum
-    ("EDGE-1", None),
-    ("EDGE-5", None),
-    # S spectrum
-    ("S-3", None),
-    ("S-5", None),
+    "EDGE-1", "EDGE-2", "EDGE-3", "EDGE-4", "EDGE-5",
+    # S spectrum — all 5 bands
+    "S-1", "S-2", "S-3", "S-4", "S-5",
     # RB spectrum
-    ("RB-1", None),
-    ("RB-3", None),
+    "RB-1", "RB-2", "RB-3",
+    # ILB/OLB
+    "ILB-1", "ILB-3",
 ]
 
-def fetch_sample_rows(conn, archetype_code, player_name_like=None, limit=3):
-    conn.row_factory = sqlite3.Row
+def fetch_sample_rows(conn, archetype_code, limit=2):
     cur = conn.cursor()
-    params = {"arch": archetype_code, "limit": limit}
-    name_clause = ""
-    if player_name_like:
-        name_clause = "AND LOWER(p.player_name) LIKE LOWER(:name)"
-        params["name"] = f"%{player_name_like}%"
-
-    cur.execute(f"""
+    cur.execute("""
       SELECT
         p.prospect_id,
         p.display_name AS player_name,
@@ -41,43 +30,54 @@ def fetch_sample_rows(conn, archetype_code, player_name_like=None, limit=3):
       FROM apex_scores s
       JOIN prospects p ON p.prospect_id = s.prospect_id
       WHERE s.season_id = 1
-        AND s.model_version = (SELECT MAX(model_version) FROM apex_scores WHERE season_id = 1)
-        AND s.matched_archetype LIKE :arch || '%'
-        {name_clause}
+        AND p.is_active = 1
+        AND s.is_calibration_artifact = 0
+        AND s.model_version = (
+          SELECT MAX(model_version) FROM apex_scores
+          WHERE season_id = 1
+        )
+        AND s.matched_archetype LIKE ? || '%'
       ORDER BY s.apex_composite DESC
-      LIMIT :limit;
-    """, params)
+      LIMIT ?
+    """, (archetype_code, limit))
     return cur.fetchall()
 
-def get_position_pvc(position_group):
-    PVC_TABLE = {
-        "QB": 1.0, "CB": 1.0, "EDGE": 1.0,
-        "WR": 0.90, "OT": 0.90, "S": 0.90, "IDL": 0.90,
-        "ILB": 0.85, "OLB": 0.85, "LB": 0.85,
-        "OG": 0.80, "TE": 0.80, "C": 0.80,
-        "RB": 0.70,
-        "OL": 0.80,  # generic fallback used in prospects
-    }
-    return PVC_TABLE.get(position_group, 1.0)
+BASE_PVC = {
+    "QB": 1.0, "CB": 1.0, "EDGE": 1.0,
+    "WR": 0.90, "OT": 0.90, "S": 0.90, "IDL": 0.90,
+    "ILB": 0.85, "OLB": 0.85, "LB": 0.85,
+    "OG": 0.80, "TE": 0.80, "C": 0.80,
+    "RB": 0.70,
+    "OL": 0.80,
+}
 
 def pvc_preview():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
 
     print("=== PVC Archetype Preview ===")
-    print("player | pos | arch | raw_score | base_PVC | arch_PVC | apex_comp")
+    print(f"{'player':<28} | {'pos':<5} | {'arch':<30} | {'raw':>5} | {'base':>5} | {'eff':>6} | {'comp':>6} | flag")
 
-    for arch_code, name_like in TEST_PLAYERS:
-        rows = fetch_sample_rows(conn, arch_code, name_like, limit=2)
+    prev_pos = None
+    for arch_code in TEST_ARCHETYPES:
+        rows = fetch_sample_rows(conn, arch_code, limit=2)
         if not rows:
             continue
-        print(f"\n-- {arch_code} --")
+        pos_prefix = arch_code.split("-")[0]
+        if pos_prefix != prev_pos:
+            print()
+            prev_pos = pos_prefix
+        print(f"-- {arch_code} --")
         for r in rows:
-            base_pvc = get_position_pvc(r["position_group"])
-            arch_pvc = r["pvc"]  # effective PVC stored on apex_scores row
+            base = BASE_PVC.get(r["position_group"], 1.0)
+            eff = r["pvc"]
+            flag = ""
+            # Flag rows where eff_pvc == base_pvc exactly (likely pre-archetype-weight legacy)
+            if abs(eff - base) < 0.0001 and base < 1.0:
+                flag = " LEGACY?"
             print(
-                f"{r['player_name']} | {r['position_group']} | {r['archetype_code']} | "
-                f"{r['raw_score']:.1f} | {base_pvc:.3f} | {arch_pvc:.3f} | {r['apex_composite']:.1f}"
+                f"  {r['player_name']:<28} | {r['position_group']:<5} | {r['archetype_code']:<30} | "
+                f"{r['raw_score']:>5.1f} | {base:>5.3f} | {eff:>6.4f} | {r['apex_composite']:>6.1f} |{flag}"
             )
 
     conn.close()
