@@ -4,7 +4,7 @@ APEX OS is a deterministic draft operating system that turns 16 ranking sources,
 
 ---
 
-Last Updated (UTC): 2026-04-23T21:48:06.693581+00:00
+Last Updated (UTC): 2026-04-23T23:30:00.000000+00:00
 
 ---
 
@@ -25,6 +25,63 @@ Last Updated (UTC): 2026-04-23T21:48:06.693581+00:00
 As of Session 101 (post-fix): DEDUP_GHOST and INACTIVE_SNAPSHOT passes complete. 304 MULTI_ACTIVE real-school clusters remain — require manual review before any further deactivation.
 
 ## Last Completed Milestone
+
+Session 116 close (CB PAA gate batch complete. 12 rescores written. 5 archetype corrections. Divergence recomputed. All failure conditions cleared.)
+
+Session 116 close:
+- DB writes: YES. apex_scores updated for 12 CB prospects at apex_v2.3 (10 initial + 2 corrections).
+- Schema change: NONE. Next migration label: 0060.
+- Active prospects: 1170 (unchanged).
+- apex_scores: 286 active non-calibration rows at apex_v2.3 (12 updated this session).
+- notes table: 10 scoring notes written (one per CB player, permanent record).
+- override_log: 5 entries written (Delane, Ponds, Muhammad label, Scott lock, Abney correction).
+
+Key work completed:
+1. CB PAA GATE BATCH — ARCHETYPE CORRECTIONS:
+   Five ARCHETYPE_OVERRIDES entries added/updated in run_apex_scoring_2026.py:
+   - Mansoor Delane (pid=39): CB-3 → CB-1 Anticipatory Lockdown. NEW entry added.
+     Score: 53.1 DAY3 → 109.5 ELITE (+56.4). Divergence: APEX_LOW -116 → APEX_HIGH +9.
+   - D'Angelo Ponds (pid=3236): CB-3 → CB-1 Anticipatory Lockdown. Entry updated.
+     Score: 53.2 DAY3 → 107.6 ELITE (+54.4). Divergence: APEX_LOW -95 → APEX_HIGH +28.
+     Diagnosis confirmed: prior APEX_LOW was archetype mismatch artifact, not score inflation.
+   - Malik Muhammad (pid=13): CB-1 Outside Press → CB-1 Anticipatory Lockdown. Label + PAA updated.
+     Score: 97.1 → 103.3 ELITE (+6.2). Confidence upgraded Tier B → Tier A. XP-4 noted.
+   - Keionte Scott (pid=338): CB-4 lock ADDED. Model drifted to CB-3 without lock (score crashed
+     89.2→49.0). Lock reinstated. Final: 87.2 ELITE, R3 Late-R4 Early (age discount + FM-6).
+     Capital corrected from inflated R1 1-10. Divergence: APEX_HIGH +69 (consensus undervaluing).
+   - Keith Abney (pid=74): CB-4 Slot Specialist → CB-2 Zone Architect. PAA gate confirms man floor
+     >60 (Man/Press=79th pct). Score: 87.9 ELITE → 63.9 DAY2. Capital: R1 1-10 → R2 Mid-R3 Early.
+     13-penalty flag volume noted. FM-6 mandatory Landing Spot Note added.
+
+2. CONFIRMED ARCHETYPES (no change, re-scored with scoring notes injected):
+   - Jermod McCoy (pid=38): CB-1 FM-4 stable. 103.5 → 102.5 ELITE (-1.0). Capital R1 12-22.
+   - Avieon Terrell (pid=33): CB-1 stable. 101.0 → 96.9 ELITE (-4.1). ALIGNED.
+   - Colton Hood (pid=72): CB-3 stable. 54.7 → 54.6 DAY3 (-0.1). APEX_LOW -84.
+   - Brandon Cisse (pid=71): CB-3 stable. 49.0 → 50.5 DAY3 (+1.5). APEX_LOW -115. FM-4 active.
+   - Chris Johnson (pid=35): CB-2 stable. 74.9 → 72.2 DAY1 (-2.7). APEX_LOW -10 MINOR.
+
+3. DIVERGENCE RECOMPUTE (post all 12 rescores):
+   286 prospects. Final dist: ALIGNED=33, APEX_HIGH=121, APEX_LOW=39, APEX_LOW_PVC_STRUCTURAL=93.
+   CB-specific post-S116: Delane +9, Ponds +28, Muhammad +82, McCoy +10, Terrell +6, Scott +69.
+   Abney now APEX_LOW -25 (was +34 — archetype correction reveals consensus over-pricing).
+
+4. SCORING NOTES: 10 permanent scout notes written to notes table (all 10 CB players).
+   Includes PAA gate resolution, FM flag status, eval confidence rationale, market pricing notes.
+
+5. ARCHETYPE_OVERRIDES dict: 5 entries modified. Total keys: 29 (was 28, added pid=39 and pid=338).
+
+Open items (carried forward to S117):
+- Rerun 2 failed prospects: Mauigoa (pid=22), Peter Woods (pid=79) — JSON parse issue in model output.
+- Deactivate Klubnik ghost PIDs (pid=112, pid=4468); delete pid=112 apex_scores row.
+- Full board export: apex_all_scored_session116.json + apex_top300_board_session116.csv.
+- Run tag triggers (run_tag_triggers_2026.py) and triage new recs.
+- Pre-draft snapshot (board ready — 286 at arch-weight apex_v2.3).
+
+Next Milestone (Session 117):
+- Fix Mauigoa + Peter Woods JSON failures.
+- Klubnik ghost PID cleanup + divergence recompute.
+- Full board export + pre-draft snapshot.
+- Run tag triggers + triage.
 
 Session 115 close (top50 re-score complete. Divergence recomputed. CB audit pack re-run against fresh scores. export_png.py migrated from Playwright to html2image.)
 
@@ -69,21 +126,6 @@ Key work completed:
    requirements.txt: added html2image.
    packages.txt (new, repo root): chromium + chromium-driver for Streamlit Cloud apt layer.
    export_png_bytes() and all public signatures unchanged — app.py call site untouched.
-
-Open items (carried forward to S116):
-- Rerun 2 failed prospects: Mauigoa (pid=22), Peter Woods (pid=79) — JSON parse issue in model output.
-- Deactivate Klubnik ghost PIDs (pid=112, pid=4468); delete pid=112 apex_scores row.
-- Full board export: apex_all_scored_session115.json + apex_top300_board_session115.csv.
-- Run tag triggers (run_tag_triggers_2026.py) and triage new recs.
-- Pre-draft snapshot (board ready — 286 at arch-weight apex_v2.3).
-- CB archetype overrides: Abney (CB-4 FM-1/Dev Bet), Stukes (CB-4 Dev Bet), Hood/Cisse/Delane
-  (CB-3 FM-1 over-penalty candidates). Confirm via film (Q3/Q4 gates) before overriding.
-
-Next Milestone (Session 116):
-- Fix Mauigoa + Peter Woods JSON failures (individual re-score or prompt patch).
-- Klubnik ghost PID cleanup + divergence recompute.
-- Full board export + pre-draft snapshot.
-- CB archetype overrides after film review.
 
 Session 114 close (CB audit pack complete. Three read-only CB diagnostic scripts built and wired into weekly orchestrator.)
 
