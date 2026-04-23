@@ -26,6 +26,44 @@ As of Session 101 (post-fix): DEDUP_GHOST and INACTIVE_SNAPSHOT passes complete.
 
 ## Last Completed Milestone
 
+Session 111 close (Legacy PVC audit complete. Full re-score command block generated for 251 rows. No DB writes.)
+
+Session 111 close:
+- DB writes: NO.
+- Schema change: NONE. Next migration label: 0060.
+- Active prospects: unchanged (1170).
+- apex_scores: unchanged (359 rows).
+
+Key work completed:
+1. LEGACY PVC AUDIT (diagnostic only, no writes):
+   - Queried apex_scores v2.3 for all rows where pvc == base_pvc (arch weight not applied).
+   - Result: 251 of 287 active non-calibration rows are legacy (arch weights never applied
+     at score time — pvc_archetype_weights was populated after the bulk scoring runs).
+   - 39 rows already have arch-weight PVC: S-4 (3), S-5 (8), S-3/Taaffe (1), DT band (19),
+     OL/OT-1/2 entries with pvc=0.90 (8).
+   - Confirmed column names: apex_scores.pvc (not pvc_used), apex_scores.matched_archetype
+     (not archetype_code).
+
+2. BAND SUMMARY (legacy rows by position):
+   CB=29, EDGE=35, LB/ILB=66, OL/OG/OT=31, QB=10, RB=16, S=7, TE=17, WR=38.
+   Total: 251. Essentially the entire pre-S110 board.
+   Key premium bands: S-1 (Downs), S-2 (Kilgore, Haulcy), S-3 (Thieneman, Ramsey, Wheatley,
+   Smith), RB-1/2/3, ILB-1/2/3.
+
+3. RE-SCORE COMMAND BLOCK GENERATED (Step D):
+   Full --batch single --prospect_id <pid> --force --apply 1 command list for all 251 rows,
+   grouped by position. Practical recommendation: use --batch all --force --apply 1 instead
+   (equivalent, one call).
+
+Next Milestone (Session 112):
+- Full board re-score: python -m scripts.run_apex_scoring_2026 --batch all --force --apply 1
+  (251 legacy rows → arch-weight PVC applied across all positions)
+- Post-cleanup: re-run legacy PVC query → 0 rows for base<1.0 positions.
+- doctor_pvc_preview: confirm no LEGACY? flags.
+- Recompute divergence: --batch divergence --apply 1.
+- Investigate Arvell Reese (pid=16) ELITE→DAY1 drop if full re-score changes his composite.
+- Pre-draft snapshot after full re-score.
+
 Session 110 close (DB identity-hygiene pass complete. S-position calibration complete.
 Arvell Reese ILB-3 handoff block applied. Global ghost PID cleanup enforced.)
 
