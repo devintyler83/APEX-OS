@@ -5100,8 +5100,8 @@ Tiers: **ELITE** ≥85 · **DAY1** ≥70 · **DAY2** ≥55 · **DAY3** ≥40 · 
         ab["Player"]     = apex_df["display_name"]
         ab["Pos"]        = apex_df["position_group"]
         ab["School"]     = apex_df["school_canonical"]
-        ab["RPG"]        = apex_df["raw_score"].apply(_fmt_apex_composite) if "raw_score" in apex_df.columns else "-"
-        ab["APEX Score"] = apex_df["apex_composite"].apply(_fmt_apex_composite)
+        ab["RPG"]        = apex_df["raw_score"].round(1) if "raw_score" in apex_df.columns else pd.NA
+        ab["APEX Score"] = apex_df["apex_composite"].round(1)
         ab["APEX Tier"]  = apex_df["apex_tier"].fillna("")
         ab["Archetype"]  = apex_df["apex_archetype"].fillna("-")
 
@@ -5182,6 +5182,12 @@ Tiers: **ELITE** ≥85 · **DAY1** ≥70 · **DAY2** ≥55 · **DAY3** ≥40 · 
 
         ab_event = st.dataframe(
             apex_styled,
+            column_config={
+                "APEX Rank":  st.column_config.NumberColumn("APEX Rank",  format="%d"),
+                "RPG":        st.column_config.NumberColumn("RPG",        format="%.1f"),
+                "APEX Score": st.column_config.NumberColumn("APEX Score", format="%.1f"),
+                "Consensus":  st.column_config.NumberColumn("Consensus",  format="%d"),
+            },
             use_container_width=True,
             hide_index=True,
             on_select="rerun",

@@ -1222,7 +1222,7 @@ ARCHETYPE_OVERRIDES: dict[int, dict] = {
             "LANDING_SPOT_MANDATORY -- Tier-A only in confirmed zone-dominant deployment."
         ),
         "eval_confidence":     "Tier B",
-        "capital_range":       "R1 Late / R2 Early -- scheme-confirmed landing spot required",
+        "capital_range":       "R1 Picks 12-22 -- zone-dominant landing spot required (FM-2/FM-6 caps top-5 upside)",
         "fm_flags":            ["FM-2 Scheme Ghost (primary)", "FM-6 Role Mismatch (secondary)"],
         "placed_session":      82,
         "bust_warning": (
