@@ -26,6 +26,65 @@ As of Session 101 (post-fix): DEDUP_GHOST and INACTIVE_SNAPSHOT passes complete.
 
 ## Last Completed Milestone
 
+Session 115 close (top50 re-score complete. Divergence recomputed. CB audit pack re-run against fresh scores. export_png.py migrated from Playwright to html2image.)
+
+Session 115 close:
+- DB writes: YES. apex_scores updated for 48 of top-50 prospects at apex_v2.3.
+- Schema change: NONE. Next migration label: 0060.
+- Active prospects: 1170 (unchanged).
+- apex_scores: 286 active non-calibration rows at apex_v2.3 (48 updated this session).
+- 2 JSON parse failures (not written): Francis Mauigoa (pid=22, OG, #9), Peter Woods (pid=79, IDL, #28).
+  Both failed on truncated `strengths` field mid-string. Re-score individually if needed.
+
+Key work completed:
+1. TOP-50 RE-SCORE (--batch top50 --force --apply 1):
+   - 48 prospects written to apex_scores. Key CB scores post-rescore:
+     Avieon Terrell (pid=33): composite 101.0 ELITE (+11 divergence, near-ALIGNED).
+     Jermod McCoy (pid=38): composite 103.5 ELITE, FM-4 Medical Flag Active tag, R1 12-22.
+     Keith Abney (pid=74): composite 87.9 ELITE (+34 APEX_HIGH — gap widened slightly).
+     Colton Hood (pid=72): CB-3 Freak=77.8 DAY1, Press Man Corner=54.7 DAY3, -82 APEX_LOW (gap widened).
+     Brandon Cisse (pid=71): -121 APEX_LOW (gap widened).
+     Mansoor Delane (pid=39): -116 APEX_LOW (gap widened). D'Angelo Ponds (pid=3236): -95 (tightened slightly).
+     Chris Johnson (pid=35): composite 74.9 DAY1, capital R1 22-32/Top R2, divergence -4 (near-ALIGNED).
+
+2. DIVERGENCE RECOMPUTE (--batch divergence --apply 1):
+   286 prospects. Post-rescore dist: ALIGNED=32, APEX_HIGH=122, APEX_LOW=39, APEX_LOW_PVC_STRUCTURAL=93.
+   CB-specific APEX_LOW MAJOR: Cisse(-121), Delane(-116), Ponds(-95), Hood(-82), Everette(-91).
+   CB-specific APEX_HIGH MAJOR: Will Lee(+170), Devon Marshall(+152), Andre Fuller(+151),
+   Brent Austin(+145), TJ Hall(+142), Keionte Scott(+73), Treydan Stukes(+93), Keith Abney(+34).
+
+3. CB AUDIT PACK RE-RUN (python run_cb_audit_pack.py --season-id 1):
+   Fresh timestamped logs written to draftos/logs/:
+     cb_divergence_snapshot_20260423_133913.txt
+     cb4_tweener_audit_20260423_133913.txt
+     cb3_fm1_stresstest_20260423_133913.txt
+   CB board stable: 29 CBs, HIGH=14, ALIGNED=8, LOW=7.
+   All 8 CB-4 candidates remain APEX_HIGH — systematic slot deployment gate review still pending.
+   FM-1 stress test shows Cisse/Delane gaps widening (model more confident in penalty, not less).
+   Colton Hood (pid=72) is cleanest CB-3 Freak Tier A film review target: v_ath=9.1, v_proc=7.2, PROD=8.0.
+
+4. export_png.py: Playwright dependency removed. Replaced with html2image.
+   _find_browser() helper checks 8 Linux/cloud Chrome/Chromium paths in order.
+   Windows dev: passes browser_executable=None (html2image auto-detects).
+   requirements.txt: added html2image.
+   packages.txt (new, repo root): chromium + chromium-driver for Streamlit Cloud apt layer.
+   export_png_bytes() and all public signatures unchanged — app.py call site untouched.
+
+Open items (carried forward to S116):
+- Rerun 2 failed prospects: Mauigoa (pid=22), Peter Woods (pid=79) — JSON parse issue in model output.
+- Deactivate Klubnik ghost PIDs (pid=112, pid=4468); delete pid=112 apex_scores row.
+- Full board export: apex_all_scored_session115.json + apex_top300_board_session115.csv.
+- Run tag triggers (run_tag_triggers_2026.py) and triage new recs.
+- Pre-draft snapshot (board ready — 286 at arch-weight apex_v2.3).
+- CB archetype overrides: Abney (CB-4 FM-1/Dev Bet), Stukes (CB-4 Dev Bet), Hood/Cisse/Delane
+  (CB-3 FM-1 over-penalty candidates). Confirm via film (Q3/Q4 gates) before overriding.
+
+Next Milestone (Session 116):
+- Fix Mauigoa + Peter Woods JSON failures (individual re-score or prompt patch).
+- Klubnik ghost PID cleanup + divergence recompute.
+- Full board export + pre-draft snapshot.
+- CB archetype overrides after film review.
+
 Session 114 close (CB audit pack complete. Three read-only CB diagnostic scripts built and wired into weekly orchestrator.)
 
 Session 114 close:

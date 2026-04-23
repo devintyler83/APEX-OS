@@ -1,0 +1,149 @@
+====================================================================
+CB-3 FM-1 ATHLETICISM MIRAGE STRESS TEST
+Generated: 2026-04-23 13:39:13
+
+Negative rank delta = APEX below market (model penalizing).
+Positive rank delta = APEX above market (model discounting FM-1 concern).
+
+Candidates: CB-3 rows with FM-1 primary/secondary, OR APEX_LOW >= -50 ranks.
+Multiple rows per prospect = multiple archetype evaluations (intentional).
+====================================================================
+
+Total CB-3 FM-1 rows: 9
+Unique prospects:     6
+
+--------------------------------------------------------------------
+PID:          39
+Name:         Mansoor Delane (Louisiana State)
+Consensus:    11  (sources: 16)
+Divergence:   -116  APEX_LOW  MAJOR
+Tags:         Development Bet
+
+  Archetype evaluations:
+    Archetype:  CB-3 Athletic Freak
+    APEX:       74.8  DAY1  (conf: Tier B)
+    FM Primary: —
+    FM Second:  —
+    Vectors:    ATH=8.7  PROC=6.8  DEV=8.0  PROD=6.9  SCH=7.2  COMP=7.8
+    STRESS FLAGS:
+      !! No FM-1 but APEX_LOW -116 — large gap driven by different mechanism; note for PAA review
+
+    Archetype:  CB-3 Press Man Corner
+    APEX:       53.1  DAY3  (conf: Tier B)
+    FM Primary: FM-1 Athleticism Mirage  << FM-1 PRIMARY
+    FM Second:  FM-3 Processing Wall
+    Vectors:    ATH=8.7  PROC=7.2  DEV=7.8  PROD=6.9  SCH=6.8  COMP=8.4
+    STRESS FLAGS:
+      !! FM-1 PRIMARY but v_athleticism high — re-check if mirage or genuine freak
+
+--------------------------------------------------------------------
+PID:          71
+Name:         Brandon Cisse (South Carolina)
+Consensus:    34  (sources: 15)
+Divergence:   -121  APEX_LOW  MAJOR
+Tags:         Elite RAS | Divergence Alert | Development Bet
+
+  Archetype evaluations:
+    Archetype:  CB-3 Athletic Freak
+    APEX:       73.2  DAY1  (conf: Tier B)
+    FM Primary: —
+    FM Second:  —
+    Vectors:    ATH=8.9  PROC=5.8  DEV=7.1  PROD=6.4  SCH=7.2  COMP=7.5
+    STRESS FLAGS:
+      !! No FM-1 but APEX_LOW -121 — large gap driven by different mechanism; note for PAA review
+
+    Archetype:  CB-3 Press Man Corner
+    APEX:       49.0  DAY3  (conf: Tier B)
+    FM Primary: FM-1 Athleticism Mirage  << FM-1 PRIMARY
+    FM Second:  FM-3 Processing Wall
+    Vectors:    ATH=8.7  PROC=6.2  DEV=6.8  PROD=6.4  SCH=7.1  COMP=7.8
+    STRESS FLAGS:
+      !! FM-1 PRIMARY but v_athleticism high — re-check if mirage or genuine freak
+
+--------------------------------------------------------------------
+PID:          72
+Name:         Colton Hood (Tennessee)
+Consensus:    32  (sources: 15)
+Divergence:   -82  APEX_LOW  MAJOR
+Tags:         Elite RAS | Divergence Alert
+
+  Archetype evaluations:
+    Archetype:  CB-3 Athletic Freak
+    APEX:       77.8  DAY1  (conf: Tier A)
+    FM Primary: —
+    FM Second:  —
+    Vectors:    ATH=8.8  PROC=7.2  DEV=8.5  PROD=8.3  SCH=7.5  COMP=8.1
+    STRESS FLAGS:
+      !! No FM-1 but APEX_LOW -82 — large gap driven by different mechanism; note for PAA review
+
+    Archetype:  CB-3 Press Man Corner
+    APEX:       54.7  DAY3  (conf: Tier A)
+    FM Primary: FM-1 Athleticism Mirage  << FM-1 PRIMARY
+    FM Second:  FM-3 Processing Wall
+    Vectors:    ATH=9.1  PROC=7.2  DEV=8.7  PROD=8.0  SCH=7.8  COMP=8.4
+    STRESS FLAGS:
+      !! FM-1 PRIMARY but v_athleticism high — re-check if mirage or genuine freak
+
+--------------------------------------------------------------------
+PID:          107
+Name:         Daylen Everette (Georgia)
+Consensus:    90  (sources: 13)
+Divergence:   -91  APEX_LOW  MAJOR
+Tags:         Elite RAS | Divergence Alert | Development Bet
+
+  Archetype evaluations:
+    Archetype:  CB-3 Press Man Corner
+    APEX:       45.2  DAY3  (conf: Tier B)
+    FM Primary: FM-3 Processing Wall
+    FM Second:  FM-6 Role Mismatch
+    Vectors:    ATH=9.1  PROC=6.8  DEV=6.9  PROD=5.5  SCH=4.2  COMP=7.8
+    STRESS FLAGS:
+      !! No FM-1 but APEX_LOW -91 — large gap driven by different mechanism; note for PAA review
+
+--------------------------------------------------------------------
+PID:          203
+Name:         Ephesians Prysock (Washington)
+Consensus:    134  (sources: 11)
+Divergence:   -45  APEX_LOW  MAJOR
+Tags:         Elite RAS | Divergence Alert
+
+  Archetype evaluations:
+    Archetype:  CB-3 Press Man Corner
+    APEX:       45.4  DAY3  (conf: Tier B)
+    FM Primary: FM-1 Athleticism Mirage  << FM-1 PRIMARY
+    FM Second:  FM-3 Processing Wall
+    Vectors:    ATH=8.7  PROC=5.5  DEV=6.8  PROD=4.2  SCH=6.0  COMP=7.2
+    STRESS FLAGS:
+      !! FM-1 PRIMARY but v_athleticism high — re-check if mirage or genuine freak
+
+--------------------------------------------------------------------
+PID:          3236
+Name:         D'Angelo Ponds (Indiana)
+Consensus:    31  (sources: 14)
+Divergence:   -95  APEX_LOW  MAJOR
+Tags:         Great RAS | Compression Flag | Development Bet
+
+  Archetype evaluations:
+    Archetype:  CB-3 Press Man Corner
+    APEX:       53.2  DAY3  (conf: Tier B)
+    FM Primary: FM-1 Athleticism Mirage  << FM-1 PRIMARY
+    FM Second:  FM-3 Processing Wall
+    Vectors:    ATH=8.4  PROC=6.8  DEV=8.7  PROD=7.5  SCH=7.2  COMP=7.9
+    STRESS FLAGS:
+      !! FM-1 PRIMARY but v_athleticism high — re-check if mirage or genuine freak
+
+====================================================================
+PAA Q3/Q4 RE-CHECK PROTOCOL (CB library, CB-3 section)
+
+  Q3: Does athleticism translate to contested coverage wins?
+      (Not just measurables — FILM evidence of winning contested reps.)
+  Q4: Is the burst/twitch replicable vs NFL route trees, or scheme-assisted?
+
+  FM-1 CONFIRMED (keep penalty):  Q3=No, Q4=No, v_athleticism shows in
+      measurables but not in contested coverage outcomes.
+  FM-1 OVER-PENALTY (reduce/reclassify):  Q3=Yes on tape, v_processing>=7,
+      APEX_LOW driven by PAA gates not by athleticism ceiling.
+
+  If reclassifying: update ARCHETYPE_OVERRIDES in run_apex_scoring_2026.py
+  and re-score: python -m scripts.run_apex_scoring_2026 --batch top50 --force --apply 1
+====================================================================
