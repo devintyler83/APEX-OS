@@ -21,7 +21,7 @@ APEX OS is a deterministic draft operating system that turns 16 ranking sources,
 
 ---
 
-Last Updated (UTC): 2026-04-23T03:51:35.674650+00:00
+Last Updated (UTC): 2026-04-23T16:21:02.926336+00:00
 
 ---
 
@@ -2378,11 +2378,11 @@ Inactive (data preserved): ngs_2026 (source_id=29, is_active=0) — model score,
 
 2) System Snapshot Output
 === DRAFTOS SYSTEM SNAPSHOT ===
-generated_utc: 2026-04-23T03:51:34.947201+00:00
+generated_utc: 2026-04-23T16:21:01.516335+00:00
 
 ## Git
 branch: main
-commit: 92fb1a243bfd0d5f9f7abd84e8a3bcde9086741a
+commit: 98cedc6fc6ce54f247e7d7b56fddbcfde03c8842
 status: clean
 
 ## Tables
@@ -2592,6 +2592,7 @@ no is_active column
 - scripts\build_snapshot_packet.py
 - scripts\build_team_context_2026.py
 - scripts\classify_contracts_from_comps.py
+- scripts\clean_s_ghost_pids.py
 - scripts\cleanup_stukes_ghost_orphans.py
 - scripts\compute_snapshot_confidence.py
 - scripts\compute_snapshot_coverage.py
@@ -2600,6 +2601,7 @@ no is_active column
 - scripts\delete_orphan_snapshots.py
 - scripts\divergence_triage_helper.py
 - scripts\doctor.py
+- scripts\doctor_pvc_preview.py
 - scripts\doctor_snapshot.py
 - scripts\draftos_detail_iframe_v2-old.py
 - scripts\draftos_detail_iframe_v2.py
@@ -2615,6 +2617,7 @@ no is_active column
 - scripts\fix_prospect_ghosts2026.py
 - scripts\generate_prospect_pdf_2026.py
 - scripts\get_team_board_2026.py
+- scripts\global_ghost_pid_cleanup.py
 - scripts\ingest_combine_2026.py
 - scripts\ingest_contract_history.py
 - scripts\ingest_drafttek_2026.py
@@ -2634,6 +2637,7 @@ no is_active column
 - scripts\patch_prospect_canonicalization_2026.py
 - scripts\patch_source_canonicalization_2026.py
 - scripts\publish_latest_packet.py
+- scripts\purge_non2026_apex_scores.py
 - scripts\rebuild_team_fit_2026.py
 - scripts\reconcile_consensus_vs_jfosterfilm_2026.py
 - scripts\reingest_source_2026.py
