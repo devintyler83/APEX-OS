@@ -26,59 +26,53 @@ As of Session 101 (post-fix): DEDUP_GHOST and INACTIVE_SNAPSHOT passes complete.
 
 ## Last Completed Milestone
 
-Session 113 close (UI/Board remediation complete. APEX sort bug fixed. Caleb Downs capital text updated. Landing page tier label patched. Fix script simplified.)
+Session 114 close (CB audit pack complete. Three read-only CB diagnostic scripts built and wired into weekly orchestrator.)
 
-Session 113 close:
-- DB writes: YES (capital_base + capital_adjusted for pid=28, apex_v2.3).
+Session 114 close:
+- DB writes: NONE. All work this session is read-only diagnostic tooling.
 - Schema change: NONE. Next migration label: 0060.
 - Active prospects: 1170 (unchanged).
 - apex_scores: 286 active non-calibration rows at apex_v2.3 (unchanged).
 
 Key work completed:
-1. APEX BOARD SORT BUG FIXED (app/app.py):
-   - Root cause: RPG and APEX Score columns were formatted as strings via _fmt_apex_composite(),
-     causing lexicographic sort. "113.6" and "105.2" sorted before "98.5" because '1' < '9'.
-   - Fix: columns now stored as float (.round(1)); column_config.NumberColumn declared for
-     APEX Rank, RPG, APEX Score, Consensus. Descending sort on APEX Score now numerically correct.
-   - _fmt_apex_composite() retained -- still used by Big Board display["RPG"] column.
+1. CB AUDIT PACK (3 scripts + 1 wrapper):
+   - scripts/cb4_tweener_audit.py -- lists all CB-4 Slot Specialist prospects, checks
+     divergence, tags, and override history. Flags ELITE tier + Dev Bet co-presence and
+     FM-1 Primary as potential archetype mis-assignments requiring CB library re-check.
+     8 CB-4 candidates surfaced; Keith Abney (pid=74) flagged as clearest review target
+     (CB-4 ELITE, FM-1 Primary, v_ath high, Dev Bet tag).
+   - scripts/cb3_fm1_stresstest.py -- identifies CB-3 prospects with FM-1 Athleticism
+     Mirage as primary/secondary failure mode, or large APEX_LOW (>= -50 ranks). Surfaces
+     full vector context (v_athleticism, v_processing) to separate confirmed mirage from
+     potential over-penalty. 9 rows across 6 unique prospects; Delane and Ponds flagged
+     as PAA Q3/Q4 re-check targets (v_proc 6.8-7.2, FM-1 primary but high v_ath).
+   - scripts/cb_divergence_snapshot.py -- full CB board (29 prospects), one row per
+     prospect (best apex_composite where multiple evals exist), banded into APEX_HIGH (14),
+     ALIGNED (8), APEX_LOW (7). Malik Muhammad (pid=13, CB-1, +80 APEX_HIGH, ELITE 97.1)
+     surfaced as independent premium-position signal worth confirming.
+   - run_cb_audit_pack.py (repo root) -- single-command wrapper:
+     python run_cb_audit_pack.py --season-id 1
 
-2. CALEB DOWNS CAPITAL TEXT UPDATED (pid=28, apex_v2.3):
-   - OLD: "R1 Late / R2 Early -- scheme-confirmed landing spot required"
-     (set Session 82 when apex_composite ~73 DAY1 -- stale by ~25 points)
-   - NEW: "R1 Picks 12-22 -- zone-dominant landing spot required (FM-2/FM-6 caps top-5 upside)"
-   - ARCHETYPE_OVERRIDES in run_apex_scoring_2026.py updated (line ~1225).
-   - DB patched via scripts/fix_caleb_downs_capital_s113.py --apply 1.
-   - capital_anchor mapping: "12-22" in s -> pick=17 (correct for ELITE-tier R1 range).
-   - DB backup: draftos_backup_fix_capital_20260423T192540Z.sqlite
+2. WEEKLY ORCHESTRATOR UPDATED (scripts/run_weekly_update.py):
+   - Step 20 appended: non-blocking CB diagnostics block runs all three scripts after
+     packet step. try/except wrapper ensures CB diagnostic failure never kills pipeline.
+   - _SEASON_ID_MAP {2026: 1} maps draft_year to season_id at call site.
+   - All three scripts write timestamped logs to draftos/logs/.
 
-3. LANDING PAGE TIER LABEL PATCHED (web/apexos-landing.html, line 837):
-   - OLD: "DAY1 · Cornerstone" (stale sub-label, no longer in canonical vocabulary)
-   - NEW: "DAY1 · Round 1"
-
-4. ARCHETYPE DROPDOWNS (Issue 2) -- FALSE POSITIVE:
-   - archetype_defs.py verified current with all 62 v2.3 canonical labels.
-   - All DISTINCT matched_archetype values in apex_scores v2.3 are canonical. No fix required.
-
-5. FIX SCRIPT SIMPLIFIED (scripts/fix_caleb_downs_capital_s113.py):
-   - _backup_db() removed; replaced with backup_once(False) from draftos.apex.writer.
-   - Write + verify consolidated from 2 separate connect() contexts into 1.
-
-6. UI/BOARD QA CHECKLIST defined for future engine/archetype/tier updates:
-   Triggers: any apex_tier label change, new/renamed archetype, new composite column, capital text bulk change.
-   Checks: (a) APEX Board numeric sort, (b) capital text vs tier, (c) archetype label display,
-   (d) landing page / marketing hardcoded strings.
-
-Open items (deferred to S114):
+Open items (carried from S113, deferred to S115):
 - Deactivate Klubnik ghost PIDs (pid=112, pid=4468); delete pid=112 apex_scores row.
 - Recompute divergence after Klubnik cleanup.
-- Export full board: apex_all_scored_session113.json + apex_top300_board_session113.csv.
+- Export full board: apex_all_scored_session114.json + apex_top300_board_session114.csv.
 - Run tag triggers (run_tag_triggers_2026.py) and triage new recs.
 - Pre-draft snapshot (board ready -- all 286 at arch-weight apex_v2.3).
+- CB archetype review: Abney (CB-4 FM-1/Dev Bet), Stukes (CB-4 Dev Bet), Delane/Ponds
+  (CB-3 FM-1 primary, v_proc borderline). Use run_cb_audit_pack.py output + CB library.
 
-Next Milestone (Session 114):
+Next Milestone (Session 115):
 - Klubnik ghost PID cleanup + divergence recompute.
 - Full board export + pre-draft snapshot.
 - Tag trigger run + triage.
+- CB archetype overrides (if warranted after film review).
 
 Session 112 close (Full board arch-weight PVC re-score complete. 286 prospects at apex_v2.3. Divergence recomputed. Doctor PASSED.)
 

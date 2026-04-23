@@ -1,0 +1,105 @@
+================================================================================
+CB DIVERGENCE SNAPSHOT
+Generated: 2026-04-23 13:05:34
+Min sources filter: 0  (0 = show all)
+
+EDGE = consensus_rank - apex_rank  (+pos = APEX above market, -neg = APEX below).
+Bands: APEX_HIGH >= +20 | ALIGNED | APEX_LOW <= -20
+One row per prospect; best apex_composite used when multiple evals exist.
+================================================================================
+
+── APEX_HIGH (14)  APEX above market (+20+ ranks) — monitor for mis-priced signal
+BAND            PID   APEX  CONS   EDGE  TIER    ARCHETYPE                   NAME (SCHOOL)
+--------------------------------------------------------------------------------
+APEX_HIGH      3593   72.2   210  +169  DAY1    CB-4 Slot Specialist        Will Lee (Texas A&M)
+                     FM: [FM-6 Role Mismatch / FM-1 Athleticism Mirage]
+                     Tags: Compression Flag | Divergence Alert
+APEX_HIGH       251   68.9   201  +152  DAY2    CB-4 Slot Specialist        Devon Marshall (NC State)
+                     FM: [FM-6 Role Mismatch / FM-1 Athleticism Mirage]
+                     Tags: Divergence Alert
+APEX_HIGH       335   56.7   257  +150  DAY2    CB-5 Raw Projection         Andre Fuller (Toledo)
+                     FM: [FM-3 Processing Wall / FM-5 Motivation Cliff]
+                     Tags: Elite RAS | Divergence Alert | Development Bet
+APEX_HIGH       202   66.5   203  +146  DAY2    CB-4 Slot Specialist        Brent Austin (California)
+                     FM: [FM-6 Role Mismatch / FM-1 Athleticism Mirage]
+                     Tags: Compression Flag | Divergence Alert
+APEX_HIGH       131   61.3   221  +140  DAY2    CB-2 Zone Architect         Tj Hall (Iowa)
+                     FM: [FM-2 Scheme Ghost / FM-1 Athleticism Mirage]
+                     Tags: Compression Flag | Divergence Alert
+APEX_HIGH       157   51.1   279  +135  DAY3    CB-5 Raw Projection         Collin Wright (Stanford)
+                     FM: [FM-3 Processing Wall / FM-1 Athleticism Mirage]
+                     Tags: Great RAS | Compression Flag | Divergence Alert
+APEX_HIGH       106   58.0   196   +98  DAY2    CB-5 Raw Projection         Charles Demmings (Stephen F. Austin)
+                     FM: [FM-3 Processing Wall / FM-6 Role Mismatch]
+                     Tags: Elite RAS | Divergence Alert | Development Bet
+APEX_HIGH       160   87.9   105   +93  ELITE   CB-4 Slot Specialist        Treydan Stukes (Arizona)
+                     FM: [FM-6 Role Mismatch / FM-2 Scheme Ghost]
+                     Tags: Elite RAS | Divergence Alert | Development Bet
+APEX_HIGH        13   97.1    86   +80  ELITE   CB-1 Anticipatory Lockdown  Malik Muhammad (Texas)
+                     FM: [FM-6 Role Mismatch / FM-3 Processing Wall]
+                     Tags: Elite RAS | Divergence Alert | Development Bet
+APEX_HIGH       158   72.5   117   +78  DAY1    CB-4 Slot Specialist        Hezekiah Masses (California)
+                     FM: [FM-6 Role Mismatch / FM-1 Athleticism Mirage]
+                     Tags: Poor RAS | Compression Flag | Divergence Alert | Development
+APEX_HIGH       338   89.2    82   +73  ELITE   CB-4 Slot Specialist        Keionte Scott (Miami)
+                     FM: [FM-6 Role Mismatch / FM-3 Processing Wall]
+                     Tags: Elite RAS | Compression Flag | Divergence Alert
+APEX_HIGH        34   80.1    83   +59  DAY1    CB-4 Slot Specialist        Chandler Rivers (Duke)
+                     FM: [FM-6 Role Mismatch / FM-4 Body Breakdown]
+                     Tags: Great RAS | Compression Flag | Divergence Alert
+APEX_HIGH       252   53.4   178   +53  DAY3    CB-5 Raw Projection         Jadon Canady (Oregon)
+                     FM: [FM-1 Athleticism Mirage / FM-3 Processing Wall]
+                     Tags: Compression Flag | Divergence Alert | Development Bet
+APEX_HIGH        74   85.8    45   +31  ELITE   CB-4 Slot Specialist        Keith Abney (Arizona State)
+                     FM: [FM-1 Athleticism Mirage / FM-4 Body Breakdown]
+                     Tags: Divergence Alert | Development Bet
+
+── ALIGNED (8)  Within ±20 ranks of consensus
+BAND            PID   APEX  CONS   EDGE  TIER    ARCHETYPE                   NAME (SCHOOL)
+--------------------------------------------------------------------------------
+ALIGNED         108   55.3   127   +14  DAY2    CB-5 Raw Projection         Domani Jackson (Alabama)
+                     FM: [FM-3 Processing Wall / FM-1 Athleticism Mirage]
+                     Tags: Elite RAS | Great RAS | Compression Flag | Divergence Alert
+ALIGNED          38  105.2    15   +13  ELITE   CB-1 Anticipatory Lockdown  Jermod Mccoy (Tennessee)
+                     FM: [FM-4 Body Breakdown / FM-3 Processing Wall]
+                     Tags: Elite RAS | Development Bet
+ALIGNED          33   95.7    14    +7  ELITE   CB-1 Anticipatory Lockdown  Avieon Terrell (Clemson)
+                     FM: [FM-1 Athleticism Mirage / FM-6 Role Mismatch]
+ALIGNED          36   62.2    77    +0  DAY2    CB-2 Zone Architect         Davison Igbinosun (Ohio State)
+                     FM: [FM-2 Scheme Ghost / FM-3 Processing Wall]
+                     Tags: Great RAS | Divergence Alert | Scheme Dependent | Developmen
+ALIGNED          37   69.4    64    -2  DAY2    CB-3 Athletic Freak         Devin Moore (Florida)
+                     Tags: Great RAS | Compression Flag | Divergence Alert | Developmen
+ALIGNED         109   62.9    66    -7  DAY2    CB-2 Zone Architect         Julian Neal (Arkansas)
+                     FM: [FM-2 Scheme Ghost / FM-3 Processing Wall]
+                     Tags: Elite RAS | Divergence Alert | Development Bet
+ALIGNED          35   77.4    30   -10  DAY1    CB-2 Zone Technician        Chris Johnson (San Diego State)
+                     Tags: Elite RAS | Divergence Alert | Development Bet
+ALIGNED         159   54.0   108   -10  DAY3    CB-5 Raw Projection         Tacario Davis (Washington)
+                     FM: [FM-3 Processing Wall / FM-1 Athleticism Mirage]
+                     Tags: Elite RAS | Great RAS | Divergence Alert | Development Bet
+
+── APEX_LOW (7)  APEX below market (>20 ranks) — check FM-1/PAA gate correctness
+BAND            PID   APEX  CONS   EDGE  TIER    ARCHETYPE                   NAME (SCHOOL)
+--------------------------------------------------------------------------------
+APEX_LOW        253   44.9   168   -20  DAY3    CB-5 Raw Projection         Thaddeus Dixon (North Carolina)
+                     FM: [FM-1 Athleticism Mirage / FM-3 Processing Wall]
+                     Tags: Divergence Alert | Development Bet
+APEX_LOW        203   45.4   134   -45  DAY3    CB-3 Press Man Corner       Ephesians Prysock (Washington)
+                     FM: [FM-1 Athleticism Mirage / FM-3 Processing Wall]
+                     Tags: Elite RAS | Divergence Alert
+APEX_LOW         72   77.8    32   -72  DAY1    CB-3 Athletic Freak         Colton Hood (Tennessee)
+                     Tags: Elite RAS | Divergence Alert
+APEX_LOW        107   45.2    90   -91  DAY3    CB-3 Press Man Corner       Daylen Everette (Georgia)
+                     FM: [FM-3 Processing Wall / FM-6 Role Mismatch]
+                     Tags: Elite RAS | Divergence Alert | Development Bet
+APEX_LOW       3236   71.0    31  -102  DAY1    CB-5 Raw Projection         D'Angelo Ponds (Indiana)
+                     Tags: Great RAS | Compression Flag | Development Bet
+APEX_LOW         39   74.8    11  -106  DAY1    CB-3 Athletic Freak         Mansoor Delane (Louisiana State)
+                     Tags: Development Bet
+APEX_LOW         71   73.2    34  -117  DAY1    CB-3 Athletic Freak         Brandon Cisse (South Carolina)
+                     Tags: Elite RAS | Divergence Alert | Development Bet
+
+================================================================================
+TOTAL: 29 CBs  |  HIGH=14  ALIGNED=8  LOW=7  NO_CONSENSUS=0
+================================================================================

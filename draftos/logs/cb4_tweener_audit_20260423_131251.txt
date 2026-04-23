@@ -1,0 +1,173 @@
+================================================================
+CB-4 SLOT SPECIALIST AUDIT REPORT
+Generated: 2026-04-23 13:12:51
+
+Divergence edge = consensus_rank - apex_pos_rank (positive = APEX above market).
+Review flags are heuristics — verify each candidate against the CB library.
+================================================================
+
+Total CB-4 candidates: 8
+
+----------------------------------------------------------------
+PID:            338
+Name:           Keionte Scott (Miami)
+Archetype:      CB-4 Slot Specialist
+APEX:           89.2  ELITE
+Consensus Rank: 82  (sources: 9)
+APEX Pos Rank:  —
+Rank Delta:     +73  (APEX_HIGH  MAJOR)
+Eval Conf:      Tier B
+FM Primary:     FM-6 Role Mismatch
+FM Secondary:   FM-3 Processing Wall
+Tags:           Elite RAS | Compression Flag | Divergence Alert
+Inline Override:—
+Override Log:   —
+REVIEW FLAGS:
+  !! LARGE APEX_HIGH +73 ranks — verify slot deployment gate
+  !! ELITE tier at CB-4 — confirm era premium and confirmed-slot-deployment gate are met
+
+----------------------------------------------------------------
+PID:            160
+Name:           Treydan Stukes (Arizona)
+Archetype:      CB-4 Slot Specialist
+APEX:           87.9  ELITE
+Consensus Rank: 105  (sources: 9)
+APEX Pos Rank:  —
+Rank Delta:     +93  (APEX_HIGH  MAJOR)
+Eval Conf:      Tier B
+FM Primary:     FM-6 Role Mismatch
+FM Secondary:   FM-2 Scheme Ghost
+Tags:           Elite RAS | Divergence Alert | Development Bet
+Inline Override:—
+Override Log:   —
+REVIEW FLAGS:
+  !! LARGE APEX_HIGH +93 ranks — verify slot deployment gate
+  !! ELITE tier at CB-4 — confirm era premium and confirmed-slot-deployment gate are met
+  !! Development Bet tag — CB-4 capital eligibility requires confirmed slot deployment, not projection
+
+----------------------------------------------------------------
+PID:            74
+Name:           Keith Abney (Arizona State)
+Archetype:      CB-4 Slot Specialist
+APEX:           85.8  ELITE
+Consensus Rank: 45  (sources: 14)
+APEX Pos Rank:  —
+Rank Delta:     +31  (APEX_HIGH  MAJOR)
+Eval Conf:      Tier B
+FM Primary:     FM-1 Athleticism Mirage
+FM Secondary:   FM-4 Body Breakdown
+Tags:           Divergence Alert | Development Bet
+Inline Override:—
+Override Log:   —
+REVIEW FLAGS:
+  !! LARGE APEX_HIGH +31 ranks — verify slot deployment gate
+  !! ELITE tier at CB-4 — confirm era premium and confirmed-slot-deployment gate are met
+  !! Development Bet tag — CB-4 capital eligibility requires confirmed slot deployment, not projection
+  !! FM-1 present — more consistent with CB-3 freak profile than CB-4 slot specialist
+
+----------------------------------------------------------------
+PID:            34
+Name:           Chandler Rivers (Duke)
+Archetype:      CB-4 Slot Specialist
+APEX:           80.1  DAY1
+Consensus Rank: 83  (sources: 15)
+APEX Pos Rank:  —
+Rank Delta:     +59  (APEX_HIGH  MAJOR)
+Eval Conf:      Tier B
+FM Primary:     FM-6 Role Mismatch
+FM Secondary:   FM-4 Body Breakdown
+Tags:           Great RAS | Compression Flag | Divergence Alert
+Inline Override:—
+Override Log:   —
+REVIEW FLAGS:
+  !! LARGE APEX_HIGH +59 ranks — verify slot deployment gate
+
+----------------------------------------------------------------
+PID:            158
+Name:           Hezekiah Masses (California)
+Archetype:      CB-4 Slot Specialist
+APEX:           72.5  DAY1
+Consensus Rank: 117  (sources: 10)
+APEX Pos Rank:  —
+Rank Delta:     +78  (APEX_HIGH  MAJOR)
+Eval Conf:      Tier B
+FM Primary:     FM-6 Role Mismatch
+FM Secondary:   FM-1 Athleticism Mirage
+Tags:           Poor RAS | Compression Flag | Divergence Alert | Development Bet
+Inline Override:—
+Override Log:   —
+REVIEW FLAGS:
+  !! LARGE APEX_HIGH +78 ranks — verify slot deployment gate
+  !! Development Bet tag — CB-4 capital eligibility requires confirmed slot deployment, not projection
+  !! FM-1 present — more consistent with CB-3 freak profile than CB-4 slot specialist
+
+----------------------------------------------------------------
+PID:            3593
+Name:           Will Lee (Texas A&M)
+Archetype:      CB-4 Slot Specialist
+APEX:           72.2  DAY1
+Consensus Rank: 210  (sources: 3)
+APEX Pos Rank:  —
+Rank Delta:     +169  (APEX_HIGH  MAJOR)
+Eval Conf:      Tier B
+FM Primary:     FM-6 Role Mismatch
+FM Secondary:   FM-1 Athleticism Mirage
+Tags:           Compression Flag | Divergence Alert
+Inline Override:—
+Override Log:   —
+REVIEW FLAGS:
+  !! LARGE APEX_HIGH +169 ranks — verify slot deployment gate
+  !! FM-1 present — more consistent with CB-3 freak profile than CB-4 slot specialist
+
+----------------------------------------------------------------
+PID:            251
+Name:           Devon Marshall (NC State)
+Archetype:      CB-4 Slot Specialist
+APEX:           68.9  DAY2
+Consensus Rank: 201  (sources: 5)
+APEX Pos Rank:  —
+Rank Delta:     +152  (APEX_HIGH  MAJOR)
+Eval Conf:      Tier C
+FM Primary:     FM-6 Role Mismatch
+FM Secondary:   FM-1 Athleticism Mirage
+Tags:           Divergence Alert
+Inline Override:—
+Override Log:   —
+REVIEW FLAGS:
+  !! LARGE APEX_HIGH +152 ranks — verify slot deployment gate
+  !! FM-1 present — more consistent with CB-3 freak profile than CB-4 slot specialist
+
+----------------------------------------------------------------
+PID:            202
+Name:           Brent Austin (California)
+Archetype:      CB-4 Slot Specialist
+APEX:           66.5  DAY2
+Consensus Rank: 203  (sources: 6)
+APEX Pos Rank:  —
+Rank Delta:     +146  (APEX_HIGH  MAJOR)
+Eval Conf:      Tier B
+FM Primary:     FM-6 Role Mismatch
+FM Secondary:   FM-1 Athleticism Mirage
+Tags:           Compression Flag | Divergence Alert
+Inline Override:—
+Override Log:   —
+REVIEW FLAGS:
+  !! LARGE APEX_HIGH +146 ranks — verify slot deployment gate
+  !! FM-1 present — more consistent with CB-3 freak profile than CB-4 slot specialist
+
+================================================================
+CB-4 ARCHETYPE DEFINITION CHECKLIST (from CB library)
+
+  CONFIRM before accepting assignment:
+  1. Confirmed slot deployment (not projected) — capital gate
+  2. Elite processing / anticipation in condensed space
+  3. Era premium applied (slot scarcity in modern NFL)
+  4. FM-6 Role Mismatch is primary bust mode, not FM-1
+  5. CB-3 athletic-freak profile NOT the win mechanism
+
+  For each candidate with REVIEW FLAGS above:
+    A. Open DraftOS_Position_CB.docx, CB-4 section
+    B. Watch 5-6 film reps — slot alignment + route recognition
+    C. Override via ARCHETYPE_OVERRIDES in run_apex_scoring_2026.py
+       + re-score: python -m scripts.run_apex_scoring_2026 --batch top50 --force --apply 1
+================================================================
