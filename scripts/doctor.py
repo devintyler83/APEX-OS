@@ -271,40 +271,35 @@ def main() -> None:
         )
 
     # -----------------------------------------------------------------------
-    # Ghost PID check (added S110)
-    # Fail if any display_name has more than one active prospect with a
-    # season_id=1 apex_scores row. This catches ghost pids that slipped
-    # through clean_s_ghost_pids.py or were re-activated by mistake.
+    # Identity-hygiene check (added S110, hardened S110 global pass)
+    # FAIL if any (display_name, position_group) pair has more than one
+    # active prospect_id. One active pid per player per position is the
+    # hard invariant enforced by global_ghost_pid_cleanup.py.
     # -----------------------------------------------------------------------
     with connect() as conn:
         conn.row_factory = __import__("sqlite3").Row
 
-        dup_scored = conn.execute("""
-            SELECT p.display_name, COUNT(DISTINCT p.prospect_id) AS n_pids
-            FROM apex_scores s
-            JOIN prospects p ON p.prospect_id = s.prospect_id
-            WHERE s.season_id = 1
-              AND p.is_active = 1
-              AND s.is_calibration_artifact = 0
-            GROUP BY p.display_name
-            HAVING COUNT(DISTINCT p.prospect_id) > 1
-            ORDER BY n_pids DESC
+        ghost_violations = conn.execute("""
+            SELECT display_name, position_group, COUNT(*) AS n_pids
+            FROM prospects
+            WHERE is_active = 1
+            GROUP BY LOWER(display_name), position_group
+            HAVING COUNT(*) > 1
+            ORDER BY n_pids DESC, display_name, position_group
         """).fetchall()
 
-        if dup_scored:
+        if ghost_violations:
             detail = ", ".join(
-                f"{r['display_name']} ({r['n_pids']} pids)"
-                for r in dup_scored
+                f"{r['display_name']}/{r['position_group']} ({r['n_pids']} pids)"
+                for r in ghost_violations
             )
-            # WARNING only — these are pre-existing ghost pids from early bootstrap batches
-            # that were scored before is_active filters were enforced. Each case needs
-            # individual investigation before deactivation. See clean_s_ghost_pids.py pattern.
-            print(
-                f"WARN [ghost pid check]: {len(dup_scored)} display_name(s) have multiple "
-                f"active scored pids for season_id=1: {detail}"
+            raise SystemExit(
+                f"FAIL [identity-hygiene]: {len(ghost_violations)} (display_name, position_group) "
+                f"pair(s) have multiple active pids: {detail}. "
+                f"Run: python -m scripts.global_ghost_pid_cleanup --apply 1"
             )
-        else:
-            print(f"ghost pid check: OK (no display_name has multiple active scored pids)")
+
+        print(f"identity-hygiene: OK (0 (display_name, position_group) pairs with multiple active pids)")
 
     print("OK: doctor checks passed")
 
