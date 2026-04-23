@@ -3,3 +3,4 @@ pandas
 polars
 rapidfuzz
 python-dotenv
+html2image

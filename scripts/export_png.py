@@ -1,6 +1,6 @@
 """
 DraftOS — export_png.py
-PNG renderer for DraftOS share cards via Playwright (headless Chromium).
+PNG renderer for DraftOS share cards via html2image (headless Chrome/Chromium).
 
 Usage:
     from scripts.export_png import export_from_prospect_dict
@@ -10,33 +10,66 @@ Usage:
     python scripts/export_png.py /tmp/card.html /tmp/card.png
 
 Requires:
-    pip install playwright
-    playwright install chromium
+    pip install html2image
+    Chrome or Chromium must be installed (Streamlit Cloud: use packages.txt)
 """
 
-import asyncio
 import os
 import sys
-import hashlib
+import shutil
 import tempfile
 from datetime import datetime
 from pathlib import Path
 
-# Playwright requires ProactorEventLoop on Windows (SelectorEventLoop has no subprocess transport)
-if sys.platform == "win32":
-    asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
-
 # ── Card dimensions (match CSS .card width + body padding) ───────────────────
-_CARD_WIDTH_PX  = 800   # viewport width — card is 720px + body padding
-_CARD_HEIGHT_PX = 600   # initial viewport; Playwright clips to actual content
-_DEVICE_SCALE   = 2     # 2× for retina-quality PNG
+_CARD_WIDTH_PX  = 800
+_CARD_HEIGHT_PX = 600
+
+# Browser search order for Linux/cloud environments
+_BROWSER_CANDIDATES = [
+    "google-chrome",
+    "google-chrome-stable",
+    "chromium",
+    "chromium-browser",
+    "/usr/bin/google-chrome",
+    "/usr/bin/google-chrome-stable",
+    "/usr/bin/chromium",
+    "/usr/bin/chromium-browser",
+]
+
+_HEADLESS_FLAGS = [
+    "--no-sandbox",
+    "--disable-dev-shm-usage",
+    "--disable-gpu",
+    "--headless",
+]
+
+
+def _find_browser() -> str | None:
+    """
+    Return the first Chrome/Chromium executable found, or None on Windows
+    (html2image auto-detects on Windows).
+    """
+    if sys.platform == "win32":
+        return None  # let html2image locate Chrome via registry/PATH
+    for candidate in _BROWSER_CANDIDATES:
+        found = shutil.which(candidate)
+        if found:
+            return found
+        if Path(candidate).is_file():
+            return candidate
+    raise RuntimeError(
+        "No Chrome/Chromium browser found. Checked:\n" +
+        "\n".join(f"  {c}" for c in _BROWSER_CANDIDATES) +
+        "\nOn Streamlit Cloud add a packages.txt with: chromium"
+    )
 
 
 # ── Core render function ──────────────────────────────────────────────────────
 
 def render_html_to_png(html_str: str, output_path: str | Path) -> Path:
     """
-    Render an HTML string to a PNG file using Playwright headless Chromium.
+    Render an HTML string to a PNG file using html2image (headless Chrome).
 
     Args:
         html_str:    Complete HTML string (self-contained, no external deps).
@@ -46,59 +79,33 @@ def render_html_to_png(html_str: str, output_path: str | Path) -> Path:
         Path to the written PNG file.
 
     Raises:
-        RuntimeError: If Playwright is not installed or Chromium launch fails.
+        RuntimeError: If html2image is not installed or no browser is found.
     """
     try:
-        from playwright.sync_api import sync_playwright
+        from html2image import Html2Image
     except ImportError:
         raise RuntimeError(
-            "Playwright not installed. Run:\n"
-            "  pip install playwright\n"
-            "  playwright install chromium"
+            "html2image not installed. Run:\n"
+            "  pip install html2image"
         )
 
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    # Write HTML to a temp file so Playwright can load it via file:// URI
-    # (avoids any CSP issues with data URIs and embedded fonts)
-    with tempfile.NamedTemporaryFile(
-        mode="w", suffix=".html", encoding="utf-8", delete=False
-    ) as tmp:
-        tmp.write(html_str)
-        tmp_path = tmp.name
+    browser_exe = _find_browser()
+    kwargs = dict(
+        custom_flags=_HEADLESS_FLAGS,
+        output_path=str(output_path.parent),
+    )
+    if browser_exe is not None:
+        kwargs["browser_executable"] = browser_exe
 
-    try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch(
-                headless=True,
-                args=["--no-sandbox", "--disable-setuid-sandbox"],
-            )
-            page = browser.new_page(
-                viewport={"width": _CARD_WIDTH_PX, "height": _CARD_HEIGHT_PX},
-                device_scale_factor=_DEVICE_SCALE,
-            )
-
-            # Load HTML from temp file path
-            page.goto(f"file:///{tmp_path.replace(os.sep, '/')}")
-
-            # Wait for fonts and layout to settle
-            page.wait_for_load_state("networkidle", timeout=10_000)
-
-            # Clip screenshot to the .card element for pixel-perfect output
-            card = page.query_selector(".card")
-            if card:
-                card.screenshot(path=str(output_path), type="png")
-            else:
-                # Fallback: full-page screenshot
-                page.screenshot(path=str(output_path), full_page=True, type="png")
-
-            browser.close()
-    finally:
-        try:
-            os.unlink(tmp_path)
-        except OSError:
-            pass
+    hti = Html2Image(**kwargs)
+    hti.screenshot(
+        html_str=html_str,
+        save_as=output_path.name,
+        size=(_CARD_WIDTH_PX, _CARD_HEIGHT_PX),
+    )
 
     return output_path
 
@@ -125,9 +132,7 @@ def export_from_prospect_dict(
     Returns:
         Path to the written PNG file.
     """
-    # Late import — keeps this module importable without the full DraftOS tree
     try:
-        # Try scripts-relative import first (C:\DraftOS\scripts\)
         _scripts_dir = str(Path(__file__).parent)
         if _scripts_dir not in sys.path:
             sys.path.insert(0, _scripts_dir)
@@ -180,7 +185,6 @@ if __name__ == "__main__":
         python scripts/export_png.py --test     # renders MOCK_RUEBEN_BAIN
     """
     if len(sys.argv) == 2 and sys.argv[1] == "--test":
-        # Self-test with mock prospect
         _scripts_dir = str(Path(__file__).parent)
         if _scripts_dir not in sys.path:
             sys.path.insert(0, _scripts_dir)
