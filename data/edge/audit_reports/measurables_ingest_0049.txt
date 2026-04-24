@@ -1,0 +1,45 @@
+MEASURABLES INGEST 0049 [APPLY] — 2026-04-24T14:20:11.111995+00:00
+
+BigBoard players: 735
+Matched: 696 | Unmatched: 39
+
+=== UNMATCHED (no DB PID — not ingested) ===
+  T.J. Parker
+  A.J. Haulcy
+  J.C. Davis
+  TJ Burke
+  E.J. Williams
+  Zach Durfee
+  Jayden Loving
+  Uar Bernard
+  Caleb Offord
+  Bryce Phillips
+  Mitchell Melton
+  Camden Brown
+  Van Wells
+  Quinn Urwiler
+  Bruin Fleischmann
+  Noah Fenske
+  Austin Collins
+  Coleman Bennett
+  Joshua Weru
+  Kevin Jobity Jr.
+  Evan Svoboda
+  Brady Boyd
+  Jay Hunt
+  Sterling Webb
+  Omari Evans
+  Ja'Qurious Conley
+  Sam Scott
+  Tanoa Togiai
+  Myles Montgomery
+  Zaylin Wood
+  Anthony Frias II
+  Demarcus Lacey
+  Treyvhon Saunders
+  Kolbe Katsis
+  Jake McConnachie
+  Kenneth Harris
+  Reid Williford
+  Tyce Westland
+  Wesley Grimes

@@ -2188,14 +2188,15 @@ def _get_measurables_context(conn, prospect_id: int, archetype_code: str | None 
     """
     row = conn.execute(
         """
-        SELECT age, height_in, weight_lbs, arm_length, wingspan,
+        SELECT source, age, height_in, weight_lbs, arm_length, wingspan,
                hand_size, ten_yard_split, forty_yard_dash, shuttle,
                three_cone, vertical_jump, broad_jump,
                prod_score, ath_score, size_score,
-               speed_score, acc_score, agi_score,
-               consensus_rank
+               speed_score, acc_score, agi_score
         FROM prospect_measurables
         WHERE prospect_id = ? AND season_id = 1
+        ORDER BY CASE source WHEN 'bigboard_2026' THEN 0 ELSE 1 END
+        LIMIT 1
         """,
         (prospect_id,),
     ).fetchone()
@@ -2212,7 +2213,8 @@ def _get_measurables_context(conn, prospect_id: int, archetype_code: str | None 
         inch = row["height_in"] % 12
         height_str = f"{ft}'{inch}\""
 
-    lines = ["MEASURABLES (jfosterfilm 2026):"]
+    src_label = row["source"] if row["source"] else "measurables"
+    lines = [f"MEASURABLES ({src_label}):"]
     lines.append(
         f"  Build: {height_str or chr(8212)} | {fmt(row['weight_lbs'], 'lbs')} "
         f"| Arm: {fmt(row['arm_length'], chr(34))} "
@@ -2237,9 +2239,6 @@ def _get_measurables_context(conn, prospect_id: int, archetype_code: str | None 
         f"| SIZE={fmt(row['size_score'])} "
         f"| PROD={fmt(row['prod_score'])}"
     )
-    if row["consensus_rank"]:
-        lines.append(f"  Consensus rank: #{row['consensus_rank']}")
-
     # Archetype-aware priority prefix (Session 71)
     prefix = ""
     if archetype_code:

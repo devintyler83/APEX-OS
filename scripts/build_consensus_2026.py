@@ -26,6 +26,13 @@ from draftos.db.connect import connect
 DISPERSION_WEIGHT: float = 0.5
 MAX_PENALTY: float = 0.25          # Score reduction never exceeds 25%
 MIN_SOURCES_FOR_DISPERSION: int = 2  # Dispersion undefined for k < 2; penalty = 0
+CONSENSUS_MASTER_FLOOR: float = math.sqrt(10 / 18)  # ≈ 0.745 — coverage floor when consensus_master_2026 present. Session 77.
+CONSENSUS_MASTER_SOURCE: str = "consensus_master_2026"
+CONSENSUS_MASTER_SINGLE_SOURCE_SCALAR: float = 0.80
+# Discount for prospects appearing ONLY in consensus_master_2026.
+# Floor boost applies (they are on the master list) but single-source
+# presence warrants no multi-scout corroboration penalty.
+# 0.80 drops score ~73 to ~58, below McNeil-Warren's ~69. Session 77.
 
 # ── Source quality weights ─────────────────────────────────────────────────────
 # Tier 1 — Premium analytics/editorial (weight 1.3)
@@ -55,6 +62,8 @@ SOURCE_WEIGHTS: Dict[str, float] = {
     "fantasypros_2026":     1.0,  # FantasyPros 2026 expert consensus composite. Top 100. Aggregator. Added Session 60.
     # Tier 3 — Added Session 60
     "drafttek_2026":        0.7,  # DraftTek 2026 big board. Top 500. Lower editorial authority. Added Session 60.
+    # Dominant anchor — Added Session 77
+    "consensus_master_2026": 10.0,  # Authoritative pre-aggregated consensus. Added Session 77.
     # ngs_2026 is is_active=0 — model score, not a scout ranking. Stored but excluded from consensus.
 }
 DEFAULT_WEIGHT: float = 1.0  # fallback for any source not in the dict
@@ -233,16 +242,35 @@ def weighted_base_score_0_100(
     return 100.0 * (total_weighted / total_weight)
 
 
-def coverage_factor(k: int, n_active: int) -> float:
+def coverage_factor(
+    k: int,
+    n_active: int,
+    source_names: List[str] | None = None,
+) -> float:
     """
     coverage = sqrt(k / n_active)
+
+    Floor override: if consensus_master_2026 is among the covering sources,
+    apply minimum of CONSENSUS_MASTER_FLOOR (sqrt(10/18) ≈ 0.745).
+
+    Single-source discount: if consensus_master_2026 is the ONLY covering
+    source (k=1), apply CONSENSUS_MASTER_SINGLE_SOURCE_SCALAR (0.80) to
+    the floor value. These players have no multi-scout corroboration.
+
+    Session 77.
     """
     if n_active <= 0:
         return 0.0
     k = max(0, min(k, n_active))
     if k == 0:
         return 0.0
-    return math.sqrt(k / n_active)
+    raw = math.sqrt(k / n_active)
+    if source_names and CONSENSUS_MASTER_SOURCE in source_names:
+        floor_val = max(raw, CONSENSUS_MASTER_FLOOR)
+        if k == 1:
+            return floor_val * CONSENSUS_MASTER_SINGLE_SOURCE_SCALAR
+        return floor_val
+    return raw
 
 
 def calc_dispersion(norm_vals: List[float]) -> Tuple[float, float]:
@@ -466,7 +494,8 @@ def main():
             # Weighted base uses source quality weights
             w_base = weighted_base_score_0_100(ranks_sorted, source_max, source_id_to_name)
 
-            cov = coverage_factor(k, n_active)
+            covering_source_names = [source_id_to_name.get(sid, "") for sid, _ in ranks_sorted]
+            cov = coverage_factor(k, n_active, source_names=covering_source_names)
             std_dev, disp_penalty = calc_dispersion(norm_vals)
 
             # score = weighted_base × coverage × (1 − dispersion_penalty)
