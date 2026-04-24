@@ -537,13 +537,13 @@ Session 109 close:
 
 ## Next Milestone (Single Target)
 
-Session 113: Klubnik ghost cleanup, board export, tag triggers, pre-draft snapshot.
-1. Deactivate pid=112 (Cade Klubnik EDGE ghost, has v2.3 apex_score) and pid=4468 (Cade Klubnik LB ghost).
-   Delete apex_scores row for pid=112. Recompute divergence after cleanup.
-2. Export full board: apex_all_scored_session112.json + apex_top300_board_session112.csv.
-3. Run tag triggers (run_tag_triggers_2026.py) and triage new recs.
-4. Run pre-draft snapshot (snapshot_board.py + compute pipeline).
-All 286 prospects are now at arch-weight apex_v2.3 — board is ready for final pre-draft state.
+Session 121: Post-draft audit activation + board cleanup.
+1. Activate APEX Framework Section 9: verify actual draft results vs APEX capital ranges.
+2. Overton reclassification (EDGE→IDL, migration required) + Jacas/Howell archetype corrections.
+3. Klubnik ghost PID cleanup (pid=112, pid=4468): deactivate ghosts, delete stale apex_scores row.
+4. BigBoard HEIGHT column: convert from NFL notation (e.g. 6010) to raw inches for clean APEX prompt display.
+5. Full board export + final pre-draft snapshot (if not yet run post-Session 120).
+6. Streamlit upgrade evaluation: check 1.53.0 → ≥1.42.0 for expander key= + expanded_callback support.
 
 ---
 
