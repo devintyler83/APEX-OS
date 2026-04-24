@@ -2892,6 +2892,12 @@ def render_draft_mode(conn=None) -> None:
                 f'Remaining Board · {_n_rem} prospects · {_view_label_active}</div>',
                 unsafe_allow_html=True,
             )
+            st.caption(
+                "Remaining board shows prospects with at least one team fit "
+                "signal (IDEAL / STRONG / VIABLE). Prospects with no team fit "
+                "evaluation are excluded. Full scored universe visible on "
+                "Big Board and APEX Board."
+            )
 
             # ── Team needs (parsed once, shared across team-context modes) ──────
             def _parse_team_needs(team_rows: list[dict]) -> tuple[set, set, str]:
@@ -4167,9 +4173,10 @@ def get_apex_alerts(season_id: int = 1, model_version: str = "apex_v2.3", limit:
             rows = conn.execute(
                 """
                 SELECT
+                    p.prospect_id,
                     p.display_name,
                     p.position_group,
-                    df.divergence_rank_delta                               AS delta,
+                    df.divergence_rank_delta                               AS divergence_delta,
                     a.apex_tier,
                     pcr.consensus_rank,
                     CAST(pcr.consensus_rank - df.divergence_rank_delta AS INTEGER) AS apex_rank
@@ -4202,41 +4209,29 @@ def get_apex_alerts(season_id: int = 1, model_version: str = "apex_v2.3", limit:
 
 
 def _render_apex_alerts(alerts: list[dict]) -> None:
-    """Render the APEX Alerts horizontal banner via st.markdown. No-op if empty."""
+    """Render the APEX Alerts bar as clickable st.button columns. No-op if empty."""
     if not alerts:
         return
-
-    cards_html = ""
-    for a in alerts:
-        name     = a["display_name"]
-        pos      = a["position_group"]
-        delta    = int(a["delta"])
-        tier     = a["apex_tier"] or "—"
-        con_rank = int(a["consensus_rank"]) if a["consensus_rank"] is not None else "—"
-        apx_rank = int(a["apex_rank"])      if a["apex_rank"]      is not None else "—"
-
-        cards_html += f"""
-<div class="alert-card">
-  <div style="flex:1;min-width:0">
-    <div class="alert-name">{name}</div>
-    <div class="alert-meta">
-      <b>{pos}</b> &nbsp;·&nbsp; {tier}
-      &nbsp;·&nbsp; Consensus <b>#{con_rank}</b> &nbsp;·&nbsp; APEX <b>#{apx_rank}</b>
-    </div>
-  </div>
-  <div class="alert-delta">+{delta}</div>
-</div>"""
-
-    st.markdown(
-        f"""
-<div class="alerts-wrap">
-  <div class="alerts-head">APEX Alerts</div>
-  <div class="alerts-sub">Highest positive market inefficiencies</div>
-  <div class="alerts-row">{cards_html}
-  </div>
-</div>""",
-        unsafe_allow_html=True,
-    )
+    cols = st.columns(len(alerts))
+    for col, alert in zip(cols, alerts):
+        with col:
+            _label = (
+                f"⚡ {alert['display_name']} "
+                f"{alert['position_group']} "
+                f"+{int(alert['divergence_delta'])}"
+            )
+            if st.button(
+                _label,
+                key=f"alert_btn_{alert['prospect_id']}",
+                use_container_width=True,
+            ):
+                st.session_state["selected_pid"]     = alert["prospect_id"]
+                st.session_state["scroll_to_detail"] = True
+                st.session_state["active_board"]     = "bb"
+                st.session_state["_nav_gen"]         = (
+                    st.session_state.get("_nav_gen", 0) + 1
+                )
+                st.rerun()
 
 
 raw = _load_board()
@@ -5238,13 +5233,13 @@ Tiers: **ELITE** ≥85 · **DAY1** ≥70 · **DAY2** ≥55 · **DAY3** ≥40 · 
         ab["Archetype"]  = apex_df["apex_archetype"].fillna("-")
 
         if "gap_label" in apex_df.columns:
-            ab["Fit"] = apex_df["gap_label"].map(
+            ab["Signal"] = apex_df["gap_label"].map(
                 lambda v: _GAP_LABEL_DISPLAY_MAP.get(
                     str(v).strip().upper(), str(v)
                 ) if pd.notna(v) else "-"
             )
         else:
-            ab["Fit"] = "-"
+            ab["Signal"] = "-"
 
         ab["Consensus"]   = apex_df["consensus_rank"].astype("Int64")
         ab["APEX Edge"]   = apex_df["auto_apex_delta"].apply(_fmt_apex_delta)
@@ -5267,7 +5262,7 @@ Tiers: **ELITE** ≥85 · **DAY1** ≥70 · **DAY2** ≥55 · **DAY3** ≥40 · 
 
         _right_cols_apex = ["APEX Rank", "APEX Score", "Consensus", "APEX Edge"]
         _left_cols_apex  = ["Player", "Pos", "School", "RPG", "APEX Tier", "Archetype",
-                            "Fit", "Tags", "My Tags"]
+                            "Signal", "Tags", "My Tags"]
 
         apex_styled = (
             ab.style

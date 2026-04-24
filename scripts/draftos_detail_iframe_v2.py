@@ -3104,7 +3104,7 @@ def build_detail_html(d: dict, comps: list, rate, fm_ref_comps: list | None = No
         else:
             comps_tab_html = '<div class="comps-empty">No historical comp data available for this archetype yet.</div>'
 
-        # NOTES tab — Scout Pad utility panel
+        # TAB: SCOUT CARD
         notes_tab_html = _build_scout_pad(d, fm_codes, fm_labels, tag_list)
 
         # FIT tab — Team Fit result panel
@@ -3227,7 +3227,7 @@ def build_detail_html(d: dict, comps: list, rate, fm_ref_comps: list | None = No
           <button class="tab-btn" data-tab="tab-risk">Risk</button>
           <button class="tab-btn" data-tab="tab-comps">Comps</button>
           <button class="tab-btn" data-tab="tab-fit">Fit</button>
-          <button class="tab-btn" data-tab="tab-notes">Notes</button>
+          <button class="tab-btn" data-tab="tab-notes">Scout Card</button>
           <button class="tab-btn" data-tab="tab-report">Report</button>
         </nav>
 

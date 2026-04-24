@@ -45,13 +45,52 @@ _HEADLESS_FLAGS = [
 ]
 
 
+_WINDOWS_CHROME_PATHS = [
+    r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+    r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+    r"C:\Program Files\Chromium\Application\chrome.exe",
+]
+
+_WINDOWS_REGISTRY_KEYS = [
+    r"SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\chrome.exe",
+    r"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\App Paths\chrome.exe",
+]
+
+
 def _find_browser() -> str | None:
     """
-    Return the first Chrome/Chromium executable found, or None on Windows
-    (html2image auto-detects on Windows).
+    Return the first Chrome/Chromium executable found.
+    On Windows: checks registry, known install paths, then PATH.
+    On Linux/Mac: checks PATH and known binary names.
     """
     if sys.platform == "win32":
-        return None  # let html2image locate Chrome via registry/PATH
+        # 1. Registry lookup (most reliable on Windows)
+        try:
+            import winreg
+            for key_path in _WINDOWS_REGISTRY_KEYS:
+                try:
+                    with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, key_path) as k:
+                        exe, _ = winreg.QueryValueEx(k, "")
+                        if exe and Path(exe).is_file():
+                            return exe
+                except OSError:
+                    continue
+        except ImportError:
+            pass
+        # 2. Known install paths
+        for path in _WINDOWS_CHROME_PATHS:
+            if Path(path).is_file():
+                return path
+        # 3. PATH fallback
+        for name in ("chrome", "chromium", "chromium-browser"):
+            found = shutil.which(name)
+            if found:
+                return found
+        raise RuntimeError(
+            "No Chrome/Chromium browser found on Windows.\n"
+            "Install Chrome from https://www.google.com/chrome/"
+        )
+    # Linux / Mac
     for candidate in _BROWSER_CANDIDATES:
         found = shutil.which(candidate)
         if found:
@@ -69,43 +108,42 @@ def _find_browser() -> str | None:
 
 def render_html_to_png(html_str: str, output_path: str | Path) -> Path:
     """
-    Render an HTML string to a PNG file using html2image (headless Chrome).
-
-    Args:
-        html_str:    Complete HTML string (self-contained, no external deps).
-        output_path: Destination file path for the PNG.
-
-    Returns:
-        Path to the written PNG file.
-
-    Raises:
-        RuntimeError: If html2image is not installed or no browser is found.
+    Render HTML to PNG via Playwright running in a clean subprocess.
+    Avoids Windows asyncio ProactorEventLoop subprocess-from-thread
+    restriction.
     """
-    try:
-        from html2image import Html2Image
-    except ImportError:
-        raise RuntimeError(
-            "html2image not installed. Run:\n"
-            "  pip install html2image"
-        )
+    import subprocess, sys, tempfile
 
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    browser_exe = _find_browser()
-    kwargs = dict(
-        custom_flags=_HEADLESS_FLAGS,
-        output_path=str(output_path.parent),
-    )
-    if browser_exe is not None:
-        kwargs["browser_executable"] = browser_exe
+    # Write HTML to temp file — pass path as arg to avoid stdin size limits
+    with tempfile.NamedTemporaryFile(
+        suffix=".html", delete=False, mode="w", encoding="utf-8"
+    ) as fh:
+        fh.write(html_str)
+        html_tmp = fh.name
 
-    hti = Html2Image(**kwargs)
-    hti.screenshot(
-        html_str=html_str,
-        save_as=output_path.name,
-        size=(_CARD_WIDTH_PX, _CARD_HEIGHT_PX),
+    runner = Path(__file__).parent / "export_png_subprocess.py"
+
+    result = subprocess.run(
+        [sys.executable, str(runner), str(output_path), html_tmp],
+        capture_output=True,
+        text=True,
     )
+
+    Path(html_tmp).unlink(missing_ok=True)
+
+    if result.returncode != 0:
+        raise RuntimeError(
+            f"PNG export subprocess failed:\n{result.stderr}"
+        )
+
+    if not output_path.exists():
+        raise RuntimeError(
+            f"Subprocess exited 0 but no file at {output_path}.\n"
+            f"stdout: {result.stdout}"
+        )
 
     return output_path
 
