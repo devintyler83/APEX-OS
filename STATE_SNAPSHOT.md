@@ -4,7 +4,7 @@ APEX OS is a deterministic draft operating system that turns 16 ranking sources,
 
 ---
 
-Last Updated (UTC): 2026-04-24T02:02:16.454834+00:00
+Last Updated (UTC): 2026-04-24T14:30:00+00:00
 
 ---
 
@@ -25,6 +25,62 @@ Last Updated (UTC): 2026-04-24T02:02:16.454834+00:00
 As of Session 101 (post-fix): DEDUP_GHOST and INACTIVE_SNAPSHOT passes complete. 304 MULTI_ACTIVE real-school clusters remain — require manual review before any further deactivation.
 
 ## Last Completed Milestone
+
+Session 118 close (Consensus engine finalized for draft day. Migration 0049: prospect_measurables rebuilt with multi-source unique constraint. BigBoard ingest complete. APEX measurables context fixed for multi-source schema.)
+
+Session 118 close:
+- DB writes: YES. prospect_consensus_rankings rebuilt (1057 rows). prospect_measurables migrated + 696 BigBoard rows ingested.
+- Schema change: Migration 0049 applied. prospect_measurables UNIQUE constraint changed from (prospect_id, season_id) to (prospect_id, season_id, source). jff_ovr_rank, jff_pos_rank, consensus_rank columns dropped (jfosterfilm-specific, not carried to new schema).
+- Active prospects: unchanged.
+- apex_scores: unchanged.
+- Migrations applied: 61 total (0001–0060 + 0049_bigboard_measurables). Next migration: 0061.
+
+Key work completed:
+1. CONSENSUS ENGINE — SINGLE-SOURCE SCALAR (build_consensus_2026.py):
+   Added CONSENSUS_MASTER_SINGLE_SOURCE_SCALAR = 0.80. Prospects appearing in consensus_master_2026
+   as their ONLY source receive floor_val * 0.80, pushing single-source scores from ~73 to ~58.
+   Multi-source prospects unaffected. McNeil-Warren (6 sources) lands at consensus_rank=#37, score=69.38.
+   Top 20 stable. All single-source consensus_master-only players rank 80+. Consensus engine is
+   complete for draft day.
+
+2. MIGRATION 0049 — prospect_measurables multi-source rebuild:
+   Rebuilt prospect_measurables table with UNIQUE(prospect_id, season_id, source).
+   All 716 jfosterfilm_2026 rows preserved exactly (pre/post row count gate passed).
+   jfosterfilm-only columns dropped from new schema (jff_ovr_rank, jff_pos_rank, consensus_rank).
+
+3. BIGBOARD INGEST (BigBoard_Size_Testing_Scores_4-23-26.csv):
+   735 CSV rows. 696 matched to active prospects (is_active=1, season_id=1) by normalized name.
+   39 unmatched (audit: data/edge/audit_reports/measurables_ingest_0049.txt).
+   Source='bigboard_2026'. Total measurables rows: 1412 (716 jfosterfilm + 696 bigboard).
+
+4. APEX MEASURABLES CONTEXT FIX (run_apex_scoring_2026.py, _get_measurables_context):
+   Dropped consensus_rank from SELECT (column no longer exists — would crash all APEX re-scores today).
+   Added source column. ORDER BY prefers bigboard_2026 over jfosterfilm_2026 when both rows exist.
+   Label in prompt is now dynamic (shows source name). consensus_rank display lines removed.
+
+Known data quality notes (non-blocking):
+- BigBoard HEIGHT stored in NFL notation (e.g., 6010 = 6'1") not raw inches. Display in APEX prompt
+  shows wrong height string but height is not used in scoring.
+- Some BigBoard shuttle/3-cone values are anomalous in source CSV — composite scores are valid.
+- prospect_measurables: consensus_rank data lost in migration (was jFoster CON column, reference only,
+  never fed into consensus weights). Non-blocking.
+
+Open items (carried forward):
+- Lt Overton: full position reclassification EDGE→IDL (migration required).
+- Gabe Jacas archetype review: EDGE-4 assigned vs EDGE-3 per triage rationale.
+- Cashius Howell archetype correction review: EDGE-3→EDGE-5.
+- Mauigoa (pid=22) + Peter Woods (pid=79): JSON parse failures — still unrescored.
+- Klubnik ghost PID cleanup (pid=112, pid=4468).
+- BigBoard HEIGHT column: convert from NFL notation to raw inches for clean prompt display.
+- Re-run build_pvc_archetype_weights.py after all rescores complete.
+- Post-draft audit framework activation (after April 2026 draft).
+
+Next Milestone (Session 119 / post-draft):
+- Post-draft audit: activate APEX Framework Section 9. Verify actual draft results vs APEX capital ranges.
+- Overton reclassification + Jacas/Howell archetype corrections.
+- Full board export + final pre-draft snapshot.
+
+---
 
 Session 117 close (CB/EDGE prompts.py fix + full CB/EDGE rescore. PVC inflation bug found and corrected. LB board display fixed. Divergence recomputed. Team fit rebuilt.)
 
