@@ -26,6 +26,43 @@ As of Session 101 (post-fix): DEDUP_GHOST and INACTIVE_SNAPSHOT passes complete.
 
 ## Last Completed Milestone
 
+Session 119 close (Draft Room UI: Team Board need-decay + live Need Bar + Reset Draft. Bug fix: Open Full Profile Below stale on_select guard. Bug fix: Mini Player Card session_state persistence.)
+
+Session 119 close:
+- DB writes: NO. All changes are app/app.py UI layer only.
+- Schema change: none.
+- Migrations applied: 61 total (unchanged from Session 118).
+- Active prospects: unchanged.
+- apex_scores: unchanged.
+
+Key work completed:
+1. TEAM BOARD LEFT PANEL REBUILD (app.py):
+   - New module-level _get_team_fit_score_best_fit() scores all remaining prospects via
+     Best Fit · Team formula using live session need_weights. Team Board top-10 always
+     matches Best Fit · Team sort order, updates dynamically as picks are made.
+   - draft_need_state session key: {team_code: {position: weight}} seeded from needs_json
+     on first team selection. _decay_need_state() called in _do_draft(): Premium(100)→
+     Secondary(55)→Removed on each pick at that position.
+   - draft_picks session key: list of {prospect_id, position_group} for drafted pids filter.
+   - Live Need Bar renders above Team Board: red pills (100) and amber pills (55).
+     "All needs filled" when empty.
+   - Reset Draft button clears draft_picks, draft_need_state, resets team to SF.
+   - Old quality gate (apex_rank ≤ 120) removed — top-10 driven by score only.
+
+2. OPEN FULL PROFILE BELOW BUG FIX (app.py line 3981):
+   - Root cause: stale on_select events from Big Board tier tables firing on the rerun
+     triggered by the button, overwriting selected_pid before the detail panel reads it.
+   - Fix: added st.session_state["_nav_gen"] += 1 to the button handler. Busts all board
+     widget keys on the next rerun, same mechanism used by Prev/Next nav buttons.
+
+3. MINI PLAYER CARD SESSION PERSISTENCE (app.py):
+   - Old behaviour: st.download_button rendered inline inside if st.button() block —
+     disappeared on any subsequent rerun (scroll, filter, etc.).
+   - Fix: on successful export, PNG bytes written to session_state["mini_card_bytes"].
+     Download button rendered unconditionally outside the generate block whenever bytes
+     are present for the current prospect. Card cleared when prospect selection changes.
+     st.toast fires on successful generation.
+
 Session 118 close (Consensus engine finalized for draft day. Migration 0049: prospect_measurables rebuilt with multi-source unique constraint. BigBoard ingest complete. APEX measurables context fixed for multi-source schema.)
 
 Session 118 close:
@@ -75,10 +112,12 @@ Open items (carried forward):
 - Re-run build_pvc_archetype_weights.py after all rescores complete.
 - Post-draft audit framework activation (after April 2026 draft).
 
-Next Milestone (Session 119 / post-draft):
+Next Milestone (Session 120 / post-draft):
 - Post-draft audit: activate APEX Framework Section 9. Verify actual draft results vs APEX capital ranges.
-- Overton reclassification + Jacas/Howell archetype corrections.
+- Overton reclassification (EDGE→IDL, migration required) + Jacas/Howell archetype corrections.
 - Full board export + final pre-draft snapshot.
+- Klubnik ghost PID cleanup (pid=112, pid=4468).
+- BigBoard HEIGHT column: convert from NFL notation to raw inches for clean prompt display.
 
 ---
 
