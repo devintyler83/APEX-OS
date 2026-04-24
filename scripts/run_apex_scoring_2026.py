@@ -3010,6 +3010,17 @@ def _run_all(
         position     = _resolve_position(pid, p["position_group"], p["position_raw"])
         school       = p["school_canonical"] or "Unknown"
 
+        # Gate: skip prospects with POSITIONAL_MISCLASSIFICATION override
+        misclass = conn.execute(
+            "SELECT 1 FROM apex_overrides "
+            "WHERE prospect_id=? AND season_id=? AND override_type='POSITIONAL_MISCLASSIFICATION'",
+            (pid, season_id),
+        ).fetchone()
+        if misclass:
+            print(f"  SKIP {display_name} (pid={pid}): POSITIONAL_MISCLASSIFICATION override active")
+            skip_count += 1
+            continue
+
         override = {
             "prospect_id":  pid,
             "position":     position,

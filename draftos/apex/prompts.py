@@ -56,10 +56,10 @@ Q1: How does this player win pass rush reps?
   → Full-diet pass rush AND run stop on same drives = EDGE-1 Every-Down Disruptor
   → Scheme-specific deployment only; too light for every-down, insufficient arc speed = EDGE-5 Hybrid Tweener Rusher
 
-Q2: Is there a confirmed counter package off the initial move?
-  → YES and technique-led → EDGE-3 Power-Counter Technician
-  → YES and speed-led → EDGE-2 Speed-Bend Specialist
-  → NO → EDGE-4 Athletic Dominator or EDGE-5 Hybrid Tweener Rusher
+Q2: Counter-move mechanism — how does the player initiate counters?
+  → Reads protection leverage pre-snap, sequences counter from inside leverage = EDGE-3; Processing elevated
+  → Counter triggered by contact or reactive off blocker movement = counter present but reactive; EDGE-2 lean
+  → No confirmed counter sequence (one-move rusher) = EDGE-4 or EDGE-5; Processing not primary
 
 Q3: Does the player set the edge against the run on the same drives he generates pass rush?
   → YES → EDGE-1 Every-Down Disruptor candidate
@@ -78,11 +78,27 @@ Q1: Primary win mechanism?
   → Spatial QB-read — reads the quarterback's eyes, not the receiver = CB-2 Zone Architect
   → Physical superiority at the catch point / press dominance = CB-3 Press Man Corner
   → Slot-specific hand fighting and short-area quickness = CB-4 Slot Specialist
+  → Athletic tools only, processing and technique developing = CB-5 Raw Projection
 
 Q2 (MANDATORY FOR CB-2 Zone Architect): Man coverage floor confirmed?
   A CB-2 with no confirmed man coverage floor is a Day 2 pick regardless of zone excellence.
-  If man coverage is unconfirmed: capital maximum = Early R2.
-If gap < 3, flag as TWEENER.""",
+  Man coverage grade must clear 60/100 minimum to confirm floor.
+  If man coverage is unconfirmed or below 60: capital maximum = Early R2.
+
+Q3: Competition gate — what percentage of coverage reps against top-50 opponents?
+  If below 30% against top-50 competition: cap eval_confidence at Tier B.
+  If QB rating allowed > 85.0 across all coverage snaps: FM-1 monitoring flag required.
+
+Q4: Processing type — is the mechanism anticipatory (route-read before break) or reactive
+  (relies on recovery speed / athleticism to bail out after hip turn)?
+  → Anticipatory confirmed = Processing scores normally
+  → Reactive dominant = Processing score caps at 6/10 per FM-1 monitoring rules
+
+Q5: Size and deployment gate — does arm length, height, or weight create a structural matchup
+  ceiling against 6-3+ boundary receivers?
+  → If YES: note Injury/Durability and Competitive Toughness reflect contested-catch limitation,
+    not a mechanism flag. Mandatory Landing Spot Note if size creates scheme dependency.
+  → If CB operates exclusively from slot (<5% boundary reps): note deployment limitation.""",
 
     "QB": """\
 MANDATORY QB ARCHETYPE GATE — complete before assigning any archetype:
@@ -499,13 +515,13 @@ POSITION: EDGE (PVC=1.00)
 Use when position_group IN (EDGE, DE, OLB-EDGE)
 ----------------------------------------------------------------------
 BASE WEIGHT TABLE:
-  Processing 20% | Athleticism 18% | CompTough 14% | SchemeVers 13%
-  DevTraj 12%    | Production 11%  | Injury 7%     | Character 5%
+  Processing 20% | Athleticism 15% | CompTough 14% | SchemeVers 13%
+  DevTraj 12%    | Production 14%  | Injury 7%     | Character 5%
 
 ARCHETYPE-SPECIFIC BUMPS:
   EDGE-1 Every-Down Disruptor: CompTough bumps to 16%
   EDGE-2 Speed-Bend Specialist: Athleticism bumps to 22%
-  EDGE-3 Power-Counter Technician: DevTraj bumps to 15%
+  EDGE-3 Power-Counter Technician: Processing bumps to 23%
   EDGE-4 Athletic Dominator: Processing adjusts to 16%
   EDGE-5 Hybrid Tweener Rusher: SchemeVers bumps to 18%
 
@@ -555,8 +571,18 @@ BASE WEIGHT TABLE:
   DevTraj 10%    | Character 8%    | Production 7%  | Injury 3%
 
 ARCHETYPE-SPECIFIC BUMPS:
-  CB-1 Anticipatory Lockdown: Processing bumps to 28%
-  CB-3 Press Man Corner: Athleticism bumps to 26%
+  CB-1 Anticipatory Lockdown: Processing bumps to 26%
+  CB-2 Zone Architect: Processing bumps to 26%
+  CB-3 Press Man Corner: Athleticism bumps to 28%
+  CB-4 Slot Specialist: Processing bumps to 24%, Athleticism drops to 14%
+  CB-5 Raw Projection: DevTraj bumps to 16%
+
+CAPITAL GATES:
+  CB-1 confirmed: Day 1 / Round 1 range available — score at ceiling
+  CB-2 confirmed without man floor: capital maximum = Early Round 2
+  CB-3 confirmed: Day 1 / Day 2 range — Athleticism primary driver
+  CB-4 confirmed: Day 2 / Day 3 range — slot deployment reduces NFL floor
+  CB-5 projection: Day 3 / UDFA — development dependency required
 
 ARCHETYPES:
   CB-1 Anticipatory Lockdown  — reads route before break, top-tier anticipatory processor

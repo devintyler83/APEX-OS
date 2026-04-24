@@ -83,8 +83,16 @@ def _pick_band_from_text(capital_range: str | None) -> tuple[int | None, int | N
     return (None, None)
 
 
+_POS_ALIAS: dict[str, str] = {
+    "LB": "ILB", "MLB": "ILB",
+    "DE": "EDGE",
+    "DT": "IDL",
+}
+
+
 def evaluate_team_fit(player_ctx: dict[str, Any], team_ctx: dict[str, Any], pick_number: int | None = None) -> dict[str, Any]:
     pos = (player_ctx.get("position_group") or "").upper()
+    pos = _POS_ALIAS.get(pos, pos)  # normalize generic labels before needs/depth lookup
     archetype = player_ctx.get("matched_archetype") or ""
     divergence = player_ctx.get("divergence_rank_delta")
     capital_range = player_ctx.get("capital_range")
