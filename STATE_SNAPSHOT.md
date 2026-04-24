@@ -26,6 +26,54 @@ As of Session 101 (post-fix): DEDUP_GHOST and INACTIVE_SNAPSHOT passes complete.
 
 ## Last Completed Milestone
 
+Session 120 close (App UI bug fixes: APEX Board Signal column, clickable Alerts bar, Scout Card tab rename, Draft Mode remaining count footnote. PNG card renderer rebuilt via Playwright subprocess.)
+
+Session 120 close:
+- DB writes: NO. All changes are app/scripts layer only.
+- Schema change: none.
+- Migrations applied: 61 total (unchanged).
+- Active prospects: unchanged.
+- apex_scores: unchanged.
+
+Key work completed:
+1. APEX BOARD — "Fit" COLUMN RENAMED TO "Signal" (app.py):
+   ab["Fit"] → ab["Signal"] in APEX Board dataframe build. _left_cols_apex updated.
+   Draft Mode Team Board "Fit" column (line 2774) untouched — different scope.
+
+2. APEX ALERTS BAR — NOW CLICKABLE (app.py):
+   _render_apex_alerts() replaced: static st.markdown HTML → st.columns() + st.button() layout.
+   On click: writes selected_pid, scroll_to_detail=True, active_board="bb", increments _nav_gen, calls st.rerun().
+   get_apex_alerts() query updated: added p.prospect_id to SELECT; renamed divergence_rank_delta alias
+   from "delta" to "divergence_delta" to match button handler key references.
+
+3. DRAFT MODE REMAINING COUNT FOOTNOTE (app.py):
+   st.caption() added immediately after the "Remaining Board · N prospects" header.
+   Explains that the count reflects only prospects with at least one IDEAL/STRONG/VIABLE team fit
+   signal — full scored universe visible on Big Board and APEX Board.
+
+4. "NOTES" TAB RENAMED TO "SCOUT CARD" (scripts/draftos_detail_iframe_v2.py):
+   Button text in <nav class="tab-nav">: "Notes" → "Scout Card".
+   data-tab="tab-notes" and id="tab-notes" unchanged (JS switch logic unaffected).
+   Python comment updated to # TAB: SCOUT CARD.
+
+5. PNG CARD RENDERER REBUILT (scripts/export_png.py):
+   render_html_to_png() rewired through three iterations this session:
+   html2image (silent failure on Windows) → sync_playwright ThreadPoolExecutor (event loop conflict)
+   → subprocess.run() calling export_png_subprocess.py (clean process, no loop inheritance).
+   Final implementation: writes HTML to NamedTemporaryFile, invokes export_png_subprocess.py as
+   subprocess, checks returncode + file existence, raises RuntimeError with stderr on failure.
+   Verified: 75,982 byte PNG generated cleanly outside Streamlit.
+
+6. NEW FILES:
+   scripts/export_png_subprocess.py — standalone Playwright renderer. argv[1]=output path,
+   argv[2]=HTML temp file. Viewport 800×1100. Exits 0 on success, 1 on failure.
+   scripts/export_png_runner.py — alternate stdin JSON runner (not currently called by app).
+
+7. INVESTIGATED: Big Board tier expander sticky state.
+   Streamlit 1.53.0 st.expander has no key= and no expanded_callback parameter.
+   None of the three proposed approaches (key=, expanded_callback, sentinel) are viable.
+   No changes made. Upgrade to ≥1.42.0 required to implement sticky collapse state.
+
 Session 119 close (Draft Room UI: Team Board need-decay + live Need Bar + Reset Draft. Bug fix: Open Full Profile Below stale on_select guard. Bug fix: Mini Player Card session_state persistence.)
 
 Session 119 close:
@@ -112,12 +160,13 @@ Open items (carried forward):
 - Re-run build_pvc_archetype_weights.py after all rescores complete.
 - Post-draft audit framework activation (after April 2026 draft).
 
-Next Milestone (Session 120 / post-draft):
+Next Milestone (Session 121 / post-draft):
 - Post-draft audit: activate APEX Framework Section 9. Verify actual draft results vs APEX capital ranges.
 - Overton reclassification (EDGE→IDL, migration required) + Jacas/Howell archetype corrections.
 - Full board export + final pre-draft snapshot.
 - Klubnik ghost PID cleanup (pid=112, pid=4468).
 - BigBoard HEIGHT column: convert from NFL notation to raw inches for clean prompt display.
+- Streamlit upgrade path: evaluate upgrade from 1.53.0 to ≥1.42.0 to unlock expander key= + expanded_callback.
 
 ---
 
