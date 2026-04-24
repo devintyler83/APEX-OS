@@ -2156,6 +2156,60 @@ def _render_compare_panel(name_a: str, name_b: str, board_df: pd.DataFrame) -> N
 #   No business logic — all ordering/filtering delegated to view layer.
 # ---------------------------------------------------------------------------
 
+def _get_team_fit_score_best_fit(
+    prospect: dict,
+    need_weights: dict,
+    drafted_pids: set,
+) -> "float | None":
+    """
+    Best Fit · Team score using live session need_weights.
+    Returns None if prospect is already drafted (pid in drafted_pids).
+    need_weights: {position_group: weight} from draft_need_state — 100/55 only.
+    """
+    if prospect.get("prospect_id") in drafted_pids:
+        return None
+
+    pos       = str(prospect.get("position_group") or "")
+    apex_rank = prospect.get("apex_rank")
+    con_rank  = prospect.get("consensus_rank")
+    fm        = str(prospect.get("failure_mode_primary") or "")
+    div_flag  = str(prospect.get("divergence_flag") or "").upper()
+
+    # A) Quality — log-scale 70/30 APEX/consensus (same as _compute_team_fit_score)
+    _denom = math.log10(301.0)
+    if apex_rank is not None and apex_rank > 0:
+        _a_comp = 100.0 - 100.0 * math.log10(float(apex_rank) + 1.0) / _denom
+    else:
+        _a_comp = 0.0
+    if con_rank is not None and con_rank > 0:
+        _c_comp = 100.0 - 70.0 * math.log10(float(con_rank) + 1.0) / _denom
+    else:
+        _c_comp = 0.0
+    quality = 0.7 * _a_comp + 0.3 * _c_comp
+
+    # B) Need weight from live session state (100 = premium, 55 = secondary, 0 = absent)
+    need_weight = float(need_weights.get(pos, 0))
+
+    # C) APEX edge bonus — clamped −10..+25
+    edge_val = 0.0
+    if con_rank is not None and apex_rank is not None:
+        edge_val = float(con_rank) - float(apex_rank)
+    edge_bonus = max(-10.0, min(edge_val, 25.0))
+
+    # D) FM risk penalty — graded, capped at −15
+    fm_num = 0
+    _fm_match = re.search(r"FM-(\d+)", fm, re.IGNORECASE) if fm else None
+    if _fm_match:
+        fm_num = int(_fm_match.group(1))
+    risk_pen = -min(fm_num * 3.0, 15.0)
+
+    # E) Best Fit · Team formula (mirrors _compute_team_fit_score mode=best_fit_team,
+    #    capital term omitted — need_weight is the primary differentiator here)
+    fit_block = need_weight + edge_bonus + risk_pen
+    total = quality + fit_block * 0.4
+    return round(total, 2)
+
+
 def render_draft_mode(conn=None) -> None:
     """
     3-panel Draft Room: Left (Team War Room) | Center (Live Board) | Right (Inspector).
@@ -2272,6 +2326,11 @@ def render_draft_mode(conn=None) -> None:
     for _sk, _sv in _STATE_DEFAULTS:
         if _sk not in st.session_state:
             st.session_state[_sk] = _sv
+
+    if "draft_need_state" not in st.session_state:
+        st.session_state["draft_need_state"] = {}
+    if "draft_picks" not in st.session_state:
+        st.session_state["draft_picks"] = []
 
     # Toast feedback for View click — consumed once per click, always visible regardless of scroll
     _view_toast_name = st.session_state.pop("dm_view_toast", None)
@@ -2447,6 +2506,18 @@ def render_draft_mode(conn=None) -> None:
                 st.session_state["dm_drafted_inspect_pid"] = None
         return ok
 
+    # ── Need-state decay helper ──────────────────────────────────────────────
+    def _decay_need_state(team_code: str, drafted_position: str) -> None:
+        ns = st.session_state["draft_need_state"]
+        team_needs = ns.get(team_code, {})
+        current_weight = team_needs.get(drafted_position, 0)
+        if current_weight == 100:
+            team_needs[drafted_position] = 55
+        elif current_weight == 55:
+            team_needs.pop(drafted_position, None)
+        ns[team_code] = team_needs
+        st.session_state["draft_need_state"] = ns
+
     # ── Draft action helper ──────────────────────────────────────────────────
     def _do_draft(pid: int, team_code: str) -> bool:
         _pi = dm_get_next_pick_spec(seasonid=1)
@@ -2504,6 +2575,12 @@ def render_draft_mode(conn=None) -> None:
             if pid in _cq:
                 _cq.remove(pid)
                 st.session_state["draft_mode_compare_pids"] = _cq
+            # Track pick in session state for need-state decay
+            _drafted_pos_grp = _picked.get("position_group") or ""
+            _picks_list = list(st.session_state.get("draft_picks", []))
+            _picks_list.append({"prospect_id": pid, "position_group": _drafted_pos_grp})
+            st.session_state["draft_picks"] = _picks_list
+            _decay_need_state(team_code, _drafted_pos_grp)
             return True
         except ValueError as _ve:
             st.error(str(_ve))
@@ -2525,6 +2602,26 @@ def render_draft_mode(conn=None) -> None:
         )
         st.session_state["draft_mode_team"]        = _dm_team
         st.session_state["draft_mode_active_team"] = _dm_team
+
+        # Seed need state for this team if not yet present in session
+        if _dm_team not in st.session_state["draft_need_state"]:
+            _seed_tb = dm_get_draft_team_board(team_code=_dm_team, seasonid=1, limit=5)
+            if _seed_tb:
+                import json as _seed_json
+                _seed_weights: dict[str, int] = {}
+                try:
+                    _seed_nj = _seed_json.loads(str(_seed_tb[0].get("needs_json") or "[]"))
+                    for _sn in _seed_nj:
+                        _st = str(_sn.get("tier") or "").upper()
+                        _sp = str(_sn.get("position") or "")
+                        if _sp:
+                            if _st == "PREMIUM":
+                                _seed_weights[_sp] = 100
+                            elif _st == "SECONDARY":
+                                _seed_weights[_sp] = 55
+                except Exception:
+                    pass
+                st.session_state["draft_need_state"][_dm_team] = _seed_weights
 
         # Team picks from draft_state — computed after team selectbox resolves
         _team_picks     = sorted([p for p, t in _pick_ownership.items() if t == _dm_team])
@@ -2598,23 +2695,57 @@ def render_draft_mode(conn=None) -> None:
             st.session_state["_dm_nav_gen"] = st.session_state["_dm_nav_gen"] + 1
         st.session_state["_dm_view_snapshot"] = _dm_view
 
+        if st.button("Reset Draft", key="dm_reset_draft", use_container_width=True):
+            st.session_state["draft_picks"] = []
+            st.session_state["draft_need_state"] = {}
+            st.session_state["draft_mode_team"] = "SF"
+            st.session_state["draft_mode_active_team"] = "SF"
+            st.rerun()
+
         st.markdown("---")
 
-        # Team board — top 10, clickable; quality-gated so low-quality prospects
-        # (Con#298 / APEX#161) cannot appear in the curated front door.
-        _team_rows_raw = dm_get_draft_team_board(team_code=_dm_team, seasonid=1, limit=50)
-        _team_rows = [
-            r for r in _team_rows_raw
-            if (r.get("apex_rank") or 9999) <= 120
-            or (r.get("consensus_rank") or 9999) <= 80
-        ]
-        if len(_team_rows) < 5:
-            _team_rows = [
-                r for r in _team_rows_raw
-                if (r.get("apex_rank") or 9999) <= 150
-                or (r.get("consensus_rank") or 9999) <= 100
-            ]
-        _team_rows = _team_rows[:10]
+        # ── Need Bar ─────────────────────────────────────────────────────────
+        _team_need_weights = st.session_state["draft_need_state"].get(_dm_team, {})
+        st.markdown("**Needs**", unsafe_allow_html=False)
+        _need_pills_html = ""
+        for _np_pos, _np_wt in sorted(
+            _team_need_weights.items(), key=lambda x: -x[1]
+        ):
+            if _np_wt == 100:
+                _np_color, _np_label = "#ef4444", "🔴"
+            elif _np_wt == 55:
+                _np_color, _np_label = "#f59e0b", "🟡"
+            else:
+                continue
+            _need_pills_html += (
+                f'<span style="background:{_np_color};color:#fff;'
+                f'padding:2px 8px;border-radius:12px;'
+                f'font-size:0.75rem;margin-right:4px;">'
+                f'{_np_label} {_np_pos}</span>'
+            )
+        if not _need_pills_html:
+            _need_pills_html = (
+                '<span style="color:#888;font-size:0.75rem;">All needs filled</span>'
+            )
+        st.markdown(_need_pills_html, unsafe_allow_html=True)
+
+        # ── Team Board — Best Fit · Team scored, top 10 ───────────────────────
+        _drafted_pids = {
+            p["prospect_id"]
+            for p in st.session_state.get("draft_picks", [])
+        }
+        _team_board_scored = []
+        for _tbp in (_remaining or []):
+            _tbs = _get_team_fit_score_best_fit(
+                prospect=_tbp,
+                need_weights=_team_need_weights,
+                drafted_pids=_drafted_pids,
+            )
+            if _tbs is not None:
+                _team_board_scored.append((_tbs, _tbp))
+        _team_board_scored.sort(key=lambda x: x[0], reverse=True)
+        _team_rows = [p for _, p in _team_board_scored[:10]]
+
         st.markdown(
             f'<div style="font-size:9px;font-weight:700;letter-spacing:0.14em;'
             f'text-transform:uppercase;color:rgba(255,255,255,0.32);margin-bottom:5px;">'
@@ -3847,6 +3978,7 @@ def render_draft_mode(conn=None) -> None:
             ):
                 st.session_state["selected_pid"]       = _inspect_pid
                 st.session_state["scroll_to_detail"]   = True
+                st.session_state["_nav_gen"]           = st.session_state.get("_nav_gen", 0) + 1
                 st.rerun()
 
     # ════════════════════════════════════════════════════════════════════════
@@ -5246,6 +5378,10 @@ if st.session_state.get("scroll_to_detail"):
 
 _selected_pid = st.session_state.get("selected_pid")
 
+if st.session_state.get("mini_card_pid") != _selected_pid:
+    st.session_state.pop("mini_card_bytes", None)
+    st.session_state.pop("mini_card_pid", None)
+
 # ── Prev / Next navigation ────────────────────────────────────────────────────
 # Uses whichever board was last clicked; falls back to Big Board.
 # No-ops when compare panel is active.
@@ -5457,19 +5593,9 @@ else:
             with st.spinner("Generating card..."):
                 try:
                     _png_bytes = export_png_bytes(_prospect_dict)
-                    _slug = (
-                        _pr.get("display_name", "prospect")
-                        .lower()
-                        .replace(" ", "_")
-                        .replace("'", "")
-                    )
-                    st.download_button(
-                        label="⬇️ Download Card (PNG)",
-                        data=_png_bytes,
-                        file_name=f"apexos_{_slug}_{_selected_pid}.png",
-                        mime="image/png",
-                        key=f"dl_png_{_selected_pid}",
-                    )
+                    st.session_state["mini_card_bytes"] = _png_bytes
+                    st.session_state["mini_card_pid"]   = _selected_pid
+                    st.toast("✅ Card ready — click Download below", icon=None)
                 except RuntimeError as _e:
                     if "Playwright not installed" in str(_e):
                         st.error(
@@ -5480,6 +5606,16 @@ else:
                         st.error(f"Card generation failed: {_e}")
                 except Exception as _e:
                     st.error(f"Card generation failed: {_e}")
+
+        if st.session_state.get("mini_card_bytes") and \
+                st.session_state.get("mini_card_pid") == _selected_pid:
+            st.download_button(
+                label="⬇️ Download Player Card",
+                data=st.session_state["mini_card_bytes"],
+                file_name=f"{_selected_pid}_apex_card.png",
+                mime="image/png",
+                key=f"dl_mini_card_{_selected_pid}",
+            )
 
         # Render APEX detail or consensus card
         if _has_apex and _detail:
