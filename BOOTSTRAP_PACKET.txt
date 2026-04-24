@@ -21,7 +21,7 @@ APEX OS is a deterministic draft operating system that turns 16 ranking sources,
 
 ---
 
-Last Updated (UTC): 2026-04-24T19:46:07.808178+00:00
+Last Updated (UTC): 2026-04-24T20:24:23.749097+00:00
 
 ---
 
@@ -2792,11 +2792,11 @@ Inactive (data preserved): ngs_2026 (source_id=29, is_active=0) — model score,
 
 2) System Snapshot Output
 === DRAFTOS SYSTEM SNAPSHOT ===
-generated_utc: 2026-04-24T19:46:07.075761+00:00
+generated_utc: 2026-04-24T20:24:22.994875+00:00
 
 ## Git
 branch: main
-commit: c1f839657cc4fe1707915836781e985028d86606
+commit: 2b160fdeceb274eb1ab1accd364fd14ac0481bb0
 status: clean
 
 ## Tables
@@ -3033,6 +3033,8 @@ no is_active column
 - scripts\export_confidence_summary_csv.py
 - scripts\export_movers_csv.py
 - scripts\export_png.py
+- scripts\export_png_runner.py
+- scripts\export_png_subprocess.py
 - scripts\export_reports_html.py
 - scripts\export_reports_html_share.py
 - scripts\export_source_health_csv.py
