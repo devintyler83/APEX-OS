@@ -21,7 +21,7 @@ APEX OS is a deterministic draft operating system that turns 16 ranking sources,
 
 ---
 
-Last Updated (UTC): 2026-04-25T00:47:55.845868+00:00
+Last Updated (UTC): 2026-04-25T01:26:22.908686+00:00
 
 ---
 
@@ -2891,11 +2891,11 @@ Inactive (data preserved): ngs_2026 (source_id=29, is_active=0) — model score,
 
 2) System Snapshot Output
 === DRAFTOS SYSTEM SNAPSHOT ===
-generated_utc: 2026-04-25T00:47:55.064945+00:00
+generated_utc: 2026-04-25T01:26:22.204237+00:00
 
 ## Git
 branch: main
-commit: 17bf2cdcdd10925833fa1ae1baacc894d24701b8
+commit: 6fbb0537f80a3e93f15a5185f460369993faa086
 status: clean
 
 ## Tables
@@ -3031,6 +3031,7 @@ status: clean
 - 0059_historical_comps_v2 @ 2026-04-23 01:43:41
 - 0060_divergence_flags_triage @ 2026-04-24 00:51:24
 - 0049_bigboard_measurables @ 2026-04-24 14:20:11
+- 0061 @ 2026-04-25T01:18:30.503122
 
 ## Active Season
 no is_active column
@@ -3156,6 +3157,7 @@ no is_active column
 - scripts\ingest_ras_2026.py
 - scripts\log_draft_pick_2026.py
 - scripts\mark_drafted_2026.py
+- scripts\migrate_0061_seed_draft_results.py
 - scripts\migrate_and_ingest_measurables_0049.py
 - scripts\open_session.py
 - scripts\open_session_mode1.py
