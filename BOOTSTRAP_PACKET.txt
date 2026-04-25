@@ -21,7 +21,7 @@ APEX OS is a deterministic draft operating system that turns 16 ranking sources,
 
 ---
 
-Last Updated (UTC): 2026-04-25T01:26:22.908686+00:00
+Last Updated (UTC): 2026-04-25T01:27:52.228094+00:00
 
 ---
 
@@ -43,53 +43,42 @@ As of Session 101 (post-fix): DEDUP_GHOST and INACTIVE_SNAPSHOT passes complete.
 
 ## Last Completed Milestone
 
-Session 121 close (Ghost PID remediation + full top-300 re-score on apex_v2.3. consensusdatabase_4-23-26.csv established as permanent source of truth for position_group and prospect universe.)
+Session 122 close (draft_results seeded with 2026 R1-R2 picks. Big Board drafted badge overlay live.)
 
-Session 121 close:
-- DB writes: YES. 258 ghost PIDs deactivated, 207 position_group updates, 300+117 prospects re-scored.
-- Schema change: none.
-- Migrations applied: 61 total (unchanged).
-- Active prospects: 891 (down from 1149; 258 ghost PIDs now is_active=0).
-- apex_scores: 261 active v2.3 scores (ELITE=6, DAY1=35, DAY2=84, DAY3=85, UDFA-P=47, UDFA=4).
-- Divergence: 257 recomputed (ALIGNED=19, APEX_HIGH=194, APEX_LOW=19, APEX_LOW_PVC_STRUCTURAL=25).
+Session 122 close:
+- DB writes: YES. draft_results: 63 rows inserted (OVR 1-63, R1-R2).
+- Schema change: none. draft_results table pre-existed from an earlier migration.
+- Migrations applied: 62 total (0061 applied this session).
+- Active prospects: 891 (unchanged).
+- apex_scores: 261 active v2.3 scores (unchanged).
+- Divergence: unchanged.
 
 Key work completed:
-1. CROSS-REFERENCE AUDIT — consensusdatabase_4-23-26.csv vs prospects table:
-   Identified 146 position mismatches and ~80 ghost PID pairs where both ghost and
-   canonical PIDs were active simultaneously and both ended up in the scoring run.
-   Root cause: early LB/OL/DT catch-all bootstrap ingests created duplicate active PIDs
-   for ~258 players at wrong positions.
+1. MIGRATION 0061 — SEED DRAFT_RESULTS (scripts/migrate_0061_seed_draft_results.py):
+   Seeded draft_results table with 63 picks (OVR 1-63, rounds 1-2).
+   Used prospect_id join (not name matching) — all 63 PIDs pre-resolved.
+   Snapshot columns populated at seed time from current DB:
+     APEX snapshot coverage: 61/63 (Gabe Jacas pid=18, Davison Igbinosun pid=36 unscored).
+     Consensus rank coverage: 63/63. Divergence delta coverage: 61/63 (same 2).
+   Migration 0047 was already taken (prospect_comps). Used 0061 (next available).
+   Idempotent: INSERT OR IGNORE on UNIQUE(season_id, pick_overall).
 
-2. GHOST PID REMEDIATION SCRIPT (scripts/remediate_ghost_pids_csv_sync.py):
-   Full remediation script cross-references ALL active prospects against CSV by
-   name+school (with suffix/initial normalization: Jr., III, C.J.->CJ, etc.).
-   For each ghost pair: deactivates wrong-position PID (is_active=0), deletes
-   apex_scores + divergence_flags. Fixes position_group on canonical PID to match CSV.
-   Prints full dry-run report before any writes. --apply 0 / --apply 1 pattern.
-   258 ghost PIDs deactivated. 207 position_group updates (57 unambiguous + 150 ambiguous
-   IOL/DL/LB auto-resolved). consensusdatabase_4-23-26.csv is now permanent source of truth.
-
-3. FULL TOP-300 RE-SCORE (apex_v2.3):
-   Scored 300 prospects (289 scored, 11 JSON parse failures on ghost PIDs — expected).
-   Ghost PIDs scored at wrong archetypes; canonical PIDs scored correctly.
-
-4. POST-REMEDIATION RE-SCORE (117 prospects):
-   After ghost deactivation + position fixes, 117 canonical PIDs re-scored at correct
-   positions. 109 scored on first pass, 8 JSON parse failures retried (4 resolved, 4
-   needed second retry — all 8 ultimately scored). All 261 active scores now at correct
-   position archetypes.
-
-5. DIVERGENCE RECOMPUTE:
-   257 prospects. ALIGNED=19, APEX_HIGH=194, APEX_LOW=19, APEX_LOW_PVC_STRUCTURAL=25.
-   Premium APEX_LOW actionable alerts: Ty Simpson QB, Jaishawn Barham EDGE, Drew Allar QB,
-   Kadyn Proctor OT, Avieon Terrell CB, Bishop Fitzgerald S, Genesis Smith S, Bud Clark S.
+2. BIG BOARD DRAFTED BADGE OVERLAY (app/app.py):
+   _TEAM_ABBR dict + _load_drafted_lookup() cached function (ttl=300).
+   SQL JOIN via prospect_id — zero name-matching fragility.
+   display["Drafted"] column: "R1 · #6 · KC" format for drafted players, "" for undrafted.
+   _make_bb_styled: .map() styles Drafted cell muted (#555); .apply(axis=1) mutes all
+   other columns for drafted rows (rgba 0.32 + line-through strikethrough).
+   _BB_VISIBLE_COLS: "Drafted" entry added after "Player".
+   Spot-checks: Mansoor Delane → R1·#6·KC ✓, Davison Igbinosun → R2·#62·BUF ✓.
 
 ## Next Milestone
 
-Session 122: Review premium APEX_LOW signals (consensus overrating vs. APEX). Run
-doctor.py to verify DB integrity post-ghost-remediation. Consider snapshot rebuild now
-that positions are clean. Update CLAUDE.md with corrected active prospect count (891)
-and new ghost PID remediation script.
+Session 123: Add "Hide Drafted" toggle to Big Board sidebar filter panel.
+Toggle flips between full board (all prospects) and available-only view
+(exclude prospects with non-empty Drafted column). Sidebar placement:
+after the APEX-scored-only checkbox, before Sort board by selector.
+No DB changes. app/app.py only.
 
 ## Last Completed Milestone (previous)
 
@@ -2891,11 +2880,11 @@ Inactive (data preserved): ngs_2026 (source_id=29, is_active=0) — model score,
 
 2) System Snapshot Output
 === DRAFTOS SYSTEM SNAPSHOT ===
-generated_utc: 2026-04-25T01:26:22.204237+00:00
+generated_utc: 2026-04-25T01:27:51.420753+00:00
 
 ## Git
 branch: main
-commit: 6fbb0537f80a3e93f15a5185f460369993faa086
+commit: fee6cda811cb2a981de3540e34961882559b5a20
 status: clean
 
 ## Tables
