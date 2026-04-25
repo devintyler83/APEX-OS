@@ -4,7 +4,7 @@ APEX OS is a deterministic draft operating system that turns 16 ranking sources,
 
 ---
 
-Last Updated (UTC): 2026-04-24T20:26:14.885556+00:00
+Last Updated (UTC): 2026-04-24T22:15:00.000000+00:00
 
 ---
 
@@ -25,6 +25,56 @@ Last Updated (UTC): 2026-04-24T20:26:14.885556+00:00
 As of Session 101 (post-fix): DEDUP_GHOST and INACTIVE_SNAPSHOT passes complete. 304 MULTI_ACTIVE real-school clusters remain — require manual review before any further deactivation.
 
 ## Last Completed Milestone
+
+Session 121 close (Ghost PID remediation + full top-300 re-score on apex_v2.3. consensusdatabase_4-23-26.csv established as permanent source of truth for position_group and prospect universe.)
+
+Session 121 close:
+- DB writes: YES. 258 ghost PIDs deactivated, 207 position_group updates, 300+117 prospects re-scored.
+- Schema change: none.
+- Migrations applied: 61 total (unchanged).
+- Active prospects: 891 (down from 1149; 258 ghost PIDs now is_active=0).
+- apex_scores: 261 active v2.3 scores (ELITE=6, DAY1=35, DAY2=84, DAY3=85, UDFA-P=47, UDFA=4).
+- Divergence: 257 recomputed (ALIGNED=19, APEX_HIGH=194, APEX_LOW=19, APEX_LOW_PVC_STRUCTURAL=25).
+
+Key work completed:
+1. CROSS-REFERENCE AUDIT — consensusdatabase_4-23-26.csv vs prospects table:
+   Identified 146 position mismatches and ~80 ghost PID pairs where both ghost and
+   canonical PIDs were active simultaneously and both ended up in the scoring run.
+   Root cause: early LB/OL/DT catch-all bootstrap ingests created duplicate active PIDs
+   for ~258 players at wrong positions.
+
+2. GHOST PID REMEDIATION SCRIPT (scripts/remediate_ghost_pids_csv_sync.py):
+   Full remediation script cross-references ALL active prospects against CSV by
+   name+school (with suffix/initial normalization: Jr., III, C.J.->CJ, etc.).
+   For each ghost pair: deactivates wrong-position PID (is_active=0), deletes
+   apex_scores + divergence_flags. Fixes position_group on canonical PID to match CSV.
+   Prints full dry-run report before any writes. --apply 0 / --apply 1 pattern.
+   258 ghost PIDs deactivated. 207 position_group updates (57 unambiguous + 150 ambiguous
+   IOL/DL/LB auto-resolved). consensusdatabase_4-23-26.csv is now permanent source of truth.
+
+3. FULL TOP-300 RE-SCORE (apex_v2.3):
+   Scored 300 prospects (289 scored, 11 JSON parse failures on ghost PIDs — expected).
+   Ghost PIDs scored at wrong archetypes; canonical PIDs scored correctly.
+
+4. POST-REMEDIATION RE-SCORE (117 prospects):
+   After ghost deactivation + position fixes, 117 canonical PIDs re-scored at correct
+   positions. 109 scored on first pass, 8 JSON parse failures retried (4 resolved, 4
+   needed second retry — all 8 ultimately scored). All 261 active scores now at correct
+   position archetypes.
+
+5. DIVERGENCE RECOMPUTE:
+   257 prospects. ALIGNED=19, APEX_HIGH=194, APEX_LOW=19, APEX_LOW_PVC_STRUCTURAL=25.
+   Premium APEX_LOW actionable alerts: Ty Simpson QB, Jaishawn Barham EDGE, Drew Allar QB,
+   Kadyn Proctor OT, Avieon Terrell CB, Bishop Fitzgerald S, Genesis Smith S, Bud Clark S.
+
+## Next Milestone
+
+Session 122: Review premium APEX_LOW signals (consensus overrating vs. APEX). Run
+doctor.py to verify DB integrity post-ghost-remediation. Consider snapshot rebuild now
+that positions are clean. Update CLAUDE.md with corrected active prospect count (891)
+and new ghost PID remediation script.
+
+## Last Completed Milestone (previous)
 
 Session 120 close (App UI bug fixes: APEX Board Signal column, clickable Alerts bar, Scout Card tab rename, Draft Mode remaining count footnote. PNG card renderer rebuilt via Playwright subprocess.)
 
