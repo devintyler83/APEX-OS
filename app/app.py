@@ -4385,6 +4385,7 @@ with st.sidebar:
 """)
 
     show_apex_only = st.checkbox("APEX scored only", value=False)
+    hide_drafted = st.checkbox("Hide Drafted", value=False)
 
     sort_by = st.selectbox(
         "Sort board by",
@@ -4684,6 +4685,10 @@ display["Snapshot"] = (
 
 _drafted_lookup: dict[str, dict] = _load_drafted_lookup()
 
+if hide_drafted and _drafted_lookup:
+    _drafted_names = set(_drafted_lookup.keys())
+    filtered = filtered[~filtered["display_name"].isin(_drafted_names)]
+
 
 def _fmt_drafted(player_name: str) -> str:
     info = _drafted_lookup.get(player_name)
@@ -4892,15 +4897,6 @@ def _make_bb_styled(sub: pd.DataFrame):
                 if v else "color:rgba(255,255,255,0.18)"
             ),
             subset=["Drafted"] if "Drafted" in sub.columns else [],
-        )
-        .apply(
-            lambda row: (
-                ["color:rgba(255,255,255,0.32);text-decoration:line-through"] * len(row)
-                if row.get("Drafted", "")
-                else [""] * len(row)
-            ),
-            axis=1,
-            subset=[c for c in sub.columns if c != "Drafted"],
         )
         .set_table_styles([
             {
