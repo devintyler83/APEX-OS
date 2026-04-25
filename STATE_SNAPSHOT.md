@@ -26,42 +26,34 @@ As of Session 101 (post-fix): DEDUP_GHOST and INACTIVE_SNAPSHOT passes complete.
 
 ## Last Completed Milestone
 
-Session 122 close (draft_results seeded with 2026 R1-R2 picks. Big Board drafted badge overlay live.)
+Session 123 close (Big Board "Hide Drafted" toggle live. Styler row-muting removed.)
 
-Session 122 close:
-- DB writes: YES. draft_results: 63 rows inserted (OVR 1-63, R1-R2).
-- Schema change: none. draft_results table pre-existed from an earlier migration.
-- Migrations applied: 62 total (0061 applied this session).
+Session 123 close:
+- DB writes: NO. App layer only.
+- Schema change: none.
+- Migrations applied: 62 total (unchanged).
 - Active prospects: 891 (unchanged).
 - apex_scores: 261 active v2.3 scores (unchanged).
 - Divergence: unchanged.
 
 Key work completed:
-1. MIGRATION 0061 — SEED DRAFT_RESULTS (scripts/migrate_0061_seed_draft_results.py):
-   Seeded draft_results table with 63 picks (OVR 1-63, rounds 1-2).
-   Used prospect_id join (not name matching) — all 63 PIDs pre-resolved.
-   Snapshot columns populated at seed time from current DB:
-     APEX snapshot coverage: 61/63 (Gabe Jacas pid=18, Davison Igbinosun pid=36 unscored).
-     Consensus rank coverage: 63/63. Divergence delta coverage: 61/63 (same 2).
-   Migration 0047 was already taken (prospect_comps). Used 0061 (next available).
-   Idempotent: INSERT OR IGNORE on UNIQUE(season_id, pick_overall).
+1. HIDE DRAFTED TOGGLE (app/app.py):
+   Sidebar checkbox "Hide Drafted" (value=False) added directly below "APEX scored only".
+   Filter applied after _drafted_lookup is built: excludes any prospect whose
+   display_name is in _drafted_lookup.keys() (dict keyed by display_name, not pid).
+   Filter runs before display["Drafted"] column is built and before tier grouping,
+   so tier headers recount correctly when toggle is checked.
 
-2. BIG BOARD DRAFTED BADGE OVERLAY (app/app.py):
-   _TEAM_ABBR dict + _load_drafted_lookup() cached function (ttl=300).
-   SQL JOIN via prospect_id — zero name-matching fragility.
-   display["Drafted"] column: "R1 · #6 · KC" format for drafted players, "" for undrafted.
-   _make_bb_styled: .map() styles Drafted cell muted (#555); .apply(axis=1) mutes all
-   other columns for drafted rows (rgba 0.32 + line-through strikethrough).
-   _BB_VISIBLE_COLS: "Drafted" entry added after "Player".
-   Spot-checks: Mansoor Delane → R1·#6·KC ✓, Davison Igbinosun → R2·#62·BUF ✓.
+2. STYLER ROW MUTING REMOVED (_make_bb_styled):
+   Removed .apply(axis=1) chain that applied rgba 0.32 + line-through to drafted rows.
+   It was not rendering due to Streamlit stylesheet conflicts. Removed entirely.
+   Drafted cell .map() styling (muted gray badge text) retained — it works.
 
 ## Next Milestone
 
-Session 123: Add "Hide Drafted" toggle to Big Board sidebar filter panel.
-Toggle flips between full board (all prospects) and available-only view
-(exclude prospects with non-empty Drafted column). Sidebar placement:
-after the APEX-scored-only checkbox, before Sort board by selector.
-No DB changes. app/app.py only.
+Session 124: Push hide_drafted awareness into Draft Mode remaining board.
+Off-board (drafted) prospects should be excluded from Best Available automatically.
+No DB changes.
 
 ## Last Completed Milestone (previous)
 
