@@ -1271,6 +1271,18 @@ hr {
   font-size: 12px;
   color: rgba(255,255,255,0.45);
 }
+
+/* ── Drafted row state ── */
+.drafted-badge {
+  background-color: #2a2a2a;
+  color: #666666;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 3px;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
 </style>
 """
 try:
@@ -4128,6 +4140,65 @@ def _load_board() -> list[dict] | None:
         return None
 
 
+_TEAM_ABBR: dict[str, str] = {
+    "Las Vegas Raiders":      "LV",
+    "New York Jets":          "NYJ",
+    "Arizona Cardinals":      "ARI",
+    "Tennessee Titans":       "TEN",
+    "New York Giants":        "NYG",
+    "Kansas City Chiefs":     "KC",
+    "Washington Commanders":  "WSH",
+    "New Orleans Saints":     "NO",
+    "Cleveland Browns":       "CLE",
+    "Miami Dolphins":         "MIA",
+    "Dallas Cowboys":         "DAL",
+    "Los Angeles Rams":       "LAR",
+    "Baltimore Ravens":       "BAL",
+    "Tampa Bay Buccaneers":   "TB",
+    "Detroit Lions":          "DET",
+    "Minnesota Vikings":      "MIN",
+    "Carolina Panthers":      "CAR",
+    "Philadelphia Eagles":    "PHI",
+    "Pittsburgh Steelers":    "PIT",
+    "Los Angeles Chargers":   "LAC",
+    "Chicago Bears":          "CHI",
+    "Houston Texans":         "HOU",
+    "New England Patriots":   "NE",
+    "Seattle Seahawks":       "SEA",
+    "San Francisco 49ers":    "SF",
+    "Buffalo Bills":          "BUF",
+    "Cincinnati Bengals":     "CIN",
+    "Atlanta Falcons":        "ATL",
+    "Jacksonville Jaguars":   "JAX",
+    "Green Bay Packers":      "GB",
+    "Indianapolis Colts":     "IND",
+}
+
+
+@st.cache_data(ttl=300)
+def _load_drafted_lookup() -> dict[str, dict]:
+    """
+    Return a dict keyed on prospects.display_name for every pick in draft_results
+    (season_id=1). Values: {overall_pick, pick_round, pick_in_round, team_name}.
+    JOIN is done in SQL to avoid Python name-matching fragility.
+    """
+    try:
+        with connect() as conn:
+            rows = conn.execute("""
+                SELECT p.display_name,
+                       dr.pick_overall,
+                       dr.pick_round,
+                       dr.pick_in_round,
+                       dr.team_name
+                FROM draft_results dr
+                JOIN prospects p ON p.prospect_id = dr.prospect_id
+                WHERE dr.season_id = 1
+            """).fetchall()
+            return {row["display_name"]: dict(row) for row in rows}
+    except Exception:
+        return {}
+
+
 @st.cache_data(ttl=30)
 def _load_detail(prospect_id: int) -> dict | None:
     try:
@@ -4611,6 +4682,19 @@ display["Snapshot"] = (
     else filtered["snapshot_date"]
 )
 
+_drafted_lookup: dict[str, dict] = _load_drafted_lookup()
+
+
+def _fmt_drafted(player_name: str) -> str:
+    info = _drafted_lookup.get(player_name)
+    if not info:
+        return ""
+    abbr = _TEAM_ABBR.get(info["team_name"], info["team_name"])
+    return f"R{info['pick_round']} · #{info['pick_overall']} · {abbr}"
+
+
+display["Drafted"] = filtered["display_name"].apply(_fmt_drafted)
+
 display = display.reset_index(drop=True)
 
 # ---------------------------------------------------------------------------
@@ -4802,6 +4886,22 @@ def _make_bb_styled(sub: pd.DataFrame):
         .map(_style_ras,            subset=["RAS"])
         .map(_style_apex_delta,     subset=["APEX Edge"])
         .map(_style_apex_tier,      subset=["APEX Tier"])
+        .map(
+            lambda v: (
+                "color:#555555;font-size:10px;font-weight:600;letter-spacing:0.04em"
+                if v else "color:rgba(255,255,255,0.18)"
+            ),
+            subset=["Drafted"] if "Drafted" in sub.columns else [],
+        )
+        .apply(
+            lambda row: (
+                ["color:rgba(255,255,255,0.32);text-decoration:line-through"] * len(row)
+                if row.get("Drafted", "")
+                else [""] * len(row)
+            ),
+            axis=1,
+            subset=[c for c in sub.columns if c != "Drafted"],
+        )
         .set_table_styles([
             {
                 "selector": "thead tr th",
@@ -4886,6 +4986,7 @@ _BB_TIER_HDR: dict[str, dict] = {
 _BB_VISIBLE_COLS: list[tuple[str, str, str]] = [
     ("Consensus",  "right",  "72px"),
     ("Player",     "left",   "160px"),
+    ("Drafted",    "left",   "120px"),
     ("Pos",        "center", "40px"),
     ("School",     "left",   "120px"),
     ("RAS",        "right",  "42px"),
